@@ -213,7 +213,17 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
       }
     }
 
-    // Step E — Hook deployment (Claude Code only)
+    // Step E — Reasonix MCP config (when Reasonix is selected)
+    if (selectedPlatforms.includes('reasonix')) {
+      try {
+        writeReasonixMcpConfig(paths.reasonixConfig);
+        console.log(`  OK  Reasonix MCP: mcpServers written to ${paths.reasonixConfig}`);
+      } catch (e) {
+        warn(`  ERR: Reasonix MCP config — ${(e as Error).message}`);
+      }
+    }
+
+    // Step F — Hook deployment (Claude Code only)
     if (selectedPlatforms.includes('claudeCode')) {
       await deployHook(opts.yes);
     }

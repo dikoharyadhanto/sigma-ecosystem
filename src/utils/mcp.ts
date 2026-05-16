@@ -16,17 +16,6 @@ interface VscodeMcpConfig {
   servers: Record<string, McpServer>;
 }
 
-interface ReasonixMcpEntry {
-  name: string;
-  transport: string;
-  command: string;
-  args: string[];
-  env?: Record<string, string>;
-}
-
-interface ReasonixMcpConfig {
-  mcp: ReasonixMcpEntry[];
-}
 
 function resolveMemoryFilePath(platform: NodeJS.Platform = process.platform, homeDir = os.homedir()): string {
   const pathApi = platform === 'win32' ? path.win32 : path.posix;
@@ -70,54 +59,35 @@ export function writeVscodeMcpJson(filePath: string, options: { platform?: NodeJ
   fs.writeFileSync(filePath, JSON.stringify(createVscodeMcpConfig(options), null, 2) + '\n', 'utf8');
 }
 
-// Reasonix uses { "mcp": [...] } format; no OS-specific command wrapping — Reasonix handles that itself.
-export function createReasonixMcpConfig(options: { platform?: NodeJS.Platform; homeDir?: string } = {}): ReasonixMcpConfig {
-  const platform = options.platform ?? process.platform;
-  const homeDir = options.homeDir ?? os.homedir();
-
-  return {
-    mcp: [
-      {
-        name: 'sequential-thinking',
-        transport: 'stdio',
-        command: 'npx',
-        args: ['-y', '@modelcontextprotocol/server-sequential-thinking'],
-      },
-      {
-        name: 'sigma-memory',
-        transport: 'stdio',
-        command: 'npx',
-        args: ['-y', '@modelcontextprotocol/server-memory'],
-        env: { MEMORY_FILE_PATH: resolveMemoryFilePath(platform, homeDir) },
-      },
-    ],
-  };
-}
-
-// Merges sigma entries into ~/.reasonix/config.json without clobbering other Reasonix settings.
-export function writeReasonixMcpConfig(filePath: string, options: { platform?: NodeJS.Platform; homeDir?: string } = {}): void {
+// Merges sigma MCP servers into ~/.reasonix/config.json under the mcpServers key.
+// Uses plain npx (no cmd /c) — Reasonix handles OS differences itself.
+// Also strips any object-format entries previously written to the mcp array by mistake.
+export function writeReasonixMcpConfig(filePath: string, options: { homeDir?: string } = {}): void {
   let existing: Record<string, unknown> = {};
   if (fs.existsSync(filePath)) {
-    try { existing = fs.readJsonSync(filePath); } catch { /* ignore parse errors; overwrite with fresh config */ }
+    try { existing = fs.readJsonSync(filePath); } catch { /* ignore parse errors; start fresh */ }
   }
 
-  const sigmaEntries = createReasonixMcpConfig(options).mcp;
-  const sigmaNames = new Set(sigmaEntries.map(e => e.name));
+  const homeDir = options.homeDir ?? os.homedir();
+  const memoryFilePath = path.join(homeDir, '.sigma', 'memory_sigma.jsonl');
 
-  // Filter both object-format ({ name, ... }) and string-format ("name=command args") duplicates.
-  const existingMcp: unknown[] = Array.isArray(existing.mcp)
-    ? (existing.mcp as unknown[]).filter(e => {
-        if (typeof e === 'string') {
-          return !Array.from(sigmaNames).some(n => (e as string).startsWith(n + '='));
-        }
-        if (typeof e === 'object' && e !== null && 'name' in e) {
-          return !sigmaNames.has((e as ReasonixMcpEntry).name);
-        }
-        return true;
-      })
-    : [];
+  const sigmaServers: Record<string, McpServer> = {
+    'sequential-thinking': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-sequential-thinking'] },
+    'sigma-memory': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'], env: { MEMORY_FILE_PATH: memoryFilePath } },
+  };
 
-  const merged = { ...existing, mcp: [...existingMcp, ...sigmaEntries] };
+  // Strip any object-format entries from the mcp array (added erroneously by earlier sigma versions).
+  const existingMcp = Array.isArray(existing.mcp)
+    ? (existing.mcp as unknown[]).filter(e => typeof e === 'string')
+    : undefined;
+
+  const existingServers = (existing.mcpServers ?? {}) as Record<string, unknown>;
+  const merged: Record<string, unknown> = {
+    ...existing,
+    mcpServers: { ...existingServers, ...sigmaServers },
+  };
+  if (existingMcp !== undefined) merged.mcp = existingMcp;
+
   fs.ensureDirSync(path.dirname(filePath));
   fs.writeFileSync(filePath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
 }
