@@ -8,6 +8,70 @@ It gives small-to-medium teams a structured, evidence-based workflow without the
 
 ---
 
+## End-to-End Workflow
+
+```text
+┌────────────────────┐
+│  Director Intent   │
+│  Human decides     │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│ ARC / DIR-INTENT   │
+│ Clarify objective, │
+│ scope, constraints │
+└─────────┬──────────┘
+          │ Director approves / locks
+          ▼
+┌────────────────────┐
+│ Optional ROADMAP   │
+│ FMN splits large   │
+│ work into stages   │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│ FMN-PLAN           │
+│ Build contract +   │
+│ test contract      │
+└─────────┬──────────┘
+          │ Director approves / locks
+          ▼
+┌────────────────────┐
+│ DEV-EXEC           │
+│ Implementation +   │
+│ evidence           │
+└─────────┬──────────┘
+          │ Director approves / locks
+          ▼
+┌────────────────────┐
+│ DIR-CLOSE          │
+│ Closure summary,   │
+│ proof, limitations │
+└────────────────────┘
+```
+
+AUD may review at any major decision point:
+
+```text
+DIR-INTENT ── AUD review ──► Director decision
+FMN-PLAN   ── AUD audit  ──► Director decision
+DEV-EXEC   ── AUD audit  ──► Director decision
+DIR-CLOSE  ── AUD audit  ──► Director decision
+```
+
+Sigma's control loop:
+
+```text
+Director speaks in intent.
+AI roles operate the workflow.
+CLI enforces gates.
+Artifacts preserve evidence.
+```
+
+---
+
 ## Why Sigma?
 
 Sigma is not an autonomous agent swarm. It is a governance layer.
