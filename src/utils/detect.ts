@@ -10,9 +10,10 @@ export interface DetectedTools {
 }
 
 export interface ToolTargetPaths {
-  claudeCommands: string;   // ~/.claude/commands/
-  codexSkills: string;      // ~/.codex/skills/
-  reasonixSkills: string;   // ~/.reasonix/skills/
+  claudeCommands: string;    // ~/.claude/commands/
+  codexSkills: string;       // ~/.codex/skills/
+  reasonixSkills: string;    // ~/.reasonix/skills/
+  reasonixConfig: string;    // ~/.reasonix/config.json
   antigravityAgents: string; // ~/.gemini/agents/
 }
 
@@ -22,6 +23,7 @@ export function targetPaths(): ToolTargetPaths {
     claudeCommands: path.join(home, '.claude', 'commands'),
     codexSkills: path.join(home, '.codex', 'skills'),
     reasonixSkills: path.join(home, '.reasonix', 'skills'),
+    reasonixConfig: path.join(home, '.reasonix', 'config.json'),
     antigravityAgents: path.join(home, '.gemini', 'agents'),
   };
 }

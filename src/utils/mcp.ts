@@ -16,6 +16,18 @@ interface VscodeMcpConfig {
   servers: Record<string, McpServer>;
 }
 
+interface ReasonixMcpEntry {
+  name: string;
+  transport: string;
+  command: string;
+  args: string[];
+  env?: Record<string, string>;
+}
+
+interface ReasonixMcpConfig {
+  mcp: ReasonixMcpEntry[];
+}
+
 function resolveMemoryFilePath(platform: NodeJS.Platform = process.platform, homeDir = os.homedir()): string {
   const pathApi = platform === 'win32' ? path.win32 : path.posix;
   return pathApi.join(homeDir, '.sigma', 'memory_sigma.jsonl');
@@ -56,4 +68,56 @@ export function writeMcpJson(filePath: string, options: { platform?: NodeJS.Plat
 export function writeVscodeMcpJson(filePath: string, options: { platform?: NodeJS.Platform; homeDir?: string } = {}): void {
   fs.ensureDirSync(path.dirname(filePath));
   fs.writeFileSync(filePath, JSON.stringify(createVscodeMcpConfig(options), null, 2) + '\n', 'utf8');
+}
+
+// Reasonix uses { "mcp": [...] } format; no OS-specific command wrapping — Reasonix handles that itself.
+export function createReasonixMcpConfig(options: { platform?: NodeJS.Platform; homeDir?: string } = {}): ReasonixMcpConfig {
+  const platform = options.platform ?? process.platform;
+  const homeDir = options.homeDir ?? os.homedir();
+
+  return {
+    mcp: [
+      {
+        name: 'sequential-thinking',
+        transport: 'stdio',
+        command: 'npx',
+        args: ['-y', '@modelcontextprotocol/server-sequential-thinking'],
+      },
+      {
+        name: 'sigma-memory',
+        transport: 'stdio',
+        command: 'npx',
+        args: ['-y', '@modelcontextprotocol/server-memory'],
+        env: { MEMORY_FILE_PATH: resolveMemoryFilePath(platform, homeDir) },
+      },
+    ],
+  };
+}
+
+// Merges sigma entries into ~/.reasonix/config.json without clobbering other Reasonix settings.
+export function writeReasonixMcpConfig(filePath: string, options: { platform?: NodeJS.Platform; homeDir?: string } = {}): void {
+  let existing: Record<string, unknown> = {};
+  if (fs.existsSync(filePath)) {
+    try { existing = fs.readJsonSync(filePath); } catch { /* ignore parse errors; overwrite with fresh config */ }
+  }
+
+  const sigmaEntries = createReasonixMcpConfig(options).mcp;
+  const sigmaNames = new Set(sigmaEntries.map(e => e.name));
+
+  // Filter both object-format ({ name, ... }) and string-format ("name=command args") duplicates.
+  const existingMcp: unknown[] = Array.isArray(existing.mcp)
+    ? (existing.mcp as unknown[]).filter(e => {
+        if (typeof e === 'string') {
+          return !Array.from(sigmaNames).some(n => (e as string).startsWith(n + '='));
+        }
+        if (typeof e === 'object' && e !== null && 'name' in e) {
+          return !sigmaNames.has((e as ReasonixMcpEntry).name);
+        }
+        return true;
+      })
+    : [];
+
+  const merged = { ...existing, mcp: [...existingMcp, ...sigmaEntries] };
+  fs.ensureDirSync(path.dirname(filePath));
+  fs.writeFileSync(filePath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
 }

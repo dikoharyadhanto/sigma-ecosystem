@@ -527,6 +527,12 @@ Optional VS Code MCP config:
 sigma setup memory --vscode
 ```
 
+Optional Reasonix MCP config (writes to `~/.reasonix/config.json`, merged):
+
+```bash
+sigma setup memory --reasonix
+```
+
 Refresh ecosystem memory with fresh seed (e.g. after a CLI update):
 
 ```bash

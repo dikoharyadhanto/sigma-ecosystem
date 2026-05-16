@@ -16,7 +16,7 @@ import {
 } from '../config';
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, copyDir, fileExists } from '../utils/fs';
-import { writeMcpJson, writeVscodeMcpJson, createMcpConfig } from '../utils/mcp';
+import { writeMcpJson, writeVscodeMcpJson, createMcpConfig, writeReasonixMcpConfig } from '../utils/mcp';
 import { detectTools, targetPaths } from '../utils/detect';
 
 // ── Bundle paths (files shipped inside the npm package) ─────────────────────
@@ -369,7 +369,7 @@ function seedMemoryFile(): void {
   fs.writeFileSync(GLOBAL_MEMORY_FILE, seedContent, 'utf-8');
 }
 
-function runMemorySetup(opts: { vscode?: boolean; print?: boolean; reseed?: boolean }): void {
+function runMemorySetup(opts: { vscode?: boolean; print?: boolean; reseed?: boolean; reasonix?: boolean }): void {
   if (!fileExists(GLOBAL_SIGMA_DIR)) {
     error('Sigma is not installed. Run: sigma setup install');
   }
@@ -404,6 +404,13 @@ function runMemorySetup(opts: { vscode?: boolean; print?: boolean; reseed?: bool
     const vscodeMcpPath = path.join(projectRoot, '.vscode', 'mcp.json');
     writeVscodeMcpJson(vscodeMcpPath);
     success(`Written: ${vscodeMcpPath}`);
+  }
+
+  // Optionally write ~/.reasonix/config.json (global, merged with existing)
+  if (opts.reasonix) {
+    const paths = targetPaths();
+    writeReasonixMcpConfig(paths.reasonixConfig);
+    success(`Written: ${paths.reasonixConfig}`);
   }
 
   if (opts.print) {
@@ -452,9 +459,10 @@ export function setupCommand(): Command {
     .command('memory')
     .description('Write .mcp.json (sequential-thinking + sigma-memory) into the current project directory')
     .option('--vscode', 'Also write .vscode/mcp.json for VS Code extension')
+    .option('--reasonix', 'Also write MCP entries into ~/.reasonix/config.json (global, merged)')
     .option('--print', 'Print generated config to stdout in addition to writing files')
     .option('--reseed', 'Overwrite memory file with fresh seed from package bundle')
-    .action((opts: { vscode?: boolean; print?: boolean; reseed?: boolean }) => {
+    .action((opts: { vscode?: boolean; print?: boolean; reseed?: boolean; reasonix?: boolean }) => {
       try { runMemorySetup(opts); } catch (e) { error((e as Error).message); }
     });
 

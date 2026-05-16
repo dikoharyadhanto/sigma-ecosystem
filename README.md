@@ -112,6 +112,7 @@ cd your-project
 sigma project start
 sigma setup memory
 sigma setup memory --vscode
+
 ```
 
 ### 3. Open your AI tool and activate ARC
@@ -525,6 +526,12 @@ Optional VS Code MCP config:
 
 ```bash
 sigma setup memory --vscode
+```
+
+Optional Reasonix MCP config (writes to `~/.reasonix/config.json`, merged):
+
+```bash
+sigma setup memory --reasonix
 ```
 
 Refresh ecosystem memory with fresh seed (e.g. after a CLI update):
