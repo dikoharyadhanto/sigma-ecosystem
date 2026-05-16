@@ -192,6 +192,11 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
         const src = path.join(sourceDir, fileName);
         const dst = path.join(targetDir, fileName);
         try {
+          // If a previous install left a directory at this path (e.g. Delta's directory-based
+          // codex skills), remove it so fs.copySync can write a file in its place.
+          if (fileExists(dst) && fs.statSync(dst).isDirectory()) {
+            fs.removeSync(dst);
+          }
           fs.copySync(src, dst, { overwrite: true });
           ok++;
         } catch {
