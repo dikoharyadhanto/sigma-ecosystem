@@ -262,6 +262,8 @@ ARC should report:
 - blockers or inconsistencies,
 - recommended next valid action.
 
+**Cross-Role CSO Check:** After reading runtime state and active artifacts, apply the Cross-Role CSO Check — collect CSO files from `Sigma/logs/` by role prefix (`CSO-AUD-`, `CSO-FMN-`); prioritize `Source: CSO` over `Source: CHECKPOINT`; filter by artifact relevance; cap at 3. CSO is context only. Locked artifacts and `progress.json` win over any CSO content. Conflicts must be reported to Director, not silently resolved.
+
 ---
 
 ## Behavioral Standards

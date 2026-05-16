@@ -1,7 +1,7 @@
 # Implementation Plan — Phase 6: Distribution & Bridge Files
 
 **Phase**: 6 of 7
-**Goal**: Finalize the npm package for public distribution — real bridge file content (CLAUDE.md, AGENTS.md, GEMINI.md), 24 skill files for 4 AI platforms × 6 skills (/arc, /fmn, /dev, /aud, /checkpoint, /cso), hook guard for progress.json, enhanced `sigma setup install` with tool detection and skill deployment, and SIGMA_README.md. Version bump 0.5.0 → 0.6.0. SIGMA_PROTOCOL.md Section 25 filled.
+**Goal**: Finalize the npm package for public distribution — real bridge file content (CLAUDE.md, AGENTS.md, GEMINI.md), 28 skill files for 4 AI platforms × 7 skills (/arc, /fmn, /dev, /aud, /checkpoint, /cso, /report), hook guard for progress.json, enhanced `sigma setup install` with tool detection and skill deployment, and SIGMA_README.md. Version bump 0.5.0 → 0.6.0. SIGMA_PROTOCOL.md Section 25 filled.
 **Status**: PENDING
 **Prerequisites**: Phase 5 complete and MCP setup gap fixed (scripts/mcp-run-*.js, src/utils/mcp.ts, sigma setup memory writes .mcp.json — all landed post-PLAN-5)
 
@@ -113,9 +113,9 @@ Do not edit these files directly. Use the CLI commands:
 
 ---
 
-### 2. Skill File Roster (24 files total)
+### 2. Skill File Roster (28 files total)
 
-Six skill files per platform. Content is the same across platforms for the same role — only deployment path differs.
+Seven skill files per platform. Content is the same across platforms for the same role — only deployment path differs.
 
 | Skill | Role | Description |
 | :--- | :--- | :--- |
@@ -125,8 +125,9 @@ Six skill files per platform. Content is the same across platforms for the same 
 | `aud` | AUD — Auditor | Passive external auditor; reviews Director-provided evidence only; never locks, never scans, never mandates; produces AUD-NOTE |
 | `checkpoint` | CHECKPOINT | Mid-work state capture for any role; produces CSO snapshot |
 | `cso` | CSO Handler | Creates, links, and closes CSO artifacts; used by any role at handoff |
+| `report` | /report — Director Briefing | Universal read-only Director briefing; not a role; does not switch roles; chat-only |
 
-**Total files by platform:** 4 platforms × 6 skills = **24 files**
+**Total files by platform:** 4 platforms × 7 skills = **28 files**
 
 Platform Codex uses no file extension (directory-based skill routing); all others use `.md`.
 
@@ -960,7 +961,7 @@ Replace the `[PHASE 6]` placeholder at line 1585 with the 6-subsection spec from
 
 | # | Criterion |
 | :--- | :--- |
-| AC-01 | `setup/targets/` contains exactly 24 skill files across 4 platform subdirectories (claude_code, codex, reasonix, antigravity), 6 files each |
+| AC-01 | `setup/targets/` contains exactly 28 skill files across 4 platform subdirectories (claude_code, codex, reasonix, antigravity), 7 files each |
 | AC-02 | All skill files contain: frontmatter with `description:` field, Role Identity section, Activation section, Bootstrap Protocol (4-step), role rules file reference, CLI-Managed Files table |
 | AC-03 | `setup/targets/bridge/` contains all 5 bridge files (CLAUDE.md, GEMINI.md, AGENTS.md, DEEPSEEK.md, REASONIX.md) with real operational content — not stubs; each file matches its tier specification |
 | AC-04 | `setup/targets/hooks/protect-sigma.js` blocks Edit/Write targeting `Sigma/progress.json` — outputs `{"decision":"block",...}` JSON on stdout |

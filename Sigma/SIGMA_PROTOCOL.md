@@ -1198,10 +1198,12 @@ Full example: `CSO-ARC-20260516-1430.md`
 
 **Storage**: `Sigma/logs/`
 
-**Creation flow:**
+**Creation paths:**
 
-1. `/cso` skill shortcut — generates a CSO draft from conversation context. Does not create the file artifact.
-2. `sigma cso new --from <draft>` — creates and registers the CSO file in `Sigma/logs/`. This is the CLI step that makes the CSO a tracked artifact.
+- `/checkpoint` skill — quick state preservation snapshot; creates `Source: CHECKPOINT` CSO. Lower priority in cross-role review.
+- `/cso` skill — formal handoff; creates `Source: CSO` CSO. Higher priority in cross-role review.
+
+For both paths: the skill generates a CSO draft; then `sigma cso new` or `sigma cso new --from <draft>` creates and registers the file in `Sigma/logs/`.
 
 **Properties:**
 
@@ -1209,6 +1211,21 @@ Full example: `CSO-ARC-20260516-1430.md`
 - CSO creation satisfies no gate requirement.
 - CSO is visible in `sigma session bootstrap` output — recent CSOs are listed to aid agent orientation.
 - Multiple CSOs may exist from the same session or role.
+
+**CSO Metadata:** Each CSO should include a metadata section:
+
+| Field | Value |
+| :--- | :--- |
+| Source | `CHECKPOINT` or `CSO` |
+| Created By Role | Active role at creation time |
+| Purpose | `Quick state preservation` or `Formal handoff` |
+| Related Artifact | Artifact type and version, e.g. `FMN-PLAN-v2` |
+| Related Artifact State | `DRAFT`, `LOCKED`, `SUPERSEDED`, or `none` |
+| Authority Level | Always `Context Only` |
+
+**Authority rule:** CSO content is carry-forward context only. Locked artifacts and `progress.json` always win over any CSO content. Conflicts between CSO content and locked state must be reported to the Director — never silently resolved.
+
+**Cross-Role CSO Check:** At session bootstrap, governance roles (ARC, FMN, DEV) check relevant CSO files in `Sigma/logs/`. Each role reads CSOs from role prefixes relevant to its work, prioritizes `Source: CSO` over `Source: CHECKPOINT`, filters by artifact relevance, and caps at 3 files. AUD does not independently scan CSO files — AUD reads only CSOs explicitly provided or authorized by the Director.
 
 **Typical CSO contents:** current context summary, active artifact versions and states, pending decisions, recommended next actions, open questions, handoff notes.
 
@@ -1611,7 +1628,7 @@ The `readme` field in `package.json` points to `SIGMA_README.md`.
 1. **Governance files** — creates `~/.sigma/` directory structure; copies templates, rules, constitution, and protocol from the package bundle.
 2. **Bridge file templates** — copies `setup/targets/bridge/*.md` into `~/.sigma/bridge/` (always overwrite — these are managed templates, not user-modified files).
 3. **Tool detection** — checks for the existence of `~/.claude/commands/`, `~/.codex/skills/`, `~/.reasonix/skills/`, `~/.gemini/agents/`.
-4. **Skill deployment** (interactive unless `--yes`) — for each detected and selected platform, copies 6 skill files (arc, fmn, dev, aud, checkpoint, cso) from `setup/targets/{platform}/` to the detected target directory.
+4. **Skill deployment** (interactive unless `--yes`) — for each detected and selected platform, copies 7 skill files (arc, fmn, dev, aud, checkpoint, cso, report) from `setup/targets/{platform}/` to the detected target directory.
 5. **Hook deployment** (Claude Code only, if selected) — copies `setup/targets/hooks/protect-sigma.js` to `~/.sigma/hooks/`; patches `~/.claude/settings.json` PreToolUse entry (idempotent — no duplicate insertion).
 
 `sigma setup install --yes` performs all steps non-interactively (selects all detected tools).
@@ -1656,21 +1673,25 @@ Skill files activate AI roles within Sigma-governed projects. Each file is a Mar
 
 | Platform | Target Directory | File Extension | Invoked as |
 | :--- | :--- | :--- | :--- |
-| Claude Code | `~/.claude/commands/` | `.md` | `/arc`, `/fmn`, `/dev`, `/aud`, `/checkpoint`, `/cso` |
+| Claude Code | `~/.claude/commands/` | `.md` | `/arc`, `/fmn`, `/dev`, `/aud`, `/checkpoint`, `/cso`, `/report` |
 | Codex CLI | `~/.codex/skills/` | (none) | `#arc`, `#fmn`, etc. |
 | Reasonix | `~/.reasonix/skills/` | `.md` | `/arc`, `/fmn`, etc. |
 | Antigravity | `~/.gemini/agents/` | `.md` | Agent selector |
 
-**24 skill files total** — 4 platforms × 6 roles (arc, fmn, dev, aud, checkpoint, cso). Content is identical across platforms for the same role.
+**28 skill files total** — 4 platforms × 7 roles (arc, fmn, dev, aud, checkpoint, cso, report). Content is identical across platforms for the same role.
 
-**Common skill file sections:**
+**Common skill file sections (governance roles: ARC, FMN, DEV, AUD):**
 - Frontmatter with `description:` field (max 80 chars)
 - Role Identity, Activation, Role Immutability, Scope and Authority
 - Director Authorization (or for AUD: External Auditor Isolation Policy + Evidence Boundary + CLI Operation Policy)
 - Bootstrap Protocol (4-step; AUD uses 3-step passive bootstrap)
+- Cross-Role CSO Check (ARC/FMN/DEV only — after Bootstrap Protocol, before Role Rules)
+- External Audit CSO Scope (AUD only — after Bootstrap Protocol, before Role Rules)
 - Role Rules reference, CLI-Managed Files table
 
 AUD skill files have a different section structure: External Auditor Isolation Policy replaces Director Authorization; Evidence Boundary format is specified; CLI Operation Policy states AUD is passive by default.
+
+`/report` skill files have a simplified structure: Skill Identity (universal read-only Director briefing, not a governance role), Activation and word-limit flags, Information Sources (read-only), Output Format (5-section template), Forbidden Operations. They do not include Bootstrap Protocol, Cross-Role CSO Check, or Role Rules.
 
 ---
 

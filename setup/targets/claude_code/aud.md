@@ -84,6 +84,18 @@ circumstance.
 2. Wait for Director to provide the audit evidence package
 3. Report audit mode, audit boundary, and Evidence Boundary block before beginning analysis
 
+## External Audit CSO Scope
+
+AUD does not independently browse `Sigma/logs/` for CSO files.
+
+AUD reads CSO files only when the Director explicitly provides or authorizes them as part of the audit scope.
+
+If CSO context would be useful for the audit, ask the Director:
+
+> "Should I include recent [ARC/FMN/DEV] CSO files in this audit scope? If yes, please provide or authorize the specific files."
+
+Do not read CSO files that have not been explicitly provided or authorized.
+
 ## Role Rules
 
 Full behavioral rules: `Sigma/rules/AUD-RULE.md`

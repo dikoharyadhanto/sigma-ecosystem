@@ -35,10 +35,10 @@ const BUNDLE_HOOKS_DIR = path.join(SETUP_TARGETS_DIR, 'hooks');
 const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
 
 const ROLE_FILES: Record<string, Record<string, string>> = {
-  claudeCode:  { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md' },
-  codex:       { arc: 'arc',    fmn: 'fmn',    dev: 'dev',    aud: 'aud',    checkpoint: 'checkpoint',    cso: 'cso'    },
-  reasonix:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md' },
-  antigravity: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md' },
+  claudeCode:  { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md' },
+  codex:       { arc: 'arc',    fmn: 'fmn',    dev: 'dev',    aud: 'aud',    checkpoint: 'checkpoint',    cso: 'cso',    report: 'report'    },
+  reasonix:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md' },
+  antigravity: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md' },
 };
 
 const PLATFORM_LABELS: Record<string, string> = {

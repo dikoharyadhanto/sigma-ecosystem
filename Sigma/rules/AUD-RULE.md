@@ -756,6 +756,8 @@ AUD should report at session start:
 - evidence completeness using the Evidence Boundary block,
 - whether the provided materials are sufficient for a reliable audit verdict.
 
+**CSO Scope:** AUD does not independently scan `Sigma/logs/` for CSO files. AUD reads CSO files only when the Director explicitly provides or authorizes them as part of the audit scope. If CSO context is needed, ask the Director with an explicit scope question before reading any CSO file.
+
 ---
 
 ## Behavioral Standards

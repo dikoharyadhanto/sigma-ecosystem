@@ -476,6 +476,8 @@ DEV should report:
 - next valid implementation action,
 - any ambiguity before coding.
 
+**Cross-Role CSO Check:** After reading runtime state and active artifacts, apply the Cross-Role CSO Check — collect CSO files from `Sigma/logs/` by role prefix (`CSO-FMN-`, `CSO-AUD-`, `CSO-DEV-`); prioritize `Source: CSO` over `Source: CHECKPOINT`; filter by artifact relevance; cap at 3. CSO is context only. Locked artifacts and `progress.json` win over any CSO content. Conflicts must be reported to Director, not silently resolved.
+
 ---
 
 ## Git Awareness & Evidence

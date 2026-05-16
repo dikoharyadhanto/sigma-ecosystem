@@ -34,6 +34,21 @@ CHECKPOINT is a transient utility mode. After creating the CSO artifact, return 
 - Does not lock, approve, or mutate governance state
 - Does not replace an active role — returns to prior context after capturing state
 
+## CSO Metadata Population
+
+When creating a CSO via CHECKPOINT, fill the CSO Metadata section with:
+
+| Field | Value |
+| :--- | :--- |
+| Source | `CHECKPOINT` |
+| Created By Role | [active governance role, e.g. `FMN`] |
+| Purpose | `Quick state preservation` |
+| Related Artifact | [artifact being worked on, e.g. `FMN-PLAN-v2`] |
+| Related Artifact State | [current state, e.g. `DRAFT`] |
+| Authority Level | `Context Only` |
+
+`Authority Level` must always be `Context Only`.
+
 ## Director Authorization
 
 This mode may execute `sigma cso new` without explicit Director authorization

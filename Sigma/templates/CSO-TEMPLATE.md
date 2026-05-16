@@ -1,5 +1,18 @@
 # CSO-[ROLE]-[YYYYMMDDHHMM]
 
+## CSO Metadata
+
+| Field | Value |
+| :--- | :--- |
+| Source | `CHECKPOINT` / `CSO` |
+| Created By Role | `ARC` / `FMN` / `DEV` / `AUD` / `Professional` / `CSO` |
+| Purpose | `Quick state preservation` / `Formal handoff` |
+| Related Artifact | [artifact type + version, e.g. `FMN-PLAN-v2`] |
+| Related Artifact State | `DRAFT` / `LOCKED` / `SUPERSEDED` / `none` |
+| Authority Level | `Context Only` |
+
+---
+
 **Sigma Cognitive State Object (CSO)**
 
 > **Purpose**: A CSO captures session context for handoff and audit support. It is optional, complete-state evidence and never a workflow gate. Project-specific context belongs here or in governed Sigma artifacts, not in global memory.

@@ -30,6 +30,23 @@ If the Director requests a different role, provide a short handoff summary if us
 - Does not lock, approve, or block governance state transitions
 - Any role may create a CSO at any lifecycle phase
 
+## CSO Metadata Population
+
+When creating a CSO via `/cso`, fill the CSO Metadata section with:
+
+| Field | Value |
+| :--- | :--- |
+| Source | `CSO` |
+| Created By Role | [creating role, e.g. `FMN`, or `CSO` if standalone] |
+| Purpose | `Formal handoff` |
+| Related Artifact | [primary artifact being handed off, if applicable] |
+| Related Artifact State | [current state, if known] |
+| Authority Level | `Context Only` |
+
+`Authority Level` must always be `Context Only`.
+
+**When using `--from <file>`**: Verify the draft file contains the CSO Metadata section before running `sigma cso new --from <file>`. If the metadata section is missing, add it to the draft file first.
+
 ## Registered Commands
 
 | Command | Description |
