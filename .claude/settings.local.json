@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Read(//i/Works/Project/delta-ecosystem/**)",
-      "Bash(dir \"I:\\\\Works\\\\Project\\\\delta-ecosystem\")"
+      "Bash(dir \"I:\\\\Works\\\\Project\\\\delta-ecosystem\")",
+      "Read(//tmp/**)",
+      "Bash(sigma plan *)",
+      "Bash(sigma project *)",
+      "Bash(sigma exec *)"
     ]
   }
 }

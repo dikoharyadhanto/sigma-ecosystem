@@ -16,6 +16,7 @@ import {
   createInitialProgress,
   getGateStatus,
   isStaleIntentPresent,
+  getNextValidOperations,
 } from '../engine/progress';
 import { initDecisionsFile } from '../engine/memory';
 import { success, info, warn, error } from '../utils/output';
@@ -249,6 +250,16 @@ function runStatus(): void {
     for (const w of stale) {
       warn(`  ${w.domain} ${w.version} has stale_intent=true`);
     }
+  }
+
+  const nextOps = getNextValidOperations(data);
+  console.log('\n--- Next Valid Operations ---');
+  if (nextOps.length > 0) {
+    for (const op of nextOps) {
+      console.log(`  sigma ${op}`);
+    }
+  } else {
+    console.log('  none');
   }
 
   console.log('');
