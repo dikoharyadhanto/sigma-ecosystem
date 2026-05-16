@@ -1005,7 +1005,79 @@ The following sections will be completed in the phases indicated. Headers are ma
 
 ## 22. CLI Setup & Installation
 
-> **[PHASE 3]** — `sigma setup install`, global directory structure (`~/.sigma/`), template deployment, MCP memory configuration, `sigma project start` initialization sequence, and `sigma session bootstrap` output format will be defined in Phase 3.
+### Installation
+
+Sigma is distributed as an npm package. Install globally:
+
+```bash
+npm install -g sigma-cli
+```
+
+After npm install, run the global setup:
+
+```bash
+sigma setup install
+```
+
+This creates `~/.sigma/` with the following structure:
+
+```
+~/.sigma/
+├── templates/      ← Artifact templates (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE, CSO, ROADMAP)
+├── rules/          ← Role rule files (ARC-RULE, AUD-RULE, FMN-RULE, DEV-RULE)
+├── governance/     ← Protocol documents (SIGMA_CONSTITUTION.md, SIGMA_PROTOCOL.md)
+├── bridge/         ← Bridge file templates (CLAUDE.md, GEMINI.md, AGENTS.md)
+├── projects.json   ← Global project registry
+└── sigma.config.json
+```
+
+### Project Initialization
+
+In the root of a new project:
+
+```bash
+sigma project start --id MYPROJ --name "My Project Name"
+```
+
+This creates:
+
+- `Sigma/` governance folder with all subfolders (`design/`, `build/`, `close/`, `rules/`, `logs/`, `memory/`) and governance documents
+- `Sigma/progress.json` seeded to initial state (lifecycle_state: DESIGN, all gates false)
+- `CLAUDE.md`, `GEMINI.md`, `AGENTS.md` bridge files at project root
+- Project entry in `~/.sigma/projects.json`
+
+**Project ID rules**: Uppercase letters, digits, and hyphens only. Maximum 12 characters. Examples: `MYPROJ`, `ALPHA-1`, `WEBAPP`.
+
+### CLI Update
+
+When a new version of Sigma CLI is installed:
+
+```bash
+npm install -g sigma-cli@latest
+sigma setup update
+```
+
+`sigma setup update` syncs `~/.sigma/templates/`, `~/.sigma/rules/`, and `~/.sigma/governance/` from the new package. It does NOT touch any active project's `Sigma/` folder.
+
+To update governance files inside an existing project:
+
+```bash
+sigma project sync --confirm
+```
+
+### Session Bootstrap
+
+At the start of every agent session:
+
+```bash
+sigma session bootstrap [--role ARC|AUD|FMN|DEV]
+```
+
+Outputs: lifecycle phase, artifact states (INTENT, PLAN, EXEC, CLOSE, ROADMAP), gate status, STALE_INTENT warnings, recent CSO files, next valid operations, and documents to read. With `--role`, filters the document reading list to the active role's required reads.
+
+### Schema Version
+
+`Sigma/progress.json` carries a `schema_version` field (current: `1.0.0`). When the CLI reads a `progress.json`, it validates the schema version and warns if a mismatch is detected. State-mutating operations on a newer schema than the CLI supports are blocked until the CLI is updated.
 
 ---
 

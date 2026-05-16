@@ -1,0 +1,39 @@
+{
+  "name": "sigma-cli",
+  "version": "0.3.0",
+  "description": "Sigma — Lightweight project governance CLI",
+  "bin": {
+    "sigma": "./bin/sigma.js"
+  },
+  "main": "./dist/cli.js",
+  "files": [
+    "bin/",
+    "dist/",
+    "Sigma/templates/",
+    "Sigma/rules/",
+    "Sigma/SIGMA_CONSTITUTION.md",
+    "Sigma/SIGMA_PROTOCOL.md",
+    "Sigma/SIGMA-REGISTRY.json",
+    "Sigma/SIGMA-OPERATION-REGISTRY.json"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node bin/sigma.js",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "chalk": "^4.1.2",
+    "fs-extra": "^11.0.0",
+    "inquirer": "^8.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/fs-extra": "^11.0.0",
+    "@types/inquirer": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

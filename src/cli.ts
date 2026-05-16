@@ -1,0 +1,26 @@
+import { Command } from 'commander';
+import { SIGMA_VERSION } from './config';
+import { setupCommand } from './commands/setup';
+import { projectCommand } from './commands/project';
+import { sessionCommand } from './commands/session';
+import { gitignoreCommand } from './commands/gitignore';
+
+const program = new Command();
+
+program
+  .name('sigma')
+  .description('Sigma — Lightweight project governance CLI')
+  .version(SIGMA_VERSION);
+
+program.addCommand(setupCommand());
+program.addCommand(projectCommand());
+program.addCommand(sessionCommand());
+program.addCommand(gitignoreCommand());
+
+program.on('command:*', (operands: string[]) => {
+  console.error(`Unknown command: sigma ${operands.join(' ')}`);
+  console.error('Run `sigma --help` for available commands.');
+  process.exit(1);
+});
+
+program.parse(process.argv);

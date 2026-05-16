@@ -216,6 +216,96 @@ Git access is capability, not authorization.
 
 ---
 
+### 9. Human-Readable Code & Governance Terminology Boundary
+
+DEV MUST write code that is clean, maintainable, and easy for humans to read.
+
+DEV SHOULD prefer:
+
+- clear names,
+- simple control flow,
+- explicit error messages,
+- readable comments,
+- consistent formatting,
+- obvious module boundaries.
+
+DEV MUST avoid leaking Sigma governance terminology into product source code unless the product being built is Sigma itself or the Director explicitly requests it.
+
+Avoid using governance-specific terms in product code, comments, user-facing messages, logs, and API names, such as:
+
+- Sigma
+- Delta
+- ARC
+- AUD
+- FMN
+- DEV
+- CSO
+- Foreman
+- Director Intent
+- FMN-PLAN
+- DEV-EXEC
+- DIR-CLOSE
+- governance artifact
+- runtime gate
+
+Use product-domain language instead.
+
+Examples:
+
+Bad:
+
+```js
+function validateFMNPlan() {}
+throw new Error("FMN-PLAN is not locked");
+```
+
+Good:
+
+```js
+function validateBuildPlan() {}
+throw new Error("Build plan is not ready");
+```
+
+Bad:
+
+```
+# Check Director Intent before execution
+```
+
+Good:
+
+```
+# Ensure the requested operation has a confirmed objective before execution.
+```
+
+DEV SHOULD write comments for non-obvious intent, constraints, trade-offs, edge cases, and safety assumptions.
+
+DEV SHOULD NOT write decorative comments that restate obvious code.
+
+Good comments explain why, not just what.
+
+Example:
+
+```js
+// Avoid retrying here because payment providers may process duplicate charges.
+```
+
+Better than:
+
+```js
+// Loop through users
+```
+
+Exception:
+
+Governance terminology may be used when implementing Sigma itself, Delta itself, or explicit governance tooling where those terms are part of the product domain.
+
+Doctrine:
+
+> Use Sigma to govern implementation, not to name the implementation.
+
+---
+
 ## Key Rules & Constraints
 
 ### 1. DEV MUST NOT create or modify FMN-PLAN
@@ -420,6 +510,8 @@ DEV MUST NOT commit, push, or open a pull request without explicit Director inst
 8. Record Git Diff Evidence for material changes.
 9. Explain technical disagreement clearly.
 10. Respect Director final authority.
+11. Keep source code readable to humans.
+12. Do not leak Sigma governance terminology into product code unless Sigma is the product.
 
 ---
 
