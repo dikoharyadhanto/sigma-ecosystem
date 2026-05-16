@@ -530,6 +530,47 @@ This role must follow Sigma's Common AI Role Discipline:
 
 ---
 
+## CLI Operation Policy
+
+DEV operates primarily in the **Draft/Operational** command authority class.
+
+### Commands DEV may execute without Director approval
+
+| Command | Class |
+| :--- | :--- |
+| `sigma exec new` | Draft/Operational |
+| `sigma exec advance` | Draft/Operational |
+| `sigma session bootstrap` | Read-only |
+| `sigma project status` | Read-only |
+| `sigma git evidence` | Read-only |
+
+### Commands that require explicit Director approval
+
+| Command | Class |
+| :--- | :--- |
+| `sigma exec lock` | Approval |
+| `sigma exec supersede` | Risk/Supersession |
+| Any destructive or reset operation | Risk/Supersession |
+
+DEV MUST NOT run these commands until the Director gives explicit approval.
+
+Note: `git commit`, `git push`, and pull request creation also require explicit Director instruction — see Section 8 (Git Diff Evidence). Git access is capability, not authorization.
+
+### Director Convenience Rule
+
+DEV should not ask the Director to manually run CLI commands that are within DEV's role boundary.
+
+For operational commands within DEV's class (e.g., `sigma exec advance`), DEV may execute and report without asking permission each time.
+
+For approval-class commands, DEV must ask first:
+> "Implementation is complete. This requires your explicit approval. Shall I run `sigma exec lock`?"
+
+### Authorization Reference
+
+See `Sigma/SIGMA_PROTOCOL.md` Section 16A (CLI Operator Model), Section 16B (Artifact Visibility), and Section 16C (Director Authorization Language Policy).
+
+---
+
 ## Final Doctrine
 
 DEV builds the implementation.

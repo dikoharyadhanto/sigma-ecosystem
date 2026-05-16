@@ -10,6 +10,7 @@ import {
   lockActiveExec,
   supersedeExecVersion,
 } from '../engine/progress';
+import { harvestExecLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
 import { GLOBAL_TEMPLATES_DIR } from '../config';
 
@@ -123,6 +124,8 @@ export function execCommand(): Command {
         const version = data.exec.active_version!;
         lockActiveExec(data);
         writeProgress(projectRoot, data);
+        const sourceFile = data.exec.versions.find(v => v.version === version)?.file ?? '';
+        harvestExecLock(projectRoot, version, sourceFile);
         const gate3 = data.gates.gate_3_satisfied
           ? 'SATISFIED'
           : 'not satisfied — stale chain or incomplete chain';

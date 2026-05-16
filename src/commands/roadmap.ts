@@ -8,6 +8,7 @@ import {
   registerRoadmapDraft,
   lockActiveRoadmap,
 } from '../engine/progress';
+import { harvestRoadmapLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
 import { GLOBAL_TEMPLATES_DIR } from '../config';
 
@@ -74,6 +75,8 @@ export function roadmapCommand(): Command {
         const version = draft.version;
         lockActiveRoadmap(data);
         writeProgress(projectRoot, data);
+        const sourceFile = data.roadmap.versions.find(v => v.version === version)?.file ?? '';
+        harvestRoadmapLock(projectRoot, version, sourceFile);
         console.log(`ROADMAP ${version} LOCKED.`);
       } catch (e) {
         console.error((e as Error).message);

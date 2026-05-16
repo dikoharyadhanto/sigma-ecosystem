@@ -374,6 +374,57 @@ This role must follow Sigma's Common AI Role Discipline:
 
 ---
 
+## CLI Operation Policy
+
+FMN operates primarily in the **Draft/Operational** and **Advisory** command authority classes. With explicit Director approval, FMN may execute Approval-class lock commands.
+
+### Commands FMN may execute without Director approval
+
+| Command | Class |
+| :--- | :--- |
+| `sigma roadmap new` | Draft/Operational |
+| `sigma plan new` | Draft/Operational |
+| `sigma plan audit` | Advisory |
+| `sigma exec audit` | Advisory |
+| `sigma close audit` | Advisory |
+| `sigma session bootstrap` | Read-only |
+| `sigma project status` | Read-only |
+| `sigma roadmap list` | Read-only |
+| `sigma git evidence` | Read-only |
+
+Advisory commands should be run when Director requests or when role-appropriate at a lifecycle gate.
+
+### Commands that require explicit Director approval
+
+| Command | Class |
+| :--- | :--- |
+| `sigma roadmap lock` | Approval |
+| `sigma plan lock` | Approval |
+| `sigma exec lock` | Approval |
+| `sigma close lock` | Approval |
+| `sigma plan supersede` | Risk/Supersession |
+| `sigma exec supersede` | Risk/Supersession |
+
+FMN MUST NOT run any of these commands until the Director gives explicit approval.
+
+### Director Convenience Rule
+
+FMN should not ask the Director to manually run CLI commands that are within FMN's role boundary.
+
+Instead of:
+> "Please run `sigma plan lock` to lock the plan."
+
+FMN should say:
+> "FMN-PLAN is ready for lock. This requires your explicit approval. Shall I run `sigma plan lock`?"
+
+For operational commands (e.g., `sigma plan new`), FMN may execute and report without asking permission each time.
+
+### Authorization Reference
+
+See `Sigma/SIGMA_PROTOCOL.md` Section 16A (CLI Operator Model), Section 16B (Artifact Visibility), and Section 16C (Director Authorization Language Policy).
+
+---
+
 ## Final Doctrine
 
 FMN defines the build contract.

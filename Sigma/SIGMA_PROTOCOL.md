@@ -131,6 +131,7 @@ Each role may express: agreement, conditional agreement, doubt, disagreement, re
 However, disagreement is advisory unless the Director accepts it.
 
 A role must distinguish between:
+
 - **role judgment**: what the role believes is correct,
 - **runtime authority**: what the Director decides,
 - **document state**: what Sigma CLI records.
@@ -224,6 +225,7 @@ A decision cycle ends when the Director gives a ruling, such as: lock, approval,
 If the Director explicitly opens a new cycle, the counters reset.
 
 Examples of a new cycle:
+
 - `OPEN_NEW_PLAN`
 - `UPDATE_CURRENT_EXEC`
 - new artifact version
@@ -475,14 +477,14 @@ See Section 18 for CSO lifecycle details.
 
 ### 5.6 ROADMAP — Implementation Staging Map
 
-| Property       | Value               |
-| -------------- | ------------------- |
-| Owner          | FMN                 |
+| Property       | Value                       |
+| -------------- | --------------------------- |
+| Owner          | FMN                         |
 | Authored by    | FMN (Director may initiate) |
-| Phase          | BUILD               |
-| Storage        | `Sigma/build/`      |
-| Versioning     | Tier 1              |
-| Auto-supersede | Yes (single-active) |
+| Phase          | BUILD                       |
+| Storage        | `Sigma/build/`              |
+| Versioning     | Tier 1                      |
+| Auto-supersede | Yes (single-active)         |
 
 Optional FMN-authored document that breaks a locked DIR-INTENT into large build stages before each stage is converted into an FMN-PLAN. ROADMAP is not a runtime gate — FMN-PLAN does not require a ROADMAP to exist.
 
@@ -644,12 +646,12 @@ DEV cannot begin implementation without an approved work plan and pre-build test
 
 ### Gate 3 — BUILD Evidence
 
-| Property            | Value                                                                                                                                                                                             |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Blocks              | `sigma close new`                                                                                                                                                                                 |
-| Pre-condition       | Full INTENT → PLAN → EXEC chain: active INTENT is LOCKED; at least one DEV-EXEC is LOCKED whose `plan_version_ref` points to a LOCKED FMN-PLAN whose `intent_version_ref` points to that INTENT |
-| CLI error (no chain)| `Gate 3 blocked: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain).`                                                                                                           |
-| CLI error (stale)   | `Gate 3 stale: Qualifying chain has stale_intent=true. Add --ack-stale-intent to acknowledge and proceed.`                                                                                        |
+| Property             | Value                                                                                                                                                                                           |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Blocks               | `sigma close new`                                                                                                                                                                               |
+| Pre-condition        | Full INTENT → PLAN → EXEC chain: active INTENT is LOCKED; at least one DEV-EXEC is LOCKED whose `plan_version_ref` points to a LOCKED FMN-PLAN whose `intent_version_ref` points to that INTENT |
+| CLI error (no chain) | `Gate 3 blocked: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain).`                                                                                                          |
+| CLI error (stale)    | `Gate 3 stale: Qualifying chain has stale_intent=true. Add --ack-stale-intent to acknowledge and proceed.`                                                                                      |
 
 CLOSE cannot be declared without evidence of completed work. Gate 3 validates the full chain — a PLAN that was never used by any EXEC does not count. A STALE_INTENT chain requires Director to explicitly acknowledge via `--ack-stale-intent` on `sigma close new`; without this flag, the CLI blocks.
 
@@ -702,10 +704,10 @@ All Sigma governance artifacts follow this naming pattern:
 
 PROJECT_ID is intentionally excluded. Artifacts live inside the project's `Sigma/` folder — path provides project context. Project identity is recorded in `progress.json` and `~/.sigma/projects.json`, not in filenames. This keeps filenames simple and makes project renaming cost-free.
 
-| Placeholder | Valid values                                                  |
-| ----------- | ------------------------------------------------------------- |
-| `{ROLE}`    | `DIR` (Director), `FMN` (Foreman), `DEV` (Developer)          |
-| `{DOC}`     | `INTENT`, `PLAN`, `EXEC`, `CLOSE`                             |
+| Placeholder | Valid values                                                 |
+| ----------- | ------------------------------------------------------------ |
+| `{ROLE}`    | `DIR` (Director), `FMN` (Foreman), `DEV` (Developer)         |
+| `{DOC}`     | `INTENT`, `PLAN`, `EXEC`, `CLOSE`                            |
 | `{VER}`     | Version string per tier — e.g. `1.0`, `0.1` (see Section 11) |
 
 **Examples:**
@@ -790,14 +792,14 @@ Every Sigma project contains a `Sigma/` directory at the project root. This is t
 
 ## 13. Folder-to-Phase Mapping
 
-| Folder             | Phase                  | Artifacts                                                      |
-| ------------------ | ---------------------- | -------------------------------------------------------------- |
-| `Sigma/design/`    | DESIGN                 | `DIR-INTENT-v{VER}.md`                                         |
-| `Sigma/build/`     | BUILD                  | `FMN-PLAN-v{VER}.md`, `DEV-EXEC-v{VER}.md`                     |
-| `Sigma/close/`     | CLOSE                  | `DIR-CLOSE-v{VER}.md`                                          |
-| `Sigma/rules/`     | All phases (reference) | `ARC-RULE.md`, `AUD-RULE.md`, `FMN-RULE.md`, `DEV-RULE.md`     |
-| `Sigma/logs/`      | Any phase              | CSO files, progress backups, migration logs, sync backups      |
-| `Sigma/memory/`    | Any phase              | `decisions.jsonl` (auto-harvested by CLI on lock events)       |
+| Folder          | Phase                  | Artifacts                                                  |
+| --------------- | ---------------------- | ---------------------------------------------------------- |
+| `Sigma/design/` | DESIGN                 | `DIR-INTENT-v{VER}.md`                                     |
+| `Sigma/build/`  | BUILD                  | `FMN-PLAN-v{VER}.md`, `DEV-EXEC-v{VER}.md`                 |
+| `Sigma/close/`  | CLOSE                  | `DIR-CLOSE-v{VER}.md`                                      |
+| `Sigma/rules/`  | All phases (reference) | `ARC-RULE.md`, `AUD-RULE.md`, `FMN-RULE.md`, `DEV-RULE.md` |
+| `Sigma/logs/`   | Any phase              | CSO files, progress backups, migration logs, sync backups  |
+| `Sigma/memory/` | Any phase              | `decisions.jsonl` (auto-harvested by CLI on lock events)   |
 
 ---
 
@@ -905,6 +907,256 @@ AUD becomes mandatory only when the Director explicitly marks the project as **r
 There is no standalone `sigma audit` command. AUD is always invoked in the context of a specific artifact domain. AUD output is always advisory — only Director locks.
 
 > Full command-by-command specification: see **Section 23 — CLI Command Reference**.
+
+---
+
+## 16A. CLI Operator Model
+
+Sigma CLI is designed to be operated primarily by AI roles under Director authority.
+
+The Director is not expected to manually execute every lifecycle command. In normal use, AI roles may run read-only, draft, operational, and artifact-preparation commands within their role boundary.
+
+However, **AI roles must not infer Director approval.** Any command that represents approval, closure, accepted risk, stale-intent acknowledgment, supersession, destructive reset, or artifact lock requires explicit Director authorization.
+
+**Sigma is not a human-first CLI. Sigma is an AI-operated governance runtime under Director authority.**
+
+This distinction defines Sigma's identity more precisely than command count or UX ergonomics. The relevant design axis is authority safety — which actor may run which command, when, and on what basis.
+
+### Authority Architecture
+
+| Layer           | Identity                 | Role                                                                         |
+|:--------------- |:------------------------ |:---------------------------------------------------------------------------- |
+| Director        | Human                    | Sole approval authority — authorizes lock, risk acknowledgment, supersession |
+| AI Roles        | DEV, FMN, AUD, GMN, etc. | Command operators — execute within role boundary and authority class         |
+| CLI             | `sigma` binary           | Gate enforcer — validates state prerequisites before permitting commands     |
+| `progress.json` | Runtime file             | Runtime truth — single source of truth for what is currently permitted       |
+| Artifacts       | Markdown files           | Traceable evidence — permanent record of decisions and approvals             |
+| AUD             | Optional role            | Challenge layer — advisory only, never approval authority                    |
+
+### Command Authority Classes
+
+| Class               | Commands                                                                                         | AI May Execute?                         | Requires Explicit Director Instruction?  |
+|:------------------- |:------------------------------------------------------------------------------------------------ |:---------------------------------------:|:----------------------------------------:|
+| Read-only           | `status`, `list`, `session bootstrap`, `git evidence`                                            | Yes                                     | No                                       |
+| Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `exec advance`, `close new`, `cso new`      | Yes, within role boundary               | Usually no, unless scope or risk changes |
+| Advisory            | `intent review`, `plan audit`, `exec audit`, `close audit`                                       | Yes, when requested or role-appropriate | Usually yes — Director-triggered         |
+| Approval            | `intent lock`, `roadmap lock`, `plan lock`, `exec lock`, `close lock`                            | Only after Director approval            | Yes                                      |
+| Risk / Supersession | `close new --ack-stale-intent`, `plan supersede`, `exec supersede`, destructive/reset operations | Only after Director approval            | Yes                                      |
+
+Note on `close new`: without `--ack-stale-intent`, this is an operational command and AI may execute after gate conditions are met. With `--ack-stale-intent`, this is a risk acknowledgment command and requires explicit Director approval.
+
+### Explicit Approval Rule
+
+AI roles may execute approval-class or risk-acknowledgment commands only after the Director gives clear authorization.
+
+**Clear authorization includes:**
+
+- `approved`
+- `lock this`
+- `lanjut lock`
+- `accept risk`
+- `ack stale intent`
+- `supersede this version`
+- equivalent unambiguous instruction
+
+**Ambiguous approval-like language is not sufficient.** The following are examples of insufficient authorization:
+
+- `looks good`
+- `menarik`
+- `sepertinya oke`
+- `lanjut bahas`
+- `apa pendapatmu?`
+
+If authorization is unclear, the AI role must ask before executing.
+
+### Next Command Recommendation
+
+AI roles should report the next valid command when useful. Recommendation is not authorization.
+
+Format:
+
+```
+Next valid command:
+  sigma plan lock
+
+Authority required:
+  Explicit Director approval.
+```
+
+Or for operational commands:
+
+```
+Next valid command:
+  sigma exec advance testing
+
+Authority required:
+  Operational command; AI may execute within DEV/FMN workflow.
+```
+
+### Director Authority Preservation
+
+The CLI enforces gates, but CLI execution does not replace Director authority.
+
+A valid command is not automatically an authorized command.
+
+A command is authorized only when it is:
+
+1. Permitted by Sigma state gates
+2. Within the executing role's authority class
+3. When required by its authority class — explicitly authorized by Director
+
+### Director Convenience Rule
+
+AI roles should not ask the Director to manually run routine Sigma CLI commands when the AI role has tool access and the command is within its role boundary.
+
+Instead of:
+
+> "Please run `sigma plan lock`."
+
+The AI role should say:
+
+> "The next valid command is `sigma plan lock`. This requires explicit Director approval. Shall I run it?"
+
+For authority-sensitive commands (approval-class or risk/supersession-class), the AI role must ask for explicit authorization before execution. The Director may give authorization in natural language — the AI role interprets that as permission to run the command.
+
+For operational commands within the role's authority class, the AI role may execute and report rather than asking permission for each step.
+
+---
+
+## 16B. Human-Readable vs AI-Operational Artifacts
+
+Sigma artifacts are not equally human-facing.
+
+Sigma is designed as an AI-operated governance protocol under Director authority. Most governance artifacts exist primarily to give AI roles a precise, traceable, and enforceable operating context. The Director is not expected to read every artifact in full during normal operation.
+
+### Human-Facing Artifacts
+
+The primary Director-facing artifacts are:
+
+- **DIR-INTENT** — especially the intent explanation and Director decision sections. Must be written clearly enough for Director review and approval.
+- **DIR-CLOSE** — because it records what was completed, what evidence supports closure, and what limitations or risks were accepted. Must be written clearly enough for Director final review.
+
+These documents MUST be written for Director comprehension. Dense AI-operational formatting is inappropriate for these artifacts.
+
+### AI-Operational Artifacts
+
+The following artifacts are primarily AI-operational:
+
+- **ROADMAP**
+- **FMN-PLAN**
+- **DEV-EXEC**
+- **AUD findings**
+- **CSO**
+- **progress.json**
+- **memory/decisions.jsonl**
+- role rule files
+- protocol and registry files
+
+Humans may inspect these artifacts when desired, but they are optimized for AI role execution, traceability, gate enforcement, and cross-session continuity rather than casual human reading. Dense formatting, technical fields, and verbose structure are acceptable in AI-operational artifacts.
+
+### Director Interaction Model
+
+In normal Sigma operation, the Director interacts primarily through:
+
+- reviewing or refining DIR-INTENT,
+- requesting AUD review when desired,
+- approving or rejecting lock decisions,
+- reviewing DIR-CLOSE before project closure,
+- giving explicit authorization for risk acknowledgment, supersession, or major scope change.
+
+AI roles are responsible for:
+
+- reading and consuming operational artifacts,
+- maintaining role boundaries,
+- surfacing only decision-relevant issues to the Director,
+- translating Director decisions into valid Sigma CLI operations.
+
+The Director should not be required to navigate operational artifacts to make governance decisions. AI roles are the interface layer between operational detail and Director decision-making.
+
+---
+
+## 16C. Director Authorization Language Policy
+
+Director authorization may be given in natural language. The Director is not required to type Sigma CLI commands manually.
+
+AI roles must interpret clear Director authorization language as permission to execute the relevant Sigma CLI command, provided that:
+
+1. the target artifact is unambiguous,
+2. the command is valid under Sigma runtime gates,
+3. the command is within the role's operational boundary,
+4. the authorization is explicit enough for the command class (see Section 16A).
+
+### Clear Approval Signals
+
+Examples of clear approval signals:
+
+- `approved`
+- `approve this`
+- `I approve this plan`
+- `I give my approval`
+- `lock it`
+- `go ahead and lock`
+- `run it`
+- `yes, run it`
+- `approved, lock it`
+- `accept risk`
+- `acknowledge stale intent`
+- `ack stale intent`
+- `supersede this version`
+
+These may authorize the relevant command if the active artifact is clear from context.
+
+The signal list is representative, not exhaustive. AI roles must apply the underlying principle: authorization must be unambiguous and directed at a specific command or action.
+
+### Rejection Signals
+
+Examples of rejection or non-approval signals:
+
+- `I don't like this`
+- `reject this`
+- `do not lock`
+- `revise this first`
+- `this is not right`
+- `I disagree`
+- `needs more work`
+
+These must not trigger lock commands or approval-class operations.
+
+### Ambiguous Signals
+
+Examples of ambiguous or insufficient authorization:
+
+- `okay`
+- `noted`
+- `interesting`
+- `makes sense`
+- `continue` (in a discussion context, not a command context)
+- `good point`
+- `looks good`
+- `seems fine`
+- `what do you think?`
+
+These are not sufficient for approval-class commands. If authorization is unclear, the AI role must ask for confirmation before executing.
+
+### Conditional Approval
+
+If the Director gives conditional approval, the AI role must satisfy the condition and then confirm with the Director that the condition is satisfied before executing the command.
+
+Examples of conditional approval:
+
+- `approve, but fix section 3 first`
+- `lock after adding the risk note`
+- `approved with accepted risk`
+
+**Correct behavior for conditional approval:**
+
+1. Receive conditional approval.
+2. Satisfy the stated condition.
+3. Report to Director: "[Condition] has been addressed. May I proceed with [command]?"
+4. Wait for Director confirmation.
+5. Execute only after Director confirms.
+
+The AI role must not self-certify that a condition is satisfied and proceed unilaterally. Even if the condition appears satisfied, the Director must confirm before the approval-class command runs.
 
 ---
 
@@ -1087,68 +1339,70 @@ All artifact lifecycle commands share a common pattern: read `progress.json`, ch
 
 ### `sigma intent` — DIR-INTENT Artifact
 
-| Subcommand | Pre-condition | Post-condition | Key Output |
-| :--- | :--- | :--- | :--- |
-| `intent new` | None | DRAFT registered; file at `Sigma/design/DIR-INTENT-v{N}.md` | "Created: Sigma/design/DIR-INTENT-v1.md" |
-| `intent review` | Active INTENT exists | Advisory findings appended to file; progress.json unchanged | "Advisory findings section appended to …" |
-| `intent lock` | `active_state == 'DRAFT'` | State → LOCKED; Gate 1 open; lifecycle → BUILD; prior LOCKED → SUPERSEDED; STALE_INTENT propagated | "DIR-INTENT v1 LOCKED. Gate 1 open. Lifecycle → BUILD." |
-| `intent status` | progress.json exists | Read-only | Version, state, locked_at, Gate 1 status |
-| `intent list` | progress.json exists | Read-only | Table: all versions, state, timestamps, superseded_by |
+| Subcommand      | Pre-condition             | Post-condition                                                                                     | Key Output                                              |
+|:--------------- |:------------------------- |:-------------------------------------------------------------------------------------------------- |:------------------------------------------------------- |
+| `intent new`    | None                      | DRAFT registered; file at `Sigma/design/DIR-INTENT-v{N}.md`                                        | "Created: Sigma/design/DIR-INTENT-v1.md"                |
+| `intent review` | Active INTENT exists      | Advisory findings appended to file; progress.json unchanged                                        | "Advisory findings section appended to …"               |
+| `intent lock`   | `active_state == 'DRAFT'` | State → LOCKED; Gate 1 open; lifecycle → BUILD; prior LOCKED → SUPERSEDED; STALE_INTENT propagated | "DIR-INTENT v1 LOCKED. Gate 1 open. Lifecycle → BUILD." |
+| `intent status` | progress.json exists      | Read-only                                                                                          | Version, state, locked_at, Gate 1 status                |
+| `intent list`   | progress.json exists      | Read-only                                                                                          | Table: all versions, state, timestamps, superseded_by   |
 
 **STALE_INTENT propagation** (triggered by `intent lock`):
+
 - All PLAN versions with `intent_version_ref` ≠ newly locked INTENT → `stale_intent = true`
 - All EXEC versions whose `plan_version_ref` points to a stale PLAN → `stale_intent = true`
 - Cascades through full version history, not just active versions
 
 ### `sigma plan` — FMN-PLAN Artifact
 
-| Subcommand | Pre-condition | Post-condition | Key Output |
-| :--- | :--- | :--- | :--- |
-| `plan new` | `gates.gate_1_open == true` | DRAFT registered; records `intent_version_ref`; file at `Sigma/build/FMN-PLAN-v{N}.md` | "Created: Sigma/build/FMN-PLAN-v1.md (references INTENT v1)" |
-| `plan audit` | Active PLAN exists | Advisory findings appended; progress.json unchanged | "Advisory findings section appended to …" |
-| `plan lock` | `active_state == 'DRAFT'` | State → LOCKED; Gate 2 open; prior LOCKED PLAN **not** auto-superseded (multi-active) | "FMN-PLAN v1 LOCKED. Gate 2 open." |
-| `plan supersede` | `--v <version>` and `--reason <reason>`; target must be LOCKED | Target → SUPERSEDED; `supersede_reason` recorded | "FMN-PLAN v1 superseded. Reason: …" |
-| `plan status` | progress.json exists | Read-only | Active PLAN version, state, intent_version_ref, stale flag |
-| `plan list` | progress.json exists | Read-only | Table: all versions, state, intent_version_ref, stale flag |
+| Subcommand       | Pre-condition                                                  | Post-condition                                                                         | Key Output                                                   |
+|:---------------- |:-------------------------------------------------------------- |:-------------------------------------------------------------------------------------- |:------------------------------------------------------------ |
+| `plan new`       | `gates.gate_1_open == true`                                    | DRAFT registered; records `intent_version_ref`; file at `Sigma/build/FMN-PLAN-v{N}.md` | "Created: Sigma/build/FMN-PLAN-v1.md (references INTENT v1)" |
+| `plan audit`     | Active PLAN exists                                             | Advisory findings appended; progress.json unchanged                                    | "Advisory findings section appended to …"                    |
+| `plan lock`      | `active_state == 'DRAFT'`                                      | State → LOCKED; Gate 2 open; prior LOCKED PLAN **not** auto-superseded (multi-active)  | "FMN-PLAN v1 LOCKED. Gate 2 open."                           |
+| `plan supersede` | `--v <version>` and `--reason <reason>`; target must be LOCKED | Target → SUPERSEDED; `supersede_reason` recorded                                       | "FMN-PLAN v1 superseded. Reason: …"                          |
+| `plan status`    | progress.json exists                                           | Read-only                                                                              | Active PLAN version, state, intent_version_ref, stale flag   |
+| `plan list`      | progress.json exists                                           | Read-only                                                                              | Table: all versions, state, intent_version_ref, stale flag   |
 
 ### `sigma exec` — DEV-EXEC Artifact
 
 Version format: `v0.{N}` (build iterations). State machine: DRAFT → BUILDING → TESTING → COMPLETED → LOCKED.
 
-| Subcommand | Pre-condition | Post-condition | Key Output |
-| :--- | :--- | :--- | :--- |
-| `exec new` | `gates.gate_2_open == true` | DRAFT registered; records `plan_version_ref`; file at `Sigma/build/DEV-EXEC-v0.{N}.md` | "Created: Sigma/build/DEV-EXEC-v0.1.md (references PLAN v1)" |
-| `exec audit` | Active EXEC exists | Advisory findings appended; progress.json unchanged | "Advisory findings section appended to …" |
-| `exec advance building` | `active_state == 'DRAFT'` | State → BUILDING | "DEV-EXEC v0.1: DRAFT → BUILDING" |
-| `exec advance testing` | `active_state == 'BUILDING'` | State → TESTING | "DEV-EXEC v0.1: BUILDING → TESTING" |
-| `exec advance complete` | `active_state == 'TESTING'` | State → COMPLETED | "DEV-EXEC v0.1: TESTING → COMPLETED" |
-| `exec lock` | `active_state == 'COMPLETED'` | State → LOCKED; Gate 3 re-evaluated | "DEV-EXEC v0.1 LOCKED. Gate 3: SATISFIED" |
-| `exec supersede` | `--v <version>` and `--reason <reason>`; target LOCKED | Target → SUPERSEDED | "DEV-EXEC v0.1 superseded. Reason: …" |
-| `exec status` | progress.json exists | Read-only | Active EXEC version, state, plan_version_ref, Gate 3 status |
-| `exec list` | progress.json exists | Read-only | Table: all versions, state, plan_version_ref, stale flag |
+| Subcommand              | Pre-condition                                          | Post-condition                                                                         | Key Output                                                   |
+|:----------------------- |:------------------------------------------------------ |:-------------------------------------------------------------------------------------- |:------------------------------------------------------------ |
+| `exec new`              | `gates.gate_2_open == true`                            | DRAFT registered; records `plan_version_ref`; file at `Sigma/build/DEV-EXEC-v0.{N}.md` | "Created: Sigma/build/DEV-EXEC-v0.1.md (references PLAN v1)" |
+| `exec audit`            | Active EXEC exists                                     | Advisory findings appended; progress.json unchanged                                    | "Advisory findings section appended to …"                    |
+| `exec advance building` | `active_state == 'DRAFT'`                              | State → BUILDING                                                                       | "DEV-EXEC v0.1: DRAFT → BUILDING"                            |
+| `exec advance testing`  | `active_state == 'BUILDING'`                           | State → TESTING                                                                        | "DEV-EXEC v0.1: BUILDING → TESTING"                          |
+| `exec advance complete` | `active_state == 'TESTING'`                            | State → COMPLETED                                                                      | "DEV-EXEC v0.1: TESTING → COMPLETED"                         |
+| `exec lock`             | `active_state == 'COMPLETED'`                          | State → LOCKED; Gate 3 re-evaluated                                                    | "DEV-EXEC v0.1 LOCKED. Gate 3: SATISFIED"                    |
+| `exec supersede`        | `--v <version>` and `--reason <reason>`; target LOCKED | Target → SUPERSEDED                                                                    | "DEV-EXEC v0.1 superseded. Reason: …"                        |
+| `exec status`           | progress.json exists                                   | Read-only                                                                              | Active EXEC version, state, plan_version_ref, Gate 3 status  |
+| `exec list`             | progress.json exists                                   | Read-only                                                                              | Table: all versions, state, plan_version_ref, stale flag     |
 
 **Gate 3 evaluation** (triggered by `exec lock`): `gate_3_satisfied = true` when a complete clean chain exists — INTENT LOCKED → a PLAN LOCKED with `intent_version_ref` pointing to that INTENT and `stale_intent != true` → the active EXEC LOCKED with `plan_version_ref` pointing to that PLAN.
 
 ### `sigma close` — DIR-CLOSE Artifact
 
-| Subcommand | Pre-condition | Post-condition | Key Output |
-| :--- | :--- | :--- | :--- |
-| `close new` | Complete INTENT → PLAN → EXEC LOCKED chain (same version chain). If chain is stale: `--ack-stale-intent` required. | DRAFT registered; lifecycle → CLOSE; file at `Sigma/close/DIR-CLOSE-v{N}.md` | "Created: Sigma/close/DIR-CLOSE-v1.md" |
-| `close audit` | Active CLOSE exists | Advisory findings appended; progress.json unchanged | "Advisory findings section appended to …" |
-| `close lock` | `active_state == 'DRAFT'` | State → LOCKED; lifecycle → CLOSED; prior LOCKED CLOSE → SUPERSEDED | "DIR-CLOSE v1 LOCKED. Lifecycle → CLOSED. Project is complete." |
-| `close status` | progress.json exists | Read-only | Active CLOSE version, state, lifecycle |
+| Subcommand     | Pre-condition                                                                                                      | Post-condition                                                               | Key Output                                                      |
+|:-------------- |:------------------------------------------------------------------------------------------------------------------ |:---------------------------------------------------------------------------- |:--------------------------------------------------------------- |
+| `close new`    | Complete INTENT → PLAN → EXEC LOCKED chain (same version chain). If chain is stale: `--ack-stale-intent` required. | DRAFT registered; lifecycle → CLOSE; file at `Sigma/close/DIR-CLOSE-v{N}.md` | "Created: Sigma/close/DIR-CLOSE-v1.md"                          |
+| `close audit`  | Active CLOSE exists                                                                                                | Advisory findings appended; progress.json unchanged                          | "Advisory findings section appended to …"                       |
+| `close lock`   | `active_state == 'DRAFT'`                                                                                          | State → LOCKED; lifecycle → CLOSED; prior LOCKED CLOSE → SUPERSEDED          | "DIR-CLOSE v1 LOCKED. Lifecycle → CLOSED. Project is complete." |
+| `close status` | progress.json exists                                                                                               | Read-only                                                                    | Active CLOSE version, state, lifecycle                          |
 
 **`close new` error conditions:**
+
 - No complete chain → `GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED`
 - Stale chain without `--ack-stale-intent` → `GATE 3 STALE: Qualifying chain has stale intent. Add --ack-stale-intent to acknowledge.`
 
 ### `sigma roadmap` — ROADMAP Artifact
 
-| Subcommand | Pre-condition | Post-condition | Key Output |
-| :--- | :--- | :--- | :--- |
-| `roadmap new` | `intent.active_state == 'LOCKED'`; no existing DRAFT | DRAFT registered; file at `Sigma/build/ROADMAP-v{N}.md` | "Created: Sigma/build/ROADMAP-v1.md" |
-| `roadmap lock` | DRAFT roadmap exists | DRAFT → LOCKED; prior LOCKED ROADMAP → SUPERSEDED | "ROADMAP v1 LOCKED." |
-| `roadmap list` | progress.json exists | Read-only | Table: all versions, state, timestamps |
+| Subcommand     | Pre-condition                                        | Post-condition                                          | Key Output                             |
+|:-------------- |:---------------------------------------------------- |:------------------------------------------------------- |:-------------------------------------- |
+| `roadmap new`  | `intent.active_state == 'LOCKED'`; no existing DRAFT | DRAFT registered; file at `Sigma/build/ROADMAP-v{N}.md` | "Created: Sigma/build/ROADMAP-v1.md"   |
+| `roadmap lock` | DRAFT roadmap exists                                 | DRAFT → LOCKED; prior LOCKED ROADMAP → SUPERSEDED       | "ROADMAP v1 LOCKED."                   |
+| `roadmap list` | progress.json exists                                 | Read-only                                               | Table: all versions, state, timestamps |
 
 ### `sigma git evidence`
 
@@ -1163,12 +1417,14 @@ Pre-condition: must be in a git repository. Error if not: `No git repository fou
 Creates a CSO (Close-out Session Output) file and registers it in `progress.cso[]`.
 
 **Flags:**
+
 - `--role <role>` — role label in filename (e.g., `DEV`, `FMN`, `ARC`). Defaults to `ANON`.
 - `--from <file>` — seed content from an existing draft file. If omitted, uses CSO template.
 
 **Naming:** `Sigma/logs/CSO-{ROLE}-{YYYYMMDD}-{HHMM}.md`
 
 **Registration entry:**
+
 ```json
 { "version": "CSO-DEV-20260516-1430", "state": "COMPLETE", "file": "Sigma/logs/CSO-DEV-20260516-1430.md", "created_at": "..." }
 ```
@@ -1178,7 +1434,6 @@ Creates a CSO (Close-out Session Output) file and registers it in `progress.cso[
 `sigma intent review`, `sigma plan audit`, `sigma exec audit`, `sigma close audit` append an advisory findings section to the artifact file. These commands **do not change `progress.json` runtime state**.
 
 ```markdown
-
 ---
 
 ## AUD Advisory Findings
@@ -1202,7 +1457,126 @@ Multiple AUD passes are allowed — each appends a new findings block to the sam
 
 ## 24. Memory & MCP Configuration
 
-> **[PHASE 5]** — Decision Memory auto-harvest fields per lock event type, MCP memory node store setup (`~/.sigma/memory_sigma.jsonl`), memory tier initialization on project start, and guidance for agents querying Sigma memory via MCP tools (`search_nodes`, `read_graph`) will be defined in Phase 5.
+### 24.1 Memory Architecture
+
+Sigma uses a two-tier memory model. Both tiers use JSONL format — one JSON object per line.
+
+| Tier | File | Writer | Reader | Scope |
+| :--- | :--- | :--- | :--- | :--- |
+| Project decision log | `Sigma/memory/decisions.jsonl` | CLI (lock events) | Agents via MCP | Per-project |
+| Global memory | `~/.sigma/memory_sigma.jsonl` | Agents via MCP | Agents via MCP | Cross-project |
+
+The CLI writes only to `decisions.jsonl`. The CLI never reads from or writes to `memory_sigma.jsonl` after `sigma setup memory` creates the file.
+
+`decisions.jsonl` is created as an empty file by `sigma project start`. Decision log entries are populated exclusively by actual lock events — no seed entries are written at project initialization.
+
+---
+
+### 24.2 DecisionEntry Schema
+
+Each lock event appends one JSON line to `Sigma/memory/decisions.jsonl`.
+
+| Field | Type | Present For | Extraction Source |
+| :--- | :--- | :--- | :--- |
+| `artifact` | string | All | Literal per event type |
+| `version` | string | All | Active version at lock time |
+| `lock_event` | string | All | Literal per event type |
+| `source_file` | string | All | Artifact file path from progress.json |
+| `timestamp` | string | All | ISO 8601 at harvest time |
+| `director_notes` | string | All | First heading matching `/director/i` |
+| `risk_notes` | string | All | `## 8. Risk & Failure Definition` (INTENT); `""` for others |
+| `evidence_references` | string | All | `## 2. Success Definition` (INTENT); `## 3. Evidence References` (CLOSE); `""` for others |
+| `stage_summary` | string | ROADMAP | `## 3. Stage Overview` |
+| `recommended_next_plan` | string | ROADMAP | `## 8. FMN Roadmap Notes` |
+| `pending_items` | string | ROADMAP | `## 7. Pending Items` |
+| `task_plan_summary` | string | PLAN | `## 2. Work Order / Task Plan` |
+| `test_contract_summary` | string | PLAN | `## 5. Pre-Build Test Contract` |
+| `implementation_summary` | string | EXEC | `## 2. Implementation Approach` |
+| `known_issues` | string | EXEC | Heading matching `/known.*(issues\|limitations)/i` |
+| `plan_refs` | string | CLOSE | `## 3. Evidence References` |
+| `exec_refs` | string | CLOSE | `## 3. Evidence References` (same content) |
+| `closure_verdict` | string | CLOSE | `## 10. Director Closure Decision Notes` |
+| `accepted_limitations` | string | CLOSE | `## 6. Known Limitations` |
+
+All artifact-specific fields are always written for their artifact type — never omitted. If extraction yields no match, the field is written as `""`. This ensures a consistent parseable shape per artifact type without requiring agents to handle missing keys.
+
+---
+
+### 24.3 Harvest Trigger Table
+
+| Lock Event | Artifact-Specific Fields Added |
+| :--- | :--- |
+| `intent.lock` | (base fields only) |
+| `roadmap.lock` | `stage_summary`, `recommended_next_plan`, `pending_items` |
+| `plan.lock` | `task_plan_summary`, `test_contract_summary` |
+| `exec.lock` | `implementation_summary`, `known_issues` |
+| `close.lock` | `plan_refs`, `exec_refs`, `closure_verdict`, `accepted_limitations` |
+
+Section extraction is best-effort. If a heading is not found, the field is `""`. Extraction never throws — a failed extract returns `""` silently.
+
+---
+
+### 24.4 Non-Blocking Guarantee
+
+Harvest failure never aborts the lock command. The lock operation commits `progress.json` first; harvest runs after. If the artifact file does not exist at harvest time, or if any exception occurs during extraction or append, a warning is printed to stderr and the lock command exits 0.
+
+This means:
+
+- A missing artifact file at harvest time produces a stderr warning, not a failure.
+- A crash in the harvest engine does not roll back the lock.
+- The CLI user always receives the lock success message.
+
+---
+
+### 24.5 MCP Configuration
+
+`sigma setup memory` creates `~/.sigma/memory_sigma.jsonl` as an empty file (if not already present) and prints the MCP configuration snippet agents need to connect to it.
+
+Agents configure the MCP server externally. The CLI provides the file path and snippet — it does not start or manage the MCP server process.
+
+Example MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "sigma-memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "MEMORY_FILE_PATH": "/home/user/.sigma/memory_sigma.jsonl"
+      }
+    }
+  }
+}
+```
+
+Re-running `sigma setup memory` when the file already exists prints "already configured" and does not truncate or overwrite the file.
+
+---
+
+### 24.6 Agent Query Pattern
+
+Agents query `decisions.jsonl` via the MCP server configured against `memory_sigma.jsonl`. The per-project decision log must be promoted to global memory by agents (see 24.7) before it becomes queryable via MCP.
+
+Recommended query patterns:
+
+- `search_nodes({ query: "risk notes intent" })` — semantic search across promoted entries
+- `read_graph()` — retrieve full memory graph
+- Filter by `artifact` field to isolate entries by type (e.g., `artifact == "CLOSE"` for closure decisions)
+
+Agents should read `Sigma/memory/decisions.jsonl` directly when querying project-local decisions that have not been promoted.
+
+---
+
+### 24.7 Memory Promotion Policy
+
+**Project decision log** (`decisions.jsonl`): populated automatically by CLI on lock events. Read-only for agents — they query but do not write to it via CLI. Agents may reference entries when drafting artifacts.
+
+**Global memory** (`memory_sigma.jsonl`): written exclusively by agents via MCP tools (`create_entities`, `add_observations`, etc.). Agents may propose memory candidates; only Director-approved items are promoted to global memory.
+
+**Promotion boundary**: project-specific facts (implementation details, known issues, deviation notes) must stay in project artifacts, CSO files, or `decisions.jsonl`. Only generalizable, reusable knowledge is promoted to global memory.
+
+**No auto-promotion**: no CLI command or lock event automatically writes to `memory_sigma.jsonl`. The CLI has no reference to this file at runtime — only `sigma setup memory` touches it at setup time.
 
 ---
 

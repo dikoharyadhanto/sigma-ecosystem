@@ -10,6 +10,7 @@ import {
   GLOBAL_BRIDGE_DIR,
   GLOBAL_PROJECTS_FILE,
   GLOBAL_CONFIG_FILE,
+  GLOBAL_MEMORY_FILE,
   SIGMA_VERSION,
 } from '../config';
 import { success, info, warn, error } from '../utils/output';
@@ -167,6 +168,39 @@ async function runUpdate(): Promise<void> {
   console.log('  To sync governance files into a project, run: sigma project sync --confirm');
 }
 
+// ── sigma setup memory ───────────────────────────────────────────────────────
+
+function runMemorySetup(): void {
+  if (!fileExists(GLOBAL_SIGMA_DIR)) {
+    error('Sigma is not installed. Run: sigma setup install');
+  }
+
+  const alreadyExists = fileExists(GLOBAL_MEMORY_FILE);
+  if (!alreadyExists) {
+    fs.ensureFileSync(GLOBAL_MEMORY_FILE);
+    success(`Memory file created: ${GLOBAL_MEMORY_FILE}`);
+  } else {
+    info(`Memory file already configured: ${GLOBAL_MEMORY_FILE}`);
+  }
+
+  const mcpConfig = {
+    mcpServers: {
+      'sigma-memory': {
+        command: 'npx',
+        args: ['-y', '@modelcontextprotocol/server-memory'],
+        env: { MEMORY_FILE_PATH: GLOBAL_MEMORY_FILE },
+      },
+    },
+  };
+
+  console.log('\n=== Sigma MCP Memory Setup ===\n');
+  console.log(`  Memory file: ${GLOBAL_MEMORY_FILE}\n`);
+  console.log('Add to your MCP configuration (.mcp.json or equivalent):\n');
+  console.log(JSON.stringify(mcpConfig, null, 2));
+  console.log('\nAgents query memory using MCP tools: search_nodes, read_graph');
+  console.log('Project decision log: Sigma/memory/decisions.jsonl (per-project, CLI-written)\n');
+}
+
 // ── Command builder ──────────────────────────────────────────────────────────
 
 export function setupCommand(): Command {
@@ -192,6 +226,13 @@ export function setupCommand(): Command {
         console.error(err instanceof Error ? err.message : String(err));
         process.exit(1);
       });
+    });
+
+  cmd
+    .command('memory')
+    .description('Configure Sigma MCP memory node store (~/.sigma/memory_sigma.jsonl)')
+    .action(() => {
+      try { runMemorySetup(); } catch (e) { error((e as Error).message); }
     });
 
   return cmd;

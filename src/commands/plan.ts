@@ -9,6 +9,7 @@ import {
   lockActivePlan,
   supersedePlanVersion,
 } from '../engine/progress';
+import { harvestPlanLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
 import { GLOBAL_TEMPLATES_DIR } from '../config';
 
@@ -91,6 +92,8 @@ export function planCommand(): Command {
         const version = data.plan.active_version!;
         lockActivePlan(data);
         writeProgress(projectRoot, data);
+        const sourceFile = data.plan.versions.find(v => v.version === version)?.file ?? '';
+        harvestPlanLock(projectRoot, version, sourceFile);
         console.log(`FMN-PLAN ${version} LOCKED. Gate 2 open. Next: sigma exec new`);
       } catch (e) {
         console.error((e as Error).message);
