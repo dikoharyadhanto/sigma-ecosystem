@@ -1,0 +1,192 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-05-16T00:00:00Z",
+  "description": "Sigma Document Registry — permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE) are tracked in progress.json, not here.",
+  "total_documents": 10,
+  "authority_model": {
+    "description": "Two separate, non-conflatable authority axes.",
+    "semantic_authority": {
+      "description": "Governs interpretation, behavior, and governance decisions.",
+      "hierarchy": [
+        "constitutional",
+        "operational_governance",
+        "agent_rule",
+        "agent_config"
+      ],
+      "note": "In any conflict between semantic claims in governance documents, the tier order above resolves: constitutional > operational_governance > agent_rule > agent_config."
+    },
+    "runtime_authority": {
+      "description": "Governs current lifecycle state and CLI operation gating.",
+      "tier": "runtime_state",
+      "holder": "progress.json",
+      "note": "progress.json does not override constitutional doctrine. It governs operational state: which artifacts exist, what their lifecycle states are, and which CLI operations are permitted right now. In any conflict between a semantic claim in a markdown document and the runtime state in progress.json, the CLI uses progress.json for gate decisions."
+    }
+  },
+  "documents": [
+    {
+      "document_id": "sigma_constitution",
+      "file": "SIGMA_CONSTITUTION.md",
+      "location": "Sigma/",
+      "authority_tier": "constitutional",
+      "owner": "Director",
+      "lifecycle": "living — amended only when Delta Constitution is amended",
+      "mandatory_when": [
+        "governance_conflict",
+        "constitutional_amendment",
+        "authority_hierarchy_query",
+        "session_bootstrap"
+      ],
+      "description": "Delta Constitution copy, adapted with Sigma-specific terminology. Governs constitutional principles: Director authority, agent sovereignty, hierarchy of authority, lifecycle governance. If Delta Constitution is amended, this document MUST be updated.",
+      "tolerate_missing": false
+    },
+    {
+      "document_id": "sigma_protocol",
+      "file": "SIGMA_PROTOCOL.md",
+      "location": "Sigma/",
+      "authority_tier": "operational_governance",
+      "owner": "Director",
+      "lifecycle": "living — extended per phase; never replaced wholesale",
+      "mandatory_when": [
+        "session_bootstrap",
+        "governance_conflict",
+        "document_navigation",
+        "lifecycle_query"
+      ],
+      "description": "Sigma operational doctrine. Defines lifecycle, roles, artifacts, state machines, gate rules, naming conventions, folder structure, audit doctrine. Written incrementally per phase; Phase 0A establishes foundational sections.",
+      "section_triggers": [
+        { "section": "lifecycle", "trigger": "lifecycle_query" },
+        { "section": "role_definitions", "trigger": "role_boundary_violation" },
+        { "section": "artifact_definitions", "trigger": "document_navigation" },
+        { "section": "state_machine", "trigger": "lifecycle_query" },
+        { "section": "gate_rules", "trigger": "governance_conflict" },
+        { "section": "auto_supersede_policy", "trigger": "governance_conflict" },
+        { "section": "stale_intent", "trigger": "stale_intent_query" },
+        { "section": "audit_doctrine", "trigger": "role_boundary_violation" },
+        { "section": "aud_activation_policy", "trigger": "role_boundary_violation" },
+        { "section": "folder_structure", "trigger": "document_navigation" },
+        { "section": "naming_convention", "trigger": "document_navigation" },
+        { "section": "cli_command_surface", "trigger": "session_bootstrap" }
+      ],
+      "tolerate_missing": false
+    },
+    {
+      "document_id": "arc_rule",
+      "file": "rules/ARC-RULE.md",
+      "location": "Sigma/",
+      "authority_tier": "agent_rule",
+      "owner": "Director",
+      "lifecycle": "stable — updated when ARC role definition changes",
+      "mandatory_when": [
+        "session_bootstrap_arc_role",
+        "role_boundary_violation"
+      ],
+      "description": "ARC role rule file. Defines ARC responsibilities, permissions, boundaries, and activation protocol. ARC role: interview Director, draft DIR-INTENT. Created in Phase 2.",
+      "tolerate_missing": true,
+      "missing_behavior": "Warn on session_bootstrap when ARC role active; do not error on read-only operations."
+    },
+    {
+      "document_id": "aud_rule",
+      "file": "rules/AUD-RULE.md",
+      "location": "Sigma/",
+      "authority_tier": "agent_rule",
+      "owner": "Director",
+      "lifecycle": "stable — updated when AUD role definition changes",
+      "mandatory_when": [
+        "session_bootstrap_aud_role",
+        "role_boundary_violation"
+      ],
+      "description": "AUD role rule file. Defines AUD responsibilities, permissions, audit scope, and advisory-only constraint. AUD role: brutal auditor, advisory only — not an approval gate. Created in Phase 2.",
+      "tolerate_missing": true,
+      "missing_behavior": "Warn on session_bootstrap when AUD role active; do not error on read-only operations."
+    },
+    {
+      "document_id": "fmn_rule",
+      "file": "rules/FMN-RULE.md",
+      "location": "Sigma/",
+      "authority_tier": "agent_rule",
+      "owner": "Director",
+      "lifecycle": "stable — updated when FMN role definition changes",
+      "mandatory_when": [
+        "session_bootstrap_fmn_role",
+        "role_boundary_violation"
+      ],
+      "description": "FMN role rule file. Defines FMN responsibilities, permissions, and activation protocol. FMN role: work order + test contract (FMN-PLAN), evaluation of DEV results. Created in Phase 2.",
+      "tolerate_missing": true,
+      "missing_behavior": "Warn on session_bootstrap when FMN role active; do not error on read-only operations."
+    },
+    {
+      "document_id": "dev_rule",
+      "file": "rules/DEV-RULE.md",
+      "location": "Sigma/",
+      "authority_tier": "agent_rule",
+      "owner": "Director",
+      "lifecycle": "stable — updated when DEV role definition changes",
+      "mandatory_when": [
+        "session_bootstrap_dev_role",
+        "role_boundary_violation"
+      ],
+      "description": "DEV role rule file. Defines DEV responsibilities, permissions, and activation protocol. DEV role: implementation plan + report (DEV-EXEC), code execution. Created in Phase 2.",
+      "tolerate_missing": true,
+      "missing_behavior": "Warn on session_bootstrap when DEV role active; do not error on read-only operations."
+    },
+    {
+      "document_id": "claude_config",
+      "file": "CLAUDE.md",
+      "location": "project root",
+      "authority_tier": "agent_config",
+      "owner": "Director",
+      "lifecycle": "stable — updated when Claude-specific configuration changes",
+      "mandatory_when": [
+        "session_bootstrap",
+        "role_boundary_violation"
+      ],
+      "description": "Claude-specific bridge file at project root. Configures how Claude reads and operates within this Sigma project. Points to active role rule file and Sigma governance documents. Generated by sigma project start from ~/.sigma/templates/.",
+      "tolerate_missing": true,
+      "missing_behavior": "Warn on session_bootstrap; Claude may still operate without it but with reduced governance enforcement."
+    },
+    {
+      "document_id": "gemini_config",
+      "file": "GEMINI.md",
+      "location": "project root",
+      "authority_tier": "agent_config",
+      "owner": "Director",
+      "lifecycle": "stable — updated when Gemini-specific configuration changes",
+      "mandatory_when": [
+        "session_bootstrap",
+        "role_boundary_violation"
+      ],
+      "description": "Gemini-specific bridge file at project root. Configures how Gemini reads and operates within this Sigma project. Generated by sigma project start from ~/.sigma/templates/.",
+      "tolerate_missing": true,
+      "missing_behavior": "Warn on session_bootstrap; Gemini may still operate without it."
+    },
+    {
+      "document_id": "agents_config",
+      "file": "AGENTS.md",
+      "location": "project root",
+      "authority_tier": "agent_config",
+      "owner": "Director",
+      "lifecycle": "stable — updated when general agent configuration changes",
+      "mandatory_when": [
+        "session_bootstrap",
+        "role_boundary_violation"
+      ],
+      "description": "General agent bridge file at project root. Platform-agnostic configuration for any AI agent operating within this Sigma project. Generated by sigma project start from ~/.sigma/templates/.",
+      "tolerate_missing": true,
+      "missing_behavior": "Warn on session_bootstrap; agents may still operate without it."
+    },
+    {
+      "document_id": "progress_json",
+      "file": "progress.json",
+      "location": "Sigma/",
+      "authority_tier": "runtime_state",
+      "owner": "CLI (Director-gated writes)",
+      "lifecycle": "runtime — read before every CLI operation; written after every state-mutating operation",
+      "mandatory_when": [
+        "every_cli_operation"
+      ],
+      "description": "Single source of runtime truth. Tracks lifecycle state, artifact versions and states, gate flags, STALE_INTENT markers, and CSO log. The CLI reads this before every operation (to check gates) and writes it after every state-mutating operation. Runtime authority: in any conflict between a semantic markdown claim and progress.json, the CLI uses progress.json for gate decisions.",
+      "tolerate_missing": false,
+      "missing_behavior": "All CLI operations error with: 'No Sigma project found. Run: sigma project start'"
+    }
+  ]
+}

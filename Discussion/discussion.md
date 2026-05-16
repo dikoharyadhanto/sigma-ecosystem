@@ -714,3 +714,70 @@ Keputusan dari Checkpoint 2:
 | 4 | Sublayer authority labels dalam DIR-INTENT + FMN-PLAN template | Phase 1 |
 | 5 | Isi dokumen closure / DIR-CLOSE format | Phase 1 |
 | 6 | Detail teknis implementasi (daemon, auto-update, offline mode, telemetry) | Phase 6 |
+
+---
+
+## Session #4 — 20260516 — Phase 0B Design, AUD Audit & Execution
+
+> **Peserta**: Director + AUD (GPT Auditor) + Claude (Sonnet 4.6)
+> **Topik**: 3 diskusi desain pre-0B + AUD audit PLAN-0B (15 issue) + patch confirmations + Phase 0B file creation
+> **Status**: Selesai — PLAN-0B.md + SIGMA_PROTOCOL.md diupdate, 3 file Phase 0B dibuat
+
+### Diskusi Desain Pre-0B (3 Pertanyaan Director)
+
+| # | Pertanyaan | Keputusan |
+|---|---|---|
+| Q1 | Bagaimana jika ada update sigma, sedangkan sigma project start di versi lama? | Dua jalur terpisah: `sigma setup update` (global, safe, tidak menyentuh project Sigma/) vs `sigma project sync` (project-level, Director-confirmed, dengan backup sebelum write). Schema mismatch: auto-migrate jika CLI lebih baru (backup + log); BLOCK semantic ops jika progress.json lebih baru dari CLI. |
+| Q2 | Bagaimana jika mau reset progress dan mendaftarkan ulang? | `project_reset` dengan `--confirm` (soft: backup progress.json saja) atau `--confirm --wipe` (archive artifacts ke logs/reset-archive-{timestamp}/ — tidak pernah permanent delete). |
+| Q3 | Bagaimana mengatur ulang project ID global? | `sigma project register` — re-register project ID dari progress.json ke ~/.sigma/projects.json. Tidak ada concept "project ID global" yang terpisah dari progress.json. |
+
+### AUD Audit PLAN-0B — 15 Issues & Resolusi
+
+| # | Issue AUD | Verdict Director | Patch |
+|---|---|---|---|
+| 1 | Operation count inkonsisten (32/37 di PLAN-0B) | ✅ Setuju + koreksi — count benar = 36 (AUD hitung 35, missing exec_list) | Semua referensi count → 36 |
+| 2 | intent_lock: UNDER_REVIEW implication vs state machine | ✅ Setuju — hapus UNDER_REVIEW sepenuhnya. Review/audit tulis ke file dokumen, TIDAK ubah progress.json. | PLAN-0B + SIGMA_PROTOCOL sections 6.1-6.4 |
+| 3 | plan_lock: state machine tidak explicitly say no auto-supersede | ✅ Setuju — tambah explicit no auto-supersede di description | PLAN-0B plan_lock description |
+| 4 | Semantic level definition ambigu | ✅ Setuju — ubah ke "mutates project artifacts or runtime state" | PLAN-0B level definition |
+| 5 | lifecycle_state missing CLOSED enum | ✅ Setuju — tambah CLOSED: close_lock → CLOSED | PLAN-0B + SIGMA_PROTOCOL |
+| 6 | Gate 3: tidak enforce full chain INTENT→PLAN→EXEC | ✅ Setuju — Gate 3 harus validasi chain: active INTENT LOCKED → PLAN LOCKED referencing it → EXEC LOCKED referencing that PLAN | PLAN-0B + SIGMA_PROTOCOL Section 7 |
+| 7 | STALE_INTENT: kontradiksi antara "warn" dan "block" | ✅ Setuju — explicit: `--ack-stale-intent` flag REQUIRED, tanpa flag = BLOCK. Acknowledgment dicatat di DIR-CLOSE DRAFT metadata. | PLAN-0B + SIGMA_PROTOCOL Section 9 |
+| 8 | plan_lock: no-auto-supersede perlu ditegaskan | ✅ Sama dengan #3 | |
+| 9 | project_sync: tidak ada mention backup | ✅ Setuju — tambah backup line: "Backs up affected files to Sigma/logs/sync-backup-{timestamp}/ before writing" | PLAN-0B project_sync |
+| 10 | setup_install: klaim manages MCP memory — overlap dengan setup_memory | ✅ Setuju — hapus MCP dari setup_install scope. Strict separation. | PLAN-0B setup_install |
+| 11 | gitignore level: "semantic" vs "read_only" | ✅ Setuju — ubah ke read_only (stdout only, tidak write file) | PLAN-0B gitignore_generate |
+| 12 | SIGMA-REGISTRY: dua authority axes tidak dibedakan | ✅ Setuju — split ke semantic authority vs runtime authority | PLAN-0B + SIGMA_PROTOCOL |
+| 13 | Folder naming: strategy/execution/closure → design/build/close | ✅ Director patch sekarang — lebih konsisten dengan lifecycle phase names | PLAN-0B + SIGMA_PROTOCOL Sections 5, 6, 12, 13 |
+| 14 | SIGMA-REGISTRY count: 9 vs 10 | ✅ Koreksi — 10 entries termasuk progress_json (runtime_state tier) | PLAN-0B |
+| 15 | Seed file note perlu klarifikasi | ✅ Setuju — tambah note tentang DIR-DI-000-SIGMA vs lifecycle artifact | PLAN-0B |
+
+### Keputusan Final Phase 0B
+
+| #  | Keputusan | Detail |
+|----|---|---|
+| S4-1 | **Naming convention final** | `{ROLE}-{DOC}-v{VERSION}.md` — PROJECT_ID **dihapus** dari filename. Project identity di progress.json dan ~/.sigma/projects.json. Alasan: path sudah berikan project context; lebih clean; tidak ada rename cost jika project ID berubah. |
+| S4-2 | **Folder structure final** | `design/` (DIR-INTENT), `build/` (FMN-PLAN + DEV-EXEC), `close/` (DIR-CLOSE). Menggantikan strategy/execution/closure — konsisten dengan lifecycle phase names. |
+| S4-3 | **UNDER_REVIEW dihapus** | Tidak ada state UNDER_REVIEW di progress.json state machine. Audit/review command tulis ke file dokumen saja — tidak mengubah runtime state. |
+| S4-4 | **lifecycle_state enum final** | `DESIGN \| BUILD \| CLOSE \| CLOSED`. Transitions: project_start → DESIGN; intent_lock → BUILD; close_new → CLOSE; close_lock → CLOSED. |
+| S4-5 | **Gate 3 chain-based** | Validasi chain: active INTENT LOCKED → ≥1 PLAN LOCKED referencing that INTENT → ≥1 EXEC LOCKED referencing that PLAN. Independent PLAN/EXEC tanpa chain tidak satisfies Gate 3. |
+| S4-6 | **STALE_INTENT: block behavior** | `close new` BLOCKS tanpa `--ack-stale-intent` jika chain ada stale_intent=true. Flag required; acknowledgment dicatat di DIR-CLOSE DRAFT metadata. |
+| S4-7 | **setup_install vs setup_memory** | Strict separation: setup_install hanya deploy files/templates/shortcuts; setup_memory handle MCP memory config. Tidak overlap. |
+| S4-8 | **project_sync: Director-confirmed + backup** | Tidak pernah auto-triggered oleh setup_update. Requires --confirm. Backup sebelum write ke Sigma/logs/sync-backup-{timestamp}/. |
+| S4-9 | **project_reset modes** | Soft (--confirm): backup progress.json saja. Archive (--confirm --wipe): archive artifact files ke logs/reset-archive-{timestamp}/. Never permanent delete. |
+| S4-10 | **Schema migration policy** | Auto-migrate (CLI newer): backup + write + migration log. Block (CLI older): error message. Read-only ops masih allowed saat blocked. |
+| S4-11 | **SIGMA-REGISTRY authority: dua axes** | Semantic authority: constitutional → operational_governance → agent_rule → agent_config. Runtime authority: runtime_state (progress.json). Konflik: progress.json wins untuk gate decisions. |
+| S4-12 | **36 operations total** | Distribusi per domain: project(5), session(1), intent(5), plan(6), exec(9), close(4), git(1), cso(1), setup(3), gitignore(1). |
+
+### Dokumen yang Dihasilkan
+
+| File | Lokasi | Status |
+|------|--------|--------|
+| `PLAN-0B.md` | `Implementation/PLAN-0B.md` | ✅ Selesai — 15 patches applied |
+| `SIGMA_PROTOCOL.md` (updates) | `Sigma/SIGMA_PROTOCOL.md` | ✅ Selesai — Sections 5-7, 9-10, 12-13 updated |
+| `SIGMA-OPERATION-REGISTRY.json` | `Sigma/SIGMA-OPERATION-REGISTRY.json` | ✅ Selesai — 36 operations |
+| `SIGMA-REGISTRY.json` | `Sigma/SIGMA-REGISTRY.json` | ✅ Selesai — 10 document entries |
+| `progress.json` | `Sigma/progress.json` | ✅ Selesai — seed file for sigma-ecosystem |
+
+### Open Items dari Session #4
+
+Tidak ada open item baru. Semua 15 AUD audit items resolved.
