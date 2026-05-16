@@ -3,7 +3,7 @@
 > **Status**: Draft — for Director review
 > **Purpose**: High-level task breakdown by implementation phase. Each phase will have its own WO with technical specifics.
 > **Reference**: `Intent/DIR-DI-000-SIGMA-v1.0.md` + `Discussion/discussion.md` (all decisions through Session #2)
->
+> 
 > **Project Root Convention**: `sigma-ecosystem/` is treated as the project root AND as a registered Sigma project. The `Sigma/` folder inside it is the live governance layer for this project — Sigma is being built using Sigma protocol (dogfooding from Phase 0A). All governance artifacts (`SIGMA_CONSTITUTION.md`, `SIGMA_PROTOCOL.md`, role rules, templates, progress.json, etc.) live inside `Sigma/`, not at the project root.
 
 ---
@@ -42,6 +42,7 @@ The doctrine layer. Establishes Sigma's identity, principles, lifecycle, roles, 
 - **SIGMA_CONSTITUTION.md** — Based on `DELTA_CONSTITUTION.md`. Same 10-Article structure, but terminology is adapted for Sigma (e.g., Article I references Sigma identity, Article IV hierarchy uses Sigma artifact names). Includes a Sigma-specific preface explaining the relationship to Delta, sync obligation, and Sigma-specific interpretation note. Sigma does not have a separate constitution — the Delta Constitution structure is the constitutional layer for both systems. If Delta Constitution is amended, Sigma must follow. **File location: `Sigma/SIGMA_CONSTITUTION.md`** (Director decided: B2, B3, B9 — Session #1; terminology adaptation decided in Phase 0A execution)
 
 - **SIGMA_PROTOCOL.md** — The core operational document. **Living document — written incrementally per phase.** Each phase adds or extends the relevant sections; earlier sections are not rewritten unless a conflict is found. Phase 0A writes the foundational doctrine (sections 1–19). Later phases extend it with template references (Phase 1), rule file references (Phase 2), CLI setup details (Phase 3), full CLI command spec (Phase 4), memory model (Phase 5), and distribution details (Phase 6). **File location: `Sigma/SIGMA_PROTOCOL.md`**. Covers (Phase 0A scope):
+  
   - Sigma identity and relationship to Delta
   - Lifecycle definition: `START → DESIGN → BUILD → CLOSE`
     - **DESIGN**: DIR-INTENT only. ARC drafts, AUD reviews (optional), Director locks. This is the intent and strategy layer — not technical.
@@ -107,6 +108,7 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
   - Promotion Check (STAY_SIGMA / PROMOTE_TO_HEAVIER_PROCESS)
 
 - **FMN-PLAN template** — One living document, two internal sections. Authored by FMN (Foreman). Equivalent to Delta's WO + STR merged:
+  
   - Section 1: Work Order / Task Plan — what needs to be built, task breakdown, acceptance criteria, dependencies
   - Section 2: Simulation Test Report — test plan written BEFORE DEV starts (pre-build contract); FMN fills pass/fail results after reviewing DEV's completed EXEC
   - Metadata header: artifact version, status, reference to DIR-INTENT version locked
@@ -143,6 +145,7 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
 ### Main Tasks
 
 - **ARC-RULE.md** — **DESIGN phase role.** Rules for Global Architect:
+  
   - Primary responsibility: interview Director, draft DIR-INTENT, produce strategy synthesis
   - Sublayer authority map (what ARC can propose vs what is sovereign)
   - Scope: ARC's work ends when DIR-INTENT is locked. ARC does not touch BUILD phase artifacts.
@@ -150,6 +153,7 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
   - Prohibited actions (e.g., cannot lock artifacts — only Director locks)
 
 - **AUD-RULE.md** — **Spans both DESIGN and BUILD phases.** Rules for Auditor:
+  
   - Primary responsibility: critique challengeable layers — in DIR-INTENT (DESIGN) and FMN-PLAN/DEV-EXEC (BUILD)
   - Audit boundary enforcement: Intent Core is sovereign — may not be attacked; all other sublayers are auditable (route, assumptions, methods, risk, feasibility, scope, evidence)
   - Output format: findings section within the artifact being reviewed/audited
@@ -158,6 +162,7 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
   - Session bootstrap procedure
 
 - **FMN-RULE.md** — **BUILD phase role.** Rules for Foreman:
+  
   - Primary responsibility: produce FMN-PLAN (work order + simulation test report) — both sections
   - Gate rule: FMN cannot start until DIR-INTENT is locked (DESIGN complete)
   - Test plan must be written BEFORE DEV starts building (Section 2 of FMN-PLAN is the pre-build contract)
@@ -167,6 +172,7 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
   - What to read before starting: locked DIR-INTENT + any existing FMN-PLAN versions
 
 - **DEV-RULE.md** — **BUILD phase role.** Rules for Developer:
+  
   - Primary responsibility: produce DEV-EXEC (implementation plan + implementation report) — both sections
   - Gate rule: DEV cannot start until FMN-PLAN is locked (same version)
   - Build iteration rules: v0.1, v0.2, etc. — when to iterate vs when to close
@@ -215,6 +221,7 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
 ### Main Tasks
 
 - **`sigma intent`** commands:
+  
   - `new` — creates DIR-INTENT draft from template, registers in progress.json
   - `review` — invokes AUD review on the active DIR-INTENT; outputs advisory findings section. Named `review` (not `audit`) — Intent Core is sovereign, only the route and assumptions are reviewable
   - `lock` — locks INTENT, triggers auto-supersede of prior locked INTENT versions, harvests decision memory
@@ -222,6 +229,7 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
   - `list` — lists all INTENT versions with states
 
 - **`sigma plan`** commands:
+  
   - `new` — creates FMN-PLAN draft (gate: INTENT must be locked — DESIGN phase must be complete), registers in progress.json
   - `audit` — invokes AUD review on the active FMN-PLAN; outputs advisory findings section
   - `lock` — locks PLAN, harvests decision memory
@@ -229,6 +237,7 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
   - `status` / `list`
 
 - **`sigma exec`** commands:
+  
   - `new` — creates DEV-EXEC draft (gate: PLAN must be locked, same version), registers in progress.json
   - `audit` — invokes AUD review on the active DEV-EXEC; outputs advisory findings section
   - `advance building` — transitions EXEC to BUILDING state
@@ -239,6 +248,7 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
   - `status` / `list`
 
 - **`sigma close`** commands:
+  
   - `new` — creates DIR-CLOSE draft (gate: INTENT locked + min 1 PLAN locked + 1 EXEC locked, same version), warns if STALE_INTENT
   - `audit` — invokes AUD review on the active DIR-CLOSE before Director locks; advisory only
   - `lock` — locks CLOSE, triggers auto-supersede of prior CLOSE
@@ -262,17 +272,21 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
 ### Main Tasks
 
 - **Decision Memory auto-harvest** — On every `lock` event (intent lock, plan lock, exec lock, close lock): extract decision-relevant content from the locked document, append structured entry to `Sigma/memory/decisions.jsonl`. Harvest fields intentionally lighter than Delta Full:
-
+  
   All lock events harvest:
+  
   - `artifact`, `version`, `lock_event`, `director_verdict`, `accepted_risks`, `evidence_references`, `source_file`, `timestamp`
-
+  
   FMN-PLAN lock additionally harvests:
+  
   - `task_plan_summary`, `test_contract_summary`
-
+  
   DEV-EXEC lock additionally harvests:
+  
   - `implementation_summary`, `known_issues`
-
+  
   DIR-CLOSE lock additionally harvests:
+  
   - `plan_refs`, `exec_refs`, `closure_verdict`, `accepted_limitations`
 
 - **`sigma setup memory`** — Configures Sigma MCP memory node store (separate from Delta's `memory_delta.jsonl`); creates `~/.sigma/memory_sigma.jsonl`; outputs MCP config instructions
@@ -304,12 +318,12 @@ The machine contract layer. Translates the doctrine from Phase 0A into precise, 
 
 6 skills × 4 platforms = **24 skill files** (`/arc`, `/aud`, `/fmn`, `/dev`, `/checkpoint`, `/cso`). Authored here because they reference the final command surface, folder structure, and setup targets — all of which are only stable after CLI is complete.
 
-| Platform | Location | Format |
-|----------|----------|--------|
-| **Claude Code** | `setup/targets/claude_code/` | Markdown with `name`/`description` frontmatter |
-| **Antigravity** | `setup/targets/antigravity/` | Markdown with `name`/`description`/`model` frontmatter |
-| **Codex** | `setup/targets/codex/skills/{skill}/` | Folder per skill: `SKILL.md` + `agents/` subfolder |
-| **Reasonix** | `setup/targets/reasonix/skills/` | Markdown with `name`/`description`/`run_as` frontmatter |
+| Platform        | Location                              | Format                                                  |
+| --------------- | ------------------------------------- | ------------------------------------------------------- |
+| **Claude Code** | `setup/targets/claude_code/`          | Markdown with `name`/`description` frontmatter          |
+| **Antigravity** | `setup/targets/antigravity/`          | Markdown with `name`/`description`/`model` frontmatter  |
+| **Codex**       | `setup/targets/codex/skills/{skill}/` | Folder per skill: `SKILL.md` + `agents/` subfolder      |
+| **Reasonix**    | `setup/targets/reasonix/skills/`      | Markdown with `name`/`description`/`run_as` frontmatter |
 
 Skill behavior specs (platform-agnostic):
 
@@ -382,14 +396,14 @@ Phase 7 (Validation & Dogfooding)
 
 Items needing Director decision before or during the phase they affect:
 
-| #   | Open Item                                                                              | Resolves In |
-| --- | -------------------------------------------------------------------------------------- | ----------- |
-| 1   | AUD activation: optional by default (AUD recommended, aligned with C8 in discussion.md) — confirm final wording in SIGMA_PROTOCOL.md | Phase 0A |
-| 2   | Rules detail untuk roles — ARC, AUD, FMN, DEV (C13 deferred)                          | Phase 2     |
-| 3   | Template & format dokumen detail (D10 deferred)                                        | Phase 1     |
-| 4   | Sublayer authority labels dalam DIR-INTENT + FMN-PLAN template                         | Phase 1     |
-| 5   | Isi dokumen closure / DIR-CLOSE format                                                 | Phase 1     |
-| 6   | Detail teknis implementasi (daemon, auto-update, offline mode, telemetry — N deferred) | Phase 6     |
+| #   | Open Item                                                                                                                            | Resolves In |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| 1   | AUD activation: optional by default (AUD recommended, aligned with C8 in discussion.md) — confirm final wording in SIGMA_PROTOCOL.md | Phase 0A    |
+| 2   | Rules detail untuk roles — ARC, AUD, FMN, DEV (C13 deferred)                                                                         | Phase 2     |
+| 3   | Template & format dokumen detail (D10 deferred)                                                                                      | Phase 1     |
+| 4   | Sublayer authority labels dalam DIR-INTENT + FMN-PLAN template                                                                       | Phase 1     |
+| 5   | Isi dokumen closure / DIR-CLOSE format                                                                                               | Phase 1     |
+| 6   | Detail teknis implementasi (daemon, auto-update, offline mode, telemetry — N deferred)                                               | Phase 6     |
 
 ---
 

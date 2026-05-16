@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-05-16T00:00:00Z",
   "description": "Sigma Document Registry — permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE) are tracked in progress.json, not here.",
-  "total_documents": 10,
+  "total_documents": 11,
   "authority_model": {
     "description": "Two separate, non-conflatable authority axes.",
     "semantic_authority": {
@@ -187,6 +187,21 @@
       "description": "Single source of runtime truth. Tracks lifecycle state, artifact versions and states, gate flags, STALE_INTENT markers, and CSO log. The CLI reads this before every operation (to check gates) and writes it after every state-mutating operation. Runtime authority: in any conflict between a semantic markdown claim and progress.json, the CLI uses progress.json for gate decisions.",
       "tolerate_missing": false,
       "missing_behavior": "All CLI operations error with: 'No Sigma project found. Run: sigma project start'"
+    },
+    {
+      "document_id": "artifact_templates",
+      "file": "templates/",
+      "location": "Sigma/",
+      "authority_tier": "agent_config",
+      "owner": "Director",
+      "lifecycle": "stable — updated when artifact structure changes; templates are embedded by Phase 3 CLI",
+      "mandatory_when": [
+        "artifact_creation",
+        "session_bootstrap"
+      ],
+      "description": "Canonical Markdown templates for all Sigma artifacts and CSO. Five files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, CSO-TEMPLATE.md. Phase 3 CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma cso new.",
+      "tolerate_missing": true,
+      "missing_behavior": "Warn on artifact creation commands; CLI may fall back to inline templates if folder is missing."
     }
   ]
 }
