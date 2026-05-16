@@ -1,5 +1,9 @@
 # Rekomendasi - DIR-INTENT Document
 
+> CATATAN: Hindari bagian dari template yang sifatnya mengisi sesuatu yang sebenarnya akan redundan dari Sigma CLI dan progress.json (RUNTIME STATE)  dan berpotensi konflik atau tidak match
+
+
+
 Untuk Sigma, **`DIR-INTENT` memang paling tepat menjadi gabungan terkompresi dari Delta `DIR-DI` + bagian inti `GMN-STRAT`**.
 
 Tapi kompresinya harus hati-hati. Jangan sekadar menempel dua template. Delta `DIR-DI` berfungsi sebagai **strategic intent & decision constraint layer**, sedangkan `GMN-STRAT` berfungsi sebagai **execution control system** dengan strategic control, requirement, risk, architecture, validation gate, dan role consumption rules.
@@ -59,8 +63,6 @@ Delta-specific STRAT lock gate
 Rekomendasi Template: `DIR-INTENT`
 
 ```
-# DIR-INTENT-{PROJECT_ID}-{VERSION}
-
 **Sigma Director Intent & Strategic Control**
 
 > **Purpose**: This document captures the Director's intent, strategic constraints, execution direction, auditable assumptions, and minimum evidence expectations for a Sigma project.
@@ -69,61 +71,52 @@ Rekomendasi Template: `DIR-INTENT`
 
 ---
 
-## 1. Metadata
-
-| Field | Value |
-| :--- | :--- |
-| Project Name | [Project Name] |
-| Document Type | DIR-INTENT |
-
----
-
-## 2. Intent Core — Sovereign Layer
+## 1. Intent Core — Sovereign Layer
 
 > **Audit Status**: CLARITY_ONLY  
 > AUD may identify ambiguity, contradiction, missing success criteria, or unclear scope.  
 > AUD may not oppose, replace, or re-rank the Director's intent.
 
-### 2.1 Objective
+### 1.1 Objective
 
 [What are we trying to create or change?]
 
-### 2.2 Problem Being Solved
+### 1.2 Problem Being Solved
 
 [What pain, gap, inefficiency, risk, or opportunity does this project address?]
 
-### 2.3 Target User / Beneficiary
+### 1.3 Target User / Beneficiary
 
 [Who benefits from this project?]
 
-### 2.4 Desired Outcome
+### 1.4 Desired Outcome
 
 [What should be observably different when this project succeeds?]
 
-### 2.5 Primary Value Delivered
+### 1.5 Primary Value Delivered
 
 [The core value this project must deliver.]
 
 ---
 
-## 3. Success Definition
+## 2. Success Definition
 
 > **Audit Status**: FULL_AUDIT  
 > Success criteria must be measurable, observable, or verifiable.
 
-### 3.1 Concrete Outcome
+### 2.1 Concrete Outcome
 
 [Specific observable result.]
 
-### 3.2 Success Threshold
+### 2.2 Success Threshold
 
 [Quantified or binary threshold.]
 
-### 3.3 Measurement Method
+### 2.3 Measurement Method
 
 [How will success be verified?]
 
-### 3.4 Minimum Viable Evidence
+### 2.4 Minimum Viable Evidence
 
 Before this project can close, Sigma must have:
 
@@ -135,55 +128,55 @@ Before this project can close, Sigma must have:
 
 ---
 
-## 4. Strategic Trade-Offs
+## 3. Strategic Trade-Offs
 
 > **Audit Status**: FULL_AUDIT  
 > AUD may challenge whether the trade-offs are coherent, feasible, or risky.
 
-### 4.1 Primary Trade-Off
+### 3.1 Primary Trade-Off
 
 We prioritize **[X]** over **[Y]**.
 
-### 4.2 Secondary Trade-Offs
+### 3.2 Secondary Trade-Offs
 
 - We are willing to sacrifice **[X]** to gain **[Y]**.
 - We are willing to sacrifice **[X]** to gain **[Y]**.
 
-### 4.3 Why These Trade-Offs Matter
+### 3.3 Why These Trade-Offs Matter
 
 [Explain how these choices affect scope, architecture, timeline, risk, and evidence.]
 
 ---
 
-## 5. Scope Boundary
+## 4. Scope Boundary
 
 > **Audit Status**: FULL_AUDIT  
 > Scope must be explicit enough for FMN to produce execution work without inventing intent.
 
-### 5.1 In Scope
+### 4.1 In Scope
 
 - [Must deliver item 1]
 - [Must deliver item 2]
 
-### 5.2 Out of Scope
+### 4.2 Out of Scope
 
 - [Explicitly deferred item 1]
 - [Explicitly deferred item 2]
 
-### 5.3 Non-Goals
+### 4.3 Non-Goals
 
 We will NOT do the following:
 
 - [Non-goal 1]
 - [Non-goal 2]
 
-### 5.4 Why This Boundary Matters
+### 4.4 Why This Boundary Matters
 
 [What goes wrong if this scope expands?]
 
 ---
 
-## 6. Constraints & Preferences — Challengeable Means Layer
+## 5. Constraints & Preferences — Challengeable Means Layer
 
 > **Audit Status**: CHALLENGEABLE  
 > The Director may state preferences here, but AUD may challenge feasibility, risk, cost, mismatch, or hidden trade-offs.
@@ -204,12 +197,12 @@ We will NOT do the following:
 
 ---
 
-## 7. Technical & Architecture Direction
+## 6. Technical & Architecture Direction
 
 > **Audit Status**: FULL_AUDIT  
 > Tech stack, architecture, and solution assumptions are not sovereign intent. They are auditable means.
 
-### 7.1 Preferred Tech Stack
+### 6.1 Preferred Tech Stack
 
 | Layer | Technology | Reason | Risk / Trade-Off |
 | :--- | :--- | :--- | :--- |
@@ -218,17 +211,17 @@ We will NOT do the following:
 | Database | [...] | [...] | [...] |
 | Hosting | [...] | [...] | [...] |
 
-### 7.2 Architecture Direction
+### 6.2 Architecture Direction
 
 [High-level architecture or product structure.]
 
-### 7.3 Solution Assumptions
+### 6.3 Solution Assumptions
 
 | Assumption ID | Assumption | Confidence | What if wrong? |
 | :--- | :--- | :--- | :--- |
 | ASM-001 | [...] | Low / Medium / High | [...] |
 
-### 7.4 Explicitly Rejected Approaches
+### 6.4 Explicitly Rejected Approaches
 
 | Rejected Option | Reason Rejected | Trade-Off Accepted |
 | :--- | :--- | :--- |
@@ -236,7 +229,7 @@ We will NOT do the following:
 
 ---
 
-## 8. Functional Requirements
+## 7. Functional Requirements
 
 > **Audit Status**: FULL_AUDIT  
 > These are execution-shaping requirements. FMN uses this section to create the `FMN-EXEC` task plan and test contract.
@@ -266,12 +259,12 @@ As a [role], I want to [action], so that [benefit].
 
 ---
 
-## 9. Risk & Failure Definition
+## 8. Risk & Failure Definition
 
 > **Audit Status**: FULL_AUDIT  
 > Risks should be practical, not decorative.
 
-### 9.1 Risk Appetite
+### 8.1 Risk Appetite
 
 | Risk Type | Tolerance |
 | :--- | :--- |
@@ -279,7 +272,7 @@ As a [role], I want to [action], so that [benefit].
 | Degraded Capability | Low / Medium / High |
 | Unknowns | Low / Medium / High |
 
-### 9.2 Primary Failure Concern
+### 8.2 Primary Failure Concern
 
 **The Failure**:  
 [Worst realistic outcome to avoid.]
@@ -290,13 +283,13 @@ As a [role], I want to [action], so that [benefit].
 **Guardrail / Mitigation**:  
 [How we reduce the chance or impact.]
 
-### 9.3 Risk Register
+### 8.3 Risk Register
 
 | Risk ID | Classification | Description | Impact | Mitigation | Accepted? |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | RR-001 | Fatal / Degrading / Noise | [...] | [...] | [...] | Yes / No / Conditional |
 
-### 9.4 Failure Definition
+### 8.4 Failure Definition
 
 - **Project Failure**: [...]
 - **Build Blocker**: [...]
@@ -304,18 +297,18 @@ As a [role], I want to [action], so that [benefit].
 
 ---
 
-## 10. Execution Direction for FMN-EXEC
+## 9. Execution Direction for FMN-EXEC
 
 > **Audit Status**: FULL_AUDIT  
 > This section tells FMN how to convert intent into execution without creating a separate ARC-PLAN artifact.
 
-### 10.1 Execution Focus
+### 9.1 Execution Focus
 
 | Focus Area | Why It Matters | Watch-Out |
 | :--- | :--- | :--- |
 | [...] | [...] | [...] |
 
-### 10.2 FMN Must Produce
+### 9.2 FMN Must Produce
 
 The first `FMN-PLAN` must include:
 
@@ -326,7 +319,7 @@ The first `FMN-PLAN` must include:
 - [ ] Implementation Report section
 - [ ] Evidence Summary
 
-### 10.3 DEV Must Not
+### 9.3 DEV Must Not
 
 - [Forbidden implementation behavior]
 - [Out-of-scope expansion]
@@ -334,12 +327,12 @@ The first `FMN-PLAN` must include:
 
 ---
 
-## 11. Audit Findings — Advisory Only
+## 10. Audit Findings — Advisory Only
 
 > **Audit Status**: ADVISORY  
 > AUD findings support Director judgment. They do not approve, reject, lock, or block runtime state.
 
-### 11.1 AUD Review Scope
+### 10.1 AUD Review Scope
 
 AUD may review:
 
@@ -358,7 +351,7 @@ AUD may not:
 - Re-rank Director values
 - Treat advisory findings as runtime approval
 
-### 11.2 AUD Advisory Verdict
+### 10.2 AUD Advisory Verdict
 
 **Verdict**: PASS / PASS_WITH_RISK / REVISE / REJECT_RECOMMENDED / PROMOTE_TO_HEAVIER_PROCESS
 
@@ -374,7 +367,7 @@ AUD may not:
 
 ---
 
-## 12. Final Validation Checklist
+## 11. Final Validation Checklist
 
 Before `DIR-INTENT` can be locked:
 

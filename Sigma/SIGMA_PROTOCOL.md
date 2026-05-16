@@ -231,7 +231,7 @@ Sigma uses five artifact types: four governance artifacts and one optional hando
 | Owner          | Director                                          |
 | Authored by    | ARC (draft), Director (approval and lock verdict) |
 | Phase          | DESIGN                                            |
-| Storage        | `Sigma/strategy/`                                 |
+| Storage        | `Sigma/design/`                                   |
 | Versioning     | Tier 1                                            |
 | Auto-supersede | Yes (single-active)                               |
 
@@ -253,7 +253,7 @@ DIR-INTENT has two layers defined by auditability:
 | Owner          | FMN                                      |
 | Authored by    | FMN                                      |
 | Phase          | BUILD                                    |
-| Storage        | `Sigma/execution/`                       |
+| Storage        | `Sigma/build/`                           |
 | Versioning     | Tier 2                                   |
 | Auto-supersede | No (multi-active, manual supersede only) |
 
@@ -275,7 +275,7 @@ FMN-PLAN is the Sigma equivalent of Delta Full's WO + ANT-STR merged into one ar
 | Owner          | DEV                                      |
 | Authored by    | DEV                                      |
 | Phase          | BUILD                                    |
-| Storage        | `Sigma/execution/`                       |
+| Storage        | `Sigma/build/`                           |
 | Versioning     | Tier 2                                   |
 | Auto-supersede | No (multi-active, manual supersede only) |
 
@@ -297,7 +297,7 @@ DEV-EXEC is the Sigma equivalent of Delta Full's CDC-IMPL + CDC-WALK merged into
 | Owner          | Director            |
 | Authored by    | Director            |
 | Phase          | CLOSE               |
-| Storage        | `Sigma/closure/`    |
+| Storage        | `Sigma/close/`      |
 | Versioning     | Tier 1              |
 | Auto-supersede | Yes (single-active) |
 
@@ -331,19 +331,19 @@ See Section 18 for CSO lifecycle details.
 ### 6.1 DIR-INTENT States
 
 ```
-DRAFT → [UNDER_REVIEW] → LOCKED → SUPERSEDED
+DRAFT → LOCKED → SUPERSEDED
 ```
 
-| State          | Description                           | Triggered by                    |
-| -------------- | ------------------------------------- | ------------------------------- |
-| `DRAFT`        | Created; not yet reviewed or locked   | `sigma intent new`              |
-| `UNDER_REVIEW` | AUD review in progress (optional)     | `sigma intent review`           |
-| `LOCKED`       | Director-approved; satisfies Gate 1   | `sigma intent lock`             |
-| `SUPERSEDED`   | Replaced when a new version is locked | Auto on new `sigma intent lock` |
+| State        | Description                           | Triggered by                    |
+| ------------ | ------------------------------------- | ------------------------------- |
+| `DRAFT`      | Created; not yet locked               | `sigma intent new`              |
+| `LOCKED`     | Director-approved; satisfies Gate 1   | `sigma intent lock`             |
+| `SUPERSEDED` | Replaced when a new version is locked | Auto on new `sigma intent lock` |
 
 **Rules:**
 
-- UNDER_REVIEW is optional — DRAFT may transition directly to LOCKED
+- `sigma intent review` writes AUD advisory findings to the document file — it does NOT change the runtime state in `progress.json`. INTENT stays DRAFT after review.
+- DRAFT may transition directly to LOCKED (review is optional)
 - Only one DIR-INTENT may be LOCKED at a time (single-active)
 - When a new version is LOCKED, the previously LOCKED version becomes SUPERSEDED automatically
 
@@ -352,19 +352,19 @@ DRAFT → [UNDER_REVIEW] → LOCKED → SUPERSEDED
 ### 6.2 FMN-PLAN States
 
 ```
-DRAFT → [UNDER_REVIEW] → LOCKED → [SUPERSEDED]
+DRAFT → LOCKED → [SUPERSEDED]
 ```
 
-| State          | Description                         | Triggered by                                    |
-| -------------- | ----------------------------------- | ----------------------------------------------- |
-| `DRAFT`        | Created; not yet locked             | `sigma plan new`                                |
-| `UNDER_REVIEW` | AUD review in progress (optional)   | `sigma plan audit`                              |
-| `LOCKED`       | Director-approved; satisfies Gate 2 | `sigma plan lock`                               |
-| `SUPERSEDED`   | Explicitly superseded by Director   | `sigma plan supersede --v <ver> --reason "..."` |
+| State        | Description                         | Triggered by                                    |
+| ------------ | ----------------------------------- | ----------------------------------------------- |
+| `DRAFT`      | Created; not yet locked             | `sigma plan new`                                |
+| `LOCKED`     | Director-approved; satisfies Gate 2 | `sigma plan lock`                               |
+| `SUPERSEDED` | Explicitly superseded by Director   | `sigma plan supersede --v <ver> --reason "..."` |
 
 **Rules:**
 
-- UNDER_REVIEW is optional — DRAFT may transition directly to LOCKED
+- `sigma plan audit` writes AUD advisory findings to the document file — it does NOT change the runtime state. PLAN stays DRAFT after audit.
+- DRAFT may transition directly to LOCKED (audit is optional)
 - Multiple FMN-PLAN versions may be LOCKED simultaneously (multi-active)
 - Locking a new FMN-PLAN version does NOT auto-supersede previous LOCKED versions
 - Supersede is always explicit and requires a stated reason
@@ -374,22 +374,22 @@ DRAFT → [UNDER_REVIEW] → LOCKED → [SUPERSEDED]
 ### 6.3 DEV-EXEC States
 
 ```
-DRAFT → [UNDER_REVIEW] → BUILDING → TESTING → COMPLETED → LOCKED → [SUPERSEDED]
+DRAFT → BUILDING → TESTING → COMPLETED → LOCKED → [SUPERSEDED]
 ```
 
-| State          | Description                                     | Triggered by                                    |
-| -------------- | ----------------------------------------------- | ----------------------------------------------- |
-| `DRAFT`        | Created; sections not yet written               | `sigma exec new`                                |
-| `UNDER_REVIEW` | AUD review in progress (optional)               | `sigma exec audit`                              |
-| `BUILDING`     | DEV is actively implementing                    | `sigma exec advance building`                   |
-| `TESTING`      | Implementation done; testing in progress        | `sigma exec advance testing`                    |
-| `COMPLETED`    | Testing done; Implementation Report written     | `sigma exec advance complete`                   |
-| `LOCKED`       | Director-approved; satisfies Gate 3 (EXEC side) | `sigma exec lock`                               |
-| `SUPERSEDED`   | Explicitly superseded by Director               | `sigma exec supersede --v <ver> --reason "..."` |
+| State        | Description                                     | Triggered by                                    |
+| ------------ | ----------------------------------------------- | ----------------------------------------------- |
+| `DRAFT`      | Created; sections not yet written               | `sigma exec new`                                |
+| `BUILDING`   | DEV is actively implementing                    | `sigma exec advance building`                   |
+| `TESTING`    | Implementation done; testing in progress        | `sigma exec advance testing`                    |
+| `COMPLETED`  | Testing done; Implementation Report written     | `sigma exec advance complete`                   |
+| `LOCKED`     | Director-approved; satisfies Gate 3 (EXEC side) | `sigma exec lock`                               |
+| `SUPERSEDED` | Explicitly superseded by Director               | `sigma exec supersede --v <ver> --reason "..."` |
 
 **Rules:**
 
-- UNDER_REVIEW is optional — DRAFT may transition directly to BUILDING
+- `sigma exec audit` writes AUD advisory findings to the document file — it does NOT change the runtime state. EXEC stays in its current state after audit.
+- Audit may be invoked at any point before lock (DRAFT, BUILDING, TESTING, or COMPLETED)
 - Multiple DEV-EXEC versions may be LOCKED simultaneously (multi-active)
 - Locking a new DEV-EXEC version does NOT auto-supersede previous LOCKED versions
 - Supersede is always explicit and requires a stated reason
@@ -399,19 +399,19 @@ DRAFT → [UNDER_REVIEW] → BUILDING → TESTING → COMPLETED → LOCKED → [
 ### 6.4 DIR-CLOSE States
 
 ```
-DRAFT → [UNDER_REVIEW] → LOCKED → SUPERSEDED
+DRAFT → LOCKED → SUPERSEDED
 ```
 
-| State          | Description                           | Triggered by                   |
-| -------------- | ------------------------------------- | ------------------------------ |
-| `DRAFT`        | Created; not yet reviewed or locked   | `sigma close new`              |
-| `UNDER_REVIEW` | AUD review in progress (optional)     | `sigma close audit`            |
-| `LOCKED`       | Director-approved; project is closed  | `sigma close lock`             |
-| `SUPERSEDED`   | Replaced when a new version is locked | Auto on new `sigma close lock` |
+| State        | Description                                               | Triggered by                   |
+| ------------ | --------------------------------------------------------- | ------------------------------ |
+| `DRAFT`      | Created; not yet locked                                   | `sigma close new`              |
+| `LOCKED`     | Director-approved; project lifecycle_state becomes CLOSED | `sigma close lock`             |
+| `SUPERSEDED` | Replaced when a new version is locked                     | Auto on new `sigma close lock` |
 
 **Rules:**
 
-- UNDER_REVIEW is optional — DRAFT may transition directly to LOCKED
+- `sigma close audit` writes AUD advisory findings to the document file — it does NOT change the runtime state. CLOSE stays DRAFT after audit.
+- DRAFT may transition directly to LOCKED (audit is optional)
 - Only one DIR-CLOSE may be LOCKED at a time (single-active)
 - Revision = new version. When a new version is LOCKED, the previous LOCKED version becomes SUPERSEDED automatically
 
@@ -447,14 +447,16 @@ DEV cannot begin implementation without an approved work plan and pre-build test
 
 ### Gate 3 — BUILD Evidence
 
-| Property      | Value                                                                                                                                                   |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Blocks        | `sigma close new`                                                                                                                                       |
-| Pre-condition | `DIR-INTENT` LOCKED + at least one `FMN-PLAN` LOCKED + at least one `DEV-EXEC` LOCKED, where the EXEC references the same FMN-PLAN version              |
-| CLI error     | `Gate 3 blocked: CLOSE requires a LOCKED DIR-INTENT, at least one LOCKED FMN-PLAN, and at least one LOCKED DEV-EXEC referencing the same plan version.` |
-| CLI warning   | If the qualifying PLAN/EXEC pair carries `stale_intent: true`, CLI warns before allowing `sigma close new` to proceed                                   |
+| Property            | Value                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Blocks              | `sigma close new`                                                                                                                                                                                 |
+| Pre-condition       | Full INTENT → PLAN → EXEC chain: active INTENT is LOCKED; at least one DEV-EXEC is LOCKED whose `plan_version_ref` points to a LOCKED FMN-PLAN whose `intent_version_ref` points to that INTENT |
+| CLI error (no chain)| `Gate 3 blocked: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain).`                                                                                                           |
+| CLI error (stale)   | `Gate 3 stale: Qualifying chain has stale_intent=true. Add --ack-stale-intent to acknowledge and proceed.`                                                                                        |
 
-CLOSE cannot be declared without evidence of completed work. The Director must explicitly identify which PLAN and EXEC versions satisfy the closure evidence requirement in the DIR-CLOSE document.
+CLOSE cannot be declared without evidence of completed work. Gate 3 validates the full chain — a PLAN that was never used by any EXEC does not count. A STALE_INTENT chain requires Director to explicitly acknowledge via `--ack-stale-intent` on `sigma close new`; without this flag, the CLI blocks.
+
+The Director must explicitly identify which PLAN and EXEC versions satisfy the closure evidence requirement in the DIR-CLOSE document.
 
 ---
 
@@ -484,8 +486,9 @@ CLOSE cannot be declared without evidence of completed work. The Director must e
 
 **Effect on CLOSE:**
 
-- `sigma close new` will warn if the qualifying PLAN/EXEC pair carries the STALE_INTENT flag
-- Director must consciously proceed past the warning — the CLI does not silently allow stale evidence to support closure
+- `sigma close new` **blocks** if the qualifying PLAN/EXEC chain carries the STALE_INTENT flag
+- Director must pass `--ack-stale-intent` to `sigma close new` to proceed; without it the command exits with a gate error
+- The acknowledgment is recorded in the DIR-CLOSE DRAFT metadata — it is not a silent bypass
 
 **What STALE_INTENT means:** The intent that governed that work has been superseded. The work itself may still be valid. Director decides whether the stale evidence is sufficient for closure or whether fresh BUILD artifacts should be produced against the new intent.
 
@@ -496,24 +499,25 @@ CLOSE cannot be declared without evidence of completed work. The Director must e
 All Sigma governance artifacts follow this naming pattern:
 
 ```
-{ROLE}-{DOC}-{PROJECT_ID}-v{VER}.md
+{ROLE}-{DOC}-v{VER}.md
 ```
 
-| Placeholder    | Valid values                                                 |
-| -------------- | ------------------------------------------------------------ |
-| `{ROLE}`       | `DIR` (Director), `FMN` (Foreman), `DEV` (Developer)         |
-| `{DOC}`        | `INTENT`, `PLAN`, `EXEC`, `CLOSE`                            |
-| `{PROJECT_ID}` | 3-digit zero-padded project number, e.g. `001`, `042`        |
-| `{VER}`        | Version string per tier — e.g. `1.0`, `0.1` (see Section 11) |
+PROJECT_ID is intentionally excluded. Artifacts live inside the project's `Sigma/` folder — path provides project context. Project identity is recorded in `progress.json` and `~/.sigma/projects.json`, not in filenames. This keeps filenames simple and makes project renaming cost-free.
+
+| Placeholder | Valid values                                                  |
+| ----------- | ------------------------------------------------------------- |
+| `{ROLE}`    | `DIR` (Director), `FMN` (Foreman), `DEV` (Developer)          |
+| `{DOC}`     | `INTENT`, `PLAN`, `EXEC`, `CLOSE`                             |
+| `{VER}`     | Version string per tier — e.g. `1.0`, `0.1` (see Section 11) |
 
 **Examples:**
 
 | Artifact   | Example filename                                                |
 | ---------- | --------------------------------------------------------------- |
-| DIR-INTENT | `DIR-INTENT-001-v1.0.md`                                        |
-| FMN-PLAN   | `FMN-PLAN-001-v0.1.md`                                          |
-| DEV-EXEC   | `DEV-EXEC-001-v0.2.md`                                          |
-| DIR-CLOSE  | `DIR-CLOSE-001-v1.0.md`                                         |
+| DIR-INTENT | `DIR-INTENT-v1.0.md`                                            |
+| FMN-PLAN   | `FMN-PLAN-v0.1.md`                                              |
+| DEV-EXEC   | `DEV-EXEC-v0.2.md`                                              |
+| DIR-CLOSE  | `DIR-CLOSE-v1.0.md`                                             |
 | CSO        | `CSO-ARC-20260516-1430.md` (timestamp pattern — see Section 18) |
 
 ---
@@ -548,27 +552,32 @@ Every Sigma project contains a `Sigma/` directory at the project root. This is t
 
 ```
 {ProjectRoot}/
-├── Sigma/                                   ← Governance layer (all Sigma artifacts live here)
-│   ├── SIGMA_CONSTITUTION.md                ← Constitutional doctrine
-│   ├── SIGMA_PROTOCOL.md                    ← Operational governance protocol
+├── Sigma/                                      ← Governance layer (all Sigma artifacts live here)
+│   ├── SIGMA_CONSTITUTION.md                   ← Constitutional doctrine
+│   ├── SIGMA_PROTOCOL.md                       ← Operational governance protocol
+│   ├── SIGMA-REGISTRY.json                     ← Document authority registry (Phase 0B)
+│   ├── SIGMA-OPERATION-REGISTRY.json           ← CLI operation contracts (Phase 0B)
+│   ├── progress.json                           ← Runtime state (CLI-managed, authoritative)
 │   ├── rules/           ← Role rule files (read-only governance reference)
 │   │   ├── ARC-RULE.md
 │   │   ├── AUD-RULE.md
 │   │   ├── FMN-RULE.md
 │   │   └── DEV-RULE.md
-│   ├── strategy/        ← DESIGN artifacts
-│   │   └── DIR-INTENT-{ID}-v{VER}.md
-│   ├── execution/       ← BUILD artifacts
-│   │   ├── FMN-PLAN-{ID}-v{VER}.md
-│   │   └── DEV-EXEC-{ID}-v{VER}.md
-│   ├── closure/         ← CLOSE artifacts
-│   │   └── DIR-CLOSE-{ID}-v{VER}.md
-│   ├── logs/            ← CSO files (optional, session handoff)
-│   │   └── CSO-{AGENT}-{YYYYMMDD}-{HHMM}.md
-│   ├── memory/          ← Decision Memory (CLI-managed)
-│   │   └── decisions.jsonl
-│   └── progress.json    ← Runtime state (CLI-managed, authoritative)
-├── CLAUDE.md / GEMINI.md / AGENTS.md        ← Agent bridge files
+│   ├── design/          ← DESIGN artifacts
+│   │   └── DIR-INTENT-v{VER}.md
+│   ├── build/           ← BUILD artifacts
+│   │   ├── FMN-PLAN-v{VER}.md
+│   │   └── DEV-EXEC-v{VER}.md
+│   ├── close/           ← CLOSE artifacts
+│   │   └── DIR-CLOSE-v{VER}.md
+│   ├── logs/            ← CSO files + CLI-generated backups and logs
+│   │   ├── CSO-{AGENT}-{YYYYMMDD}-{HHMM}.md
+│   │   ├── progress-backup-{timestamp}.json    ← Created by project reset
+│   │   ├── migration-{timestamp}.json          ← Created on schema migration
+│   │   └── sync-backup-{timestamp}/            ← Created by project sync
+│   └── memory/          ← Decision Memory (CLI-managed)
+│       └── decisions.jsonl
+├── CLAUDE.md / GEMINI.md / AGENTS.md           ← Agent bridge files
 └── [project source, tests, deliverables — outside Sigma/]
 ```
 
@@ -583,14 +592,14 @@ Every Sigma project contains a `Sigma/` directory at the project root. This is t
 
 ## 13. Folder-to-Phase Mapping
 
-| Folder             | Phase                  | Artifacts                                                  |
-| ------------------ | ---------------------- | ---------------------------------------------------------- |
-| `Sigma/strategy/`  | DESIGN                 | `DIR-INTENT-{ID}-v{VER}.md`                                |
-| `Sigma/execution/` | BUILD                  | `FMN-PLAN-{ID}-v{VER}.md`, `DEV-EXEC-{ID}-v{VER}.md`       |
-| `Sigma/closure/`   | CLOSE                  | `DIR-CLOSE-{ID}-v{VER}.md`                                 |
-| `Sigma/rules/`     | All phases (reference) | `ARC-RULE.md`, `AUD-RULE.md`, `FMN-RULE.md`, `DEV-RULE.md` |
-| `Sigma/logs/`      | Any phase              | `CSO-{AGENT}-{YYYYMMDD}-{HHMM}.md`                         |
-| `Sigma/memory/`    | Any phase              | `decisions.jsonl` (auto-harvested by CLI on lock events)   |
+| Folder             | Phase                  | Artifacts                                                      |
+| ------------------ | ---------------------- | -------------------------------------------------------------- |
+| `Sigma/design/`    | DESIGN                 | `DIR-INTENT-v{VER}.md`                                         |
+| `Sigma/build/`     | BUILD                  | `FMN-PLAN-v{VER}.md`, `DEV-EXEC-v{VER}.md`                     |
+| `Sigma/close/`     | CLOSE                  | `DIR-CLOSE-v{VER}.md`                                          |
+| `Sigma/rules/`     | All phases (reference) | `ARC-RULE.md`, `AUD-RULE.md`, `FMN-RULE.md`, `DEV-RULE.md`     |
+| `Sigma/logs/`      | Any phase              | CSO files, progress backups, migration logs, sync backups      |
+| `Sigma/memory/`    | Any phase              | `decisions.jsonl` (auto-harvested by CLI on lock events)       |
 
 ---
 
