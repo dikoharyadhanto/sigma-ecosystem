@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//i/Works/Project/delta-ecosystem/**)",
+      "Bash(dir \"I:\\\\Works\\\\Project\\\\delta-ecosystem\")"
+    ]
+  }
+}

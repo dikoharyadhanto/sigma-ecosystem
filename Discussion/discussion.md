@@ -148,10 +148,12 @@ NamaProject/
 ### 2.2 Siklus Hidup (Target v1.0)
 
 ```
-start → plan → build → close
+start → design → build → close
 ```
 
 4 fase vs 7-8 langkah Delta Full.
+
+> ⚠️ **Koreksi (Phase 0A)**: Fase pertama awalnya disebut "plan" dalam dokumen diskusi awal, lalu diubah menjadi **"DESIGN"** dalam `sigma_phase_implementation.md` dan `SIGMA_PROTOCOL.md` untuk menghindari konflik nama dengan artifact FMN-PLAN. "DESIGN" adalah nama resmi fase pertama di semua dokumen downstream.
 
 ### 2.3 Role Sequence (Dikompresi)
 
@@ -388,7 +390,7 @@ Keputusan dari Checkpoint 2:
 
 ### G. Workflow & Lifecycle
 
-- [x] **Fase**: **START → PLAN → BUILD → CLOSE** ✅
+- [x] **Fase**: **START → DESIGN → BUILD → CLOSE** ✅ *(dikoreksi dari "PLAN" → "DESIGN" — lihat Session #3)*
 - [x] **Gate Rules (3 gate)**: ✅
   - **PLAN** butuh DIR-INTENT locked
   - **EXEC** butuh PLAN locked (versi yang sama)
@@ -594,7 +596,7 @@ Keputusan dari Checkpoint 2:
 
 | #   | Keputusan             | Detail                                                                                         |
 | --- | --------------------- | ---------------------------------------------------------------------------------------------- |
-| G1  | Fase                  | **START → PLAN → BUILD → CLOSE**                                                               |
+| G1  | Fase                  | **START → DESIGN → BUILD → CLOSE** *(dikoreksi: "PLAN" → "DESIGN" — lihat Session #3)*        |
 | G2  | Gate Rules            | 3 gate: PLAN butuh INTENT locked; EXEC butuh PLAN locked; CLOSE butuh INTENT + 1 PLAN + 1 EXEC (versi sama) |
 | G3  | State INTENT          | DRAFT → UNDER_REVIEW → {Audit AUD / Approval Director} → LOCKED → SUPERSEDED                   |
 | G4  | State PLAN            | DRAFT → {Audit AUD / Approval Director} → LOCKED → SUPERSEDED                                  |
@@ -651,13 +653,64 @@ Keputusan dari Checkpoint 2:
 ### Keputusan yang Dikonfirmasi Kuat
 
 - Nama Sigma, CLI `sigma`, standalone + Delta branding
-- 3 role: ARC, AUD, DEV
-- Gate hanya 2: EXEC butuh INTENT locked; CLOSE butuh INTENT + 1 EXEC locked
+- 3 role: ARC, AUD, DEV *(⚠️ keliru — lihat koreksi di bawah)*
+- Gate hanya 2: EXEC butuh INTENT locked; CLOSE butuh INTENT + 1 EXEC locked *(⚠️ keliru — lihat koreksi di bawah)*
 - AUD advisory only, Director only approval
 - Tidak ada override, block/unblock, TEA, promote
 - Sigma dan Delta tidak saling migrasi
 - `sigma promote` tidak ada — boundary arsitektur bersih
 
+> ⚠️ **Koreksi pasca Session #2**: Dua poin di atas keliru dan bertentangan dengan keputusan Session #1:
+> - **Role**: Bukan 3, tapi **4 role** (ARC, AUD, **FMN**, DEV) — FMN (Foreman) sudah diputuskan di C1–C6 Session #1 sebagai role BUILD terpisah dari DEV.
+> - **Gate**: Bukan 2, tapi **3 gate** — Gate 1: FMN-PLAN butuh INTENT locked; Gate 2: DEV-EXEC butuh FMN-PLAN locked; Gate 3: CLOSE butuh INTENT + 1 FMN-PLAN + 1 DEV-EXEC locked (versi sama). Ini konsisten dengan G2 yang sudah diputuskan di Session #1.
+> Keputusan Session #1 (C1 dan G2) adalah yang benar dan digunakan di semua dokumen downstream.
+
 ### Verdict
 
 **Sigma siap masuk ke `SIGMA_PROTOCOL.md`.** Semua keputusan arsitektur sudah konsisten. 8 item pending adalah detail template/implementasi, bukan blocker desain.
+
+> **Update**: `SIGMA_PROTOCOL.md` sudah ditulis di Phase 0A (lihat Session #3).
+
+---
+
+## Session #3 — 20260516 — Phase 0A Execution Decisions
+
+> **Peserta**: Director + Claude (Sonnet 4.6)
+> **Topik**: Eksekusi Phase 0A — keputusan implementasi selama penulisan SIGMA_CONSTITUTION.md dan SIGMA_PROTOCOL.md
+> **Status**: Selesai — dokumen Phase 0A sudah dibuat
+
+### Keputusan & Koreksi Phase 0A
+
+| #   | Keputusan | Detail |
+| --- | --------- | ------ |
+| S3-1 | **Fase pertama: "PLAN" → "DESIGN"** | Nama fase pertama diubah dari "plan" menjadi **DESIGN** untuk menghindari konflik nama dengan artifact FMN-PLAN. Lifecycle resmi: `START → DESIGN → BUILD → CLOSE`. Semua dokumen downstream menggunakan "DESIGN". |
+| S3-2 | **SIGMA_CONSTITUTION.md: terminology adapted** | Bukan pure verbatim copy dari DELTA_CONSTITUTION.md. Struktur 10 artikel tetap sama, tapi terminologi diadaptasi untuk Sigma (Article I menyebut "Sigma", Article IV menggunakan Sigma artifact hierarchy). Sync obligation tetap berlaku: jika Delta Constitution diamendemen, SIGMA_CONSTITUTION.md harus diupdate. |
+| S3-3 | **File location: dalam `Sigma/`** | SIGMA_CONSTITUTION.md dan SIGMA_PROTOCOL.md berada di `Sigma/` folder, bukan di project root. Semua governance artifacts Sigma (termasuk doctrine files) live inside `Sigma/`. |
+| S3-4 | **sigma-ecosystem = dogfooding Sigma project** | Folder `sigma-ecosystem/` diperlakukan sebagai project root sekaligus registered Sigma project pertama. `Sigma/` di dalamnya adalah governance layer aktif untuk project ini sendiri. Sigma dibangun menggunakan Sigma protocol. |
+| S3-5 | **SIGMA_PROTOCOL.md: living document** | Ditulis secara inkremental per fase. Phase 0A menulis sections 1–19 (foundational doctrine). Fase berikutnya menambah sections yang relevan tanpa menulis ulang sections sebelumnya kecuali ada konflik. |
+| S3-6 | **AUD activation policy: confirmed (Open Item #1)** | AUD optional by default. Recommended sebelum INTENT lock pertama, sebelum build jika scope/tech risk non-trivial, sebelum public release. Mandatory hanya jika Director mark project sebagai risk-sensitive. |
+| S3-7 | **SIGMA_PROTOCOL.md: section coverage per phase** | Phase 0A: 15 sections FULL, 2 sections FOUNDATIONAL (akan di-extend di Phase 1 dan 2), 1 section HIGH-LEVEL (CLI Command Surface — full spec di Phase 4). Detail di `Implementation/PLAN-0A.md`. |
+
+### Dokumen yang Dihasilkan
+
+| File | Lokasi | Status |
+| ---- | ------ | ------ |
+| `SIGMA_CONSTITUTION.md` | `Sigma/SIGMA_CONSTITUTION.md` | ✅ Selesai — Director-reviewed |
+| `SIGMA_PROTOCOL.md` | `Sigma/SIGMA_PROTOCOL.md` | ✅ Selesai — Phase 0A sections complete |
+| `PLAN-0A.md` | `Implementation/PLAN-0A.md` | ✅ Selesai — Director-approved |
+
+### Open Items Resolved
+
+| Open Item | Resolusi |
+| --------- | -------- |
+| #1 — AUD activation policy wording | ✅ Resolved — S3-6 di atas |
+
+### Pending Items Sisa (dari sigma_phase_implementation.md)
+
+| # | Open Item | Resolves In |
+| - | --------- | ----------- |
+| 2 | Rules detail untuk roles — ARC, AUD, FMN, DEV | Phase 2 |
+| 3 | Template & format dokumen detail | Phase 1 |
+| 4 | Sublayer authority labels dalam DIR-INTENT + FMN-PLAN template | Phase 1 |
+| 5 | Isi dokumen closure / DIR-CLOSE format | Phase 1 |
+| 6 | Detail teknis implementasi (daemon, auto-update, offline mode, telemetry) | Phase 6 |

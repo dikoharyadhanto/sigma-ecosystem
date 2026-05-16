@@ -3,6 +3,8 @@
 > **Status**: Draft — for Director review
 > **Purpose**: High-level task breakdown by implementation phase. Each phase will have its own WO with technical specifics.
 > **Reference**: `Intent/DIR-DI-000-SIGMA-v1.0.md` + `Discussion/discussion.md` (all decisions through Session #2)
+>
+> **Project Root Convention**: `sigma-ecosystem/` is treated as the project root AND as a registered Sigma project. The `Sigma/` folder inside it is the live governance layer for this project — Sigma is being built using Sigma protocol (dogfooding from Phase 0A). All governance artifacts (`SIGMA_CONSTITUTION.md`, `SIGMA_PROTOCOL.md`, role rules, templates, progress.json, etc.) live inside `Sigma/`, not at the project root.
 
 ---
 
@@ -37,9 +39,9 @@ The doctrine layer. Establishes Sigma's identity, principles, lifecycle, roles, 
 
 ### Main Tasks
 
-- **SIGMA_CONSTITUTION.md** — Copy of `DELTA_CONSTITUTION.md`, renamed. Same 10 Articles, same content. Sigma does not have a separate constitution — Delta Constitution is the constitution for the entire Delta Ecosystem including Sigma. If Delta Constitution is amended, Sigma must follow. (Director decided: B2, B3, B9 — Session #1)
+- **SIGMA_CONSTITUTION.md** — Based on `DELTA_CONSTITUTION.md`. Same 10-Article structure, but terminology is adapted for Sigma (e.g., Article I references Sigma identity, Article IV hierarchy uses Sigma artifact names). Includes a Sigma-specific preface explaining the relationship to Delta, sync obligation, and Sigma-specific interpretation note. Sigma does not have a separate constitution — the Delta Constitution structure is the constitutional layer for both systems. If Delta Constitution is amended, Sigma must follow. **File location: `Sigma/SIGMA_CONSTITUTION.md`** (Director decided: B2, B3, B9 — Session #1; terminology adaptation decided in Phase 0A execution)
 
-- **SIGMA_PROTOCOL.md** — The core operational document. Covers:
+- **SIGMA_PROTOCOL.md** — The core operational document. **Living document — written incrementally per phase.** Each phase adds or extends the relevant sections; earlier sections are not rewritten unless a conflict is found. Phase 0A writes the foundational doctrine (sections 1–19). Later phases extend it with template references (Phase 1), rule file references (Phase 2), CLI setup details (Phase 3), full CLI command spec (Phase 4), memory model (Phase 5), and distribution details (Phase 6). **File location: `Sigma/SIGMA_PROTOCOL.md`**. Covers (Phase 0A scope):
   - Sigma identity and relationship to Delta
   - Lifecycle definition: `START → DESIGN → BUILD → CLOSE`
     - **DESIGN**: DIR-INTENT only. ARC drafts, AUD reviews (optional), Director locks. This is the intent and strategy layer — not technical.
