@@ -1582,7 +1582,124 @@ Agents should read `Sigma/memory/decisions.jsonl` directly when querying project
 
 ## 25. Distribution & Bridge Files
 
-> **[PHASE 6]** — npm package finalization, bridge file templates (CLAUDE.md, GEMINI.md, AGENTS.md), skill file specifications for all 4 platforms × 6 skills (`/arc`, `/aud`, `/fmn`, `/dev`, `/checkpoint`, `/cso`), and `SIGMA_README.md` content will be defined in Phase 6.
+### 25.1 npm Package Structure
+
+The `sigma-cli` npm package is published with the following `files` array:
+
+```
+bin/                          — sigma.js entry point
+dist/                         — compiled TypeScript output
+scripts/                      — MCP runner scripts
+setup/                        — skill files, bridge templates, hook guard
+Sigma/templates/              — project template files
+Sigma/rules/                  — role rule files (ARC, FMN, DEV, AUD)
+Sigma/SIGMA_CONSTITUTION.md
+Sigma/SIGMA_PROTOCOL.md
+Sigma/SIGMA-REGISTRY.json
+Sigma/SIGMA-OPERATION-REGISTRY.json
+SIGMA_README.md               — npm package page content
+```
+
+The `readme` field in `package.json` points to `SIGMA_README.md`.
+
+---
+
+### 25.2 Setup Install Procedure
+
+`sigma setup install` performs the following steps in order:
+
+1. **Governance files** — creates `~/.sigma/` directory structure; copies templates, rules, constitution, and protocol from the package bundle.
+2. **Bridge file templates** — copies `setup/targets/bridge/*.md` into `~/.sigma/bridge/` (always overwrite — these are managed templates, not user-modified files).
+3. **Tool detection** — checks for the existence of `~/.claude/commands/`, `~/.codex/skills/`, `~/.reasonix/skills/`, `~/.gemini/agents/`.
+4. **Skill deployment** (interactive unless `--yes`) — for each detected and selected platform, copies 6 skill files (arc, fmn, dev, aud, checkpoint, cso) from `setup/targets/{platform}/` to the detected target directory.
+5. **Hook deployment** (Claude Code only, if selected) — copies `setup/targets/hooks/protect-sigma.js` to `~/.sigma/hooks/`; patches `~/.claude/settings.json` PreToolUse entry (idempotent — no duplicate insertion).
+
+`sigma setup install --yes` performs all steps non-interactively (selects all detected tools).
+
+`sigma setup update` refreshes governance files and bridge templates in `~/.sigma/` but does NOT redeploy skill files to AI tool directories (skill files are user-space).
+
+---
+
+### 25.3 Bridge File Specification
+
+Bridge files are placed at the project root by `sigma project start`. They describe how each AI vendor should operate in a Sigma-governed project.
+
+**Bridge file tiers:**
+
+**Tier 1 — Full Bridge** (CLAUDE.md, GEMINI.md, AGENTS.md)
+
+Nine-section structure. For vendors that reliably follow complex multi-mode governance instructions.
+
+Sections: Ownership, Operational Modes (Professional + ARC/FMN/DEV/AUD), Role Immutability, CLI Operator Model (with AUD Exception), Director Authorization Language, CLI-Managed Files, Mandatory Bootstrap, MCP Tooling, Memory Isolation.
+
+AUD is first-class in Tier 1 and must be explicitly described as a passive external auditor: advisory-only, may not lock or mandate, reviews only Director-provided materials.
+
+**Tier 2 — Lightweight Isolation Bridge** (DEEPSEEK.md)
+
+Seven-section structure. Non-inheritance is a safety design — role activation sections are intentionally absent to avoid false confidence where multi-mode compliance may be unreliable.
+
+Sections: Ownership (with explicit non-inheritance rule), Operational Mode (Professional + Flexible), CLI Operator Model, Director Authorization Language, CLI-Managed Files (no-edit rule only), Sigma CLI Awareness, Memory Isolation.
+
+**Tier 3 — Shell Whitelist Bridge** (REASONIX.md)
+
+Six-section structure. Points to DEEPSEEK.md as primary doctrine. Adds a Sigma CLI shell whitelist split into read-only commands (safe without authorization) and authorization-required commands (lock, supersede, reset).
+
+Bridge file templates ship in `setup/targets/bridge/` inside the package.
+
+---
+
+### 25.4 Skill File Specification
+
+Skill files activate AI roles within Sigma-governed projects. Each file is a Markdown document deployed to a tool-specific directory.
+
+**Platform deployment paths:**
+
+| Platform | Target Directory | File Extension | Invoked as |
+| :--- | :--- | :--- | :--- |
+| Claude Code | `~/.claude/commands/` | `.md` | `/arc`, `/fmn`, `/dev`, `/aud`, `/checkpoint`, `/cso` |
+| Codex CLI | `~/.codex/skills/` | (none) | `#arc`, `#fmn`, etc. |
+| Reasonix | `~/.reasonix/skills/` | `.md` | `/arc`, `/fmn`, etc. |
+| Antigravity | `~/.gemini/agents/` | `.md` | Agent selector |
+
+**24 skill files total** — 4 platforms × 6 roles (arc, fmn, dev, aud, checkpoint, cso). Content is identical across platforms for the same role.
+
+**Common skill file sections:**
+- Frontmatter with `description:` field (max 80 chars)
+- Role Identity, Activation, Role Immutability, Scope and Authority
+- Director Authorization (or for AUD: External Auditor Isolation Policy + Evidence Boundary + CLI Operation Policy)
+- Bootstrap Protocol (4-step; AUD uses 3-step passive bootstrap)
+- Role Rules reference, CLI-Managed Files table
+
+AUD skill files have a different section structure: External Auditor Isolation Policy replaces Director Authorization; Evidence Boundary format is specified; CLI Operation Policy states AUD is passive by default.
+
+---
+
+### 25.5 Hook Guard
+
+`setup/targets/hooks/protect-sigma.js` is a Node.js PreToolUse hook deployed to `~/.sigma/hooks/`.
+
+It intercepts Edit and Write tool calls. If the target path matches `Sigma/progress.json`, it outputs a blocking decision:
+
+```json
+{ "decision": "block", "reason": "Sigma progress.json is CLI-managed. Use sigma commands instead of direct edits." }
+```
+
+The hook entry is patched into `~/.claude/settings.json` under `hooks.PreToolUse` matching `Edit|Write`. The patch is idempotent — re-running `sigma setup install` does not duplicate the entry.
+
+Hard hook protection is Claude Code-only. Other platforms (Codex, Reasonix, Antigravity) rely on bridge file and skill file behavioral rules to enforce the same constraint.
+
+---
+
+### 25.6 MCP Setup
+
+`sigma setup memory` configures two MCP servers for the current project:
+
+- **sequential-thinking** (`@modelcontextprotocol/server-sequential-thinking`) — structured multi-step reasoning for planning and architecture review
+- **sigma-memory** (`@modelcontextprotocol/server-memory`) — persistent knowledge graph; memory file at `~/.sigma/memory_sigma.jsonl`
+
+`sigma setup memory` writes `.mcp.json` to the current project directory. Pass `--vscode` to also write `.vscode/mcp.json` for the VS Code extension.
+
+The memory file (`~/.sigma/memory_sigma.jsonl`) is Sigma ecosystem-level only. Project-specific decisions are recorded in `Sigma/memory/decisions.jsonl` by the CLI on lock events. Global memory is written by agents via MCP tools; promotion from project-level to global requires Director decision.
 
 ---
 

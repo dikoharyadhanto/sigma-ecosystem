@@ -1,21 +1,24 @@
 {
   "name": "sigma-cli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Sigma — Lightweight project governance CLI",
   "bin": {
     "sigma": "./bin/sigma.js"
   },
   "main": "./dist/cli.js",
+  "readme": "SIGMA_README.md",
   "files": [
     "bin/",
     "dist/",
     "scripts/",
+    "setup/",
     "Sigma/templates/",
     "Sigma/rules/",
     "Sigma/SIGMA_CONSTITUTION.md",
     "Sigma/SIGMA_PROTOCOL.md",
     "Sigma/SIGMA-REGISTRY.json",
-    "Sigma/SIGMA-OPERATION-REGISTRY.json"
+    "Sigma/SIGMA-OPERATION-REGISTRY.json",
+    "SIGMA_README.md"
   ],
   "scripts": {
     "build": "tsc",

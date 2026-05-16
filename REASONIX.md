@@ -1,0 +1,63 @@
+# Reasonix — sigma-ecosystem Integration
+
+## Ownership
+
+This file bridges Reasonix with the sigma-ecosystem project.
+This project is the sigma-cli source codebase — a TypeScript/Node.js npm package
+that implements the Sigma governance CLI.
+
+Primary doctrine for DeepSeek/Reasonix: `DEEPSEEK.md` at the project root.
+
+## Primary Doctrine
+
+Follow `DEEPSEEK.md` above all other project-level rule files.
+Do not read CLAUDE.md, GEMINI.md, or AGENTS.md unless the Director explicitly
+requests it.
+
+## Sigma Shell Whitelist
+
+The following commands are safe to run without Director authorization:
+
+```
+sigma --help
+sigma session bootstrap
+sigma project status
+sigma project list
+sigma intent status
+sigma roadmap list
+sigma plan status
+sigma exec status
+sigma close status
+sigma git evidence
+```
+
+The following commands require explicit Director authorization before running:
+
+```
+sigma intent lock
+sigma roadmap lock
+sigma plan lock
+sigma exec lock
+sigma close lock
+sigma close new --ack-stale-intent
+sigma * supersede
+sigma project reset
+```
+
+## CLI Operator Model
+
+Do not ask the Director to manually run Sigma commands when you can run them
+through available tooling. Identify the command, state whether it requires
+authorization, ask, then execute only after authorization when required.
+
+## Director Authorization Language
+
+Sufficient: "approved", "lock it", "I approve this plan", "go ahead", "run it"
+Ambiguous (not sufficient for lock/risk): "okay", "noted", "makes sense"
+
+If authorization is unclear, ask before executing.
+
+## Memory Isolation
+
+`~/.sigma/memory_sigma.jsonl` is Sigma ecosystem-level only.
+Do not store project-specific facts or session context there.

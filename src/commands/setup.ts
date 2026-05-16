@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
+import os from 'os';
 import inquirer from 'inquirer';
 import {
   GLOBAL_SIGMA_DIR,
@@ -16,6 +17,7 @@ import {
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, copyDir, fileExists } from '../utils/fs';
 import { writeMcpJson, writeVscodeMcpJson, createMcpConfig } from '../utils/mcp';
+import { detectTools, targetPaths } from '../utils/detect';
 
 // ── Bundle paths (files shipped inside the npm package) ─────────────────────
 
@@ -26,12 +28,37 @@ const BUNDLE_RULES = path.join(PACKAGE_ROOT, 'Sigma', 'rules');
 const BUNDLE_CONSTITUTION = path.join(PACKAGE_ROOT, 'Sigma', 'SIGMA_CONSTITUTION.md');
 const BUNDLE_PROTOCOL = path.join(PACKAGE_ROOT, 'Sigma', 'SIGMA_PROTOCOL.md');
 
-const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md'];
+const SETUP_TARGETS_DIR = path.join(PACKAGE_ROOT, 'setup', 'targets');
+const BUNDLE_BRIDGE_DIR = path.join(SETUP_TARGETS_DIR, 'bridge');
+const BUNDLE_HOOKS_DIR = path.join(SETUP_TARGETS_DIR, 'hooks');
+
+const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
+
+const ROLE_FILES: Record<string, Record<string, string>> = {
+  claudeCode:  { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md' },
+  codex:       { arc: 'arc',    fmn: 'fmn',    dev: 'dev',    aud: 'aud',    checkpoint: 'checkpoint',    cso: 'cso'    },
+  reasonix:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md' },
+  antigravity: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md' },
+};
+
+const PLATFORM_LABELS: Record<string, string> = {
+  claudeCode:  'Claude Code  (~/.claude/commands/)',
+  codex:       'Codex CLI    (~/.codex/skills/)',
+  reasonix:    'Reasonix     (~/.reasonix/skills/)',
+  antigravity: 'Antigravity  (~/.gemini/agents/)',
+};
+
+const PLATFORM_SOURCE_DIR: Record<string, string> = {
+  claudeCode:  'claude_code',
+  codex:       'codex',
+  reasonix:    'reasonix',
+  antigravity: 'antigravity',
+};
 
 // ── sigma setup install ──────────────────────────────────────────────────────
 
-async function runInstall(opts: { force?: boolean }): Promise<void> {
-  if (fileExists(GLOBAL_SIGMA_DIR) && !opts.force) {
+async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<void> {
+  if (fileExists(GLOBAL_SIGMA_DIR) && !opts.force && !opts.yes) {
     const { confirmed } = await inquirer.prompt([
       {
         type: 'confirm',
@@ -81,11 +108,18 @@ async function runInstall(opts: { force?: boolean }): Promise<void> {
     warn('SIGMA_PROTOCOL.md not found in bundle — skipping');
   }
 
-  // Seed bridge stubs
-  for (const stub of BRIDGE_STUBS) {
-    const stubPath = path.join(GLOBAL_BRIDGE_DIR, stub);
-    if (!fileExists(stubPath)) {
-      fs.writeFileSync(stubPath, `# ${stub}\n\n<!-- Sigma bridge stub — Phase 6 will write real content -->\n`);
+  // Step A — Bridge file templates (always overwrite — templates, not user-modified)
+  if (fileExists(BUNDLE_BRIDGE_DIR)) {
+    ensureDir(GLOBAL_BRIDGE_DIR);
+    copyDir(BUNDLE_BRIDGE_DIR, GLOBAL_BRIDGE_DIR);
+    console.log('  Installed: bridge/ templates');
+  } else {
+    // Fall back to seeding stubs for backward compatibility
+    for (const stub of BRIDGE_STUBS) {
+      const stubPath = path.join(GLOBAL_BRIDGE_DIR, stub);
+      if (!fileExists(stubPath)) {
+        fs.writeFileSync(stubPath, `# ${stub}\n\n<!-- Sigma bridge stub -->\n`);
+      }
     }
   }
 
@@ -103,9 +137,147 @@ async function runInstall(opts: { force?: boolean }): Promise<void> {
     }, { spaces: 2 });
   }
 
+  // Step B — Detect tools
+  const detected = detectTools();
+  const paths = targetPaths();
+  const detectedPlatforms = (Object.entries(detected) as [string, boolean][])
+    .filter(([, v]) => v)
+    .map(([k]) => k);
+
+  if (detectedPlatforms.length === 0) {
+    info('No AI tool directories detected. Skipping skill deployment.');
+    info('Detected directories: ~/.claude/commands, ~/.codex/skills, ~/.reasonix/skills, ~/.gemini/agents');
+  } else {
+    // Step C — Select platforms
+    let selectedPlatforms: string[];
+
+    if (opts.yes) {
+      selectedPlatforms = detectedPlatforms;
+    } else {
+      const { chosen } = await inquirer.prompt([
+        {
+          type: 'checkbox',
+          name: 'chosen',
+          message: 'Select AI tools to configure with Sigma skills:',
+          choices: detectedPlatforms.map(p => ({ name: PLATFORM_LABELS[p], value: p, checked: true })),
+        },
+      ]);
+      selectedPlatforms = chosen as string[];
+    }
+
+    // Step D — Deploy skill files
+    const targetDirMap: Record<string, string> = {
+      claudeCode:  paths.claudeCommands,
+      codex:       paths.codexSkills,
+      reasonix:    paths.reasonixSkills,
+      antigravity: paths.antigravityAgents,
+    };
+
+    for (const platform of selectedPlatforms) {
+      const sourceDir = path.join(SETUP_TARGETS_DIR, PLATFORM_SOURCE_DIR[platform]);
+      const targetDir = targetDirMap[platform];
+
+      if (!fileExists(sourceDir)) {
+        warn(`Skill source not found for ${platform} — skipping`);
+        continue;
+      }
+
+      ensureDir(targetDir);
+      const roles = ROLE_FILES[platform];
+      let ok = 0;
+      let failed = 0;
+
+      for (const [, fileName] of Object.entries(roles)) {
+        const src = path.join(sourceDir, fileName);
+        const dst = path.join(targetDir, fileName);
+        try {
+          fs.copySync(src, dst, { overwrite: true });
+          ok++;
+        } catch {
+          warn(`  ERR: ${dst}`);
+          failed++;
+        }
+      }
+
+      const label = PLATFORM_LABELS[platform];
+      if (failed === 0) {
+        console.log(`  OK  ${label} (${ok} skills)`);
+      } else {
+        console.log(`  PARTIAL ${label} (${ok} OK, ${failed} ERR)`);
+      }
+    }
+
+    // Step E — Hook deployment (Claude Code only)
+    if (selectedPlatforms.includes('claudeCode')) {
+      await deployHook(opts.yes);
+    }
+  }
+
   success('Sigma installed successfully.');
   console.log(`  Global dir: ${GLOBAL_SIGMA_DIR}`);
   console.log('  Run `sigma project start` to initialize a project.');
+}
+
+// ── Hook deployment ──────────────────────────────────────────────────────────
+
+async function deployHook(yes?: boolean): Promise<void> {
+  const hookSrc = path.join(BUNDLE_HOOKS_DIR, 'protect-sigma.js');
+  const hooksDir = path.join(GLOBAL_SIGMA_DIR, 'hooks');
+  const hookDst = path.join(hooksDir, 'protect-sigma.js');
+
+  if (!fileExists(hookSrc)) {
+    warn('protect-sigma.js not found in bundle — skipping hook deployment');
+    return;
+  }
+
+  ensureDir(hooksDir);
+  fs.copySync(hookSrc, hookDst, { overwrite: true });
+
+  // Patch ~/.claude/settings.json
+  const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+  const hookCommand = `node "${hookDst}"`;
+  const hookEntry = { type: 'command', command: hookCommand };
+
+  let settings: Record<string, unknown> = {};
+  if (fileExists(settingsPath)) {
+    try {
+      settings = fs.readJsonSync(settingsPath) as Record<string, unknown>;
+    } catch {
+      warn('Could not parse ~/.claude/settings.json — skipping hook patch');
+      return;
+    }
+  }
+
+  // Navigate / create the hooks structure
+  if (!settings.hooks) settings.hooks = {};
+  const hooks = settings.hooks as Record<string, unknown>;
+  if (!hooks.PreToolUse) hooks.PreToolUse = [];
+  const preToolUse = hooks.PreToolUse as Array<Record<string, unknown>>;
+
+  // Find or create the Edit|Write matcher entry (idempotent)
+  let matcherEntry = preToolUse.find(
+    e => typeof e.matcher === 'string' && /Edit\|Write|Write\|Edit/.test(e.matcher as string),
+  );
+
+  if (!matcherEntry) {
+    matcherEntry = { matcher: 'Edit|Write', hooks: [] };
+    preToolUse.push(matcherEntry);
+  }
+
+  const existingHooks = (matcherEntry.hooks as Array<Record<string, unknown>>) ?? [];
+  const alreadyInstalled = existingHooks.some(
+    h => typeof h.command === 'string' && (h.command as string).includes('protect-sigma.js'),
+  );
+
+  if (!alreadyInstalled) {
+    existingHooks.push(hookEntry);
+    matcherEntry.hooks = existingHooks;
+    fs.ensureDirSync(path.dirname(settingsPath));
+    fs.writeJsonSync(settingsPath, settings, { spaces: 2 });
+    console.log('  OK  Hook: protect-sigma.js deployed + settings.json patched');
+  } else {
+    console.log('  OK  Hook: protect-sigma.js already installed (no duplicate)');
+  }
 }
 
 // ── sigma setup update ───────────────────────────────────────────────────────
@@ -127,6 +299,9 @@ async function runUpdate(): Promise<void> {
   }
   if (fileExists(GLOBAL_GOVERNANCE_DIR)) {
     fs.copySync(GLOBAL_GOVERNANCE_DIR, path.join(backupBase, 'governance'));
+  }
+  if (fileExists(GLOBAL_BRIDGE_DIR)) {
+    fs.copySync(GLOBAL_BRIDGE_DIR, path.join(backupBase, 'bridge'));
   }
 
   info('Updating files from package bundle...');
@@ -155,6 +330,13 @@ async function runUpdate(): Promise<void> {
     console.log('  Updated: governance/SIGMA_PROTOCOL.md');
   }
 
+  // Update bridge file templates (managed, not user-modified)
+  if (fileExists(BUNDLE_BRIDGE_DIR)) {
+    ensureDir(GLOBAL_BRIDGE_DIR);
+    copyDir(BUNDLE_BRIDGE_DIR, GLOBAL_BRIDGE_DIR);
+    console.log('  Updated: bridge/ templates');
+  }
+
   // Update cli_version in config
   if (fileExists(GLOBAL_CONFIG_FILE)) {
     const cfg = fs.readJsonSync(GLOBAL_CONFIG_FILE) as Record<string, unknown>;
@@ -166,6 +348,7 @@ async function runUpdate(): Promise<void> {
   success('Sigma updated successfully.');
   console.log(`  Backup saved to: ${backupBase}`);
   console.log('  Note: existing project Sigma/ folders were NOT touched.');
+  console.log('  Note: skill files in AI tool directories were NOT redeployed.');
   console.log('  To sync governance files into a project, run: sigma project sync --confirm');
 }
 
@@ -222,7 +405,8 @@ export function setupCommand(): Command {
     .command('install')
     .description('Install Sigma globally to ~/.sigma/')
     .option('--force', 'Skip reinstall confirmation')
-    .action((opts: { force?: boolean }) => {
+    .option('--yes', 'Non-interactive: select all detected tools without prompts')
+    .action((opts: { force?: boolean; yes?: boolean }) => {
       runInstall(opts).catch(err => {
         console.error(err instanceof Error ? err.message : String(err));
         process.exit(1);
@@ -231,7 +415,7 @@ export function setupCommand(): Command {
 
   cmd
     .command('update')
-    .description('Update ~/.sigma/ templates, rules, and governance from package bundle')
+    .description('Update ~/.sigma/ templates, rules, governance, and bridge templates from package bundle')
     .action(() => {
       runUpdate().catch(err => {
         console.error(err instanceof Error ? err.message : String(err));
