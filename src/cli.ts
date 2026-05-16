@@ -4,6 +4,13 @@ import { setupCommand } from './commands/setup';
 import { projectCommand } from './commands/project';
 import { sessionCommand } from './commands/session';
 import { gitignoreCommand } from './commands/gitignore';
+import { intentCommand } from './commands/intent';
+import { planCommand } from './commands/plan';
+import { execCommand } from './commands/exec';
+import { closeCommand } from './commands/close';
+import { roadmapCommand } from './commands/roadmap';
+import { gitCommand } from './commands/git';
+import { csoCommand } from './commands/cso';
 
 const program = new Command();
 
@@ -16,6 +23,13 @@ program.addCommand(setupCommand());
 program.addCommand(projectCommand());
 program.addCommand(sessionCommand());
 program.addCommand(gitignoreCommand());
+program.addCommand(intentCommand());
+program.addCommand(planCommand());
+program.addCommand(execCommand());
+program.addCommand(closeCommand());
+program.addCommand(roadmapCommand());
+program.addCommand(gitCommand());
+program.addCommand(csoCommand());
 
 program.on('command:*', (operands: string[]) => {
   console.error(`Unknown command: sigma ${operands.join(' ')}`);

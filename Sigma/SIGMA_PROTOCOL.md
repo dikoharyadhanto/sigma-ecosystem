@@ -904,7 +904,7 @@ AUD becomes mandatory only when the Director explicitly marks the project as **r
 
 There is no standalone `sigma audit` command. AUD is always invoked in the context of a specific artifact domain. AUD output is always advisory — only Director locks.
 
-> Full command-by-command specification with options, flags, and error messages: **[PHASE 4]**
+> Full command-by-command specification: see **Section 23 — CLI Command Reference**.
 
 ---
 
@@ -1083,7 +1083,120 @@ Outputs: lifecycle phase, artifact states (INTENT, PLAN, EXEC, CLOSE, ROADMAP), 
 
 ## 23. CLI Command Reference
 
-> **[PHASE 4]** — Full command-by-command specification for all domains: exact subcommands, options, flags, pre-condition checks, state transitions triggered, error messages, and edge case behavior will be defined in Phase 4.
+All artifact lifecycle commands share a common pattern: read `progress.json`, check pre-conditions (gate or state), mutate state, write `progress.json`, output result. Status and list commands are read-only.
+
+### `sigma intent` — DIR-INTENT Artifact
+
+| Subcommand | Pre-condition | Post-condition | Key Output |
+| :--- | :--- | :--- | :--- |
+| `intent new` | None | DRAFT registered; file at `Sigma/design/DIR-INTENT-v{N}.md` | "Created: Sigma/design/DIR-INTENT-v1.md" |
+| `intent review` | Active INTENT exists | Advisory findings appended to file; progress.json unchanged | "Advisory findings section appended to …" |
+| `intent lock` | `active_state == 'DRAFT'` | State → LOCKED; Gate 1 open; lifecycle → BUILD; prior LOCKED → SUPERSEDED; STALE_INTENT propagated | "DIR-INTENT v1 LOCKED. Gate 1 open. Lifecycle → BUILD." |
+| `intent status` | progress.json exists | Read-only | Version, state, locked_at, Gate 1 status |
+| `intent list` | progress.json exists | Read-only | Table: all versions, state, timestamps, superseded_by |
+
+**STALE_INTENT propagation** (triggered by `intent lock`):
+- All PLAN versions with `intent_version_ref` ≠ newly locked INTENT → `stale_intent = true`
+- All EXEC versions whose `plan_version_ref` points to a stale PLAN → `stale_intent = true`
+- Cascades through full version history, not just active versions
+
+### `sigma plan` — FMN-PLAN Artifact
+
+| Subcommand | Pre-condition | Post-condition | Key Output |
+| :--- | :--- | :--- | :--- |
+| `plan new` | `gates.gate_1_open == true` | DRAFT registered; records `intent_version_ref`; file at `Sigma/build/FMN-PLAN-v{N}.md` | "Created: Sigma/build/FMN-PLAN-v1.md (references INTENT v1)" |
+| `plan audit` | Active PLAN exists | Advisory findings appended; progress.json unchanged | "Advisory findings section appended to …" |
+| `plan lock` | `active_state == 'DRAFT'` | State → LOCKED; Gate 2 open; prior LOCKED PLAN **not** auto-superseded (multi-active) | "FMN-PLAN v1 LOCKED. Gate 2 open." |
+| `plan supersede` | `--v <version>` and `--reason <reason>`; target must be LOCKED | Target → SUPERSEDED; `supersede_reason` recorded | "FMN-PLAN v1 superseded. Reason: …" |
+| `plan status` | progress.json exists | Read-only | Active PLAN version, state, intent_version_ref, stale flag |
+| `plan list` | progress.json exists | Read-only | Table: all versions, state, intent_version_ref, stale flag |
+
+### `sigma exec` — DEV-EXEC Artifact
+
+Version format: `v0.{N}` (build iterations). State machine: DRAFT → BUILDING → TESTING → COMPLETED → LOCKED.
+
+| Subcommand | Pre-condition | Post-condition | Key Output |
+| :--- | :--- | :--- | :--- |
+| `exec new` | `gates.gate_2_open == true` | DRAFT registered; records `plan_version_ref`; file at `Sigma/build/DEV-EXEC-v0.{N}.md` | "Created: Sigma/build/DEV-EXEC-v0.1.md (references PLAN v1)" |
+| `exec audit` | Active EXEC exists | Advisory findings appended; progress.json unchanged | "Advisory findings section appended to …" |
+| `exec advance building` | `active_state == 'DRAFT'` | State → BUILDING | "DEV-EXEC v0.1: DRAFT → BUILDING" |
+| `exec advance testing` | `active_state == 'BUILDING'` | State → TESTING | "DEV-EXEC v0.1: BUILDING → TESTING" |
+| `exec advance complete` | `active_state == 'TESTING'` | State → COMPLETED | "DEV-EXEC v0.1: TESTING → COMPLETED" |
+| `exec lock` | `active_state == 'COMPLETED'` | State → LOCKED; Gate 3 re-evaluated | "DEV-EXEC v0.1 LOCKED. Gate 3: SATISFIED" |
+| `exec supersede` | `--v <version>` and `--reason <reason>`; target LOCKED | Target → SUPERSEDED | "DEV-EXEC v0.1 superseded. Reason: …" |
+| `exec status` | progress.json exists | Read-only | Active EXEC version, state, plan_version_ref, Gate 3 status |
+| `exec list` | progress.json exists | Read-only | Table: all versions, state, plan_version_ref, stale flag |
+
+**Gate 3 evaluation** (triggered by `exec lock`): `gate_3_satisfied = true` when a complete clean chain exists — INTENT LOCKED → a PLAN LOCKED with `intent_version_ref` pointing to that INTENT and `stale_intent != true` → the active EXEC LOCKED with `plan_version_ref` pointing to that PLAN.
+
+### `sigma close` — DIR-CLOSE Artifact
+
+| Subcommand | Pre-condition | Post-condition | Key Output |
+| :--- | :--- | :--- | :--- |
+| `close new` | Complete INTENT → PLAN → EXEC LOCKED chain (same version chain). If chain is stale: `--ack-stale-intent` required. | DRAFT registered; lifecycle → CLOSE; file at `Sigma/close/DIR-CLOSE-v{N}.md` | "Created: Sigma/close/DIR-CLOSE-v1.md" |
+| `close audit` | Active CLOSE exists | Advisory findings appended; progress.json unchanged | "Advisory findings section appended to …" |
+| `close lock` | `active_state == 'DRAFT'` | State → LOCKED; lifecycle → CLOSED; prior LOCKED CLOSE → SUPERSEDED | "DIR-CLOSE v1 LOCKED. Lifecycle → CLOSED. Project is complete." |
+| `close status` | progress.json exists | Read-only | Active CLOSE version, state, lifecycle |
+
+**`close new` error conditions:**
+- No complete chain → `GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED`
+- Stale chain without `--ack-stale-intent` → `GATE 3 STALE: Qualifying chain has stale intent. Add --ack-stale-intent to acknowledge.`
+
+### `sigma roadmap` — ROADMAP Artifact
+
+| Subcommand | Pre-condition | Post-condition | Key Output |
+| :--- | :--- | :--- | :--- |
+| `roadmap new` | `intent.active_state == 'LOCKED'`; no existing DRAFT | DRAFT registered; file at `Sigma/build/ROADMAP-v{N}.md` | "Created: Sigma/build/ROADMAP-v1.md" |
+| `roadmap lock` | DRAFT roadmap exists | DRAFT → LOCKED; prior LOCKED ROADMAP → SUPERSEDED | "ROADMAP v1 LOCKED." |
+| `roadmap list` | progress.json exists | Read-only | Table: all versions, state, timestamps |
+
+### `sigma git evidence`
+
+Read-only git inspection. No `progress.json` changes, no artifact files written.
+
+Collects and prints: current branch, latest commit hash + message + date, changed files (`git status --short`), diff summary (`git diff --stat HEAD`).
+
+Pre-condition: must be in a git repository. Error if not: `No git repository found. Initialize with: git init`
+
+### `sigma cso new`
+
+Creates a CSO (Close-out Session Output) file and registers it in `progress.cso[]`.
+
+**Flags:**
+- `--role <role>` — role label in filename (e.g., `DEV`, `FMN`, `ARC`). Defaults to `ANON`.
+- `--from <file>` — seed content from an existing draft file. If omitted, uses CSO template.
+
+**Naming:** `Sigma/logs/CSO-{ROLE}-{YYYYMMDD}-{HHMM}.md`
+
+**Registration entry:**
+```json
+{ "version": "CSO-DEV-20260516-1430", "state": "COMPLETE", "file": "Sigma/logs/CSO-DEV-20260516-1430.md", "created_at": "..." }
+```
+
+### Audit / Review Output Format
+
+`sigma intent review`, `sigma plan audit`, `sigma exec audit`, `sigma close audit` append an advisory findings section to the artifact file. These commands **do not change `progress.json` runtime state**.
+
+```markdown
+
+---
+
+## AUD Advisory Findings
+
+*Appended: {ISO 8601 timestamp}*
+*Operation: sigma {domain} {action}*
+*Status: ADVISORY ONLY — does not change runtime state*
+
+**Audit Scope**: [AUD fills this]
+
+**Findings**:
+
+[AUD fills this]
+
+**Recommendation**: [AUD fills this]
+```
+
+Multiple AUD passes are allowed — each appends a new findings block to the same file.
 
 ---
 

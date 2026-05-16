@@ -15,9 +15,15 @@ export type CsoState = 'DRAFT' | 'COMPLETE';
 export interface ArtifactVersion {
   version: string;
   state: string;
+  file?: string;
   created_at: string;
   updated_at: string;
+  locked_at?: string;
+  superseded_by?: string;
+  supersede_reason?: string;
   stale_intent?: boolean;
+  intent_version_ref?: string;
+  plan_version_ref?: string;
 }
 
 export interface ArtifactTracker {
@@ -203,6 +209,291 @@ export function isStaleIntentPresent(data: ProgressJson): StaleIntentWarning[] {
   }
 
   return warnings;
+}
+
+// ── Version Helpers ───────────────────────────────────────────────────────────
+
+export function nextMajorVersion(versions: ArtifactVersion[]): string {
+  return `v${versions.length + 1}`;
+}
+
+export function nextExecVersion(versions: ArtifactVersion[]): string {
+  return `v0.${versions.length + 1}`;
+}
+
+// ── INTENT Mutations ──────────────────────────────────────────────────────────
+
+export function registerIntentDraft(
+  data: ProgressJson,
+  version: string,
+  filePath: string
+): void {
+  const now = new Date().toISOString();
+  data.intent.versions.push({ version, state: 'DRAFT', file: filePath, created_at: now, updated_at: now });
+  data.intent.active_version = version;
+  data.intent.active_state = 'DRAFT';
+}
+
+function propagateStaleIntent(data: ProgressJson, newLockedVersion: string): void {
+  const now = new Date().toISOString();
+  const stalePlanVersions = new Set<string>();
+
+  for (const pv of data.plan.versions) {
+    if (pv.intent_version_ref && pv.intent_version_ref !== newLockedVersion) {
+      pv.stale_intent = true;
+      pv.updated_at = now;
+      stalePlanVersions.add(pv.version);
+    }
+  }
+
+  for (const ev of data.exec.versions) {
+    if (ev.plan_version_ref && stalePlanVersions.has(ev.plan_version_ref)) {
+      ev.stale_intent = true;
+      ev.updated_at = now;
+    }
+  }
+}
+
+export function lockActiveIntent(data: ProgressJson): void {
+  const now = new Date().toISOString();
+  const activeVersion = data.intent.active_version;
+  if (!activeVersion) throw new Error('No active INTENT version to lock');
+
+  for (const v of data.intent.versions) {
+    if (v.state === 'LOCKED') {
+      v.state = 'SUPERSEDED';
+      v.superseded_by = activeVersion;
+      v.updated_at = now;
+    }
+  }
+
+  const active = data.intent.versions.find(v => v.version === activeVersion);
+  if (!active) throw new Error(`INTENT version ${activeVersion} not found`);
+  active.state = 'LOCKED';
+  active.locked_at = now;
+  active.updated_at = now;
+
+  data.intent.active_state = 'LOCKED';
+  data.gates.gate_1_open = true;
+  if (data.lifecycle_state === 'DESIGN') data.lifecycle_state = 'BUILD';
+
+  propagateStaleIntent(data, activeVersion);
+}
+
+// ── PLAN Mutations ────────────────────────────────────────────────────────────
+
+export function registerPlanDraft(
+  data: ProgressJson,
+  version: string,
+  filePath: string,
+  intentVersionRef: string
+): void {
+  const now = new Date().toISOString();
+  data.plan.versions.push({
+    version, state: 'DRAFT', file: filePath,
+    created_at: now, updated_at: now,
+    intent_version_ref: intentVersionRef,
+  });
+  data.plan.active_version = version;
+  data.plan.active_state = 'DRAFT';
+}
+
+export function lockActivePlan(data: ProgressJson): void {
+  const now = new Date().toISOString();
+  const activeVersion = data.plan.active_version;
+  if (!activeVersion) throw new Error('No active PLAN version to lock');
+
+  const active = data.plan.versions.find(v => v.version === activeVersion);
+  if (!active) throw new Error(`PLAN version ${activeVersion} not found`);
+  active.state = 'LOCKED';
+  active.locked_at = now;
+  active.updated_at = now;
+
+  data.plan.active_state = 'LOCKED';
+  data.gates.gate_2_open = true;
+}
+
+export function supersedePlanVersion(data: ProgressJson, version: string, reason: string): void {
+  const now = new Date().toISOString();
+  const target = data.plan.versions.find(v => v.version === version);
+  if (!target) throw new Error(`PLAN version ${version} not found`);
+  if (target.state !== 'LOCKED') throw new Error(`PLAN ${version} is not LOCKED; cannot supersede`);
+  target.state = 'SUPERSEDED';
+  target.supersede_reason = reason;
+  target.updated_at = now;
+}
+
+// ── EXEC Mutations ────────────────────────────────────────────────────────────
+
+export function registerExecDraft(
+  data: ProgressJson,
+  version: string,
+  filePath: string,
+  planVersionRef: string
+): void {
+  const now = new Date().toISOString();
+  data.exec.versions.push({
+    version, state: 'DRAFT', file: filePath,
+    created_at: now, updated_at: now,
+    plan_version_ref: planVersionRef,
+  });
+  data.exec.active_version = version;
+  data.exec.active_state = 'DRAFT';
+}
+
+export function advanceExecState(
+  data: ProgressJson,
+  toState: 'BUILDING' | 'TESTING' | 'COMPLETED'
+): void {
+  const now = new Date().toISOString();
+  const activeVersion = data.exec.active_version;
+  if (!activeVersion) throw new Error('No active EXEC version to advance');
+
+  const expectedSource: Record<string, string> = {
+    BUILDING: 'DRAFT',
+    TESTING: 'BUILDING',
+    COMPLETED: 'TESTING',
+  };
+
+  const currentState = data.exec.active_state;
+  if (currentState !== expectedSource[toState]) {
+    throw new Error(
+      `Cannot advance to ${toState}: current state is ${currentState}, expected ${expectedSource[toState]}`
+    );
+  }
+
+  const active = data.exec.versions.find(v => v.version === activeVersion);
+  if (!active) throw new Error(`EXEC version ${activeVersion} not found`);
+  active.state = toState;
+  active.updated_at = now;
+  data.exec.active_state = toState;
+}
+
+function evaluateGate3(data: ProgressJson): boolean {
+  const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
+  if (!lockedIntent) return false;
+
+  const qualifyingPlan = data.plan.versions.find(
+    v => v.state === 'LOCKED' &&
+      v.intent_version_ref === lockedIntent.version &&
+      !v.stale_intent
+  );
+  if (!qualifyingPlan) return false;
+
+  const qualifyingExec = data.exec.versions.find(
+    v => v.version === data.exec.active_version &&
+      v.state === 'LOCKED' &&
+      v.plan_version_ref === qualifyingPlan.version
+  );
+  return !!qualifyingExec;
+}
+
+export function lockActiveExec(data: ProgressJson): void {
+  const now = new Date().toISOString();
+  const activeVersion = data.exec.active_version;
+  if (!activeVersion) throw new Error('No active EXEC version to lock');
+
+  const active = data.exec.versions.find(v => v.version === activeVersion);
+  if (!active) throw new Error(`EXEC version ${activeVersion} not found`);
+  active.state = 'LOCKED';
+  active.locked_at = now;
+  active.updated_at = now;
+
+  data.exec.active_state = 'LOCKED';
+  data.gates.gate_3_satisfied = evaluateGate3(data);
+}
+
+export function supersedeExecVersion(data: ProgressJson, version: string, reason: string): void {
+  const now = new Date().toISOString();
+  const target = data.exec.versions.find(v => v.version === version);
+  if (!target) throw new Error(`EXEC version ${version} not found`);
+  if (target.state !== 'LOCKED') throw new Error(`EXEC ${version} is not LOCKED; cannot supersede`);
+  target.state = 'SUPERSEDED';
+  target.supersede_reason = reason;
+  target.updated_at = now;
+}
+
+// ── CLOSE Mutations ───────────────────────────────────────────────────────────
+
+export function registerCloseDraft(
+  data: ProgressJson,
+  version: string,
+  filePath: string,
+  staleAcknowledged: boolean
+): void {
+  const now = new Date().toISOString();
+  const entry: ArtifactVersion & { stale_acknowledged?: boolean } = {
+    version, state: 'DRAFT', file: filePath,
+    created_at: now, updated_at: now,
+  };
+  if (staleAcknowledged) entry.stale_acknowledged = true;
+  data.close.versions.push(entry as ArtifactVersion);
+  data.close.active_version = version;
+  data.close.active_state = 'DRAFT';
+  data.lifecycle_state = 'CLOSE';
+}
+
+export function lockActiveClose(data: ProgressJson): void {
+  const now = new Date().toISOString();
+  const activeVersion = data.close.active_version;
+  if (!activeVersion) throw new Error('No active CLOSE version to lock');
+
+  for (const v of data.close.versions) {
+    if (v.state === 'LOCKED') {
+      v.state = 'SUPERSEDED';
+      v.superseded_by = activeVersion;
+      v.updated_at = now;
+    }
+  }
+
+  const active = data.close.versions.find(v => v.version === activeVersion);
+  if (!active) throw new Error(`CLOSE version ${activeVersion} not found`);
+  active.state = 'LOCKED';
+  active.locked_at = now;
+  active.updated_at = now;
+
+  data.close.active_state = 'LOCKED';
+  data.lifecycle_state = 'CLOSED';
+}
+
+// ── ROADMAP Mutations ─────────────────────────────────────────────────────────
+
+export function registerRoadmapDraft(
+  data: ProgressJson,
+  version: string,
+  filePath: string
+): void {
+  const now = new Date().toISOString();
+  data.roadmap.versions.push({ version, state: 'DRAFT', file: filePath, created_at: now, updated_at: now });
+  data.roadmap.active_version = version;
+  data.roadmap.active_state = 'DRAFT';
+}
+
+export function lockActiveRoadmap(data: ProgressJson): void {
+  const now = new Date().toISOString();
+  const draft = data.roadmap.versions.find(v => v.state === 'DRAFT');
+  if (!draft) throw new Error('No ROADMAP DRAFT to lock');
+
+  for (const v of data.roadmap.versions) {
+    if (v.state === 'LOCKED') {
+      v.state = 'SUPERSEDED';
+      v.superseded_by = draft.version;
+      v.updated_at = now;
+    }
+  }
+
+  draft.state = 'LOCKED';
+  draft.locked_at = now;
+  draft.updated_at = now;
+
+  data.roadmap.active_version = draft.version;
+  data.roadmap.active_state = 'LOCKED';
+}
+
+// ── CSO Registration ──────────────────────────────────────────────────────────
+
+export function registerCsoEntry(data: ProgressJson, entry: CsoEntry): void {
+  data.cso.push(entry);
 }
 
 export function getNextValidOperations(data: ProgressJson): string[] {
