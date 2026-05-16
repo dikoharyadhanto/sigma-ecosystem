@@ -110,6 +110,8 @@ sigma setup install
 ```bash
 cd your-project
 sigma project start
+sigma setup memory
+sigma setup memory --vscode
 ```
 
 ### 3. Open your AI tool and activate ARC
@@ -182,11 +184,11 @@ These shortcuts are intentionally typed by the Director.
 
 They are not role-switching commands in the same way as `/arc`, `/fmn`, `/dev`, or `/aud`. They exist to help the Director stay oriented, preserve context, and hand off work between sessions.
 
-| Shortcut | Use It When | What It Produces | Role Impact |
-| :--- | :--- | :--- | :--- |
-| `/report` | You want to know the latest state, decisions, risks, and next move | Short chat-only briefing | No role switch |
-| `/checkpoint` | You are mid-session and want to save the current context before continuing | Quick CSO file in `Sigma/logs/` | No role switch |
-| `/cso` | You are ending a session, changing context, or preparing a deliberate handoff | Formal CSO file in `Sigma/logs/` | Activates CSO Handler role |
+| Shortcut      | Use It When                                                                   | What It Produces                 | Role Impact                |
+|:------------- |:----------------------------------------------------------------------------- |:-------------------------------- |:-------------------------- |
+| `/report`     | You want to know the latest state, decisions, risks, and next move            | Short chat-only briefing         | No role switch             |
+| `/checkpoint` | You are mid-session and want to save the current context before continuing    | Quick CSO file in `Sigma/logs/`  | No role switch             |
+| `/cso`        | You are ending a session, changing context, or preparing a deliberate handoff | Formal CSO file in `Sigma/logs/` | Activates CSO Handler role |
 
 ### `/report` — know where you are
 
@@ -302,12 +304,12 @@ The Director controls authority decisions: approval, rejection, lock, accepted r
 
 ## Operating Model
 
-| Actor | Responsibility |
-| :--- | :--- |
-| Director | Gives intent, approves locks, accepts or rejects risk, decides closure |
-| AI Roles | Read artifacts, run operational CLI commands, draft documents, surface risks |
-| Sigma CLI | Enforces gates, updates runtime state, records decisions |
-| Artifacts | Preserve meaning, evidence, decisions, and audit trail |
+| Actor     | Responsibility                                                               |
+|:--------- |:---------------------------------------------------------------------------- |
+| Director  | Gives intent, approves locks, accepts or rejects risk, decides closure       |
+| AI Roles  | Read artifacts, run operational CLI commands, draft documents, surface risks |
+| Sigma CLI | Enforces gates, updates runtime state, records decisions                     |
+| Artifacts | Preserve meaning, evidence, decisions, and audit trail                       |
 
 A valid CLI command is not automatically an authorized command.
 
@@ -340,15 +342,15 @@ If approval is unclear, the AI role must ask before acting.
 
 ## Roles
 
-| Role | Shortcut | Responsibility |
-| :--- | :--- | :--- |
-| ARC — Architect | `/arc` | Helps create and refine `DIR-INTENT` |
-| FMN — Foreman | `/fmn` | Creates `ROADMAP` or `FMN-PLAN`; defines build and test contracts |
-| DEV — Developer | `/dev` | Implements the locked plan and records evidence in `DEV-EXEC` |
-| AUD — Auditor | `/aud` | Passive external auditor; reviews provided evidence; advisory only |
-| REPORT | `/report` | Short chat-only Director briefing: current state, decisions, risks, next move |
-| CHECKPOINT | `/checkpoint` | Quick CSO capture that preserves context without switching role |
-| CSO Handler | `/cso` | Formal CSO handoff for session transfer or role/vendor handoff |
+| Role            | Shortcut      | Responsibility                                                                |
+|:--------------- |:------------- |:----------------------------------------------------------------------------- |
+| ARC — Architect | `/arc`        | Helps create and refine `DIR-INTENT`                                          |
+| FMN — Foreman   | `/fmn`        | Creates `ROADMAP` or `FMN-PLAN`; defines build and test contracts             |
+| DEV — Developer | `/dev`        | Implements the locked plan and records evidence in `DEV-EXEC`                 |
+| AUD — Auditor   | `/aud`        | Passive external auditor; reviews provided evidence; advisory only            |
+| REPORT          | `/report`     | Short chat-only Director briefing: current state, decisions, risks, next move |
+| CHECKPOINT      | `/checkpoint` | Quick CSO capture that preserves context without switching role               |
+| CSO Handler     | `/cso`        | Formal CSO handoff for session transfer or role/vendor handoff                |
 
 Role skill files are deployed by:
 
@@ -386,14 +388,14 @@ AUD recommends. Director decides.
 
 ## Artifacts
 
-| Artifact | Purpose |
-| :--- | :--- |
-| `DIR-INTENT` | Director objective, scope, constraints, and success definition |
-| `ROADMAP` | Optional stage map for larger work |
-| `FMN-PLAN` | Build contract and test contract |
-| `DEV-EXEC` | Implementation report, verification, Git Diff Evidence, known issues |
-| `DIR-CLOSE` | Closure summary, evidence, accepted limitations |
-| `CSO` | Context handoff object stored in `Sigma/logs/` |
+| Artifact     | Purpose                                                              |
+|:------------ |:-------------------------------------------------------------------- |
+| `DIR-INTENT` | Director objective, scope, constraints, and success definition       |
+| `ROADMAP`    | Optional stage map for larger work                                   |
+| `FMN-PLAN`   | Build contract and test contract                                     |
+| `DEV-EXEC`   | Implementation report, verification, Git Diff Evidence, known issues |
+| `DIR-CLOSE`  | Closure summary, evidence, accepted limitations                      |
+| `CSO`        | Context handoff object stored in `Sigma/logs/`                       |
 
 Sigma artifact versions are governance identifiers.
 
@@ -457,42 +459,42 @@ AI roles normally execute operational commands after reading project state, role
 
 Lock, supersede, reset, stale-intent acknowledgment, and risk-related commands require explicit Director authorization.
 
-| Domain | Command | Description |
-| :--- | :--- | :--- |
-| project | `sigma project start` | Initialize a Sigma project in the current directory |
-| project | `sigma project status` | Show lifecycle phase, gate status, and active artifact versions |
-| project | `sigma project list` | List registered Sigma projects |
-| project | `sigma project sync --confirm` | Sync doctrine files from global templates into this project |
-| project | `sigma project reset --confirm` | Reset `progress.json` to initial state |
-| session | `sigma session bootstrap` | Load project state at session start |
-| intent | `sigma intent new` | Create a `DIR-INTENT` draft |
-| intent | `sigma intent lock` | Lock the active `DIR-INTENT` with Director approval |
-| intent | `sigma intent status` | Show active intent version and state |
-| intent | `sigma intent list` | List intent versions |
-| roadmap | `sigma roadmap new` | Create a `ROADMAP` draft |
-| roadmap | `sigma roadmap lock` | Lock the active `ROADMAP` with Director approval |
-| roadmap | `sigma roadmap list` | List roadmap versions |
-| plan | `sigma plan new` | Create an `FMN-PLAN` draft |
-| plan | `sigma plan lock` | Lock the active `FMN-PLAN` with Director approval |
-| plan | `sigma plan audit` | Run advisory audit of the active `FMN-PLAN` |
-| plan | `sigma plan status` | Show active plan version and state |
-| plan | `sigma plan supersede` | Supersede a locked plan version |
-| exec | `sigma exec new` | Create a `DEV-EXEC` draft |
-| exec | `sigma exec advance building` | Advance execution from DRAFT to BUILDING |
-| exec | `sigma exec advance testing` | Advance execution from BUILDING to TESTING |
-| exec | `sigma exec advance complete` | Advance execution from TESTING to COMPLETED |
-| exec | `sigma exec lock` | Lock the active `DEV-EXEC` with Director approval |
-| exec | `sigma exec audit` | Run advisory audit of the active `DEV-EXEC` |
-| exec | `sigma exec status` | Show active execution version and state |
-| close | `sigma close new` | Create a `DIR-CLOSE` draft |
-| close | `sigma close lock` | Lock the active `DIR-CLOSE` with Director approval |
-| close | `sigma close audit` | Run advisory audit of the active `DIR-CLOSE` |
-| close | `sigma close status` | Show closure state |
-| cso | `sigma cso new` | Create a CSO handoff artifact in `Sigma/logs/` |
-| git | `sigma git evidence` | Show read-only Git state summary |
-| setup | `sigma setup install` | Install Sigma globally to `~/.sigma/` |
-| setup | `sigma setup update` | Update global Sigma templates and governance files |
-| setup | `sigma setup memory` | Configure sequential-thinking and sigma-memory MCP integration |
+| Domain  | Command                         | Description                                                     |
+|:------- |:------------------------------- |:--------------------------------------------------------------- |
+| project | `sigma project start`           | Initialize a Sigma project in the current directory             |
+| project | `sigma project status`          | Show lifecycle phase, gate status, and active artifact versions |
+| project | `sigma project list`            | List registered Sigma projects                                  |
+| project | `sigma project sync --confirm`  | Sync doctrine files from global templates into this project     |
+| project | `sigma project reset --confirm` | Reset `progress.json` to initial state                          |
+| session | `sigma session bootstrap`       | Load project state at session start                             |
+| intent  | `sigma intent new`              | Create a `DIR-INTENT` draft                                     |
+| intent  | `sigma intent lock`             | Lock the active `DIR-INTENT` with Director approval             |
+| intent  | `sigma intent status`           | Show active intent version and state                            |
+| intent  | `sigma intent list`             | List intent versions                                            |
+| roadmap | `sigma roadmap new`             | Create a `ROADMAP` draft                                        |
+| roadmap | `sigma roadmap lock`            | Lock the active `ROADMAP` with Director approval                |
+| roadmap | `sigma roadmap list`            | List roadmap versions                                           |
+| plan    | `sigma plan new`                | Create an `FMN-PLAN` draft                                      |
+| plan    | `sigma plan lock`               | Lock the active `FMN-PLAN` with Director approval               |
+| plan    | `sigma plan audit`              | Run advisory audit of the active `FMN-PLAN`                     |
+| plan    | `sigma plan status`             | Show active plan version and state                              |
+| plan    | `sigma plan supersede`          | Supersede a locked plan version                                 |
+| exec    | `sigma exec new`                | Create a `DEV-EXEC` draft                                       |
+| exec    | `sigma exec advance building`   | Advance execution from DRAFT to BUILDING                        |
+| exec    | `sigma exec advance testing`    | Advance execution from BUILDING to TESTING                      |
+| exec    | `sigma exec advance complete`   | Advance execution from TESTING to COMPLETED                     |
+| exec    | `sigma exec lock`               | Lock the active `DEV-EXEC` with Director approval               |
+| exec    | `sigma exec audit`              | Run advisory audit of the active `DEV-EXEC`                     |
+| exec    | `sigma exec status`             | Show active execution version and state                         |
+| close   | `sigma close new`               | Create a `DIR-CLOSE` draft                                      |
+| close   | `sigma close lock`              | Lock the active `DIR-CLOSE` with Director approval              |
+| close   | `sigma close audit`             | Run advisory audit of the active `DIR-CLOSE`                    |
+| close   | `sigma close status`            | Show closure state                                              |
+| cso     | `sigma cso new`                 | Create a CSO handoff artifact in `Sigma/logs/`                  |
+| git     | `sigma git evidence`            | Show read-only Git state summary                                |
+| setup   | `sigma setup install`           | Install Sigma globally to `~/.sigma/`                           |
+| setup   | `sigma setup update`            | Update global Sigma templates and governance files              |
+| setup   | `sigma setup memory`            | Configure sequential-thinking and sigma-memory MCP integration  |
 
 ---
 
@@ -523,6 +525,12 @@ Optional VS Code MCP config:
 
 ```bash
 sigma setup memory --vscode
+```
+
+Refresh ecosystem memory with fresh seed (e.g. after a CLI update):
+
+```bash
+sigma setup memory --reseed
 ```
 
 Memory file:

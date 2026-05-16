@@ -31,6 +31,7 @@ const BUNDLE_PROTOCOL = path.join(PACKAGE_ROOT, 'Sigma', 'SIGMA_PROTOCOL.md');
 const SETUP_TARGETS_DIR = path.join(PACKAGE_ROOT, 'setup', 'targets');
 const BUNDLE_BRIDGE_DIR = path.join(SETUP_TARGETS_DIR, 'bridge');
 const BUNDLE_HOOKS_DIR = path.join(SETUP_TARGETS_DIR, 'hooks');
+const BUNDLE_MEMORY_SEED = path.join(PACKAGE_ROOT, 'setup', 'sigma-memory-seed.jsonl');
 
 const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
 
@@ -354,17 +355,36 @@ async function runUpdate(): Promise<void> {
 
 // ── sigma setup memory ───────────────────────────────────────────────────────
 
-function runMemorySetup(opts: { vscode?: boolean; print?: boolean }): void {
+function seedMemoryFile(): void {
+  if (!fileExists(BUNDLE_MEMORY_SEED)) {
+    warn('Memory seed file not found in package bundle. Skipping seed.');
+    return;
+  }
+  const seedContent = fs.readFileSync(BUNDLE_MEMORY_SEED, 'utf-8');
+  fs.writeFileSync(GLOBAL_MEMORY_FILE, seedContent, 'utf-8');
+}
+
+function runMemorySetup(opts: { vscode?: boolean; print?: boolean; reseed?: boolean }): void {
   if (!fileExists(GLOBAL_SIGMA_DIR)) {
     error('Sigma is not installed. Run: sigma setup install');
   }
 
-  // Ensure memory file exists
+  // Ensure memory file exists; seed if empty or --reseed requested
   if (!fileExists(GLOBAL_MEMORY_FILE)) {
     fs.ensureFileSync(GLOBAL_MEMORY_FILE);
-    success(`Memory file created: ${GLOBAL_MEMORY_FILE}`);
+    seedMemoryFile();
+    success(`Memory file created and seeded: ${GLOBAL_MEMORY_FILE}`);
+  } else if (opts.reseed) {
+    seedMemoryFile();
+    success(`Memory file reseeded: ${GLOBAL_MEMORY_FILE}`);
   } else {
-    info(`Memory file: ${GLOBAL_MEMORY_FILE}`);
+    const existing = fs.readFileSync(GLOBAL_MEMORY_FILE, 'utf-8').trim();
+    if (existing.length === 0) {
+      seedMemoryFile();
+      success(`Memory file seeded: ${GLOBAL_MEMORY_FILE}`);
+    } else {
+      info(`Memory file: ${GLOBAL_MEMORY_FILE}`);
+    }
   }
 
   const projectRoot = process.cwd();
@@ -428,7 +448,8 @@ export function setupCommand(): Command {
     .description('Write .mcp.json (sequential-thinking + sigma-memory) into the current project directory')
     .option('--vscode', 'Also write .vscode/mcp.json for VS Code extension')
     .option('--print', 'Print generated config to stdout in addition to writing files')
-    .action((opts: { vscode?: boolean; print?: boolean }) => {
+    .option('--reseed', 'Overwrite memory file with fresh seed from package bundle')
+    .action((opts: { vscode?: boolean; print?: boolean; reseed?: boolean }) => {
       try { runMemorySetup(opts); } catch (e) { error((e as Error).message); }
     });
 
