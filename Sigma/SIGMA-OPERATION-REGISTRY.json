@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-05-16T00:00:00Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 36,
+  "total_operations": 39,
   "domains": [
     "project",
     "session",
@@ -10,6 +10,7 @@
     "plan",
     "exec",
     "close",
+    "roadmap",
     "git",
     "cso",
     "setup",
@@ -837,6 +838,76 @@
         "post_condition": "none (stdout only)"
       },
       "error_messages": {}
+    },
+    {
+      "operation_id": "roadmap_new",
+      "domain": "roadmap",
+      "action": "new",
+      "level": "semantic",
+      "role": "any",
+      "description": "Create a new ROADMAP draft from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/build/ and registers the new version in progress.json with state DRAFT.",
+      "inputs": [],
+      "outputs": [
+        { "type": "file", "description": "Sigma/build/ROADMAP-v{N}.md (from template)" },
+        { "type": "state_change", "description": "progress.json: roadmap version added with state DRAFT" }
+      ],
+      "constraints": [
+        { "type": "gate", "condition": "progress.intent.active_state == 'LOCKED'", "error_message": "ROADMAP requires a locked DIR-INTENT. Run: sigma intent lock" },
+        { "type": "gate", "condition": "no ROADMAP version in state DRAFT", "error_message": "A ROADMAP DRAFT already exists. Lock it before creating a new version. Run: sigma roadmap lock" }
+      ],
+      "gating": {
+        "pre_condition": "progress.intent.active_state == 'LOCKED'; no ROADMAP version currently in DRAFT state",
+        "post_condition": "ROADMAP-v{N}.md exists in Sigma/build/; progress.json records new roadmap version with state DRAFT"
+      },
+      "error_messages": {
+        "no_locked_intent": "No locked DIR-INTENT found. ROADMAP requires a locked intent. Run: sigma intent lock",
+        "draft_exists": "A ROADMAP DRAFT already exists. Lock it before creating a new version. Run: sigma roadmap lock"
+      }
+    },
+    {
+      "operation_id": "roadmap_lock",
+      "domain": "roadmap",
+      "action": "lock",
+      "level": "semantic",
+      "role": "director",
+      "description": "Lock the active ROADMAP DRAFT. Auto-supersedes any previously LOCKED ROADMAP version. Only one ROADMAP may be LOCKED at a time.",
+      "inputs": [],
+      "outputs": [
+        { "type": "state_change", "description": "progress.json: active ROADMAP DRAFT state → LOCKED" },
+        { "type": "state_change", "description": "progress.json: previous LOCKED ROADMAP → SUPERSEDED (auto, if exists)" }
+      ],
+      "constraints": [
+        { "type": "existence", "condition": "At least one ROADMAP version must be in DRAFT state", "error_message": "No ROADMAP DRAFT found to lock. Run: sigma roadmap new" }
+      ],
+      "gating": {
+        "pre_condition": "At least one ROADMAP version in state DRAFT",
+        "post_condition": "Active ROADMAP state == LOCKED; previous LOCKED ROADMAP (if any) state == SUPERSEDED"
+      },
+      "error_messages": {
+        "no_draft": "No ROADMAP DRAFT found. Run: sigma roadmap new"
+      }
+    },
+    {
+      "operation_id": "roadmap_list",
+      "domain": "roadmap",
+      "action": "list",
+      "level": "read_only",
+      "role": "any",
+      "description": "List all ROADMAP versions with their current states (DRAFT, LOCKED, SUPERSEDED).",
+      "inputs": [],
+      "outputs": [
+        { "type": "display", "description": "Table of ROADMAP versions: version, state, file path" }
+      ],
+      "constraints": [
+        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+      ],
+      "gating": {
+        "pre_condition": "Sigma/progress.json exists",
+        "post_condition": "none (read-only)"
+      },
+      "error_messages": {
+        "not_found": "No Sigma project found. Run: sigma project start"
+      }
     }
   ]
 }

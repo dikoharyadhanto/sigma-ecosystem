@@ -473,6 +473,33 @@ See Section 18 for CSO lifecycle details.
 
 ---
 
+### 5.6 ROADMAP — Implementation Staging Map
+
+| Property       | Value               |
+| -------------- | ------------------- |
+| Owner          | FMN                 |
+| Authored by    | FMN (Director may initiate) |
+| Phase          | BUILD               |
+| Storage        | `Sigma/build/`      |
+| Versioning     | Tier 1              |
+| Auto-supersede | Yes (single-active) |
+
+Optional FMN-authored document that breaks a locked DIR-INTENT into large build stages before each stage is converted into an FMN-PLAN. ROADMAP is not a runtime gate — FMN-PLAN does not require a ROADMAP to exist.
+
+ROADMAP describes how many stages and in what order. FMN-PLAN defines the next executable build contract.
+
+Pre-condition to create: DIR-INTENT must be LOCKED. No other gate. Only one ROADMAP may be in DRAFT state at a time.
+
+ROADMAP does not replace FMN-PLAN. A ROADMAP stage is not a build contract — it is a staging signal for FMN.
+
+If ROADMAP conflicts with DIR-INTENT, DIR-INTENT wins.
+
+AUD may provide informal advisory comments on ROADMAP if Director asks, but no formal audit command or audit gate exists for ROADMAP.
+
+> Template: `Sigma/templates/ROADMAP-TEMPLATE.md`
+
+---
+
 ## 6. State Machine
 
 ### 6.1 DIR-INTENT States
@@ -564,6 +591,29 @@ DRAFT → LOCKED → SUPERSEDED
 
 ---
 
+### 6.5 ROADMAP States
+
+```
+DRAFT → LOCKED → SUPERSEDED
+```
+
+| State        | Description                           | Triggered by                     |
+| ------------ | ------------------------------------- | -------------------------------- |
+| `DRAFT`      | Created; not yet locked               | `sigma roadmap new`              |
+| `LOCKED`     | Staging plan accepted                 | `sigma roadmap lock`             |
+| `SUPERSEDED` | Replaced when a new version is locked | Auto on new `sigma roadmap lock` |
+
+**Rules:**
+
+- Only one ROADMAP may be LOCKED at a time (single-active)
+- Only one ROADMAP may be in DRAFT state at a time — `sigma roadmap new` is blocked if a DRAFT already exists
+- When a new version is LOCKED, the previously LOCKED version becomes SUPERSEDED automatically
+- DRAFT may coexist with a LOCKED version — auto-supersede fires only at lock time
+- No formal audit command exists for ROADMAP. AUD may provide informal advisory comments if Director asks, but no CLI audit gate is enforced.
+- Director interaction via Section 9 of the ROADMAP document ("Director Roadmap Notes") is semantic only — no CLI enforcement
+
+---
+
 ## 7. Gate Rules
 
 Sigma has three gates. A gate blocks an operation until its pre-condition is satisfied. Gate enforcement is performed by the CLI at runtime against `progress.json` state. No agent action may bypass a gate — only a Director can unlock a gate by satisfying its pre-condition.
@@ -613,10 +663,11 @@ The Director must explicitly identify which PLAN and EXEC versions satisfy the c
 | ------------ | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DIR-INTENT` | **Single-active, auto-supersede**       | When a new DIR-INTENT version is LOCKED, all previously LOCKED versions → `SUPERSEDED` automatically. CLI enforces this at `sigma intent lock`. |
 | `DIR-CLOSE`  | **Single-active, auto-supersede**       | When a new DIR-CLOSE version is LOCKED, all previously LOCKED versions → `SUPERSEDED` automatically. CLI enforces this at `sigma close lock`.   |
+| `ROADMAP`    | **Single-active, auto-supersede**       | When a new ROADMAP version is LOCKED, the previously LOCKED version → `SUPERSEDED` automatically. CLI enforces this at `sigma roadmap lock`.    |
 | `FMN-PLAN`   | **Multi-active, manual supersede only** | Locking a new FMN-PLAN version does not affect other LOCKED versions. Supersede requires: `sigma plan supersede --v <version> --reason "..."`   |
 | `DEV-EXEC`   | **Multi-active, manual supersede only** | Locking a new DEV-EXEC version does not affect other LOCKED versions. Supersede requires: `sigma exec supersede --v <version> --reason "..."`   |
 
-**Rationale for the distinction:** DIR-INTENT and DIR-CLOSE represent a single project-wide position — there can only be one active intent baseline and one active closure baseline at a time. FMN-PLAN and DEV-EXEC represent work iterations — multiple versions may legitimately coexist as LOCKED records of completed work.
+**Rationale for the distinction:** DIR-INTENT, DIR-CLOSE, and ROADMAP represent a single project-wide position at a time — one active intent baseline, one active closure baseline, one active staging plan. FMN-PLAN and DEV-EXEC represent work iterations — multiple versions may legitimately coexist as LOCKED records of completed work.
 
 ---
 
@@ -836,6 +887,7 @@ AUD becomes mandatory only when the Director explicitly marks the project as **r
 | `plan`      | FMN-PLAN lifecycle (new, audit, lock, supersede, status, list)          |
 | `exec`      | DEV-EXEC lifecycle (new, audit, advance, lock, supersede, status, list) |
 | `close`     | DIR-CLOSE lifecycle (new, audit, lock, status)                          |
+| `roadmap`   | ROADMAP lifecycle — optional staging map (new, lock, list)              |
 | `git`       | Git evidence output (read-only)                                         |
 | `cso`       | CSO artifact creation                                                   |
 | `setup`     | Installation, configuration, MCP memory setup                           |

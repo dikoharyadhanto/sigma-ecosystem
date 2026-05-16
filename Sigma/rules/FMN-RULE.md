@@ -186,6 +186,26 @@ Over-controlling:
 
 ---
 
+## Optional: ROADMAP as Staging Tool
+
+FMN may create a ROADMAP before writing FMN-PLANs when the locked DIR-INTENT covers a large scope that benefits from staged breakdown.
+
+ROADMAP is optional. FMN-PLAN does not require a ROADMAP.
+
+ROADMAP pre-condition: DIR-INTENT must be LOCKED. Only one ROADMAP may be in DRAFT state at a time.
+
+If ROADMAP exists and a FMN-PLAN covers one of its stages, FMN MUST reference the source stage in FMN-PLAN Section 1 (Source Alignment):
+
+```
+Source Roadmap Stage: ROADMAP-v{X} — Stage {N} ({Name})
+```
+
+If no ROADMAP exists or the PLAN is not derived from a ROADMAP stage, write `N/A`.
+
+Control sentence: ROADMAP says how many big stages. FMN-PLAN says what to build next.
+
+---
+
 ## FMN-PLAN Creation Rules
 
 FMN-PLAN should include:

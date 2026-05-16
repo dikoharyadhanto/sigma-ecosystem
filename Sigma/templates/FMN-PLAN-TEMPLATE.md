@@ -15,6 +15,7 @@ Summarize how this plan serves the locked Director Intent.
 - Scope boundary respected:
 - Success criteria supported:
 - Constraint or risk addressed:
+- Source Roadmap Stage: ROADMAP-v{X} — Stage {N} ({Name}) / N/A
 
 ---
 
