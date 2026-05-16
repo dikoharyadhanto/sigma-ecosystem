@@ -9,6 +9,7 @@
   "files": [
     "bin/",
     "dist/",
+    "scripts/",
     "Sigma/templates/",
     "Sigma/rules/",
     "Sigma/SIGMA_CONSTITUTION.md",

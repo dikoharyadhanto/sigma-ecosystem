@@ -15,6 +15,7 @@ import {
 } from '../config';
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, copyDir, fileExists } from '../utils/fs';
+import { writeMcpJson, writeVscodeMcpJson, createMcpConfig } from '../utils/mcp';
 
 // ── Bundle paths (files shipped inside the npm package) ─────────────────────
 
@@ -170,35 +171,45 @@ async function runUpdate(): Promise<void> {
 
 // ── sigma setup memory ───────────────────────────────────────────────────────
 
-function runMemorySetup(): void {
+function runMemorySetup(opts: { vscode?: boolean; print?: boolean }): void {
   if (!fileExists(GLOBAL_SIGMA_DIR)) {
     error('Sigma is not installed. Run: sigma setup install');
   }
 
-  const alreadyExists = fileExists(GLOBAL_MEMORY_FILE);
-  if (!alreadyExists) {
+  // Ensure memory file exists
+  if (!fileExists(GLOBAL_MEMORY_FILE)) {
     fs.ensureFileSync(GLOBAL_MEMORY_FILE);
     success(`Memory file created: ${GLOBAL_MEMORY_FILE}`);
   } else {
-    info(`Memory file already configured: ${GLOBAL_MEMORY_FILE}`);
+    info(`Memory file: ${GLOBAL_MEMORY_FILE}`);
   }
 
-  const mcpConfig = {
-    mcpServers: {
-      'sigma-memory': {
-        command: 'npx',
-        args: ['-y', '@modelcontextprotocol/server-memory'],
-        env: { MEMORY_FILE_PATH: GLOBAL_MEMORY_FILE },
-      },
-    },
-  };
+  const projectRoot = process.cwd();
 
-  console.log('\n=== Sigma MCP Memory Setup ===\n');
-  console.log(`  Memory file: ${GLOBAL_MEMORY_FILE}\n`);
-  console.log('Add to your MCP configuration (.mcp.json or equivalent):\n');
-  console.log(JSON.stringify(mcpConfig, null, 2));
-  console.log('\nAgents query memory using MCP tools: search_nodes, read_graph');
-  console.log('Project decision log: Sigma/memory/decisions.jsonl (per-project, CLI-written)\n');
+  // Write .mcp.json at project root
+  const mcpJsonPath = path.join(projectRoot, '.mcp.json');
+  writeMcpJson(mcpJsonPath);
+  success(`Written: ${mcpJsonPath}`);
+
+  // Optionally write .vscode/mcp.json
+  if (opts.vscode) {
+    const vscodeMcpPath = path.join(projectRoot, '.vscode', 'mcp.json');
+    writeVscodeMcpJson(vscodeMcpPath);
+    success(`Written: ${vscodeMcpPath}`);
+  }
+
+  if (opts.print) {
+    console.log('\n=== Generated .mcp.json ===\n');
+    console.log(JSON.stringify(createMcpConfig(), null, 2));
+    console.log('');
+  }
+
+  console.log('\n  MCP servers configured:');
+  console.log('    sequential-thinking  — structured multi-step reasoning');
+  console.log('    sigma-memory         — persistent knowledge graph');
+  console.log('\n  Agents query memory using MCP tools: search_nodes, read_graph');
+  console.log('  Project decision log: Sigma/memory/decisions.jsonl (per-project, CLI-written)\n');
+  console.log('  Bootstrap protocol: at session start, query memory graph before running sigma session bootstrap.\n');
 }
 
 // ── Command builder ──────────────────────────────────────────────────────────
@@ -230,9 +241,11 @@ export function setupCommand(): Command {
 
   cmd
     .command('memory')
-    .description('Configure Sigma MCP memory node store (~/.sigma/memory_sigma.jsonl)')
-    .action(() => {
-      try { runMemorySetup(); } catch (e) { error((e as Error).message); }
+    .description('Write .mcp.json (sequential-thinking + sigma-memory) into the current project directory')
+    .option('--vscode', 'Also write .vscode/mcp.json for VS Code extension')
+    .option('--print', 'Print generated config to stdout in addition to writing files')
+    .action((opts: { vscode?: boolean; print?: boolean }) => {
+      try { runMemorySetup(opts); } catch (e) { error((e as Error).message); }
     });
 
   return cmd;
