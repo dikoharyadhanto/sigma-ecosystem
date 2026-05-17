@@ -59,6 +59,31 @@ export function writeVscodeMcpJson(filePath: string, options: { platform?: NodeJ
   fs.writeFileSync(filePath, JSON.stringify(createVscodeMcpConfig(options), null, 2) + '\n', 'utf8');
 }
 
+export function writeGeminiMcpConfig(options: { homeDir?: string } = {}): void {
+  const homeDir = options.homeDir ?? os.homedir();
+  const settingsPath = path.join(homeDir, '.gemini', 'settings.json');
+  const memoryFilePath = path.join(homeDir, '.sigma', 'memory_sigma.jsonl');
+
+  let existing: Record<string, unknown> = {};
+  if (fs.existsSync(settingsPath)) {
+    try { existing = fs.readJsonSync(settingsPath); } catch { /* ignore parse errors; start fresh */ }
+  }
+
+  const sigmaServers: Record<string, McpServer> = {
+    'sequential-thinking': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-sequential-thinking'] },
+    'sigma-memory': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'], env: { MEMORY_FILE_PATH: memoryFilePath } },
+  };
+
+  const existingServers = (existing.mcpServers ?? {}) as Record<string, unknown>;
+  const merged: Record<string, unknown> = {
+    ...existing,
+    mcpServers: { ...existingServers, ...sigmaServers },
+  };
+
+  fs.ensureDirSync(path.dirname(settingsPath));
+  fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
+}
+
 // Merges sigma MCP servers into ~/.reasonix/config.json under the mcpServers key.
 // Uses plain npx (no cmd /c) — Reasonix handles OS differences itself.
 // Also strips any object-format entries previously written to the mcp array by mistake.

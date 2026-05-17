@@ -25,6 +25,9 @@ export declare function writeVscodeMcpJson(filePath: string, options?: {
     platform?: NodeJS.Platform;
     homeDir?: string;
 }): void;
+export declare function writeGeminiMcpConfig(options?: {
+    homeDir?: string;
+}): void;
 export declare function writeReasonixMcpConfig(filePath: string, options?: {
     homeDir?: string;
 }): void;

@@ -533,6 +533,12 @@ Optional Reasonix MCP config (writes to `~/.reasonix/config.json`, merged):
 sigma setup memory --reasonix
 ```
 
+Optional Gemini CLI MCP Config
+
+```
+sigma setup memory --gemini
+```
+
 Refresh ecosystem memory with fresh seed (e.g. after a CLI update):
 
 ```bash

@@ -110,9 +110,6 @@ sigma setup install
 ```bash
 cd your-project
 sigma project start
-sigma setup memory
-sigma setup memory --vscode
-
 ```
 
 ### 3. Open your AI tool and activate ARC
@@ -532,6 +529,12 @@ Optional Reasonix MCP config (writes to `~/.reasonix/config.json`, merged):
 
 ```bash
 sigma setup memory --reasonix
+```
+
+Optional Gemini CLI MCP Config
+
+```
+sigma setup memory --gemini
 ```
 
 Refresh ecosystem memory with fresh seed (e.g. after a CLI update):

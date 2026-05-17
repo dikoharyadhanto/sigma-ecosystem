@@ -7,6 +7,7 @@ exports.createMcpConfig = createMcpConfig;
 exports.createVscodeMcpConfig = createVscodeMcpConfig;
 exports.writeMcpJson = writeMcpJson;
 exports.writeVscodeMcpJson = writeVscodeMcpJson;
+exports.writeGeminiMcpConfig = writeGeminiMcpConfig;
 exports.writeReasonixMcpConfig = writeReasonixMcpConfig;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const os_1 = __importDefault(require("os"));
@@ -45,6 +46,29 @@ function writeMcpJson(filePath, options = {}) {
 function writeVscodeMcpJson(filePath, options = {}) {
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(filePath));
     fs_extra_1.default.writeFileSync(filePath, JSON.stringify(createVscodeMcpConfig(options), null, 2) + '\n', 'utf8');
+}
+function writeGeminiMcpConfig(options = {}) {
+    const homeDir = options.homeDir ?? os_1.default.homedir();
+    const settingsPath = path_1.default.join(homeDir, '.gemini', 'settings.json');
+    const memoryFilePath = path_1.default.join(homeDir, '.sigma', 'memory_sigma.jsonl');
+    let existing = {};
+    if (fs_extra_1.default.existsSync(settingsPath)) {
+        try {
+            existing = fs_extra_1.default.readJsonSync(settingsPath);
+        }
+        catch { /* ignore parse errors; start fresh */ }
+    }
+    const sigmaServers = {
+        'sequential-thinking': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-sequential-thinking'] },
+        'sigma-memory': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'], env: { MEMORY_FILE_PATH: memoryFilePath } },
+    };
+    const existingServers = (existing.mcpServers ?? {});
+    const merged = {
+        ...existing,
+        mcpServers: { ...existingServers, ...sigmaServers },
+    };
+    fs_extra_1.default.ensureDirSync(path_1.default.dirname(settingsPath));
+    fs_extra_1.default.writeFileSync(settingsPath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
 }
 // Merges sigma MCP servers into ~/.reasonix/config.json under the mcpServers key.
 // Uses plain npx (no cmd /c) — Reasonix handles OS differences itself.

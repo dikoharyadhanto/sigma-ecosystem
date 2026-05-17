@@ -369,6 +369,12 @@ function runMemorySetup(opts) {
         (0, mcp_1.writeReasonixMcpConfig)(paths.reasonixConfig);
         (0, output_1.success)(`Written: ${paths.reasonixConfig}`);
     }
+    // Optionally write ~/.gemini/settings.json (global, merged with existing)
+    if (opts.gemini) {
+        (0, mcp_1.writeGeminiMcpConfig)();
+        const geminiSettingsPath = path_1.default.join(os_1.default.homedir(), '.gemini', 'settings.json');
+        (0, output_1.success)(`Written: ${geminiSettingsPath}`);
+    }
     if (opts.print) {
         console.log('\n=== Generated .mcp.json ===\n');
         console.log(JSON.stringify((0, mcp_1.createMcpConfig)(), null, 2));
@@ -410,6 +416,7 @@ function setupCommand() {
         .description('Write .mcp.json (sequential-thinking + sigma-memory) into the current project directory')
         .option('--vscode', 'Also write .vscode/mcp.json for VS Code extension')
         .option('--reasonix', 'Also write MCP entries into ~/.reasonix/config.json (global, merged)')
+        .option('--gemini', 'Also write MCP entries into ~/.gemini/settings.json (global, merged)')
         .option('--print', 'Print generated config to stdout in addition to writing files')
         .option('--reseed', 'Overwrite memory file with fresh seed from package bundle')
         .action((opts) => {
