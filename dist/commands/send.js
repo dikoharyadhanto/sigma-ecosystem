@@ -52,6 +52,17 @@ function runSend(opts) {
     const msgType = opts.type ? validateType(opts.type) : 'NOTE';
     const subject = opts.subject?.trim() || '(no subject)';
     const projectRoot = (0, fs_1.findProjectRoot)();
+    // Gate: recipient must have an empty unread queue before receiving new messages.
+    // This enforces sequential processing — roles cannot be buried in unread messages.
+    const existingIndex = (0, mailbox_1.readIndex)(projectRoot);
+    const unread = (0, mailbox_1.getUnreadForRole)(existingIndex, toRole);
+    if (unread.length > 0) {
+        const ids = unread.map(m => `  - ${m.id}  [${m.from} → ${m.to}] ${m.type}: ${m.subject}`).join('\n');
+        throw new Error(`SEND BLOCKED — ${toRole} has ${unread.length} unread message${unread.length > 1 ? 's' : ''}.\n` +
+            `${ids}\n\n` +
+            `${toRole} must read all unread messages before receiving new ones.\n` +
+            `Run: sigma inbox read <id>   (or: sigma inbox --role ${toRole.toLowerCase()} to list them)`);
+    }
     const ts = (0, mailbox_1.generateTimestamp)();
     const msgId = (0, mailbox_1.generateMessageId)(fromRole, toRole, ts);
     const filename = (0, mailbox_1.generateFilename)(msgType, fromRole, toRole, ts);

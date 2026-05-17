@@ -6,7 +6,10 @@
       "Read(//tmp/**)",
       "Bash(sigma plan *)",
       "Bash(sigma project *)",
-      "Bash(sigma exec *)"
+      "Bash(sigma exec *)",
+      "Bash(sigma --help)",
+      "Bash(sigma send *)",
+      "Bash(sigma inbox *)"
     ]
   },
   "enabledMcpjsonServers": [

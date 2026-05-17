@@ -16,6 +16,7 @@ import {
   generateFilename,
   buildMessageMarkdown,
   resolveInboxDir,
+  getUnreadForRole,
   MessageEntry,
 } from '../engine/mailbox';
 import { findProjectRoot } from '../utils/fs';
@@ -74,6 +75,20 @@ function runSend(opts: {
   const subject = opts.subject?.trim() || '(no subject)';
 
   const projectRoot = findProjectRoot();
+
+  // Gate: recipient must have an empty unread queue before receiving new messages.
+  // This enforces sequential processing — roles cannot be buried in unread messages.
+  const existingIndex = readIndex(projectRoot);
+  const unread = getUnreadForRole(existingIndex, toRole);
+  if (unread.length > 0) {
+    const ids = unread.map(m => `  - ${m.id}  [${m.from} → ${m.to}] ${m.type}: ${m.subject}`).join('\n');
+    throw new Error(
+      `SEND BLOCKED — ${toRole} has ${unread.length} unread message${unread.length > 1 ? 's' : ''}.\n` +
+      `${ids}\n\n` +
+      `${toRole} must read all unread messages before receiving new ones.\n` +
+      `Run: sigma inbox read <id>   (or: sigma inbox --role ${toRole.toLowerCase()} to list them)`
+    );
+  }
   const ts = generateTimestamp();
   const msgId = generateMessageId(fromRole, toRole, ts);
   const filename = generateFilename(msgType, fromRole, toRole, ts);
