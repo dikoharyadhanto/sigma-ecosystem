@@ -1,5 +1,6 @@
 ---
-description: Instant Director briefing — current state, decisions, risks, next action
+name: report
+description: "Instant Director briefing — current state, decisions, risks, next action"
 ---
 
 # /report — Sigma Director Briefing

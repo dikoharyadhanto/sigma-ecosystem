@@ -1,5 +1,6 @@
 ---
-description: Sigma CSO Handler — create inter-session context transfer artifacts via sigma cso new
+name: cso
+description: "Sigma CSO Handler — create inter-session context transfer artifacts via sigma cso new"
 ---
 
 # Sigma CSO Handler

@@ -1,6 +1,6 @@
 ---
 name: CODEX-RULES
-description: System-level constraints for Codex operating in a Sigma-governed project
+description: "System-level constraints for Codex operating in a Sigma-governed project"
 ---
 
 # Codex Model Directives — Sigma

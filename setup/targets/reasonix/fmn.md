@@ -1,5 +1,6 @@
 ---
-description: Sigma FMN — Foreman: draft FMN-PLAN (work order + test contract) after INTENT locked
+name: fmn
+description: "Sigma FMN — Foreman: draft FMN-PLAN (work order + test contract) after INTENT locked"
 ---
 
 # Sigma FMN — Foreman

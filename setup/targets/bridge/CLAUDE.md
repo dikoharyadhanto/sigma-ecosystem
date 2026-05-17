@@ -1,6 +1,6 @@
 ---
 name: CLAUDE-RULES
-description: System-level constraints for Claude operating in a Sigma-governed project
+description: "System-level constraints for Claude operating in a Sigma-governed project"
 ---
 
 # Claude Model Directives — Sigma

@@ -1,6 +1,6 @@
 ---
 name: GEMINI-RULES
-description: System-level constraints for Gemini operating in a Sigma-governed project
+description: "System-level constraints for Gemini operating in a Sigma-governed project"
 ---
 
 # Gemini Model Directives — Sigma

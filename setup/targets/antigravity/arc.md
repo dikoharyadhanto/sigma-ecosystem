@@ -1,5 +1,6 @@
 ---
-description: Sigma ARC — Architect: interview Director, draft DIR-INTENT; no downstream artifact authority
+name: arc
+description: "Sigma ARC — Architect: interview Director, draft DIR-INTENT; no downstream artifact authority"
 ---
 
 # Sigma ARC — Architect

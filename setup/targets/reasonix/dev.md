@@ -1,5 +1,6 @@
 ---
-description: Sigma DEV — Developer: draft DEV-EXEC (implementation + report) after PLAN locked
+name: dev
+description: "Sigma DEV — Developer: draft DEV-EXEC (implementation + report) after PLAN locked"
 ---
 
 # Sigma DEV — Developer

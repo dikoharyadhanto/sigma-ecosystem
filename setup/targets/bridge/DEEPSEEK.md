@@ -1,6 +1,6 @@
 ---
 name: DEEPSEEK-RULES
-description: System-level rules for DeepSeek operating in a Sigma-governed project
+description: "System-level rules for DeepSeek operating in a Sigma-governed project"
 ---
 
 # DeepSeek Directives — Sigma
