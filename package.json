@@ -1,5 +1,5 @@
 {
-  "name": "sigma-cli",
+  "name": "sigma-ecosystem",
   "version": "0.9.0",
   "description": "Sigma — Lightweight project governance CLI",
   "bin": {
@@ -7,6 +7,20 @@
   },
   "main": "./dist/cli.js",
   "readme": "SIGMA_README.md",
+  "files": [
+    "bin/",
+    "dist/",
+    "scripts/",
+    "setup/",
+    "Sigma/",
+    "SIGMA_README.md",
+    "README.md",
+    "GEMINI.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "DEEPSEEK.md",
+    "REASONIX.md"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node bin/sigma.js"
