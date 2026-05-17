@@ -27,10 +27,10 @@ const BUNDLE_HOOKS_DIR = path_1.default.join(SETUP_TARGETS_DIR, 'hooks');
 const BUNDLE_MEMORY_SEED = path_1.default.join(PACKAGE_ROOT, 'setup', 'sigma-memory-seed.jsonl');
 const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
 const ROLE_FILES = {
-    claudeCode: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md' },
-    codex: { arc: 'arc', fmn: 'fmn', dev: 'dev', aud: 'aud', checkpoint: 'checkpoint', cso: 'cso', report: 'report' },
-    reasonix: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md' },
-    antigravity: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md' },
+    claudeCode: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
+    codex: { arc: 'arc', fmn: 'fmn', dev: 'dev', aud: 'aud', checkpoint: 'checkpoint', cso: 'cso', report: 'report', sigmaTest: 'sigma-test' },
+    reasonix: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
+    antigravity: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
     cursor: { sigma: 'SIGMA.mdc' },
 };
 const PLATFORM_LABELS = {

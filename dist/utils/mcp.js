@@ -70,9 +70,9 @@ function writeGeminiMcpConfig(options = {}) {
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(settingsPath));
     fs_extra_1.default.writeFileSync(settingsPath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
 }
-// Merges sigma MCP servers into ~/.reasonix/config.json under the mcpServers key.
-// Uses plain npx (no cmd /c) — Reasonix handles OS differences itself.
-// Also strips any object-format entries previously written to the mcp array by mistake.
+// Merges sigma MCP servers into ~/.reasonix/config.json.
+// Reasonix activates servers listed in the `mcp` array; `mcpServers` provides their full config.
+// Both sections must be consistent for a server to work correctly.
 function writeReasonixMcpConfig(filePath, options = {}) {
     let existing = {};
     if (fs_extra_1.default.existsSync(filePath)) {
@@ -87,17 +87,28 @@ function writeReasonixMcpConfig(filePath, options = {}) {
         'sequential-thinking': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-sequential-thinking'] },
         'sigma-memory': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'], env: { MEMORY_FILE_PATH: memoryFilePath } },
     };
-    // Strip any object-format entries from the mcp array (added erroneously by earlier sigma versions).
+    // Rebuild mcp activation array:
+    // - strip object-format entries (not valid in Reasonix mcp array)
+    // - strip any `memory=...` inline shorthand that conflicts with sigma-memory
+    // - ensure sigma server names are present as plain string activators
+    const sigmaNames = new Set(Object.keys(sigmaServers));
     const existingMcp = Array.isArray(existing.mcp)
-        ? existing.mcp.filter(e => typeof e === 'string')
-        : undefined;
+        ? existing.mcp.filter((e) => {
+            if (typeof e !== 'string')
+                return false;
+            // drop inline shorthand entries that conflict with sigma-managed names
+            // format: "name=command" or just "name"
+            const entryName = e.split('=')[0].trim();
+            return !sigmaNames.has(entryName) && entryName !== 'memory';
+        })
+        : [];
+    const mcpArray = [...existingMcp, ...Object.keys(sigmaServers)];
     const existingServers = (existing.mcpServers ?? {});
     const merged = {
         ...existing,
+        mcp: mcpArray,
         mcpServers: { ...existingServers, ...sigmaServers },
     };
-    if (existingMcp !== undefined)
-        merged.mcp = existingMcp;
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(filePath));
     fs_extra_1.default.writeFileSync(filePath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
 }
