@@ -1,22 +1,24 @@
-# Sigma
+# Sigma Ecosystem
 
-Sigma is a lightweight governance protocol and CLI for AI-assisted software projects.
+Sigma Ecosystem is a lightweight governance ecosystem for AI-assisted software projects.
 
-It helps humans use AI coding agents without losing control of intent, scope, evidence, and closure.
+It combines a protocol, CLI, AI role rules, bridge files, memory support, and project artifacts to help humans use AI coding agents without losing control of intent, scope, evidence, and closure.
+
+The CLI component is installed as `sigma-cli` and used through the `sigma` command.
 
 Sigma turns AI-assisted work into a traceable lifecycle:
 
 ```text
-DIR-INTENT → optional ROADMAP → FMN-PLAN → DEV-EXEC → DIR-CLOSE
+Define Intent → Stage the Work (optional) → Write the Plan → Build & Verify → Closure
 ```
 
-Sigma is not an autonomous agent swarm. It is an AI-operated governance layer under human authority.
+Sigma Ecosystem is not an autonomous agent swarm. It is an AI-operated governance layer under human authority.
 
 ---
 
 ## AI Roles Operate Sigma for You
 
-Sigma is designed to be operated by AI roles under your authority.
+Sigma Ecosystem is designed to be operated by AI roles under your authority.
 
 You give intent and approval.
 AI roles operate the workflow.
@@ -40,7 +42,7 @@ AI-assisted development often fails for governance reasons, not coding reasons:
 - different AI tools behave differently,
 - nobody can explain what was decided, why, or whether the work is actually done.
 
-Sigma addresses this by giving AI roles a shared workflow, shared artifacts, and clear authority boundaries.
+Sigma Ecosystem addresses this by giving AI roles a shared workflow, shared artifacts, and clear authority boundaries.
 
 ```text
 Director gives intent and approval.
@@ -197,8 +199,6 @@ Save the current context before we continue.
 Create a formal handoff summary for the next session.
 ```
 
-> **When lost, type `/report`.** Sigma will tell you the current state, open risks, and the next valid move.
-
 ---
 
 ## Director Utility Shortcuts
@@ -275,7 +275,7 @@ Good moments to use `/cso`:
 
 - at the end of a session,
 - before handing work to another AI role,
-- before handing work to another AI vendor,
+- before handing work to another AI model,
 - before pausing a project for several days,
 - when you want a cleaner handoff than a quick checkpoint.
 
@@ -411,27 +411,14 @@ AUD recommends. Director decides.
 
 ## Human Labels and Formal Artifacts
 
-| What you see | Formal artifact | Purpose |
-| :--- | :--- | :--- |
-| Intent Doc | `DIR-INTENT` | Objective, scope, constraints |
-| Plan Doc | `FMN-PLAN` | Build contract and test contract |
-| Execution Evidence | `DEV-EXEC` | Implementation report and proof |
-| Closure Doc | `DIR-CLOSE` | Final closure decision |
-| Roadmap Doc | `ROADMAP` | Optional staging map |
-| Context Handoff | `CSO` | Session continuity |
-
----
-
-## Artifacts
-
-| Artifact     | Purpose                                                              |
-|:------------ |:-------------------------------------------------------------------- |
-| `DIR-INTENT` | Director objective, scope, constraints, and success definition       |
-| `ROADMAP`    | Optional stage map for larger work                                   |
-| `FMN-PLAN`   | Build contract and test contract                                     |
-| `DEV-EXEC`   | Implementation report, verification, Git Diff Evidence, known issues |
-| `DIR-CLOSE`  | Closure summary, evidence, accepted limitations                      |
-| `CSO`        | Context handoff object stored in `Sigma/logs/`                       |
+| What you see       | Formal artifact | Purpose                          |
+|:------------------ |:--------------- |:-------------------------------- |
+| Intent Doc         | `DIR-INTENT`    | Objective, scope, constraints    |
+| Plan Doc           | `FMN-PLAN`      | Build contract and test contract |
+| Execution Evidence | `DEV-EXEC`      | Implementation report and proof  |
+| Closure Doc        | `DIR-CLOSE`     | Final closure decision           |
+| Roadmap Doc        | `ROADMAP`       | Optional staging map             |
+| Context Handoff    | `CSO`           | Session continuity               |
 
 Sigma artifact versions are governance identifiers.
 
@@ -486,6 +473,34 @@ Do not use Sigma as your only governance layer for:
 For high-stakes or regulated work, use additional compliance frameworks or a heavier governance process.
 
 ---
+
+## AI Tool Targets
+
+Sigma can deploy role skill files to supported AI environments when their expected directories are detected.
+
+Currently supported targets:
+
+- Claude Code
+- Codex CLI
+- Reasonix
+- Antigravity
+
+Additional bridge guidance may be provided for Claude Desktop, Gemini CLI, or other MCP-capable tools depending on setup support.
+
+---
+
+## Suggested AI Role Assignments
+
+These are practical starting points, not product claims. Model capabilities change over time. Use the model that performs best in your environment.
+
+| Model      | Recommended Roles | Reason                                                            |
+|:---------- |:----------------- |:----------------------------------------------------------------- |
+| Gemini     | ARC / FMN         | Often useful for long-context strategy and intent refinement.     |
+| ChatGPT    | ARC / AUD         | Good for structured reasoning, consulting, and critique.          |
+| Perplexity | AUD               | Good for document verification and cross-referencing.             |
+| Codex      | FMN / DEV         | Good at planning synthesis before implementation and code review. |
+| Claude     | FMN / DEV         | Strong for coding and work planning synthesis.                    |
+| Deepseek   | FMN / DEV         | Solid technical implementation quality at low API cost.           |
 
 ## Command Reference for AI Operators and Advanced Users
 
@@ -563,23 +578,29 @@ Optional VS Code MCP config:
 sigma setup memory --vscode
 ```
 
+### Optional MCP targets
+
+Use these only if you use the corresponding AI environment:
+
 Optional Reasonix MCP config (writes to `~/.reasonix/config.json`, merged):
 
 ```bash
 sigma setup memory --reasonix
 ```
 
-Optional Gemini CLI MCP Config
+Optional Gemini CLI MCP config:
 
-```
+```bash
 sigma setup memory --gemini
 ```
 
-Refresh ecosystem memory with fresh seed (e.g. after a CLI update):
+### Advanced: reseed ecosystem memory
 
 ```bash
 sigma setup memory --reseed
 ```
+
+Use `--reseed` after a Sigma update when you want to refresh ecosystem memory seed entries. This overwrites seed data, not project decisions.
 
 Memory file:
 
@@ -615,12 +636,12 @@ The protocol covers lifecycle phases, artifact types, gates, role rules, CLI ope
 
 ## Summary
 
-Sigma is for humans who use AI coding agents but do not want to surrender project control.
+Sigma Ecosystem is for humans who use AI coding agents but do not want to surrender project control.
 
 ```text
 You give intent.
 AI roles operate.
-Sigma enforces gates.
+Sigma CLI enforces gates.
 Artifacts preserve proof.
 You decide.
 ```
