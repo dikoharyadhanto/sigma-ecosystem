@@ -23,7 +23,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node bin/sigma.js",
-    "prepare": "npm run build"
+    "prepare": "node -e \"if(!require('fs').existsSync('dist')){require('child_process').execSync('npm run build',{stdio:'inherit'})}\""
   },
   "dependencies": {
     "commander": "^12.0.0",
