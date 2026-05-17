@@ -31,18 +31,21 @@ const ROLE_FILES = {
     codex: { arc: 'arc', fmn: 'fmn', dev: 'dev', aud: 'aud', checkpoint: 'checkpoint', cso: 'cso', report: 'report' },
     reasonix: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md' },
     antigravity: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md' },
+    cursor: { sigma: 'SIGMA.mdc' },
 };
 const PLATFORM_LABELS = {
     claudeCode: 'Claude Code  (~/.claude/commands/)',
     codex: 'Codex CLI    (~/.codex/skills/)',
     reasonix: 'Reasonix     (~/.reasonix/skills/)',
     antigravity: 'Antigravity  (~/.gemini/agents/)',
+    cursor: 'Cursor       (~/.cursor/rules/)',
 };
 const PLATFORM_SOURCE_DIR = {
     claudeCode: 'claude_code',
     codex: 'codex',
     reasonix: 'reasonix',
     antigravity: 'antigravity',
+    cursor: 'cursor',
 };
 // ── sigma setup install ──────────────────────────────────────────────────────
 async function runInstall(opts) {
@@ -152,6 +155,7 @@ async function runInstall(opts) {
             codex: paths.codexSkills,
             reasonix: paths.reasonixSkills,
             antigravity: paths.antigravityAgents,
+            cursor: paths.cursorRules,
         };
         for (const platform of selectedPlatforms) {
             const sourceDir = path_1.default.join(SETUP_TARGETS_DIR, PLATFORM_SOURCE_DIR[platform]);

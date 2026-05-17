@@ -1,0 +1,42 @@
+---
+description: Sigma governance protocol for Cursor — provides lifecycle state awareness and artifact reference
+alwaysApply: true
+---
+
+# Sigma Governance — Cursor Bridge
+
+This project uses the Sigma governance CLI for structured lifecycle management.
+
+Refer to `SIGMA_README.md` at the project root for the full governance protocol.
+
+## Quick Reference
+
+| What you need | How to get it |
+|---|---|
+| Current project state | Run `sigma project status` in terminal |
+| Session orientation | Run `sigma session bootstrap` in terminal |
+| When stuck or lost | Run `sigma project status` and read the "Next Valid Operations" list |
+
+## Rules for AI Roles
+
+- Do not edit `Sigma/progress.json` directly — all state changes go through `sigma` CLI commands
+- Do not lock artifacts without explicit Director authorization
+- When a gate is blocked, surface the blocker clearly before proposing work
+
+## Artifact Reference
+
+| Human label | Artifact code | State flow |
+|---|---|---|
+| Intent Doc | DIR-INTENT | DRAFT → LOCKED |
+| Plan Doc | FMN-PLAN | DRAFT → LOCKED |
+| Execution Evidence | DEV-EXEC | DRAFT → BUILDING → TESTING → COMPLETED → LOCKED |
+| Closure Doc | DIR-CLOSE | DRAFT → LOCKED |
+| Roadmap Doc | ROADMAP | DRAFT → LOCKED (optional) |
+
+## Gate Reference
+
+| Gate | Requires | Unlocks |
+|---|---|---|
+| Gate 1 | DIR-INTENT LOCKED | `sigma plan new` |
+| Gate 2 | FMN-PLAN LOCKED | `sigma exec new` |
+| Gate 3 | DEV-EXEC LOCKED + full evidence chain | `sigma close new` |

@@ -3,6 +3,7 @@ export interface DetectedTools {
     codex: boolean;
     reasonix: boolean;
     antigravity: boolean;
+    cursor: boolean;
 }
 export interface ToolTargetPaths {
     claudeCommands: string;
@@ -10,6 +11,7 @@ export interface ToolTargetPaths {
     reasonixSkills: string;
     reasonixConfig: string;
     antigravityAgents: string;
+    cursorRules: string;
 }
 export declare function targetPaths(): ToolTargetPaths;
 export declare function detectTools(): DetectedTools;

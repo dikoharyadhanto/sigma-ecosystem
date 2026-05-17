@@ -16,6 +16,7 @@ function targetPaths() {
         reasonixSkills: path_1.default.join(home, '.reasonix', 'skills'),
         reasonixConfig: path_1.default.join(home, '.reasonix', 'config.json'),
         antigravityAgents: path_1.default.join(home, '.gemini', 'agents'),
+        cursorRules: path_1.default.join(home, '.cursor', 'rules'),
     };
 }
 function detectTools() {
@@ -25,6 +26,7 @@ function detectTools() {
         codex: fs_extra_1.default.existsSync(t.codexSkills),
         reasonix: fs_extra_1.default.existsSync(t.reasonixSkills),
         antigravity: fs_extra_1.default.existsSync(t.antigravityAgents),
+        cursor: fs_extra_1.default.existsSync(t.cursorRules),
     };
 }
 //# sourceMappingURL=detect.js.map

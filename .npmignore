@@ -1,0 +1,35 @@
+# Development & internal docs
+Discussion/
+Intent/
+Implementation/
+.claude/
+scripts/
+sigma_phase_implementation.md
+
+# Config & tooling
+tsconfig.json
+.gitignore
+
+# Source (dist/ already includes compiled output)
+src/
+
+# Test files
+test/
+*.test.ts
+*.spec.ts
+
+# Root-level bridge stubs (templates live in setup/targets/bridge/ which is included)
+CLAUDE.md
+GEMINI.md
+AGENTS.md
+DEEPSEEK.md
+REASONIX.md
+
+# Project-specific Sigma governance artifacts — only templates/, rules/, and
+# governance docs are needed by the CLI bundle; the live project state is not.
+Sigma/design/
+Sigma/build/
+Sigma/close/
+Sigma/logs/
+Sigma/memory/
+Sigma/progress.json
