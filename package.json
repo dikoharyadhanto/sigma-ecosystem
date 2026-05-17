@@ -9,7 +9,7 @@
   "readme": "SIGMA_README.md",
   "scripts": {
     "build": "tsc",
-    "start": "node bin/sigma.js",
+    "start": "node bin/sigma.js"
   },
   "dependencies": {
     "commander": "^12.0.0",
