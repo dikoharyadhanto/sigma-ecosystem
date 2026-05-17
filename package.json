@@ -21,7 +21,7 @@
     "SIGMA_README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npx tsc",
     "start": "node bin/sigma.js",
     "prepare": "node -e \"require('child_process').execSync('npm run build',{stdio:'inherit'})\""
   },
