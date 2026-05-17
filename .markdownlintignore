@@ -1,0 +1,6 @@
+# Ignore extensionless license file from markdownlint
+LICENSE
+
+# Ignore standard build/dependency folders
+node_modules/
+dist/
