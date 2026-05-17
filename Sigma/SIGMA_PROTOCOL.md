@@ -502,6 +502,27 @@ AUD may provide informal advisory comments on ROADMAP if Director asks, but no f
 
 ---
 
+### 5.7 Director-Facing Labels
+
+Artifact codes are governance identifiers used by the CLI, rule files, and audit trail.
+
+Director-facing output — skill files, session reports, status messages, approval prompts — should always use human labels alongside artifact codes:
+
+| Human label | Artifact code | Purpose |
+| :--- | :--- | :--- |
+| Intent Doc | `DIR-INTENT` | Objective, scope, constraints, success definition |
+| Plan Doc | `FMN-PLAN` | Build contract and test contract |
+| Execution Evidence | `DEV-EXEC` | Implementation, verification, evidence |
+| Closure Doc | `DIR-CLOSE` | Final cycle closure |
+| Roadmap Doc | `ROADMAP` | Optional staging map |
+| Context Handoff | `CSO` | Session continuity snapshot |
+
+**Presentation rule**: Show meaning first, artifact code second.
+
+**Constraint**: Human labels are presentation aliases only. Artifact codes remain the authority for filenames, `progress.json` field values, registry files, CLI arguments, and template internal references.
+
+---
+
 ## 6. State Machine
 
 ### 6.1 DIR-INTENT States

@@ -232,12 +232,24 @@ function runStatus(): void {
   console.log(`Lifecycle Phase:  ${data.lifecycle_state}`);
   console.log(`Last Updated:     ${data.updated_at}`);
 
+  const ARTIFACT_LABELS: Record<string, { label: string; code: string }> = {
+    intent:  { label: 'Intent Doc',         code: 'DIR-INTENT' },
+    plan:    { label: 'Plan Doc',           code: 'FMN-PLAN'   },
+    exec:    { label: 'Execution Evidence', code: 'DEV-EXEC'   },
+    close:   { label: 'Closure Doc',        code: 'DIR-CLOSE'  },
+    roadmap: { label: 'Roadmap Doc',        code: 'ROADMAP'    },
+  };
+
   console.log('\n--- Artifact Status ---');
   for (const domain of ['intent', 'plan', 'exec', 'close', 'roadmap'] as const) {
     const tracker = data[domain];
     const version = tracker.active_version ?? 'none';
     const state = tracker.active_state ?? '—';
-    console.log(`${domain.toUpperCase().padEnd(8)}: ${version.padEnd(12)} [${state}]`);
+    const meta = ARTIFACT_LABELS[domain];
+    const label = version !== 'none'
+      ? `${meta.label} (${meta.code} ${version})`
+      : `${meta.label} (${meta.code})`;
+    console.log(`${label.padEnd(40)} [${state}]`);
   }
 
   console.log('\n--- Gate Status ---');

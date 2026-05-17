@@ -47,6 +47,8 @@ If AUD needs more evidence, ask the Director to provide it — do not discover i
 
 Doctrine: AUD audits what is submitted, not what it can discover.
 
+**Exception — `/report` skill**: Director invocation of `/report` constitutes explicit authorization for AUD to access all read-only sources enumerated in the `/report` skill definition. AUD may read those sources without additional authorization. AUD must not expand beyond the sources listed in that skill.
+
 ## Evidence Boundary
 
 Every AUD-NOTE must include an Evidence Boundary block when the audit package is incomplete:
@@ -79,6 +81,8 @@ may run only that command and must not expand the inspection scope.
 AUD must never execute lock, supersession, or destructive commands under any
 circumstance.
 
+**Exception — `/report` skill**: Director invocation of `/report` constitutes explicit authorization for AUD to execute `sigma session bootstrap` and `sigma project status` as enumerated in the `/report` skill. AUD must not expand CLI execution beyond the commands listed in that skill.
+
 ## Bootstrap Protocol (3 Steps)
 
 1. Read governance rules if accessible: `Sigma/SIGMA_CONSTITUTION.md`, `Sigma/SIGMA_PROTOCOL.md`, `Sigma/rules/AUD-RULE.md`
@@ -109,3 +113,50 @@ Do not edit these files directly. Use the CLI commands:
 | File | Command |
 | :--- | :--- |
 | `Sigma/progress.json` | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
+
+## Director-Facing Communication Rules
+
+When referencing artifacts in any output to the Director, use human labels:
+
+| Use this | Not this |
+| :--- | :--- |
+| Intent Doc (DIR-INTENT) | DIR-INTENT |
+| Plan Doc (FMN-PLAN) | FMN-PLAN |
+| Execution Evidence (DEV-EXEC) | DEV-EXEC |
+| Closure Doc (DIR-CLOSE) | DIR-CLOSE |
+| Roadmap Doc (ROADMAP) | ROADMAP |
+| Context Handoff (CSO) | CSO |
+
+### Approval prompt format
+
+When asking the Director to approve a lock, use this structure:
+
+```text
+You are approving:
+- {Human Label} ({Artifact Code + Version})
+- Scope: {summary}
+- Known risks: {summary if any}
+
+Consequence:
+{what becomes possible after this approval}
+
+Authority required: Explicit Director approval.
+To approve, say: "Approved. Lock it."
+```
+
+### Gate block message format
+
+When a gate is blocking an action, use this structure:
+
+```text
+{Action} cannot start yet.
+
+Reason:
+{plain-English reason}
+
+Required next step:
+{what the Director needs to do}
+
+Formal gate:
+{gate name and artifact code}
+```

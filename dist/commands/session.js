@@ -75,12 +75,16 @@ function runBootstrap(opts) {
     console.log('\n=== Sigma Session Bootstrap ===\n');
     console.log(`Project:          ${data.project_name} (${data.project_id})`);
     console.log(`Lifecycle Phase:  ${data.lifecycle_state}`);
+    const artifactLine = (label, code, version, state) => {
+        const display = version !== 'none' ? `${label} (${code} ${version})` : `${label} (${code})`;
+        return `${display.padEnd(40)} [${fmtState(state)}]`;
+    };
     console.log('\n--- Artifact Status ---');
-    console.log(`INTENT:   ${fmtVersion(data.intent.active_version).padEnd(14)} [${fmtState(data.intent.active_state)}]`);
-    console.log(`PLAN:     ${fmtVersion(data.plan.active_version).padEnd(14)} [${fmtState(data.plan.active_state)}]`);
-    console.log(`EXEC:     ${fmtVersion(data.exec.active_version).padEnd(14)} [${fmtState(data.exec.active_state)}]`);
-    console.log(`CLOSE:    ${fmtVersion(data.close.active_version).padEnd(14)} [${fmtState(data.close.active_state)}]`);
-    console.log(`ROADMAP:  ${fmtVersion(data.roadmap.active_version).padEnd(14)} [${fmtState(data.roadmap.active_state)}]`);
+    console.log(artifactLine('Intent Doc', 'DIR-INTENT', fmtVersion(data.intent.active_version), data.intent.active_state));
+    console.log(artifactLine('Plan Doc', 'FMN-PLAN', fmtVersion(data.plan.active_version), data.plan.active_state));
+    console.log(artifactLine('Execution Evidence', 'DEV-EXEC', fmtVersion(data.exec.active_version), data.exec.active_state));
+    console.log(artifactLine('Closure Doc', 'DIR-CLOSE', fmtVersion(data.close.active_version), data.close.active_state));
+    console.log(artifactLine('Roadmap Doc', 'ROADMAP', fmtVersion(data.roadmap.active_version), data.roadmap.active_state));
     console.log('\n--- Gate Status ---');
     console.log(`Gate 1 (Design Complete):   ${fmtGate(gates.gate_1_open)}`);
     console.log(`Gate 2 (Plan Locked):       ${fmtGate(gates.gate_2_open)}`);

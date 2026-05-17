@@ -36,11 +36,17 @@ No role switch required. No new session required. The active role produces the r
 
 | Mode | Max Words |
 | :--- | :--- |
-| `/report` | 300 words |
+| `/report` | 350 words |
 | `/report --brief` | 150 words |
-| `/report --full` | 500 words |
+| `/report --full` | 600 words |
 
 The report must be concise. No preamble. No filler. No explanation of what the report is.
+
+If the report must be trimmed to fit, cut in this order:
+1. Technical notes
+2. Secondary and tertiary Director options
+3. Secondary decision detail
+Preserve last: Verdict + Current State + Recommended next move.
 
 ## Information Sources (Read-Only)
 
@@ -68,23 +74,34 @@ Use this exact structure every time:
 
 ---
 
-# Sigma Report
+**Sigma Briefing — {project_name}**
+Date: {date}
 
-**Current State:** [One sentence: lifecycle phase, active artifacts, and gate status]
+**Verdict:** {one plain-English sentence — current state and what it means}
 
-**Director Should Know:**
-- [Most important fact or finding right now]
-- [Second most important — omit if nothing significant]
+**Current State**
+- Lifecycle: {phase name in plain English}
+- Locked evidence chain: {human labels + artifact codes, e.g. "Intent Doc (DIR-INTENT v1) → Plan Doc (FMN-PLAN v1)"}
+- Open blockers: {none / list}
 
-**Decisions So Far:**
-- [Key locked decision that is shaping current work]
-- [Second locked decision if relevant — omit if not]
+**What this means**
+{1–3 sentences on practical consequence for the Director}
 
-**Open Risk / Question:** [One unresolved issue, blocker, or open question that may require Director attention. If none, write "None at this time."]
+**Recommended next move**
+{one concrete action or decision}
 
-**Recommended Next Move:** [One concrete decision or action that can move the project forward]
+**Director options**
+1. {primary action phrase}
+2. {secondary option}
+3. {deeper inspection option, if applicable}
+
+**Technical notes** *(only if risk or blocker warrants it)*
+- {entry only if relevant}
 
 ---
+
+Director options must always include one clear recommended next move.
+Options are supporting context, not a decision menu. Maximum 3 options.
 
 ## Forbidden Operations
 

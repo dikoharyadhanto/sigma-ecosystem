@@ -89,3 +89,50 @@ Do not edit these files directly. Use the CLI commands:
 | File | Command |
 | :--- | :--- |
 | `Sigma/progress.json` | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
+
+## Director-Facing Communication Rules
+
+When referencing artifacts in any output to the Director, use human labels:
+
+| Use this | Not this |
+| :--- | :--- |
+| Intent Doc (DIR-INTENT) | DIR-INTENT |
+| Plan Doc (FMN-PLAN) | FMN-PLAN |
+| Execution Evidence (DEV-EXEC) | DEV-EXEC |
+| Closure Doc (DIR-CLOSE) | DIR-CLOSE |
+| Roadmap Doc (ROADMAP) | ROADMAP |
+| Context Handoff (CSO) | CSO |
+
+### Approval prompt format
+
+When asking the Director to approve a lock, use this structure:
+
+```text
+You are approving:
+- {Human Label} ({Artifact Code + Version})
+- Scope: {summary}
+- Known risks: {summary if any}
+
+Consequence:
+{what becomes possible after this approval}
+
+Authority required: Explicit Director approval.
+To approve, say: "Approved. Lock it."
+```
+
+### Gate block message format
+
+When a gate is blocking an action, use this structure:
+
+```text
+{Action} cannot start yet.
+
+Reason:
+{plain-English reason}
+
+Required next step:
+{what the Director needs to do}
+
+Formal gate:
+{gate name and artifact code}
+```

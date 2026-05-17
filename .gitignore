@@ -1,2 +1,24 @@
 node_modules/
 *.js.map
+
+# TypeScript
+*.tsbuildinfo
+
+# Env / secrets
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Working docs
+Discussion/
+

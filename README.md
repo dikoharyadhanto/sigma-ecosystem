@@ -14,6 +14,20 @@ Sigma is not an autonomous agent swarm. It is an AI-operated governance layer un
 
 ---
 
+## AI Roles Operate Sigma for You
+
+Sigma is designed to be operated by AI roles under your authority.
+
+You give intent and approval.
+AI roles operate the workflow.
+Sigma CLI enforces gates.
+Artifacts preserve proof.
+
+When lost, type `/report`.
+Sigma will tell you the current state, open risks, and the next valid move.
+
+---
+
 ## What Sigma Solves
 
 AI-assisted development often fails for governance reasons, not coding reasons:
@@ -112,6 +126,15 @@ cd your-project
 sigma project start
 ```
 
+### Optional: Configure MCP memory
+
+If your AI environment supports MCP reasoning and memory:
+
+```bash
+sigma setup memory
+sigma setup memory --vscode
+```
+
 ### 3. Open your AI tool and activate ARC
 
 Use your installed AI role shortcut:
@@ -173,6 +196,8 @@ Save the current context before we continue.
 /cso
 Create a formal handoff summary for the next session.
 ```
+
+> **When lost, type `/report`.** Sigma will tell you the current state, open risks, and the next valid move.
 
 ---
 
@@ -381,6 +406,19 @@ AUD reviews submitted evidence or files explicitly provided or authorized by the
 AUD does not roam the repository, scan unrelated files, inspect local state, or run Sigma CLI unless the Director explicitly authorizes a specific audit scope.
 
 AUD recommends. Director decides.
+
+---
+
+## Human Labels and Formal Artifacts
+
+| What you see | Formal artifact | Purpose |
+| :--- | :--- | :--- |
+| Intent Doc | `DIR-INTENT` | Objective, scope, constraints |
+| Plan Doc | `FMN-PLAN` | Build contract and test contract |
+| Execution Evidence | `DEV-EXEC` | Implementation report and proof |
+| Closure Doc | `DIR-CLOSE` | Final closure decision |
+| Roadmap Doc | `ROADMAP` | Optional staging map |
+| Context Handoff | `CSO` | Session continuity |
 
 ---
 
