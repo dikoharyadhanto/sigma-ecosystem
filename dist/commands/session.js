@@ -10,6 +10,8 @@ const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const registry_1 = require("../engine/registry");
 const fs_1 = require("../utils/fs");
+const mailbox_1 = require("../engine/mailbox");
+const config_1 = require("../config");
 // ── CSO log reader ────────────────────────────────────────────────────────────
 function recentCsoFiles(data, sigmaDir) {
     // Prefer CSO entries from progress.json if available
@@ -134,6 +136,52 @@ function runBootstrap(opts) {
         if (opts.role) {
             console.log(`  - Sigma/rules/${opts.role.toUpperCase()}-RULE.md`);
         }
+    }
+    // ── Role Mailbox ───────────────────────────────────────────────────────────
+    try {
+        const index = (0, mailbox_1.readIndex)(projectRoot);
+        if (opts.role) {
+            const role = opts.role.toUpperCase();
+            if (config_1.VALID_ROLES.includes(role)) {
+                const unread = (0, mailbox_1.getUnreadForRole)(index, role).slice(-3).reverse();
+                if (unread.length > 0) {
+                    console.log(`\n--- Role Inbox — ${role} ---`);
+                    console.log(`${unread.length} unread message${unread.length > 1 ? 's' : ''}:`);
+                    unread.forEach((m, i) => {
+                        console.log(`\n  ${i + 1}. [${m.from} → ${m.to}] ${m.type}: ${m.subject}`);
+                        console.log(`     File: ${m.file}`);
+                        if (m.attachments.length > 0) {
+                            console.log(`     Attach: ${m.attachments[0]}`);
+                        }
+                    });
+                    console.log(`\n  Run: sigma inbox --role ${role.toLowerCase()}`);
+                }
+            }
+        }
+        else {
+            // Group unread by role — show up to 3 per role that has messages
+            const byRole = {};
+            for (const role of config_1.VALID_ROLES) {
+                const unread = (0, mailbox_1.getUnreadForRole)(index, role).slice(-3).reverse();
+                if (unread.length > 0)
+                    byRole[role] = unread;
+            }
+            const rolesWithMessages = Object.keys(byRole);
+            if (rolesWithMessages.length > 0) {
+                console.log('\n--- Role Mailbox — Unread Messages ---');
+                for (const role of rolesWithMessages) {
+                    const msgs = byRole[role];
+                    console.log(`\n  ${role} (${msgs.length} unread)`);
+                    msgs.forEach((m, i) => {
+                        console.log(`  ${i + 1}. [${m.from} → ${m.to}] ${m.type}: ${m.subject}`);
+                    });
+                }
+                console.log('\n  Run: sigma inbox --role <role>    sigma inbox read <id>');
+            }
+        }
+    }
+    catch {
+        // index.json absent or unreadable — skip silently
     }
     console.log('');
 }

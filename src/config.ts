@@ -20,3 +20,14 @@ export const DOCUMENT_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-REGIST
 export const PROJECT_DECISIONS_FILE = path.join(PROJECT_SIGMA_DIR, 'memory', 'decisions.jsonl');
 
 export const SUBFOLDERS = ['design', 'build', 'close', 'rules', 'logs', 'memory'];
+
+export const MESSAGES_DIR = path.join(PROJECT_SIGMA_DIR, 'messages');
+export const MESSAGES_INDEX_FILE = path.join(MESSAGES_DIR, 'index.json');
+export const MESSAGES_ATTACHMENTS_DIR = path.join(MESSAGES_DIR, 'attachments');
+export const MESSAGE_SUBFOLDERS = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR', 'attachments'];
+
+export const VALID_ROLES = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR'] as const;
+export type SigmaRole = typeof VALID_ROLES[number];
+
+export const VALID_MESSAGE_TYPES = ['NOTE', 'CHECK', 'RESPONSE', 'HANDOFF', 'QUESTION', 'RISK'] as const;
+export type MessageType = typeof VALID_MESSAGE_TYPES[number];

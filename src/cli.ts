@@ -12,6 +12,8 @@ import { roadmapCommand } from './commands/roadmap';
 import { gitCommand } from './commands/git';
 import { csoCommand } from './commands/cso';
 import { overrideCommand } from './commands/override';
+import { sendCommand } from './commands/send';
+import { inboxCommand } from './commands/inbox';
 
 const program = new Command();
 
@@ -32,6 +34,8 @@ program.addCommand(roadmapCommand());
 program.addCommand(gitCommand());
 program.addCommand(csoCommand());
 program.addCommand(overrideCommand());
+program.addCommand(sendCommand());
+program.addCommand(inboxCommand());
 
 program.on('command:*', (operands: string[]) => {
   console.error(`Unknown command: sigma ${operands.join(' ')}`);

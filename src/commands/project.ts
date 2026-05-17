@@ -9,6 +9,9 @@ import {
   GLOBAL_PROJECTS_FILE,
   PROJECT_SIGMA_DIR,
   SUBFOLDERS,
+  MESSAGES_DIR,
+  MESSAGES_INDEX_FILE,
+  MESSAGE_SUBFOLDERS,
 } from '../config';
 import {
   readProgress,
@@ -199,6 +202,16 @@ async function runStart(opts: {
 
   initDecisionsFile(projectRoot);
   console.log('  Memory: Sigma/memory/decisions.jsonl initialized (empty).');
+
+  // Create messages folder tree
+  const messagesDir = path.join(projectRoot, MESSAGES_DIR);
+  fs.ensureDirSync(messagesDir);
+  for (const sub of MESSAGE_SUBFOLDERS) {
+    fs.ensureDirSync(path.join(messagesDir, sub));
+  }
+  const indexPath = path.join(projectRoot, MESSAGES_INDEX_FILE);
+  fs.writeJsonSync(indexPath, { messages: [] }, { spaces: 2 });
+  console.log('  Mailbox: Sigma/messages/ initialized.');
 
   // Create bridge file stubs
   for (const bridgeFile of ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md']) {

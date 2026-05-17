@@ -159,6 +159,15 @@ async function runStart(opts) {
     fs_extra_1.default.writeJsonSync(progressPath, initial, { spaces: 2 });
     (0, memory_1.initDecisionsFile)(projectRoot);
     console.log('  Memory: Sigma/memory/decisions.jsonl initialized (empty).');
+    // Create messages folder tree
+    const messagesDir = path_1.default.join(projectRoot, config_1.MESSAGES_DIR);
+    fs_extra_1.default.ensureDirSync(messagesDir);
+    for (const sub of config_1.MESSAGE_SUBFOLDERS) {
+        fs_extra_1.default.ensureDirSync(path_1.default.join(messagesDir, sub));
+    }
+    const indexPath = path_1.default.join(projectRoot, config_1.MESSAGES_INDEX_FILE);
+    fs_extra_1.default.writeJsonSync(indexPath, { messages: [] }, { spaces: 2 });
+    console.log('  Mailbox: Sigma/messages/ initialized.');
     // Create bridge file stubs
     for (const bridgeFile of ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md']) {
         const bridgePath = path_1.default.join(projectRoot, bridgeFile);

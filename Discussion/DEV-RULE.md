@@ -372,7 +372,9 @@ At session start, DEV SHOULD read:
 - active locked `DIR-INTENT`
 - active or latest locked `FMN-PLAN`
 - active or latest `DEV-EXEC`, if any
-- `Sigma/progress.json` state via `sigma session bootstrap`, when CLI is available
+- `Sigma/progress.json` state via `sigma session bootstrap --role dev`, when CLI is available
+- Role Mailbox: check the Role Mailbox section in bootstrap output for unread messages.
+  Or run `sigma inbox --role dev` mid-session if Director indicates a message has arrived.
 
 DEV should report:
 
@@ -418,6 +420,32 @@ DEV MUST NOT commit, push, or open a pull request without explicit Director inst
 8. Record Git Diff Evidence for material changes.
 9. Explain technical disagreement clearly.
 10. Respect Director final authority.
+
+---
+
+## Role Mailbox
+
+DEV may use the Role Mailbox to send directed messages to other roles.
+
+| Send to | Type | Trigger |
+| :--- | :--- | :--- |
+| FMN | `RISK` | Implementation hit a blocker that may require plan revision |
+| FMN | `QUESTION` | Plan is unclear enough that implementation cannot proceed safely |
+
+Command:
+
+```bash
+sigma send --from dev --to fmn --type risk --subject "..." --message "..."
+```
+
+Before sending, follow the CLI Operator Model:
+state what you intend to send and why, then execute after Director acknowledges.
+
+**Role Mailbox is not a substitute for Director escalation.**
+
+If a decision is required — escalate to Director.
+Do not send a message to another role expecting it to function as approval, rejection, or authority.
+Messages are context only.
 
 ---
 

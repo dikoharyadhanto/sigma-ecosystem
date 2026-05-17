@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SUBFOLDERS = exports.PROJECT_DECISIONS_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.PROGRESS_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_MEMORY_FILE = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_PROJECTS_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
+exports.VALID_MESSAGE_TYPES = exports.VALID_ROLES = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.SUBFOLDERS = exports.PROJECT_DECISIONS_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.PROGRESS_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_MEMORY_FILE = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_PROJECTS_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 exports.SIGMA_VERSION = '0.9.0';
@@ -22,4 +22,10 @@ exports.OPERATION_REGISTRY_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR,
 exports.DOCUMENT_REGISTRY_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'SIGMA-REGISTRY.json');
 exports.PROJECT_DECISIONS_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'memory', 'decisions.jsonl');
 exports.SUBFOLDERS = ['design', 'build', 'close', 'rules', 'logs', 'memory'];
+exports.MESSAGES_DIR = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'messages');
+exports.MESSAGES_INDEX_FILE = path_1.default.join(exports.MESSAGES_DIR, 'index.json');
+exports.MESSAGES_ATTACHMENTS_DIR = path_1.default.join(exports.MESSAGES_DIR, 'attachments');
+exports.MESSAGE_SUBFOLDERS = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR', 'attachments'];
+exports.VALID_ROLES = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR'];
+exports.VALID_MESSAGE_TYPES = ['NOTE', 'CHECK', 'RESPONSE', 'HANDOFF', 'QUESTION', 'RISK'];
 //# sourceMappingURL=config.js.map

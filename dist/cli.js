@@ -14,6 +14,8 @@ const roadmap_1 = require("./commands/roadmap");
 const git_1 = require("./commands/git");
 const cso_1 = require("./commands/cso");
 const override_1 = require("./commands/override");
+const send_1 = require("./commands/send");
+const inbox_1 = require("./commands/inbox");
 const program = new commander_1.Command();
 program
     .name('sigma')
@@ -31,6 +33,8 @@ program.addCommand((0, roadmap_1.roadmapCommand)());
 program.addCommand((0, git_1.gitCommand)());
 program.addCommand((0, cso_1.csoCommand)());
 program.addCommand((0, override_1.overrideCommand)());
+program.addCommand((0, send_1.sendCommand)());
+program.addCommand((0, inbox_1.inboxCommand)());
 program.on('command:*', (operands) => {
     console.error(`Unknown command: sigma ${operands.join(' ')}`);
     console.error('Run `sigma --help` for available commands.');

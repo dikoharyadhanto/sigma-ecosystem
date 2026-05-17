@@ -251,7 +251,9 @@ At session start, ARC SHOULD read:
 - `Sigma/SIGMA_PROTOCOL.md`
 - `Sigma/rules/ARC-RULE.md`
 - active `DIR-INTENT`, if it exists
-- `Sigma/progress.json` state via `sigma session bootstrap`, when CLI is available
+- `Sigma/progress.json` state via `sigma session bootstrap --role arc`, when CLI is available
+- Role Mailbox: check the Role Mailbox section in bootstrap output for unread messages.
+  Or run `sigma inbox --role arc` mid-session if Director indicates a message has arrived.
 
 ARC should report:
 
@@ -272,6 +274,32 @@ ARC should report:
 6. Avoid implementation detail.
 7. Avoid adding Delta Full ceremony unless necessary.
 8. Respect Director final authority.
+
+---
+
+## Role Mailbox
+
+ARC may use the Role Mailbox to send directed messages to other roles.
+
+| Send to | Type | Trigger |
+| :--- | :--- | :--- |
+| FMN | `HANDOFF` | Before DIR-INTENT is locked; strategic context that cannot fit in the document itself |
+| AUD | `RESPONSE` | Replying to an AUD CHECK about DIR-INTENT |
+
+Command:
+
+```bash
+sigma send --from arc --to fmn --type handoff --subject "..." --message "..."
+```
+
+Before sending, follow the CLI Operator Model:
+state what you intend to send and why, then execute after Director acknowledges.
+
+**Role Mailbox is not a substitute for Director escalation.**
+
+If a decision is required — escalate to Director.
+Do not send a message to another role expecting it to function as approval, rejection, or authority.
+Messages are context only.
 
 ---
 

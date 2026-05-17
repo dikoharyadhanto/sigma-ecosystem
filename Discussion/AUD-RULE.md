@@ -693,7 +693,9 @@ At session start, AUD SHOULD read:
 - `Sigma/SIGMA_PROTOCOL.md`
 - `Sigma/rules/AUD-RULE.md`
 - target artifact requested by Director
-- `Sigma/progress.json` state via `sigma session bootstrap`, when CLI is available
+- `Sigma/progress.json` state via `sigma session bootstrap --role aud`, when CLI is available
+- Role Mailbox: check the Role Mailbox section in bootstrap output for unread messages.
+  Or run `sigma inbox --role aud` mid-session if Director indicates a message has arrived.
 
 AUD should report:
 
@@ -719,6 +721,34 @@ AUD should report:
 9. Separate advisory verdict from authority.
 10. Represent skeptical user perspective when appropriate.
 11. Respect Director final authority.
+
+---
+
+## Role Mailbox
+
+AUD may use the Role Mailbox to send directed messages to other roles.
+
+| Send to | Type | Trigger |
+| :--- | :--- | :--- |
+| ARC | `CHECK` | DIR-INTENT has a concern that ARC must address |
+| FMN | `CHECK` | Test contract is weak, missing, or does not verify real failure cases |
+| DEV | `CHECK` | Evidence in DEV-EXEC is insufficient to support a closure decision |
+
+Command:
+
+```bash
+sigma send --from aud --to fmn --type check --subject "..." --message "..."
+```
+
+Before sending, follow the CLI Operator Model:
+state what you intend to send and why, then execute after Director acknowledges.
+
+**Role Mailbox is not a substitute for Director escalation.**
+
+If a decision is required — escalate to Director.
+Do not send a message to another role expecting it to function as approval, rejection, or authority.
+AUD messages are advisory. A CHECK message from AUD does not block, lock, or reject any artifact.
+Messages are context only.
 
 ---
 

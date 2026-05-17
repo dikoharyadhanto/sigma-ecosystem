@@ -299,7 +299,9 @@ At session start, FMN SHOULD read:
 - active locked `DIR-INTENT`
 - active or latest `FMN-PLAN`, if any
 - latest related `DEV-EXEC`, if any
-- `Sigma/progress.json` state via `sigma session bootstrap`, when CLI is available
+- `Sigma/progress.json` state via `sigma session bootstrap --role fmn`, when CLI is available
+- Role Mailbox: check the Role Mailbox section in bootstrap output for unread messages.
+  Or run `sigma inbox --role fmn` mid-session if Director indicates a message has arrived.
 
 FMN should report:
 
@@ -334,6 +336,33 @@ FMN MUST NOT commit, push, or open pull requests without explicit Director instr
 8. Explain disagreements clearly.
 9. Keep Sigma lighter than Delta Full.
 10. Respect Director final authority.
+
+---
+
+## Role Mailbox
+
+FMN may use the Role Mailbox to send directed messages to other roles.
+
+| Send to | Type | Trigger |
+| :--- | :--- | :--- |
+| DEV | `HANDOFF` | After FMN-PLAN is locked; implementation notes that supplement the plan |
+| ARC | `QUESTION` | DIR-INTENT is ambiguous; ARC session needed for clarification |
+| AUD | `RESPONSE` | Replying to an AUD CHECK about the test contract |
+
+Command:
+
+```bash
+sigma send --from fmn --to dev --type handoff --subject "..." --message "..."
+```
+
+Before sending, follow the CLI Operator Model:
+state what you intend to send and why, then execute after Director acknowledges.
+
+**Role Mailbox is not a substitute for Director escalation.**
+
+If a decision is required — escalate to Director.
+Do not send a message to another role expecting it to function as approval, rejection, or authority.
+Messages are context only.
 
 ---
 
