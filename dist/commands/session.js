@@ -12,6 +12,7 @@ const registry_1 = require("../engine/registry");
 const fs_1 = require("../utils/fs");
 const mailbox_1 = require("../engine/mailbox");
 const config_1 = require("../config");
+const projectConfig_1 = require("../engine/projectConfig");
 // ── CSO log reader ────────────────────────────────────────────────────────────
 function recentCsoFiles(data, sigmaDir) {
     // Prefer CSO entries from progress.json if available
@@ -74,9 +75,20 @@ function runBootstrap(opts) {
         // tolerate missing in Phase 3
     }
     // ── Output ─────────────────────────────────────────────────────────────────
+    const projectConfig = (0, projectConfig_1.readProjectConfig)(projectRoot);
     console.log('\n=== Sigma Session Bootstrap ===\n');
     console.log(`Project:          ${data.project_name} (${data.project_id})`);
     console.log(`Lifecycle Phase:  ${data.lifecycle_state}`);
+    // Director language preference — only surface when non-English to avoid noise
+    if (projectConfig.document_language !== 'en' || projectConfig.interaction_language !== 'en') {
+        console.log('\n--- Director Preferences ---');
+        console.log(`  Document language:   ${(0, projectConfig_1.langLabel)(projectConfig.document_language)} (${projectConfig.document_language})`);
+        console.log(`  Interaction:         ${(0, projectConfig_1.langLabel)(projectConfig.interaction_language)} (${projectConfig.interaction_language})`);
+        console.log(`  Formal identifiers:  English (unchanged)`);
+        console.log('');
+        console.log(`  [LANG] Write document prose in ${(0, projectConfig_1.langLabel)(projectConfig.document_language)}.`);
+        console.log('  [LANG] Keep Sigma artifact codes, CLI commands, filenames, and state names unchanged.');
+    }
     const artifactLine = (label, code, version, state) => {
         const display = version !== 'none' ? `${label} (${code} ${version})` : `${label} (${code})`;
         return `${display.padEnd(40)} [${fmtState(state)}]`;

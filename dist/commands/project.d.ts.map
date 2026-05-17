@@ -1,1 +1,1 @@
-{"version":3,"file":"project.d.ts","sourceRoot":"","sources":["../../src/commands/project.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AA0cpC,wBAAgB,cAAc,IAAI,OAAO,CAmDxC"}
+{"version":3,"file":"project.d.ts","sourceRoot":"","sources":["../../src/commands/project.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAidpC,wBAAgB,cAAc,IAAI,OAAO,CAoDxC"}

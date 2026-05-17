@@ -24,6 +24,7 @@ import {
   getNextValidOperations,
 } from '../engine/progress';
 import { initDecisionsFile } from '../engine/memory';
+import { createDefaultProjectConfig, writeProjectConfig, langLabel } from '../engine/projectConfig';
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, fileExists, findProjectRoot, backupFile } from '../utils/fs';
 
@@ -114,6 +115,7 @@ function ensureMemoryFileSeeded(): void {
 async function runStart(opts: {
   id?: string;
   name?: string;
+  lang?: string;
   confirm?: boolean;
   reinit?: boolean;
   overwriteBridge?: boolean;
@@ -222,6 +224,11 @@ async function runStart(opts: {
 
   initDecisionsFile(projectRoot);
   console.log('  Memory: Sigma/memory/decisions.jsonl initialized (empty).');
+
+  // Write project.config.json with language preference
+  const lang = opts.lang?.trim().toLowerCase() || 'en';
+  writeProjectConfig(projectRoot, createDefaultProjectConfig(lang));
+  console.log(`  Config: Sigma/project.config.json written (document language: ${langLabel(lang)})`);
 
   // Create messages folder tree
   const messagesDir = path.join(projectRoot, MESSAGES_DIR);
@@ -465,10 +472,11 @@ export function projectCommand(): Command {
     .description('Initialize a Sigma project in the current directory')
     .option('--id <PROJECT_ID>', 'Project ID (uppercase, max 12 chars)')
     .option('--name <name>', 'Project name (max 64 chars)')
+    .option('--lang <code>', 'Document language ISO 639-1 code (default: en). Use "id" for Bahasa Indonesia.')
     .option('--confirm', 'Skip interactive prompts (requires --id and --name)')
     .option('--reinit', 'Re-initialize an existing Sigma project (backs up progress.json)')
     .option('--overwrite-bridge', 'Overwrite existing bridge files (CLAUDE.md, GEMINI.md, AGENTS.md)')
-    .action((opts: { id?: string; name?: string; confirm?: boolean; reinit?: boolean; overwriteBridge?: boolean }) => {
+    .action((opts: { id?: string; name?: string; lang?: string; confirm?: boolean; reinit?: boolean; overwriteBridge?: boolean }) => {
       runStart(opts).catch(err => {
         console.error(err instanceof Error ? err.message : String(err));
         process.exit(1);

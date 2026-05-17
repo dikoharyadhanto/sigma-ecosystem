@@ -18,6 +18,7 @@ export const PROGRESS_FILE = path.join(PROJECT_SIGMA_DIR, 'progress.json');
 export const OPERATION_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-OPERATION-REGISTRY.json');
 export const DOCUMENT_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-REGISTRY.json');
 export const PROJECT_DECISIONS_FILE = path.join(PROJECT_SIGMA_DIR, 'memory', 'decisions.jsonl');
+export const PROJECT_CONFIG_FILE = path.join(PROJECT_SIGMA_DIR, 'project.config.json');
 
 export const SUBFOLDERS = ['design', 'build', 'close', 'rules', 'logs', 'memory'];
 

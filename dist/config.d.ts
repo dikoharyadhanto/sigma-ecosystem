@@ -13,6 +13,7 @@ export declare const PROGRESS_FILE: string;
 export declare const OPERATION_REGISTRY_FILE: string;
 export declare const DOCUMENT_REGISTRY_FILE: string;
 export declare const PROJECT_DECISIONS_FILE: string;
+export declare const PROJECT_CONFIG_FILE: string;
 export declare const SUBFOLDERS: string[];
 export declare const MESSAGES_DIR: string;
 export declare const MESSAGES_INDEX_FILE: string;

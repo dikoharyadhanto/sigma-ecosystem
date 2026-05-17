@@ -17,6 +17,7 @@ import {
 import { findProjectRoot } from '../utils/fs';
 import { readIndex, getUnreadForRole, MessageEntry } from '../engine/mailbox';
 import { VALID_ROLES, SigmaRole } from '../config';
+import { readProjectConfig, langLabel } from '../engine/projectConfig';
 
 // ── CSO log reader ────────────────────────────────────────────────────────────
 
@@ -91,9 +92,22 @@ function runBootstrap(opts: { role?: string }): void {
 
   // ── Output ─────────────────────────────────────────────────────────────────
 
+  const projectConfig = readProjectConfig(projectRoot);
+
   console.log('\n=== Sigma Session Bootstrap ===\n');
   console.log(`Project:          ${data.project_name} (${data.project_id})`);
   console.log(`Lifecycle Phase:  ${data.lifecycle_state}`);
+
+  // Director language preference — only surface when non-English to avoid noise
+  if (projectConfig.document_language !== 'en' || projectConfig.interaction_language !== 'en') {
+    console.log('\n--- Director Preferences ---');
+    console.log(`  Document language:   ${langLabel(projectConfig.document_language)} (${projectConfig.document_language})`);
+    console.log(`  Interaction:         ${langLabel(projectConfig.interaction_language)} (${projectConfig.interaction_language})`);
+    console.log(`  Formal identifiers:  English (unchanged)`);
+    console.log('');
+    console.log(`  [LANG] Write document prose in ${langLabel(projectConfig.document_language)}.`);
+    console.log('  [LANG] Keep Sigma artifact codes, CLI commands, filenames, and state names unchanged.');
+  }
 
   const artifactLine = (label: string, code: string, version: string, state: string | null): string => {
     const display = version !== 'none' ? `${label} (${code} ${version})` : `${label} (${code})`;
