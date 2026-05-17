@@ -7,12 +7,14 @@ import {
   GLOBAL_RULES_DIR,
   GLOBAL_GOVERNANCE_DIR,
   GLOBAL_PROJECTS_FILE,
+  GLOBAL_MEMORY_FILE,
   PROJECT_SIGMA_DIR,
   SUBFOLDERS,
   MESSAGES_DIR,
   MESSAGES_INDEX_FILE,
   MESSAGE_SUBFOLDERS,
 } from '../config';
+import { writeMcpJson } from '../utils/mcp';
 import {
   readProgress,
   writeProgress,
@@ -30,6 +32,7 @@ import { ensureDir, fileExists, findProjectRoot, backupFile } from '../utils/fs'
 const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
 const BUNDLE_OP_REGISTRY = path.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-OPERATION-REGISTRY.json');
 const BUNDLE_DOC_REGISTRY = path.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-REGISTRY.json');
+const BUNDLE_MEMORY_SEED = path.join(PACKAGE_ROOT, 'setup', 'sigma-memory-seed.jsonl');
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
@@ -87,6 +90,23 @@ function registerProjectEntry(projectId: string, projectName: string, projectPat
   }
 
   fs.writeJsonSync(GLOBAL_PROJECTS_FILE, data, { spaces: 2 });
+}
+
+// ── Memory seed helper ────────────────────────────────────────────────────────
+
+function ensureMemoryFileSeeded(): void {
+  const hasSeed = fileExists(BUNDLE_MEMORY_SEED);
+  if (!fileExists(GLOBAL_MEMORY_FILE)) {
+    fs.ensureFileSync(GLOBAL_MEMORY_FILE);
+    if (hasSeed) {
+      fs.writeFileSync(GLOBAL_MEMORY_FILE, fs.readFileSync(BUNDLE_MEMORY_SEED, 'utf-8'), 'utf-8');
+    }
+  } else {
+    const existing = fs.readFileSync(GLOBAL_MEMORY_FILE, 'utf-8').trim();
+    if (existing.length === 0 && hasSeed) {
+      fs.writeFileSync(GLOBAL_MEMORY_FILE, fs.readFileSync(BUNDLE_MEMORY_SEED, 'utf-8'), 'utf-8');
+    }
+  }
 }
 
 // ── sigma project start ───────────────────────────────────────────────────────
@@ -226,6 +246,13 @@ async function runStart(opts: {
 
   // Register in global projects.json
   registerProjectEntry(projectId, projectName, projectRoot);
+
+  // Write .mcp.json so AI agents can reach sigma-memory and sequential-thinking
+  const mcpJsonPath = path.join(projectRoot, '.mcp.json');
+  writeMcpJson(mcpJsonPath);
+  ensureMemoryFileSeeded();
+  console.log(`  MCP: ${mcpJsonPath} written (sigma-memory + sequential-thinking).`);
+  console.log(`  Memory file: ${GLOBAL_MEMORY_FILE}`);
 
   success(`Sigma project initialized: ${projectName} (${projectId})`);
   console.log(`  Location: ${sigmaDir}`);

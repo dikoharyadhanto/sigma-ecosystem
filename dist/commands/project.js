@@ -9,6 +9,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const inquirer_1 = __importDefault(require("inquirer"));
 const config_1 = require("../config");
+const mcp_1 = require("../utils/mcp");
 const progress_1 = require("../engine/progress");
 const memory_1 = require("../engine/memory");
 const output_1 = require("../utils/output");
@@ -17,6 +18,7 @@ const fs_1 = require("../utils/fs");
 const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
 const BUNDLE_OP_REGISTRY = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-OPERATION-REGISTRY.json');
 const BUNDLE_DOC_REGISTRY = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-REGISTRY.json');
+const BUNDLE_MEMORY_SEED = path_1.default.join(PACKAGE_ROOT, 'setup', 'sigma-memory-seed.jsonl');
 // ── Validation ────────────────────────────────────────────────────────────────
 const PROJECT_ID_PATTERN = /^[A-Z0-9][A-Z0-9-]{0,11}$/;
 function validateProjectId(id) {
@@ -51,6 +53,22 @@ function registerProjectEntry(projectId, projectName, projectPath) {
         data.projects.push(entry);
     }
     fs_extra_1.default.writeJsonSync(config_1.GLOBAL_PROJECTS_FILE, data, { spaces: 2 });
+}
+// ── Memory seed helper ────────────────────────────────────────────────────────
+function ensureMemoryFileSeeded() {
+    const hasSeed = (0, fs_1.fileExists)(BUNDLE_MEMORY_SEED);
+    if (!(0, fs_1.fileExists)(config_1.GLOBAL_MEMORY_FILE)) {
+        fs_extra_1.default.ensureFileSync(config_1.GLOBAL_MEMORY_FILE);
+        if (hasSeed) {
+            fs_extra_1.default.writeFileSync(config_1.GLOBAL_MEMORY_FILE, fs_extra_1.default.readFileSync(BUNDLE_MEMORY_SEED, 'utf-8'), 'utf-8');
+        }
+    }
+    else {
+        const existing = fs_extra_1.default.readFileSync(config_1.GLOBAL_MEMORY_FILE, 'utf-8').trim();
+        if (existing.length === 0 && hasSeed) {
+            fs_extra_1.default.writeFileSync(config_1.GLOBAL_MEMORY_FILE, fs_extra_1.default.readFileSync(BUNDLE_MEMORY_SEED, 'utf-8'), 'utf-8');
+        }
+    }
 }
 // ── sigma project start ───────────────────────────────────────────────────────
 async function runStart(opts) {
@@ -177,6 +195,12 @@ async function runStart(opts) {
     }
     // Register in global projects.json
     registerProjectEntry(projectId, projectName, projectRoot);
+    // Write .mcp.json so AI agents can reach sigma-memory and sequential-thinking
+    const mcpJsonPath = path_1.default.join(projectRoot, '.mcp.json');
+    (0, mcp_1.writeMcpJson)(mcpJsonPath);
+    ensureMemoryFileSeeded();
+    console.log(`  MCP: ${mcpJsonPath} written (sigma-memory + sequential-thinking).`);
+    console.log(`  Memory file: ${config_1.GLOBAL_MEMORY_FILE}`);
     (0, output_1.success)(`Sigma project initialized: ${projectName} (${projectId})`);
     console.log(`  Location: ${sigmaDir}`);
     console.log('  Next: Run `sigma session bootstrap` to confirm state.');
