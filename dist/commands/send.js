@@ -29,8 +29,24 @@ function runSend(opts) {
         throw new Error('--from is required. Use: sigma send --from <role> --to <role> --message "..."');
     if (!opts.to)
         throw new Error('--to is required. Use: sigma send --from <role> --to <role> --message "..."');
-    if (!opts.message || opts.message.trim() === '')
-        throw new Error('--message is required and must not be empty.');
+    // Resolve body: --message-file takes precedence (preserves newlines from file);
+    // --message is fine for single-line content but is truncated by shells on newlines.
+    let body;
+    if (opts.messageFile) {
+        const filePath = path_1.default.resolve(opts.messageFile);
+        if (!fs_extra_1.default.existsSync(filePath)) {
+            throw new Error(`--message-file not found: ${opts.messageFile}`);
+        }
+        body = fs_extra_1.default.readFileSync(filePath, 'utf8').trim();
+        if (body === '')
+            throw new Error('--message-file exists but is empty.');
+    }
+    else if (opts.message && opts.message.trim() !== '') {
+        body = opts.message.trim();
+    }
+    else {
+        throw new Error('--message or --message-file is required and must not be empty.');
+    }
     const fromRole = validateRole(opts.from, '--from');
     const toRole = validateRole(opts.to, '--to');
     const msgType = opts.type ? validateType(opts.type) : 'NOTE';
@@ -70,7 +86,7 @@ function runSend(opts) {
     };
     // Write message markdown
     const absFilePath = path_1.default.join(inboxDir, filename);
-    const markdown = (0, mailbox_1.buildMessageMarkdown)(entry, opts.message.trim());
+    const markdown = (0, mailbox_1.buildMessageMarkdown)(entry, body);
     fs_extra_1.default.writeFileSync(absFilePath, markdown, 'utf8');
     // Update index
     const index = (0, mailbox_1.readIndex)(projectRoot);
@@ -95,7 +111,8 @@ function sendCommand() {
         .requiredOption('--to <role>', `Recipient role (${config_1.VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)
         .option('--type <type>', `Message type (${config_1.VALID_MESSAGE_TYPES.map(t => t.toLowerCase()).join('|')})`, 'note')
         .option('--subject <subject>', 'Short subject line')
-        .requiredOption('--message <body>', 'Message body text')
+        .option('--message <body>', 'Message body (single-line; use --message-file for multi-line content)')
+        .option('--message-file <path>', 'Path to a file whose contents become the message body (preserves newlines)')
         .option('--attach <file>', 'File to attach (copied into Sigma/messages/attachments/)')
         .action((opts) => {
         try {
