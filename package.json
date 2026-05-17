@@ -1,5 +1,5 @@
 {
-  "name": "sigma-cli",
+  "name": "sigma-ecosystem",
   "version": "0.9.0",
   "description": "Sigma — Lightweight project governance CLI",
   "bin": {
