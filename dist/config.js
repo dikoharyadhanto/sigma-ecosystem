@@ -1,0 +1,25 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SUBFOLDERS = exports.PROJECT_DECISIONS_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.PROGRESS_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_MEMORY_FILE = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_PROJECTS_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
+const path_1 = __importDefault(require("path"));
+const os_1 = __importDefault(require("os"));
+exports.SIGMA_VERSION = '0.9.0';
+exports.SCHEMA_VERSION = '1.0.0';
+exports.GLOBAL_SIGMA_DIR = path_1.default.join(os_1.default.homedir(), '.sigma');
+exports.GLOBAL_TEMPLATES_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'templates');
+exports.GLOBAL_RULES_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'rules');
+exports.GLOBAL_GOVERNANCE_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'governance');
+exports.GLOBAL_BRIDGE_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'bridge');
+exports.GLOBAL_PROJECTS_FILE = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'projects.json');
+exports.GLOBAL_CONFIG_FILE = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'sigma.config.json');
+exports.GLOBAL_MEMORY_FILE = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'memory_sigma.jsonl');
+exports.PROJECT_SIGMA_DIR = 'Sigma';
+exports.PROGRESS_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'progress.json');
+exports.OPERATION_REGISTRY_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'SIGMA-OPERATION-REGISTRY.json');
+exports.DOCUMENT_REGISTRY_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'SIGMA-REGISTRY.json');
+exports.PROJECT_DECISIONS_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'memory', 'decisions.jsonl');
+exports.SUBFOLDERS = ['design', 'build', 'close', 'rules', 'logs', 'memory'];
+//# sourceMappingURL=config.js.map

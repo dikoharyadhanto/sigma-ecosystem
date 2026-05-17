@@ -21,9 +21,9 @@
     "SIGMA_README.md"
   ],
   "scripts": {
-    "build": "npx tsc",
+    "build": "tsc",
     "start": "node bin/sigma.js",
-    "prepare": "node -e \"require('child_process').execSync('npm run build',{stdio:'inherit'})\""
+    "prepare": "node -e \"if(!require('fs').existsSync('dist/cli.js')){require('child_process').execSync('npm run build',{stdio:'inherit'})}\""
   },
   "dependencies": {
     "commander": "^12.0.0",
