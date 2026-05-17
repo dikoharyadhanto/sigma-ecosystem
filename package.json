@@ -6,15 +6,30 @@
     "sigma": "./bin/sigma.js"
   },
   "main": "./dist/cli.js",
+  "files": [
+    "bin/",
+    "dist/",
+    "scripts/",
+    "setup/",
+    "Sigma/",
+    "SIGMA_README.md",
+    "README.md",
+    "GEMINI.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "DEEPSEEK.md",
+    "REASONIX.md"
+  ],
   "scripts": {
-    "build": "tsc",
-    "prepare": "npm run build"
+    "build": "tsc"
   },
   "dependencies": {
     "commander": "^12.0.0",
     "chalk": "^4.1.2",
     "fs-extra": "^11.0.0",
-    "inquirer": "^8.0.0",
+    "inquirer": "^8.0.0"
+  },
+  "devDependencies": {
     "typescript": "^5.0.0",
     "@types/node": "^20.0.0",
     "@types/fs-extra": "^11.0.0",
