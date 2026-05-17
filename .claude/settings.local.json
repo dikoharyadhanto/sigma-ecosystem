@@ -8,5 +8,9 @@
       "Bash(sigma project *)",
       "Bash(sigma exec *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "sequential-thinking",
+    "sigma-memory"
+  ]
 }
