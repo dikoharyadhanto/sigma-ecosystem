@@ -7,19 +7,6 @@
   },
   "main": "./dist/cli.js",
   "readme": "SIGMA_README.md",
-  "files": [
-    "bin/",
-    "dist/",
-    "scripts/",
-    "setup/",
-    "Sigma/templates/",
-    "Sigma/rules/",
-    "Sigma/SIGMA_CONSTITUTION.md",
-    "Sigma/SIGMA_PROTOCOL.md",
-    "Sigma/SIGMA-REGISTRY.json",
-    "Sigma/SIGMA-OPERATION-REGISTRY.json",
-    "SIGMA_README.md"
-  ],
   "scripts": {
     "build": "tsc",
     "start": "node bin/sigma.js",
