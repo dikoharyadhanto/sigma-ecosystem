@@ -8,27 +8,11 @@ import {
   registerCloseDraft,
   lockActiveClose,
   ProgressJson,
+  assertProgressCanMutate,
 } from '../engine/progress';
 import { harvestCloseLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
-import { GLOBAL_TEMPLATES_DIR } from '../config';
-
-const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path.join(PACKAGE_ROOT, 'Sigma', 'templates');
-
-function resolveTemplate(name: string): string {
-  const global = path.join(GLOBAL_TEMPLATES_DIR, name);
-  if (fs.existsSync(global)) return global;
-  const bundle = path.join(BUNDLE_TEMPLATES, name);
-  if (fs.existsSync(bundle)) return bundle;
-  throw new Error('Template not found. Run: sigma setup install');
-}
-
-function appendAuditFindings(absPath: string, domain: string, action: string): void {
-  const now = new Date().toISOString();
-  const section = `\n---\n\n## AUD Advisory Findings\n\n*Appended: ${now}*\n*Operation: sigma ${domain} ${action}*\n*Status: ADVISORY ONLY — does not change runtime state*\n\n**Audit Scope**: [AUD fills this]\n\n**Findings**:\n\n[AUD fills this]\n\n**Recommendation**: [AUD fills this]\n`;
-  fs.appendFileSync(absPath, section);
-}
+import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
 
 interface CloseChain {
   hasChain: boolean;
@@ -64,6 +48,7 @@ export function closeCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
 
         const chain = evaluateCloseChain(data);
         if (!chain.hasChain) {
@@ -78,11 +63,9 @@ export function closeCommand(): Command {
         }
 
         const version = nextMajorVersion(data.close.versions);
-        const templatePath = resolveTemplate('DIR-CLOSE-TEMPLATE.md');
         const relPath = path.join('Sigma', 'close', `DIR-CLOSE-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
-        fs.ensureDirSync(path.dirname(absPath));
-        fs.copySync(templatePath, absPath);
+        copyTemplateToArtifact('DIR-CLOSE-TEMPLATE.md', absPath);
 
         if (opts.ackStaleIntent) {
           const ackNote = `> **STALE INTENT ACKNOWLEDGED**: This closure document was created with --ack-stale-intent. The qualifying INTENT → PLAN → EXEC chain contains stale intent.\n\n`;
@@ -105,6 +88,7 @@ export function closeCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         if (!data.close.active_version) {
           throw new Error('No active DIR-CLOSE found. Run: sigma close new');
         }
@@ -126,6 +110,7 @@ export function closeCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         if (data.close.active_state !== 'DRAFT') {
           throw new Error('Active DIR-CLOSE is not in DRAFT state. Cannot lock.');
         }

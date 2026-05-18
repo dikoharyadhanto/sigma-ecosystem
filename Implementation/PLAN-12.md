@@ -78,13 +78,23 @@ Each message is stored as a Markdown file inside the recipient role's inbox fold
 YYYYMMDD-HHMMSS-{TYPE}-{FROM_ROLE}-to-{TO_ROLE}.md
 ```
 
-Example: `Sigma/messages/FMN/20260517-143012-CHECK-AUD-to-FMN.md`
+Example: `Sigma/messages/FMN/20260517-143012456-K2MX-CHECK-AUD-to-FMN.md`
 
 **Message ID format:**
 
 ```
-MSG-YYYYMMDD-HHMMSS-{FROM}-{TO}
+MSG-YYYYMMDD-HHMMSSmmm-XXXX-{FROM}-{TO}
 ```
+
+Where `mmm` is milliseconds (3 digits) and `XXXX` is a 4-character random alphanumeric suffix. Both fields are required for collision resistance — two messages sent in the same second always produce distinct IDs.
+
+**Unread-send gate (temporary policy):**
+
+A recipient may not receive a new message while they still have unread mailbox entries. This prevents AI roles from accumulating unread mail. To clear the gate, the recipient must run `sigma inbox read <id>`. This policy will be revisited when Sigma has explicit message threading or acknowledgment semantics.
+
+**Mailbox index integrity:**
+
+`Sigma/messages/index.json` is validated on every read. Malformed JSON, missing fields, invalid statuses, or duplicate IDs are treated as corruption errors — the CLI will block and report the issue. The file is never silently reset to an empty mailbox.
 
 **Markdown content:**
 
@@ -333,19 +343,15 @@ Message sent.
 sigma inbox --role fmn
 ```
 
-Output example:
+Output example (one unread message — gate policy limits recipients to one unread at a time):
 
 ```
 Role Inbox — FMN
-2 unread messages:
+1 unread messages:
 
 1. [AUD → FMN] CHECK: Plan test contract is weak
-   ID   : MSG-20260517-143012-AUD-FMN
-   File : Sigma/messages/FMN/20260517-143012-CHECK-AUD-to-FMN.md
-
-2. [ARC → FMN] NOTE: Intent scope clarified
-   ID   : MSG-20260517-150201-ARC-FMN
-   File : Sigma/messages/FMN/20260517-150201-NOTE-ARC-to-FMN.md
+   ID   : MSG-20260517-143012456-K2MX-AUD-FMN
+   File : Sigma/messages/FMN/20260517-143012456-K2MX-CHECK-AUD-to-FMN.md
 ```
 
 If no unread messages:
@@ -411,13 +417,10 @@ If `--role <role>` is provided:
 
 ```
 Role Inbox — FMN
-2 unread messages:
+1 unread messages:
 
 1. [AUD → FMN] CHECK: Plan test contract is weak
-   Sigma/messages/FMN/20260517-143012-CHECK-AUD-to-FMN.md
-
-2. [ARC → FMN] NOTE: Intent scope clarified
-   Sigma/messages/FMN/20260517-150201-NOTE-ARC-to-FMN.md
+   Sigma/messages/FMN/20260517-143012456-K2MX-CHECK-AUD-to-FMN.md
 
 Run: sigma inbox --role fmn
 ```

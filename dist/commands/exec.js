@@ -10,23 +10,7 @@ const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const memory_1 = require("../engine/memory");
 const fs_1 = require("../utils/fs");
-const config_1 = require("../config");
-const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'templates');
-function resolveTemplate(name) {
-    const global = path_1.default.join(config_1.GLOBAL_TEMPLATES_DIR, name);
-    if (fs_extra_1.default.existsSync(global))
-        return global;
-    const bundle = path_1.default.join(BUNDLE_TEMPLATES, name);
-    if (fs_extra_1.default.existsSync(bundle))
-        return bundle;
-    throw new Error('Template not found. Run: sigma setup install');
-}
-function appendAuditFindings(absPath, domain, action) {
-    const now = new Date().toISOString();
-    const section = `\n---\n\n## AUD Advisory Findings\n\n*Appended: ${now}*\n*Operation: sigma ${domain} ${action}*\n*Status: ADVISORY ONLY — does not change runtime state*\n\n**Audit Scope**: [AUD fills this]\n\n**Findings**:\n\n[AUD fills this]\n\n**Recommendation**: [AUD fills this]\n`;
-    fs_extra_1.default.appendFileSync(absPath, section);
-}
+const artifacts_1 = require("../utils/artifacts");
 const STAGE_MAP = {
     building: 'BUILDING',
     testing: 'TESTING',
@@ -41,16 +25,15 @@ function execCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (!data.gates.gate_2_open) {
                 throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
             }
             const planVersionRef = data.plan.active_version;
             const version = (0, progress_1.nextExecVersion)(data.exec.versions);
-            const templatePath = resolveTemplate('DEV-EXEC-TEMPLATE.md');
             const relPath = path_1.default.join('Sigma', 'build', `DEV-EXEC-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
-            fs_extra_1.default.ensureDirSync(path_1.default.dirname(absPath));
-            fs_extra_1.default.copySync(templatePath, absPath);
+            (0, artifacts_1.copyTemplateToArtifact)('DEV-EXEC-TEMPLATE.md', absPath);
             (0, progress_1.registerExecDraft)(data, version, relPath, planVersionRef);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`Created: ${relPath} (references PLAN ${planVersionRef})`);
@@ -66,6 +49,7 @@ function execCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (!data.exec.active_version) {
                 throw new Error('No active DEV-EXEC found. Run: sigma exec new');
             }
@@ -74,7 +58,7 @@ function execCommand() {
             const absPath = path_1.default.join(projectRoot, relPath);
             if (!fs_extra_1.default.existsSync(absPath))
                 throw new Error(`Active EXEC file not found: ${relPath}`);
-            appendAuditFindings(absPath, 'exec', 'audit');
+            (0, artifacts_1.appendAuditFindings)(absPath, 'exec', 'audit');
             console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
         }
         catch (e) {
@@ -88,6 +72,7 @@ function execCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             const validStages = Object.keys(STAGE_MAP);
             if (!validStages.includes(stage)) {
                 throw new Error(`Invalid stage "${stage}". Must be one of: ${validStages.join(', ')}`);
@@ -109,6 +94,7 @@ function execCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (data.exec.active_state !== 'COMPLETED') {
                 throw new Error('Active DEV-EXEC must be in COMPLETED state to lock. Run: sigma exec advance complete');
             }
@@ -135,6 +121,7 @@ function execCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             (0, progress_1.supersedeExecVersion)(data, opts.v, opts.reason);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`DEV-EXEC ${opts.v} superseded. Reason: ${opts.reason}`);

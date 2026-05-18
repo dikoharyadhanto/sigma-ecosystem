@@ -1,5 +1,4 @@
 import { Command } from 'commander';
-import fs from 'fs-extra';
 import path from 'path';
 import {
   readProgress,
@@ -7,21 +6,11 @@ import {
   nextMajorVersion,
   registerRoadmapDraft,
   lockActiveRoadmap,
+  assertProgressCanMutate,
 } from '../engine/progress';
 import { harvestRoadmapLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
-import { GLOBAL_TEMPLATES_DIR } from '../config';
-
-const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path.join(PACKAGE_ROOT, 'Sigma', 'templates');
-
-function resolveTemplate(name: string): string {
-  const global = path.join(GLOBAL_TEMPLATES_DIR, name);
-  if (fs.existsSync(global)) return global;
-  const bundle = path.join(BUNDLE_TEMPLATES, name);
-  if (fs.existsSync(bundle)) return bundle;
-  throw new Error('Template not found. Run: sigma setup install');
-}
+import { copyTemplateToArtifact } from '../utils/artifacts';
 
 export function roadmapCommand(): Command {
   const cmd = new Command('roadmap');
@@ -33,6 +22,7 @@ export function roadmapCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
 
         if (data.intent.active_state !== 'LOCKED') {
           throw new Error('ROADMAP requires a locked DIR-INTENT. Run: sigma intent lock');
@@ -46,11 +36,9 @@ export function roadmapCommand(): Command {
         }
 
         const version = nextMajorVersion(data.roadmap.versions);
-        const templatePath = resolveTemplate('ROADMAP-TEMPLATE.md');
         const relPath = path.join('Sigma', 'build', `ROADMAP-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
-        fs.ensureDirSync(path.dirname(absPath));
-        fs.copySync(templatePath, absPath);
+        copyTemplateToArtifact('ROADMAP-TEMPLATE.md', absPath);
         registerRoadmapDraft(data, version, relPath);
         writeProgress(projectRoot, data);
         console.log(`Created: ${relPath}`);
@@ -66,6 +54,7 @@ export function roadmapCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
 
         const draft = data.roadmap.versions.find(v => v.state === 'DRAFT');
         if (!draft) {

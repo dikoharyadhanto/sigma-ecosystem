@@ -1,0 +1,20 @@
+[mcp_servers.sequential-thinking]
+args = [
+    "/c",
+    "npx",
+    "-y",
+    "@modelcontextprotocol/server-sequential-thinking",
+]
+command = "cmd"
+
+[mcp_servers.sigma-memory]
+args = [
+    "/c",
+    "npx",
+    "-y",
+    "@modelcontextprotocol/server-memory",
+]
+command = "cmd"
+
+[mcp_servers.sigma-memory.env]
+MEMORY_FILE_PATH = 'C:\Users\dikoh\.sigma\memory_sigma.jsonl'

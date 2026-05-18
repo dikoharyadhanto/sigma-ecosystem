@@ -9,18 +9,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const fs_1 = require("../utils/fs");
-const config_1 = require("../config");
-const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'templates');
-function resolveTemplate(name) {
-    const global = path_1.default.join(config_1.GLOBAL_TEMPLATES_DIR, name);
-    if (fs_extra_1.default.existsSync(global))
-        return global;
-    const bundle = path_1.default.join(BUNDLE_TEMPLATES, name);
-    if (fs_extra_1.default.existsSync(bundle))
-        return bundle;
-    throw new Error('Template not found. Run: sigma setup install');
-}
+const artifacts_1 = require("../utils/artifacts");
 function buildTimestamp() {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -41,6 +30,7 @@ function csoCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             const role = opts.role.toUpperCase();
             const ts = buildTimestamp();
             const baseName = `CSO-${role}-${ts}`;
@@ -56,8 +46,7 @@ function csoCommand() {
                 fs_extra_1.default.copySync(srcPath, absPath);
             }
             else {
-                const templatePath = resolveTemplate('CSO-TEMPLATE.md');
-                fs_extra_1.default.copySync(templatePath, absPath);
+                (0, artifacts_1.copyTemplateToArtifact)('CSO-TEMPLATE.md', absPath);
             }
             const now = new Date().toISOString();
             const entry = {

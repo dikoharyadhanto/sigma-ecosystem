@@ -10,23 +10,7 @@ const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const memory_1 = require("../engine/memory");
 const fs_1 = require("../utils/fs");
-const config_1 = require("../config");
-const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'templates');
-function resolveTemplate(name) {
-    const global = path_1.default.join(config_1.GLOBAL_TEMPLATES_DIR, name);
-    if (fs_extra_1.default.existsSync(global))
-        return global;
-    const bundle = path_1.default.join(BUNDLE_TEMPLATES, name);
-    if (fs_extra_1.default.existsSync(bundle))
-        return bundle;
-    throw new Error('Template not found. Run: sigma setup install');
-}
-function appendAuditFindings(absPath, domain, action) {
-    const now = new Date().toISOString();
-    const section = `\n---\n\n## AUD Advisory Findings\n\n*Appended: ${now}*\n*Operation: sigma ${domain} ${action}*\n*Status: ADVISORY ONLY — does not change runtime state*\n\n**Audit Scope**: [AUD fills this]\n\n**Findings**:\n\n[AUD fills this]\n\n**Recommendation**: [AUD fills this]\n`;
-    fs_extra_1.default.appendFileSync(absPath, section);
-}
+const artifacts_1 = require("../utils/artifacts");
 function evaluateCloseChain(data) {
     const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
     if (!lockedIntent)
@@ -50,6 +34,7 @@ function closeCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             const chain = evaluateCloseChain(data);
             if (!chain.hasChain) {
                 throw new Error('GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain). Run: sigma exec lock');
@@ -58,11 +43,9 @@ function closeCommand() {
                 throw new Error('GATE 3 STALE: Qualifying chain has stale intent. Add --ack-stale-intent to acknowledge.');
             }
             const version = (0, progress_1.nextMajorVersion)(data.close.versions);
-            const templatePath = resolveTemplate('DIR-CLOSE-TEMPLATE.md');
             const relPath = path_1.default.join('Sigma', 'close', `DIR-CLOSE-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
-            fs_extra_1.default.ensureDirSync(path_1.default.dirname(absPath));
-            fs_extra_1.default.copySync(templatePath, absPath);
+            (0, artifacts_1.copyTemplateToArtifact)('DIR-CLOSE-TEMPLATE.md', absPath);
             if (opts.ackStaleIntent) {
                 const ackNote = `> **STALE INTENT ACKNOWLEDGED**: This closure document was created with --ack-stale-intent. The qualifying INTENT → PLAN → EXEC chain contains stale intent.\n\n`;
                 const existing = fs_extra_1.default.readFileSync(absPath, 'utf8');
@@ -83,6 +66,7 @@ function closeCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (!data.close.active_version) {
                 throw new Error('No active DIR-CLOSE found. Run: sigma close new');
             }
@@ -91,7 +75,7 @@ function closeCommand() {
             const absPath = path_1.default.join(projectRoot, relPath);
             if (!fs_extra_1.default.existsSync(absPath))
                 throw new Error(`Active CLOSE file not found: ${relPath}`);
-            appendAuditFindings(absPath, 'close', 'audit');
+            (0, artifacts_1.appendAuditFindings)(absPath, 'close', 'audit');
             console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
         }
         catch (e) {
@@ -105,6 +89,7 @@ function closeCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (data.close.active_state !== 'DRAFT') {
                 throw new Error('Active DIR-CLOSE is not in DRAFT state. Cannot lock.');
             }

@@ -59,6 +59,8 @@ export interface StaleIntentWarning {
     version: string;
 }
 export declare function validateProgress(data: unknown): ProgressJson;
+export declare function validateProgressSemantics(data: ProgressJson): void;
+export declare function assertProgressCanMutate(data: ProgressJson): void;
 export declare function readProgress(projectRoot: string): ProgressJson;
 export declare function writeProgress(projectRoot: string, data: ProgressJson): void;
 export declare function checkSchemaVersion(data: ProgressJson): void;

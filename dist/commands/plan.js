@@ -10,23 +10,7 @@ const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const memory_1 = require("../engine/memory");
 const fs_1 = require("../utils/fs");
-const config_1 = require("../config");
-const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'templates');
-function resolveTemplate(name) {
-    const global = path_1.default.join(config_1.GLOBAL_TEMPLATES_DIR, name);
-    if (fs_extra_1.default.existsSync(global))
-        return global;
-    const bundle = path_1.default.join(BUNDLE_TEMPLATES, name);
-    if (fs_extra_1.default.existsSync(bundle))
-        return bundle;
-    throw new Error('Template not found. Run: sigma setup install');
-}
-function appendAuditFindings(absPath, domain, action) {
-    const now = new Date().toISOString();
-    const section = `\n---\n\n## AUD Advisory Findings\n\n*Appended: ${now}*\n*Operation: sigma ${domain} ${action}*\n*Status: ADVISORY ONLY — does not change runtime state*\n\n**Audit Scope**: [AUD fills this]\n\n**Findings**:\n\n[AUD fills this]\n\n**Recommendation**: [AUD fills this]\n`;
-    fs_extra_1.default.appendFileSync(absPath, section);
-}
+const artifacts_1 = require("../utils/artifacts");
 function planCommand() {
     const cmd = new commander_1.Command('plan');
     cmd.description('Manage FMN-PLAN artifact');
@@ -36,16 +20,15 @@ function planCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (!data.gates.gate_1_open) {
                 throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
             }
             const intentVersionRef = data.intent.active_version;
             const version = (0, progress_1.nextMajorVersion)(data.plan.versions);
-            const templatePath = resolveTemplate('FMN-PLAN-TEMPLATE.md');
             const relPath = path_1.default.join('Sigma', 'build', `FMN-PLAN-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
-            fs_extra_1.default.ensureDirSync(path_1.default.dirname(absPath));
-            fs_extra_1.default.copySync(templatePath, absPath);
+            (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath);
             (0, progress_1.registerPlanDraft)(data, version, relPath, intentVersionRef);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`Created: ${relPath} (references INTENT ${intentVersionRef})`);
@@ -61,6 +44,7 @@ function planCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (!data.plan.active_version) {
                 throw new Error('No active FMN-PLAN found. Run: sigma plan new');
             }
@@ -69,7 +53,7 @@ function planCommand() {
             const absPath = path_1.default.join(projectRoot, relPath);
             if (!fs_extra_1.default.existsSync(absPath))
                 throw new Error(`Active PLAN file not found: ${relPath}`);
-            appendAuditFindings(absPath, 'plan', 'audit');
+            (0, artifacts_1.appendAuditFindings)(absPath, 'plan', 'audit');
             console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
         }
         catch (e) {
@@ -83,6 +67,7 @@ function planCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (data.plan.active_state !== 'DRAFT') {
                 throw new Error('Active FMN-PLAN is not in DRAFT state. Cannot lock.');
             }
@@ -106,6 +91,7 @@ function planCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             (0, progress_1.supersedePlanVersion)(data, opts.v, opts.reason);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`FMN-PLAN ${opts.v} superseded. Reason: ${opts.reason}`);

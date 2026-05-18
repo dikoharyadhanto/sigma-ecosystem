@@ -60,12 +60,14 @@ function runSend(opts) {
         const ids = unread.map(m => `  - ${m.id}  [${m.from} → ${m.to}] ${m.type}: ${m.subject}`).join('\n');
         throw new Error(`SEND BLOCKED — ${toRole} has ${unread.length} unread message${unread.length > 1 ? 's' : ''}.\n` +
             `${ids}\n\n` +
-            `${toRole} must read all unread messages before receiving new ones.\n` +
+            `Policy: a recipient must read all unread messages before receiving new ones.\n` +
+            `This prevents AI roles from skipping unread mailbox entries.\n` +
             `Run: sigma inbox read <id>   (or: sigma inbox --role ${toRole.toLowerCase()} to list them)`);
     }
     const ts = (0, mailbox_1.generateTimestamp)();
-    const msgId = (0, mailbox_1.generateMessageId)(fromRole, toRole, ts);
-    const filename = (0, mailbox_1.generateFilename)(msgType, fromRole, toRole, ts);
+    const suffix = (0, mailbox_1.generateRandomSuffix)();
+    const msgId = (0, mailbox_1.generateMessageId)(fromRole, toRole, ts, suffix);
+    const filename = (0, mailbox_1.generateFilename)(msgType, fromRole, toRole, ts, suffix);
     // Handle attachment
     const attachmentPaths = [];
     if (opts.attach) {
@@ -116,7 +118,9 @@ function runSend(opts) {
 }
 function sendCommand() {
     const cmd = new commander_1.Command('send');
-    cmd.description('Send a message from one role to another');
+    cmd.description('Send a message from one role to another.\n' +
+        '  Policy: a recipient must have no unread messages before receiving a new one.\n' +
+        '  Clear unread messages with: sigma inbox read <id>');
     cmd
         .requiredOption('--from <role>', `Sender role (${config_1.VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)
         .requiredOption('--to <role>', `Recipient role (${config_1.VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)

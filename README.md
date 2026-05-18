@@ -566,6 +566,16 @@ Sigma artifacts
 Sigma/memory/decisions.jsonl
 ```
 
+### State integrity
+
+State-changing Sigma commands validate `Sigma/progress.json` before they mutate runtime state. If the file is structurally valid but internally contradictory, the CLI blocks the mutation and names the affected field with recovery guidance.
+
+Read-only status/bootstrap commands remain the safest first step when recovery is needed:
+
+```bash
+sigma session bootstrap
+```
+
 Configure MCP integration:
 
 ```bash

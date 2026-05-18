@@ -5,23 +5,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.roadmapCommand = roadmapCommand;
 const commander_1 = require("commander");
-const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const memory_1 = require("../engine/memory");
 const fs_1 = require("../utils/fs");
-const config_1 = require("../config");
-const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'templates');
-function resolveTemplate(name) {
-    const global = path_1.default.join(config_1.GLOBAL_TEMPLATES_DIR, name);
-    if (fs_extra_1.default.existsSync(global))
-        return global;
-    const bundle = path_1.default.join(BUNDLE_TEMPLATES, name);
-    if (fs_extra_1.default.existsSync(bundle))
-        return bundle;
-    throw new Error('Template not found. Run: sigma setup install');
-}
+const artifacts_1 = require("../utils/artifacts");
 function roadmapCommand() {
     const cmd = new commander_1.Command('roadmap');
     cmd.description('Manage ROADMAP artifact');
@@ -31,6 +19,7 @@ function roadmapCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (data.intent.active_state !== 'LOCKED') {
                 throw new Error('ROADMAP requires a locked DIR-INTENT. Run: sigma intent lock');
             }
@@ -39,11 +28,9 @@ function roadmapCommand() {
                 throw new Error('A ROADMAP DRAFT already exists. Lock it before creating a new version. Run: sigma roadmap lock');
             }
             const version = (0, progress_1.nextMajorVersion)(data.roadmap.versions);
-            const templatePath = resolveTemplate('ROADMAP-TEMPLATE.md');
             const relPath = path_1.default.join('Sigma', 'build', `ROADMAP-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
-            fs_extra_1.default.ensureDirSync(path_1.default.dirname(absPath));
-            fs_extra_1.default.copySync(templatePath, absPath);
+            (0, artifacts_1.copyTemplateToArtifact)('ROADMAP-TEMPLATE.md', absPath);
             (0, progress_1.registerRoadmapDraft)(data, version, relPath);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`Created: ${relPath}`);
@@ -59,6 +46,7 @@ function roadmapCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             const draft = data.roadmap.versions.find(v => v.state === 'DRAFT');
             if (!draft) {
                 throw new Error('No ROADMAP DRAFT found. Run: sigma roadmap new');

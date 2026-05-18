@@ -1369,11 +1369,17 @@ Outputs: lifecycle phase, artifact states (INTENT, PLAN, EXEC, CLOSE, ROADMAP), 
 
 `Sigma/progress.json` carries a `schema_version` field (current: `1.0.0`). When the CLI reads a `progress.json`, it validates the schema version and warns if a mismatch is detected. State-mutating operations on a newer schema than the CLI supports are blocked until the CLI is updated.
 
+State-mutating commands also run semantic integrity checks before changing project state. These checks reject contradictory runtime state such as an active version that has no matching version entry, an active state that does not match the active entry, broken artifact version references, or a satisfied gate that has no qualifying artifact chain. When blocked, the CLI prints a recovery-oriented error naming the affected `Sigma/progress.json` field and directs the operator to run `sigma session bootstrap` before repairing the affected artifact path.
+
+Read-only commands remain recovery-friendly: they may display state or warnings where safe instead of forcing immediate repair.
+
 ---
 
 ## 23. CLI Command Reference
 
-All artifact lifecycle commands share a common pattern: read `progress.json`, check pre-conditions (gate or state), mutate state, write `progress.json`, output result. Status and list commands are read-only.
+All artifact lifecycle commands share a common pattern: read `progress.json`, check pre-conditions (gate or state), validate semantic integrity, mutate state, write `progress.json`, output result. Status and list commands are read-only.
+
+Mutation pre-condition checks include progress integrity validation. A command that would mutate runtime state must not proceed when `progress.json` is structurally valid but semantically contradictory.
 
 ### `sigma intent` — DIR-INTENT Artifact
 
@@ -1550,7 +1556,7 @@ All artifact-specific fields are always written for their artifact type — neve
 | `exec.lock` | `implementation_summary`, `known_issues` |
 | `close.lock` | `plan_refs`, `exec_refs`, `closure_verdict`, `accepted_limitations` |
 
-Section extraction is best-effort. If a heading is not found, the field is `""`. Extraction never throws — a failed extract returns `""` silently.
+Section extraction is best-effort. If a heading is not found, the field is `""`. Missing expected sections may produce a stderr warning, but harvesting does not abort the lock command. Extracted markdown sections are normalized for stable whitespace before being written.
 
 ---
 
@@ -1561,6 +1567,8 @@ Harvest failure never aborts the lock command. The lock operation commits `progr
 This means:
 
 - A missing artifact file at harvest time produces a stderr warning, not a failure.
+- Missing expected markdown sections produce stderr warnings and empty fields in the JSONL entry, not a failed lock.
+- Harvested markdown section content is normalized before being written.
 - A crash in the harvest engine does not roll back the lock.
 - The CLI user always receives the lock success message.
 

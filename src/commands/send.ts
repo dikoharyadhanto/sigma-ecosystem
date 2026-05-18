@@ -12,6 +12,7 @@ import {
   readIndex,
   writeIndex,
   generateTimestamp,
+  generateRandomSuffix,
   generateMessageId,
   generateFilename,
   buildMessageMarkdown,
@@ -85,13 +86,15 @@ function runSend(opts: {
     throw new Error(
       `SEND BLOCKED — ${toRole} has ${unread.length} unread message${unread.length > 1 ? 's' : ''}.\n` +
       `${ids}\n\n` +
-      `${toRole} must read all unread messages before receiving new ones.\n` +
+      `Policy: a recipient must read all unread messages before receiving new ones.\n` +
+      `This prevents AI roles from skipping unread mailbox entries.\n` +
       `Run: sigma inbox read <id>   (or: sigma inbox --role ${toRole.toLowerCase()} to list them)`
     );
   }
   const ts = generateTimestamp();
-  const msgId = generateMessageId(fromRole, toRole, ts);
-  const filename = generateFilename(msgType, fromRole, toRole, ts);
+  const suffix = generateRandomSuffix();
+  const msgId = generateMessageId(fromRole, toRole, ts, suffix);
+  const filename = generateFilename(msgType, fromRole, toRole, ts, suffix);
 
   // Handle attachment
   const attachmentPaths: string[] = [];
@@ -149,7 +152,11 @@ function runSend(opts: {
 
 export function sendCommand(): Command {
   const cmd = new Command('send');
-  cmd.description('Send a message from one role to another');
+  cmd.description(
+    'Send a message from one role to another.\n' +
+    '  Policy: a recipient must have no unread messages before receiving a new one.\n' +
+    '  Clear unread messages with: sigma inbox read <id>'
+  );
 
   cmd
     .requiredOption('--from <role>', `Sender role (${VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)

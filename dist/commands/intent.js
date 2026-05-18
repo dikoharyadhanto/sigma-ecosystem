@@ -10,23 +10,7 @@ const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const memory_1 = require("../engine/memory");
 const fs_1 = require("../utils/fs");
-const config_1 = require("../config");
-const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'templates');
-function resolveTemplate(name) {
-    const global = path_1.default.join(config_1.GLOBAL_TEMPLATES_DIR, name);
-    if (fs_extra_1.default.existsSync(global))
-        return global;
-    const bundle = path_1.default.join(BUNDLE_TEMPLATES, name);
-    if (fs_extra_1.default.existsSync(bundle))
-        return bundle;
-    throw new Error('Template not found. Run: sigma setup install');
-}
-function appendAuditFindings(absPath, domain, action) {
-    const now = new Date().toISOString();
-    const section = `\n---\n\n## AUD Advisory Findings\n\n*Appended: ${now}*\n*Operation: sigma ${domain} ${action}*\n*Status: ADVISORY ONLY — does not change runtime state*\n\n**Audit Scope**: [AUD fills this]\n\n**Findings**:\n\n[AUD fills this]\n\n**Recommendation**: [AUD fills this]\n`;
-    fs_extra_1.default.appendFileSync(absPath, section);
-}
+const artifacts_1 = require("../utils/artifacts");
 function intentCommand() {
     const cmd = new commander_1.Command('intent');
     cmd.description('Manage DIR-INTENT artifact');
@@ -36,12 +20,11 @@ function intentCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             const version = (0, progress_1.nextMajorVersion)(data.intent.versions);
-            const templatePath = resolveTemplate('DIR-INTENT-TEMPLATE.md');
             const relPath = path_1.default.join('Sigma', 'design', `DIR-INTENT-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
-            fs_extra_1.default.ensureDirSync(path_1.default.dirname(absPath));
-            fs_extra_1.default.copySync(templatePath, absPath);
+            (0, artifacts_1.copyTemplateToArtifact)('DIR-INTENT-TEMPLATE.md', absPath);
             (0, progress_1.registerIntentDraft)(data, version, relPath);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`Created: ${relPath} — open this file and fill in the intent.`);
@@ -57,6 +40,7 @@ function intentCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (!data.intent.active_version) {
                 throw new Error('No active DIR-INTENT found. Run: sigma intent new');
             }
@@ -65,7 +49,7 @@ function intentCommand() {
             const absPath = path_1.default.join(projectRoot, relPath);
             if (!fs_extra_1.default.existsSync(absPath))
                 throw new Error(`Active INTENT file not found: ${relPath}`);
-            appendAuditFindings(absPath, 'intent', 'review');
+            (0, artifacts_1.appendAuditFindings)(absPath, 'intent', 'review');
             console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
         }
         catch (e) {
@@ -79,6 +63,7 @@ function intentCommand() {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
             if (data.intent.active_state !== 'DRAFT') {
                 throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot lock.');
             }

@@ -6,20 +6,10 @@ import {
   writeProgress,
   registerCsoEntry,
   CsoEntry,
+  assertProgressCanMutate,
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
-import { GLOBAL_TEMPLATES_DIR } from '../config';
-
-const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path.join(PACKAGE_ROOT, 'Sigma', 'templates');
-
-function resolveTemplate(name: string): string {
-  const global = path.join(GLOBAL_TEMPLATES_DIR, name);
-  if (fs.existsSync(global)) return global;
-  const bundle = path.join(BUNDLE_TEMPLATES, name);
-  if (fs.existsSync(bundle)) return bundle;
-  throw new Error('Template not found. Run: sigma setup install');
-}
+import { copyTemplateToArtifact } from '../utils/artifacts';
 
 function buildTimestamp(): string {
   const now = new Date();
@@ -43,6 +33,7 @@ export function csoCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
 
         const role = opts.role.toUpperCase();
         const ts = buildTimestamp();
@@ -59,8 +50,7 @@ export function csoCommand(): Command {
           }
           fs.copySync(srcPath, absPath);
         } else {
-          const templatePath = resolveTemplate('CSO-TEMPLATE.md');
-          fs.copySync(templatePath, absPath);
+          copyTemplateToArtifact('CSO-TEMPLATE.md', absPath);
         }
 
         const now = new Date().toISOString();

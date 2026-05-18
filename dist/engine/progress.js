@@ -4,6 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateProgress = validateProgress;
+exports.validateProgressSemantics = validateProgressSemantics;
+exports.assertProgressCanMutate = assertProgressCanMutate;
 exports.readProgress = readProgress;
 exports.writeProgress = writeProgress;
 exports.checkSchemaVersion = checkSchemaVersion;
@@ -30,6 +32,13 @@ exports.getNextValidOperations = getNextValidOperations;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
+const TRACKER_STATES = {
+    intent: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
+    plan: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
+    exec: ['DRAFT', 'BUILDING', 'TESTING', 'COMPLETED', 'LOCKED', 'SUPERSEDED'],
+    close: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
+    roadmap: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
+};
 // ── Validation ───────────────────────────────────────────────────────────────
 function validateProgress(data) {
     if (typeof data !== 'object' || data === null) {
@@ -60,6 +69,128 @@ function validateProgress(data) {
         throw new Error('progress.json cso must be an array');
     }
     return data;
+}
+function recoveryHint(field) {
+    return (`Recovery: run \`sigma session bootstrap\`, inspect Sigma/progress.json field "${field}", ` +
+        'then repair by recreating or superseding the affected artifact.');
+}
+function semanticError(field, message) {
+    return new Error(`Invalid progress.json state at ${field}: ${message}. ${recoveryHint(field)}`);
+}
+function schemaVersionParts(version) {
+    const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
+    if (!match)
+        return null;
+    return match.slice(1).map(Number);
+}
+function isNewerSchema(actual, expected) {
+    const a = schemaVersionParts(actual);
+    const e = schemaVersionParts(expected);
+    if (!a || !e)
+        return actual !== expected;
+    for (let i = 0; i < 3; i += 1) {
+        if (a[i] > e[i])
+            return true;
+        if (a[i] < e[i])
+            return false;
+    }
+    return false;
+}
+function validateTracker(data, domain) {
+    const tracker = data[domain];
+    const field = domain;
+    if (typeof tracker !== 'object' || tracker === null) {
+        throw semanticError(field, 'tracker block is malformed');
+    }
+    if (!Array.isArray(tracker.versions)) {
+        throw semanticError(`${field}.versions`, 'versions must be an array');
+    }
+    if ((tracker.active_version === null) !== (tracker.active_state === null)) {
+        throw semanticError(field, 'active_version and active_state must either both be set or both be null');
+    }
+    const seen = new Set();
+    for (const v of tracker.versions) {
+        if (!v.version)
+            throw semanticError(`${field}.versions`, 'version entry is missing version');
+        if (seen.has(v.version))
+            throw semanticError(`${field}.versions`, `duplicate version "${v.version}"`);
+        seen.add(v.version);
+        if (!TRACKER_STATES[domain].includes(v.state)) {
+            throw semanticError(`${field}.${v.version}.state`, `invalid state "${v.state}"`);
+        }
+        if (!v.created_at || !v.updated_at) {
+            throw semanticError(`${field}.${v.version}`, 'created_at and updated_at are required');
+        }
+        if (v.state === 'LOCKED' && !v.locked_at) {
+            throw semanticError(`${field}.${v.version}.locked_at`, 'LOCKED entries must include locked_at');
+        }
+        if (v.state === 'SUPERSEDED' && !v.superseded_by && !v.supersede_reason) {
+            throw semanticError(`${field}.${v.version}`, 'SUPERSEDED entries must include superseded_by or supersede_reason');
+        }
+    }
+    if (tracker.active_version) {
+        const matches = tracker.versions.filter(v => v.version === tracker.active_version);
+        if (matches.length !== 1) {
+            throw semanticError(`${field}.active_version`, `active version "${tracker.active_version}" is not present exactly once`);
+        }
+        if (matches[0].state !== tracker.active_state) {
+            throw semanticError(`${field}.active_state`, `active_state "${tracker.active_state}" does not match active entry state "${matches[0].state}"`);
+        }
+    }
+    else if (tracker.versions.some(v => v.state !== 'SUPERSEDED')) {
+        throw semanticError(field, 'inactive tracker contains non-superseded versions');
+    }
+}
+function hasActiveLockedIntent(data) {
+    return data.intent.versions.some(v => v.state === 'LOCKED');
+}
+function hasActiveLockedPlan(data) {
+    return data.plan.versions.some(v => v.state === 'LOCKED');
+}
+function hasCleanGate3Chain(data) {
+    const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
+    if (!lockedIntent)
+        return false;
+    const qualifyingPlan = data.plan.versions.find(v => v.state === 'LOCKED' &&
+        v.intent_version_ref === lockedIntent.version &&
+        !v.stale_intent);
+    if (!qualifyingPlan)
+        return false;
+    return data.exec.versions.some(v => v.state === 'LOCKED' &&
+        v.plan_version_ref === qualifyingPlan.version &&
+        !v.stale_intent);
+}
+function validateProgressSemantics(data) {
+    if (data.schema_version !== config_1.SCHEMA_VERSION && isNewerSchema(data.schema_version, config_1.SCHEMA_VERSION)) {
+        throw semanticError('schema_version', `schema_version "${data.schema_version}" is newer than supported "${config_1.SCHEMA_VERSION}"`);
+    }
+    for (const domain of ['intent', 'plan', 'exec', 'close', 'roadmap']) {
+        validateTracker(data, domain);
+    }
+    const intentVersions = new Set(data.intent.versions.map(v => v.version));
+    for (const v of data.plan.versions) {
+        if (v.intent_version_ref && !intentVersions.has(v.intent_version_ref)) {
+            throw semanticError('plan.intent_version_ref', `PLAN ${v.version} references missing INTENT ${v.intent_version_ref}`);
+        }
+    }
+    const planVersions = new Set(data.plan.versions.map(v => v.version));
+    for (const v of data.exec.versions) {
+        if (v.plan_version_ref && !planVersions.has(v.plan_version_ref)) {
+            throw semanticError('exec.plan_version_ref', `EXEC ${v.version} references missing PLAN ${v.plan_version_ref}`);
+        }
+    }
+    if (data.gates.gate_1_open && !hasActiveLockedIntent(data)) {
+        throw semanticError('gates.gate_1_open', 'gate is open without an active locked INTENT');
+    }
+    if (data.gates.gate_2_open && !hasActiveLockedPlan(data)) {
+        throw semanticError('gates.gate_2_open', 'gate is open without an active locked PLAN');
+    }
+    if (data.gates.gate_3_satisfied && !hasCleanGate3Chain(data)) {
+        throw semanticError('gates.gate_3_satisfied', 'gate is satisfied without a clean INTENT -> PLAN -> EXEC chain');
+    }
+}
+function assertProgressCanMutate(data) {
+    validateProgressSemantics(data);
 }
 // ── Read / Write ─────────────────────────────────────────────────────────────
 function readProgress(projectRoot) {

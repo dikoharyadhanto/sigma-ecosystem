@@ -9,27 +9,11 @@ import {
   advanceExecState,
   lockActiveExec,
   supersedeExecVersion,
+  assertProgressCanMutate,
 } from '../engine/progress';
 import { harvestExecLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
-import { GLOBAL_TEMPLATES_DIR } from '../config';
-
-const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path.join(PACKAGE_ROOT, 'Sigma', 'templates');
-
-function resolveTemplate(name: string): string {
-  const global = path.join(GLOBAL_TEMPLATES_DIR, name);
-  if (fs.existsSync(global)) return global;
-  const bundle = path.join(BUNDLE_TEMPLATES, name);
-  if (fs.existsSync(bundle)) return bundle;
-  throw new Error('Template not found. Run: sigma setup install');
-}
-
-function appendAuditFindings(absPath: string, domain: string, action: string): void {
-  const now = new Date().toISOString();
-  const section = `\n---\n\n## AUD Advisory Findings\n\n*Appended: ${now}*\n*Operation: sigma ${domain} ${action}*\n*Status: ADVISORY ONLY — does not change runtime state*\n\n**Audit Scope**: [AUD fills this]\n\n**Findings**:\n\n[AUD fills this]\n\n**Recommendation**: [AUD fills this]\n`;
-  fs.appendFileSync(absPath, section);
-}
+import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
 
 const STAGE_MAP: Record<string, 'BUILDING' | 'TESTING' | 'COMPLETED'> = {
   building: 'BUILDING',
@@ -47,16 +31,15 @@ export function execCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         if (!data.gates.gate_2_open) {
           throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
         }
         const planVersionRef = data.plan.active_version!;
         const version = nextExecVersion(data.exec.versions);
-        const templatePath = resolveTemplate('DEV-EXEC-TEMPLATE.md');
         const relPath = path.join('Sigma', 'build', `DEV-EXEC-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
-        fs.ensureDirSync(path.dirname(absPath));
-        fs.copySync(templatePath, absPath);
+        copyTemplateToArtifact('DEV-EXEC-TEMPLATE.md', absPath);
         registerExecDraft(data, version, relPath, planVersionRef);
         writeProgress(projectRoot, data);
         console.log(`Created: ${relPath} (references PLAN ${planVersionRef})`);
@@ -72,6 +55,7 @@ export function execCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         if (!data.exec.active_version) {
           throw new Error('No active DEV-EXEC found. Run: sigma exec new');
         }
@@ -93,6 +77,7 @@ export function execCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
 
         const validStages = Object.keys(STAGE_MAP);
         if (!validStages.includes(stage)) {
@@ -116,6 +101,7 @@ export function execCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         if (data.exec.active_state !== 'COMPLETED') {
           throw new Error(
             'Active DEV-EXEC must be in COMPLETED state to lock. Run: sigma exec advance complete'
@@ -144,6 +130,7 @@ export function execCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         supersedeExecVersion(data, opts.v, opts.reason);
         writeProgress(projectRoot, data);
         console.log(`DEV-EXEC ${opts.v} superseded. Reason: ${opts.reason}`);

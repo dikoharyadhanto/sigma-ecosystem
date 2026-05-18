@@ -8,27 +8,11 @@ import {
   registerPlanDraft,
   lockActivePlan,
   supersedePlanVersion,
+  assertProgressCanMutate,
 } from '../engine/progress';
 import { harvestPlanLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
-import { GLOBAL_TEMPLATES_DIR } from '../config';
-
-const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path.join(PACKAGE_ROOT, 'Sigma', 'templates');
-
-function resolveTemplate(name: string): string {
-  const global = path.join(GLOBAL_TEMPLATES_DIR, name);
-  if (fs.existsSync(global)) return global;
-  const bundle = path.join(BUNDLE_TEMPLATES, name);
-  if (fs.existsSync(bundle)) return bundle;
-  throw new Error('Template not found. Run: sigma setup install');
-}
-
-function appendAuditFindings(absPath: string, domain: string, action: string): void {
-  const now = new Date().toISOString();
-  const section = `\n---\n\n## AUD Advisory Findings\n\n*Appended: ${now}*\n*Operation: sigma ${domain} ${action}*\n*Status: ADVISORY ONLY — does not change runtime state*\n\n**Audit Scope**: [AUD fills this]\n\n**Findings**:\n\n[AUD fills this]\n\n**Recommendation**: [AUD fills this]\n`;
-  fs.appendFileSync(absPath, section);
-}
+import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
 
 export function planCommand(): Command {
   const cmd = new Command('plan');
@@ -40,16 +24,15 @@ export function planCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         if (!data.gates.gate_1_open) {
           throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
         }
         const intentVersionRef = data.intent.active_version!;
         const version = nextMajorVersion(data.plan.versions);
-        const templatePath = resolveTemplate('FMN-PLAN-TEMPLATE.md');
         const relPath = path.join('Sigma', 'build', `FMN-PLAN-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
-        fs.ensureDirSync(path.dirname(absPath));
-        fs.copySync(templatePath, absPath);
+        copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);
         registerPlanDraft(data, version, relPath, intentVersionRef);
         writeProgress(projectRoot, data);
         console.log(`Created: ${relPath} (references INTENT ${intentVersionRef})`);
@@ -65,6 +48,7 @@ export function planCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         if (!data.plan.active_version) {
           throw new Error('No active FMN-PLAN found. Run: sigma plan new');
         }
@@ -86,6 +70,7 @@ export function planCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         if (data.plan.active_state !== 'DRAFT') {
           throw new Error('Active FMN-PLAN is not in DRAFT state. Cannot lock.');
         }
@@ -109,6 +94,7 @@ export function planCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         supersedePlanVersion(data, opts.v, opts.reason);
         writeProgress(projectRoot, data);
         console.log(`FMN-PLAN ${opts.v} superseded. Reason: ${opts.reason}`);

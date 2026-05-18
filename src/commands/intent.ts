@@ -7,27 +7,11 @@ import {
   nextMajorVersion,
   registerIntentDraft,
   lockActiveIntent,
+  assertProgressCanMutate,
 } from '../engine/progress';
 import { harvestIntentLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
-import { GLOBAL_TEMPLATES_DIR } from '../config';
-
-const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
-const BUNDLE_TEMPLATES = path.join(PACKAGE_ROOT, 'Sigma', 'templates');
-
-function resolveTemplate(name: string): string {
-  const global = path.join(GLOBAL_TEMPLATES_DIR, name);
-  if (fs.existsSync(global)) return global;
-  const bundle = path.join(BUNDLE_TEMPLATES, name);
-  if (fs.existsSync(bundle)) return bundle;
-  throw new Error('Template not found. Run: sigma setup install');
-}
-
-function appendAuditFindings(absPath: string, domain: string, action: string): void {
-  const now = new Date().toISOString();
-  const section = `\n---\n\n## AUD Advisory Findings\n\n*Appended: ${now}*\n*Operation: sigma ${domain} ${action}*\n*Status: ADVISORY ONLY — does not change runtime state*\n\n**Audit Scope**: [AUD fills this]\n\n**Findings**:\n\n[AUD fills this]\n\n**Recommendation**: [AUD fills this]\n`;
-  fs.appendFileSync(absPath, section);
-}
+import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
 
 export function intentCommand(): Command {
   const cmd = new Command('intent');
@@ -39,12 +23,11 @@ export function intentCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         const version = nextMajorVersion(data.intent.versions);
-        const templatePath = resolveTemplate('DIR-INTENT-TEMPLATE.md');
         const relPath = path.join('Sigma', 'design', `DIR-INTENT-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
-        fs.ensureDirSync(path.dirname(absPath));
-        fs.copySync(templatePath, absPath);
+        copyTemplateToArtifact('DIR-INTENT-TEMPLATE.md', absPath);
         registerIntentDraft(data, version, relPath);
         writeProgress(projectRoot, data);
         console.log(`Created: ${relPath} — open this file and fill in the intent.`);
@@ -60,6 +43,7 @@ export function intentCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         if (!data.intent.active_version) {
           throw new Error('No active DIR-INTENT found. Run: sigma intent new');
         }
@@ -81,6 +65,7 @@ export function intentCommand(): Command {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
         if (data.intent.active_state !== 'DRAFT') {
           throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot lock.');
         }

@@ -16,7 +16,7 @@ export function runCli(args: string, cwd: string, homeDir: string): CliResult {
   try {
     const stdout = execSync(`node "${CLI}" ${args}`, {
       cwd,
-      env: { ...process.env, HOME: homeDir },
+      env: { ...process.env, HOME: homeDir, USERPROFILE: homeDir },
       encoding: 'utf-8',
     });
     return { stdout, stderr: '', exitCode: 0 };
@@ -139,5 +139,54 @@ export function makeProgressWithLockedPlan() {
       versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
+  });
+}
+
+export function makeProgressWithLockedExec() {
+  const now = new Date().toISOString();
+  return makeProgress({
+    lifecycle_state: 'BUILD',
+    intent: {
+      active_version: 'v1',
+      active_state: 'LOCKED',
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
+    },
+    plan: {
+      active_version: 'v1',
+      active_state: 'LOCKED',
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+    },
+    exec: {
+      active_version: 'v0.1',
+      active_state: 'LOCKED',
+      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' }],
+    },
+    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
+  });
+}
+
+export function makeProgressWithDraftIntentAfterLockedChain() {
+  const now = new Date().toISOString();
+  return makeProgress({
+    lifecycle_state: 'BUILD',
+    intent: {
+      active_version: 'v2',
+      active_state: 'DRAFT',
+      versions: [
+        { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+        { version: 'v2', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v2.md', created_at: now, updated_at: now },
+      ],
+    },
+    plan: {
+      active_version: 'v1',
+      active_state: 'LOCKED',
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+    },
+    exec: {
+      active_version: 'v0.1',
+      active_state: 'LOCKED',
+      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' }],
+    },
+    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
   });
 }

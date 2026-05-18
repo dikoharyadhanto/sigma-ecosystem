@@ -28,6 +28,53 @@ export interface DecisionEntry {
   accepted_limitations?: string;
 }
 
+type ArtifactKind = DecisionEntry['artifact'];
+
+interface SectionSpec {
+  field: keyof DecisionEntry;
+  patterns: RegExp[];
+  required?: boolean;
+}
+
+const SECTION_SPECS: Record<ArtifactKind, SectionSpec[]> = {
+  INTENT: [
+    { field: 'director_notes', patterns: [/^## .*director.*$/im] },
+    { field: 'risk_notes', patterns: [/^## 8\. Risk/im] },
+    { field: 'evidence_references', patterns: [/^## 2\. Success Definition/im], required: true },
+  ],
+  ROADMAP: [
+    { field: 'director_notes', patterns: [/^## 9\. Director Roadmap Notes/im] },
+    { field: 'risk_notes', patterns: [] },
+    { field: 'evidence_references', patterns: [/^## 2\. Source Intent Alignment/im], required: true },
+    { field: 'stage_summary', patterns: [/^## 3\. Stage Overview/im] },
+    { field: 'recommended_next_plan', patterns: [/^## 8\. FMN Roadmap Notes/im] },
+    { field: 'pending_items', patterns: [/^## 7\. Pending Items/im] },
+  ],
+  PLAN: [
+    { field: 'director_notes', patterns: [/^## .*director.*$/im] },
+    { field: 'risk_notes', patterns: [] },
+    { field: 'evidence_references', patterns: [] },
+    { field: 'task_plan_summary', patterns: [/^## 2\. Work Order/im], required: true },
+    { field: 'test_contract_summary', patterns: [/^## 5\. Pre-Build Test Contract/im], required: true },
+  ],
+  EXEC: [
+    { field: 'director_notes', patterns: [/^## .*director.*$/im] },
+    { field: 'risk_notes', patterns: [] },
+    { field: 'evidence_references', patterns: [] },
+    { field: 'implementation_summary', patterns: [/^## 2\. Implementation Approach/im], required: true },
+    { field: 'known_issues', patterns: [/^## .*known.*(issues|limitations).*$/im] },
+  ],
+  CLOSE: [
+    { field: 'director_notes', patterns: [/^## 10\. Director Closure Decision Notes/im], required: true },
+    { field: 'risk_notes', patterns: [] },
+    { field: 'evidence_references', patterns: [/^## 3\. Evidence References/im], required: true },
+    { field: 'plan_refs', patterns: [/^## 3\. Evidence References/im] },
+    { field: 'exec_refs', patterns: [/^## 3\. Evidence References/im] },
+    { field: 'closure_verdict', patterns: [/^## 10\. Director Closure Decision Notes/im] },
+    { field: 'accepted_limitations', patterns: [/^## 6\. Known Limitations/im] },
+  ],
+};
+
 // Returns the content of the section following `pattern` up to the next ## heading.
 // Returns '' if the heading is not found. Never throws.
 function extractSection(content: string, pattern: RegExp): string {
@@ -37,7 +84,38 @@ function extractSection(content: string, pattern: RegExp): string {
   const rest = content.slice(start);
   const nextHeading = rest.search(/^## /m);
   const section = nextHeading === -1 ? rest : rest.slice(0, nextHeading);
-  return section.trim();
+  return normalizeSection(section);
+}
+
+function normalizeSection(content: string): string {
+  return content
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function extractFirstSection(content: string, patterns: RegExp[]): string {
+  for (const pattern of patterns) {
+    const value = extractSection(content, pattern);
+    if (value) return value;
+  }
+  return '';
+}
+
+function extractSections(
+  artifact: ArtifactKind,
+  content: string,
+  sourceFile: string
+): Partial<DecisionEntry> {
+  const extracted: Partial<DecisionEntry> = {};
+  for (const spec of SECTION_SPECS[artifact]) {
+    const value = extractFirstSection(content, spec.patterns);
+    (extracted as Record<string, string>)[spec.field] = value;
+    if (spec.required && !value) {
+      process.stderr.write(`[harvest] ${artifact} ${sourceFile}: missing expected section for ${String(spec.field)}\n`);
+    }
+  }
+  return extracted;
 }
 
 function appendEntry(projectRoot: string, entry: DecisionEntry): void {
@@ -61,9 +139,10 @@ export function harvestIntentLock(projectRoot: string, version: string, sourceFi
       lock_event: 'intent.lock',
       source_file: sourceFile,
       timestamp: new Date().toISOString(),
-      director_notes: extractSection(content, /^## .*director/im),
-      risk_notes: extractSection(content, /^## 8\. Risk/im),
-      evidence_references: extractSection(content, /^## 2\. Success Definition/im),
+      director_notes: '',
+      risk_notes: '',
+      evidence_references: '',
+      ...extractSections('INTENT', content, sourceFile),
     };
     appendEntry(projectRoot, entry);
   } catch (e) {
@@ -86,12 +165,10 @@ export function harvestRoadmapLock(projectRoot: string, version: string, sourceF
       lock_event: 'roadmap.lock',
       source_file: sourceFile,
       timestamp: new Date().toISOString(),
-      director_notes: extractSection(content, /^## 9\. Director Roadmap Notes/im),
       risk_notes: '',
-      evidence_references: extractSection(content, /^## 2\. Source Intent Alignment/im),
-      stage_summary: extractSection(content, /^## 3\. Stage Overview/im),
-      recommended_next_plan: extractSection(content, /^## 8\. FMN Roadmap Notes/im),
-      pending_items: extractSection(content, /^## 7\. Pending Items/im),
+      director_notes: '',
+      evidence_references: '',
+      ...extractSections('ROADMAP', content, sourceFile),
     };
     appendEntry(projectRoot, entry);
   } catch (e) {
@@ -114,11 +191,10 @@ export function harvestPlanLock(projectRoot: string, version: string, sourceFile
       lock_event: 'plan.lock',
       source_file: sourceFile,
       timestamp: new Date().toISOString(),
-      director_notes: extractSection(content, /^## .*director/im),
+      director_notes: '',
       risk_notes: '',
       evidence_references: '',
-      task_plan_summary: extractSection(content, /^## 2\. Work Order/im),
-      test_contract_summary: extractSection(content, /^## 5\. Pre-Build Test Contract/im),
+      ...extractSections('PLAN', content, sourceFile),
     };
     appendEntry(projectRoot, entry);
   } catch (e) {
@@ -141,11 +217,10 @@ export function harvestExecLock(projectRoot: string, version: string, sourceFile
       lock_event: 'exec.lock',
       source_file: sourceFile,
       timestamp: new Date().toISOString(),
-      director_notes: extractSection(content, /^## .*director/im),
+      director_notes: '',
       risk_notes: '',
       evidence_references: '',
-      implementation_summary: extractSection(content, /^## 2\. Implementation Approach/im),
-      known_issues: extractSection(content, /^## .*known.*(issues|limitations)/im),
+      ...extractSections('EXEC', content, sourceFile),
     };
     appendEntry(projectRoot, entry);
   } catch (e) {
@@ -162,8 +237,9 @@ export function harvestCloseLock(projectRoot: string, version: string, sourceFil
       return;
     }
     const content = fs.readFileSync(absPath, 'utf8');
-    const evidenceRefs = extractSection(content, /^## 3\. Evidence References/im);
-    const closureVerdict = extractSection(content, /^## 10\. Director Closure Decision Notes/im);
+    const sections = extractSections('CLOSE', content, sourceFile);
+    const evidenceRefs = sections.evidence_references ?? '';
+    const closureVerdict = sections.director_notes ?? '';
     const entry: DecisionEntry = {
       artifact: 'CLOSE',
       version,
@@ -176,7 +252,8 @@ export function harvestCloseLock(projectRoot: string, version: string, sourceFil
       plan_refs: evidenceRefs,
       exec_refs: evidenceRefs,
       closure_verdict: closureVerdict,
-      accepted_limitations: extractSection(content, /^## 6\. Known Limitations/im),
+      accepted_limitations: '',
+      ...sections,
     };
     appendEntry(projectRoot, entry);
   } catch (e) {

@@ -7,6 +7,7 @@ exports.readIndex = readIndex;
 exports.writeIndex = writeIndex;
 exports.generateTimestamp = generateTimestamp;
 exports.formatTimestampForId = formatTimestampForId;
+exports.generateRandomSuffix = generateRandomSuffix;
 exports.generateMessageId = generateMessageId;
 exports.generateFilename = generateFilename;
 exports.buildMessageMarkdown = buildMessageMarkdown;
@@ -17,16 +18,67 @@ exports.resolveInboxDir = resolveInboxDir;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
+const VALID_STATUSES = ['UNREAD', 'READ', 'ARCHIVED'];
+const REQUIRED_ENTRY_FIELDS = ['id', 'from', 'to', 'type', 'subject', 'file', 'status', 'created_at'];
+function corruptionError(detail) {
+    return new Error(`Mailbox index corruption detected in ${config_1.MESSAGES_INDEX_FILE}: ${detail}\n` +
+        `Inspect Sigma/messages/index.json manually. Do not delete it — message history may be recoverable from files in Sigma/messages/.\n` +
+        `To repair duplicate-ID entries from older builds: remove the duplicate entry from the "messages" array in index.json, then re-run the command.`);
+}
+function validateIndexData(data) {
+    if (typeof data !== 'object' || data === null) {
+        throw corruptionError('root value is not an object');
+    }
+    const d = data;
+    if (!('messages' in d) || !Array.isArray(d.messages)) {
+        throw corruptionError('"messages" field is missing or not an array');
+    }
+    const ids = new Set();
+    const files = new Set();
+    for (let i = 0; i < d.messages.length; i++) {
+        const m = d.messages[i];
+        if (typeof m !== 'object' || m === null) {
+            throw corruptionError(`entry at index ${i} is not an object`);
+        }
+        const entry = m;
+        for (const field of REQUIRED_ENTRY_FIELDS) {
+            if (typeof entry[field] !== 'string' || entry[field].length === 0) {
+                throw corruptionError(`entry at index ${i} has missing or invalid field "${field}"`);
+            }
+        }
+        if (!Array.isArray(entry.attachments)) {
+            throw corruptionError(`entry at index ${i} has invalid "attachments" field (must be an array)`);
+        }
+        if (!VALID_STATUSES.includes(entry.status)) {
+            throw corruptionError(`entry at index ${i} has invalid status "${entry.status}"`);
+        }
+        const id = entry.id;
+        if (ids.has(id)) {
+            throw corruptionError(`duplicate message ID "${id}" at index ${i} — this can occur from same-second sends in older builds`);
+        }
+        ids.add(id);
+        const file = entry.file;
+        if (files.has(file)) {
+            throw corruptionError(`duplicate file path "${file}" at index ${i}`);
+        }
+        files.add(file);
+    }
+    return data;
+}
 function readIndex(projectRoot) {
     const indexPath = path_1.default.join(projectRoot, config_1.MESSAGES_INDEX_FILE);
     if (!fs_extra_1.default.existsSync(indexPath))
         return { messages: [] };
+    let raw;
     try {
-        return fs_extra_1.default.readJsonSync(indexPath);
+        raw = fs_extra_1.default.readJsonSync(indexPath);
     }
     catch {
-        return { messages: [] };
+        throw new Error(`Mailbox index is not valid JSON: ${config_1.MESSAGES_INDEX_FILE}.\n` +
+            `Inspect Sigma/messages/index.json manually and restore or repair it.\n` +
+            `Do not delete the file — message history may be recoverable from files in Sigma/messages/.`);
     }
+    return validateIndexData(raw);
 }
 function writeIndex(projectRoot, index) {
     const indexPath = path_1.default.join(projectRoot, config_1.MESSAGES_INDEX_FILE);
@@ -36,14 +88,20 @@ function generateTimestamp() {
     return new Date().toISOString();
 }
 function formatTimestampForId(iso) {
-    // YYYYMMDD-HHMMSS from ISO string
-    return iso.replace(/[-:T]/g, '').slice(0, 15).replace(/(\d{8})(\d{6}).*/, '$1-$2');
+    // YYYYMMDD-HHMMSSmmm — millisecond precision for collision resistance
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})/);
+    if (!m)
+        throw new Error(`Invalid ISO timestamp: ${iso}`);
+    return `${m[1]}${m[2]}${m[3]}-${m[4]}${m[5]}${m[6]}${m[7]}`;
 }
-function generateMessageId(from, to, ts) {
-    return `MSG-${formatTimestampForId(ts)}-${from}-${to}`;
+function generateRandomSuffix() {
+    return Math.random().toString(36).slice(2, 6).toUpperCase();
 }
-function generateFilename(type, from, to, ts) {
-    return `${formatTimestampForId(ts)}-${type}-${from}-to-${to}.md`;
+function generateMessageId(from, to, ts, suffix) {
+    return `MSG-${formatTimestampForId(ts)}-${suffix}-${from}-${to}`;
+}
+function generateFilename(type, from, to, ts, suffix) {
+    return `${formatTimestampForId(ts)}-${suffix}-${type}-${from}-to-${to}.md`;
 }
 function buildMessageMarkdown(entry, body) {
     const attachmentCell = entry.attachments.length > 0
