@@ -1,4 +1,5 @@
 ---
+name: report
 description: Instant Director briefing — current state, decisions, risks, next action
 ---
 
@@ -19,14 +20,14 @@ The active role remains active after the report is produced.
 Invoked by Director as:
 
 ```text
-/report
+#report
 ```
 
 Optional modes:
 
 ```text
-/report --brief
-/report --full
+#report --brief
+#report --full
 ```
 
 No role switch required. No new session required. The active role produces the report from its current context.
@@ -35,9 +36,9 @@ No role switch required. No new session required. The active role produces the r
 
 | Mode | Max Words |
 | :--- | :--- |
-| `/report` | 350 words |
-| `/report --brief` | 150 words |
-| `/report --full` | 600 words |
+| `#report` | 350 words |
+| `#report --brief` | 150 words |
+| `#report --full` | 600 words |
 
 The report must be concise. No preamble. No filler. No explanation of what the report is.
 
@@ -104,7 +105,7 @@ Options are supporting context, not a decision menu. Maximum 3 options.
 
 ## Forbidden Operations
 
-During or after `/report` execution, the following are forbidden:
+During or after `#report` execution, the following are forbidden:
 
 - `sigma intent lock`, `sigma roadmap lock`, `sigma plan lock`, `sigma exec lock`, `sigma close lock`
 - `sigma plan supersede`, `sigma exec supersede`, `sigma project reset`

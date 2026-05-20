@@ -25,7 +25,7 @@ function planCommand() {
                 throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
             }
             const intentVersionRef = data.intent.active_version;
-            const version = (0, progress_1.nextMajorVersion)(data.plan.versions);
+            const version = (0, progress_1.nextPlanVersion)(data);
             const relPath = path_1.default.join('Sigma', 'build', `FMN-PLAN-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
             (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath);

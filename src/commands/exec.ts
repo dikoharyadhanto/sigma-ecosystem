@@ -36,7 +36,7 @@ export function execCommand(): Command {
           throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
         }
         const planVersionRef = data.plan.active_version!;
-        const version = nextExecVersion(data.exec.versions);
+        const version = nextExecVersion(data);
         const relPath = path.join('Sigma', 'build', `DEV-EXEC-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
         copyTemplateToArtifact('DEV-EXEC-TEMPLATE.md', absPath);

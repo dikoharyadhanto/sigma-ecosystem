@@ -201,12 +201,21 @@ function runBootstrap(opts) {
 function sessionCommand() {
     const cmd = new commander_1.Command('session');
     cmd.description('Session management commands');
+    const BOOTSTRAP_VALID_ROLES = ['ARC', 'FMN', 'DEV', 'AUD'];
     cmd
         .command('bootstrap')
         .description('Display current project state for session start')
-        .option('--role <role>', 'Filter document list to role-specific reads (ARC, AUD, FMN, DEV)')
+        .option('--role <role>', `Filter document list to role-specific reads (${BOOTSTRAP_VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)
         .action((opts) => {
         try {
+            if (opts.role) {
+                const upper = opts.role.toUpperCase();
+                if (!BOOTSTRAP_VALID_ROLES.includes(upper)) {
+                    console.error(`Invalid role "${opts.role}". Valid roles: ${BOOTSTRAP_VALID_ROLES.map(r => r.toLowerCase()).join(', ')}`);
+                    process.exit(1);
+                }
+                opts.role = upper;
+            }
             runBootstrap(opts);
         }
         catch (e) {

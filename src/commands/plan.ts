@@ -4,7 +4,7 @@ import path from 'path';
 import {
   readProgress,
   writeProgress,
-  nextMajorVersion,
+  nextPlanVersion,
   registerPlanDraft,
   lockActivePlan,
   supersedePlanVersion,
@@ -29,7 +29,7 @@ export function planCommand(): Command {
           throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
         }
         const intentVersionRef = data.intent.active_version!;
-        const version = nextMajorVersion(data.plan.versions);
+        const version = nextPlanVersion(data);
         const relPath = path.join('Sigma', 'build', `FMN-PLAN-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
         copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);

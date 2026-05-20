@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
-import inquirer from 'inquirer';
 import { readProgress, writeProgress, ProgressJson } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
 import { PROJECT_DECISIONS_FILE } from '../config';
@@ -64,10 +63,17 @@ function applyOverride(data: ProgressJson, artifact: string): void {
 
 // ── Command handler ───────────────────────────────────────────────────────────
 
-async function runOverride(opts: { reason?: string; dryRun?: boolean }): Promise<void> {
+function runOverride(opts: { reason?: string; dryRun?: boolean; directorConfirm?: boolean }): void {
   if (!opts.reason || opts.reason.trim().length === 0) {
     console.error('Error: --reason is required. Describe why this override is authorized.');
-    console.error('Example: sigma override --reason "Director decision: scope change makes plan lock obsolete"');
+    console.error('Example: sigma override --reason "Director decision: ..." --director-confirm');
+    process.exit(1);
+  }
+
+  if (!opts.dryRun && !opts.directorConfirm) {
+    console.error('Error: --director-confirm is required to execute an override.');
+    console.error('This command is restricted to Director authority.');
+    console.error('Add --director-confirm to proceed, or --dry-run to preview.');
     process.exit(1);
   }
 
@@ -92,22 +98,6 @@ async function runOverride(opts: { reason?: string; dryRun?: boolean }): Promise
 
   if (opts.dryRun) {
     console.log('\n[Dry run] No changes applied. Remove --dry-run to execute.');
-    return;
-  }
-
-  console.log('\nThis override will permanently record a bypass in Sigma/memory/decisions.jsonl.');
-
-  const { confirmed } = await inquirer.prompt([
-    {
-      type: 'confirm',
-      name: 'confirmed',
-      message: `Confirm override of ${blocked.gate} (${blocked.artifact})?`,
-      default: false,
-    },
-  ]);
-
-  if (!confirmed) {
-    console.log('Override cancelled.');
     return;
   }
 
@@ -138,12 +128,15 @@ export function overrideCommand(): Command {
 
   cmd
     .option('--reason <reason>', 'Required. Describe why this override is authorized.')
+    .option('--director-confirm', 'Required. Explicit Director authorization to execute the override.')
     .option('--dry-run', 'Show what would be bypassed without modifying state.')
-    .action((opts: { reason?: string; dryRun?: boolean }) => {
-      runOverride(opts).catch(err => {
-        console.error(err instanceof Error ? err.message : String(err));
+    .action((opts: { reason?: string; dryRun?: boolean; directorConfirm?: boolean }) => {
+      try {
+        runOverride(opts);
+      } catch (e) {
+        console.error((e as Error).message);
         process.exit(1);
-      });
+      }
     });
 
   return cmd;

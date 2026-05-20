@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sigma Report"
+  short_description: "Generate an instant Sigma Director briefing — current state, decisions, risks, next action"
+  default_prompt: "Use #report to generate an instant Sigma Director briefing."

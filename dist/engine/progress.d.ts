@@ -68,7 +68,8 @@ export declare function createInitialProgress(projectId: string, projectName: st
 export declare function getGateStatus(data: ProgressJson): GateStatus;
 export declare function isStaleIntentPresent(data: ProgressJson): StaleIntentWarning[];
 export declare function nextMajorVersion(versions: ArtifactVersion[]): string;
-export declare function nextExecVersion(versions: ArtifactVersion[]): string;
+export declare function nextPlanVersion(data: ProgressJson): string;
+export declare function nextExecVersion(data: ProgressJson): string;
 export declare function registerIntentDraft(data: ProgressJson, version: string, filePath: string): void;
 export declare function lockActiveIntent(data: ProgressJson): void;
 export declare function registerPlanDraft(data: ProgressJson, version: string, filePath: string, intentVersionRef: string): void;

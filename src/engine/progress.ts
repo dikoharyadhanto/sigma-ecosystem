@@ -216,20 +216,20 @@ function hasActiveLockedPlan(data: ProgressJson): boolean {
 }
 
 function hasCleanGate3Chain(data: ProgressJson): boolean {
-  const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
-  if (!lockedIntent) return false;
+  const activeExec = data.exec.versions.find(
+    v => v.version === data.exec.active_version && v.state === 'LOCKED'
+  );
+  if (!activeExec?.plan_version_ref) return false;
 
-  const qualifyingPlan = data.plan.versions.find(
-    v => v.state === 'LOCKED' &&
-      v.intent_version_ref === lockedIntent.version &&
+  const referencedPlan = data.plan.versions.find(
+    v => v.version === activeExec.plan_version_ref &&
+      v.state === 'LOCKED' &&
       !v.stale_intent
   );
-  if (!qualifyingPlan) return false;
+  if (!referencedPlan?.intent_version_ref) return false;
 
-  return data.exec.versions.some(
-    v => v.state === 'LOCKED' &&
-      v.plan_version_ref === qualifyingPlan.version &&
-      !v.stale_intent
+  return data.intent.versions.some(
+    v => v.version === referencedPlan.intent_version_ref && v.state === 'LOCKED'
   );
 }
 
@@ -373,12 +373,36 @@ export function isStaleIntentPresent(data: ProgressJson): StaleIntentWarning[] {
 
 // ── Version Helpers ───────────────────────────────────────────────────────────
 
+function parseMajorVersion(version: string): number {
+  const match = version.match(/^v(\d+)/);
+  if (!match) throw new Error(`Cannot parse major version from "${version}"`);
+  return parseInt(match[1], 10);
+}
+
 export function nextMajorVersion(versions: ArtifactVersion[]): string {
   return `v${versions.length + 1}`;
 }
 
-export function nextExecVersion(versions: ArtifactVersion[]): string {
-  return `v0.${versions.length + 1}`;
+// PLAN major = INTENT major − 1; minor starts at 1
+export function nextPlanVersion(data: ProgressJson): string {
+  const intentVersion = data.intent.active_version;
+  if (!intentVersion) throw new Error('No active INTENT version');
+  const planMajor = parseMajorVersion(intentVersion) - 1;
+  const existingUnderMajor = data.plan.versions.filter(
+    v => parseMajorVersion(v.version) === planMajor
+  );
+  return `v${planMajor}.${existingUnderMajor.length + 1}`;
+}
+
+// EXEC major must equal PLAN major; minor starts at 1
+export function nextExecVersion(data: ProgressJson): string {
+  const planVersion = data.plan.active_version;
+  if (!planVersion) throw new Error('No active PLAN version');
+  const execMajor = parseMajorVersion(planVersion);
+  const existingUnderMajor = data.exec.versions.filter(
+    v => parseMajorVersion(v.version) === execMajor
+  );
+  return `v${execMajor}.${existingUnderMajor.length + 1}`;
 }
 
 // ── INTENT Mutations ──────────────────────────────────────────────────────────
@@ -448,6 +472,15 @@ export function registerPlanDraft(
   filePath: string,
   intentVersionRef: string
 ): void {
+  const planMajor = parseMajorVersion(version);
+  const expectedPlanMajor = parseMajorVersion(intentVersionRef) - 1;
+  if (planMajor !== expectedPlanMajor) {
+    throw new Error(
+      `Version sync error: FMN-PLAN ${version} (major ${planMajor}) is not valid under DIR-INTENT ${intentVersionRef}. ` +
+      `Expected PLAN major: ${expectedPlanMajor} (INTENT major ${parseMajorVersion(intentVersionRef)} − 1). ` +
+      `Valid PLAN versions: v${expectedPlanMajor}.1, v${expectedPlanMajor}.2, ...`
+    );
+  }
   const now = new Date().toISOString();
   data.plan.versions.push({
     version, state: 'DRAFT', file: filePath,
@@ -491,6 +524,14 @@ export function registerExecDraft(
   filePath: string,
   planVersionRef: string
 ): void {
+  const execMajor = parseMajorVersion(version);
+  const planMajor = parseMajorVersion(planVersionRef);
+  if (execMajor !== planMajor) {
+    throw new Error(
+      `Version sync error: DEV-EXEC ${version} (major ${execMajor}) does not match FMN-PLAN ${planVersionRef} (major ${planMajor}). ` +
+      `EXEC major must equal PLAN major. Valid EXEC versions: v${planMajor}.1, v${planMajor}.2, ...`
+    );
+  }
   const now = new Date().toISOString();
   data.exec.versions.push({
     version, state: 'DRAFT', file: filePath,
@@ -499,6 +540,7 @@ export function registerExecDraft(
   });
   data.exec.active_version = version;
   data.exec.active_state = 'DRAFT';
+  data.gates.gate_3_satisfied = false;
 }
 
 export function advanceExecState(
@@ -530,22 +572,21 @@ export function advanceExecState(
 }
 
 function evaluateGate3(data: ProgressJson): boolean {
-  const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
-  if (!lockedIntent) return false;
+  const activeExec = data.exec.versions.find(
+    v => v.version === data.exec.active_version && v.state === 'LOCKED'
+  );
+  if (!activeExec?.plan_version_ref) return false;
 
-  const qualifyingPlan = data.plan.versions.find(
-    v => v.state === 'LOCKED' &&
-      v.intent_version_ref === lockedIntent.version &&
+  const referencedPlan = data.plan.versions.find(
+    v => v.version === activeExec.plan_version_ref &&
+      v.state === 'LOCKED' &&
       !v.stale_intent
   );
-  if (!qualifyingPlan) return false;
+  if (!referencedPlan?.intent_version_ref) return false;
 
-  const qualifyingExec = data.exec.versions.find(
-    v => v.version === data.exec.active_version &&
-      v.state === 'LOCKED' &&
-      v.plan_version_ref === qualifyingPlan.version
+  return data.intent.versions.some(
+    v => v.version === referencedPlan.intent_version_ref && v.state === 'LOCKED'
   );
-  return !!qualifyingExec;
 }
 
 export function lockActiveExec(data: ProgressJson): void {

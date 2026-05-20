@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sigma AUD"
+  short_description: "Activate Sigma Auditor — passive external review of Director-provided evidence"
+  default_prompt: "Use #aud to activate the Sigma AUD (Auditor) role."

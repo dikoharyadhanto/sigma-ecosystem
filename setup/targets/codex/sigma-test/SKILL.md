@@ -1,4 +1,5 @@
 ---
+name: sigma-test
 description: Sigma environment diagnostic — read-only check of CLI, MCP, memory, skills, and project structure
 ---
 
@@ -68,21 +69,23 @@ Also check file existence: `~/.sigma/memory_sigma.jsonl`
 
 ### 4. Skill Files Check
 
-Check that the following files exist in `~/.codex/skills/`:
+Check that the following skill directories exist in `~/.codex/skills/`:
 
-| Skill | Expected file |
+| Skill | Expected path |
 | :--- | :--- |
-| #arc | `~/.codex/skills/arc` |
-| #fmn | `~/.codex/skills/fmn` |
-| #dev | `~/.codex/skills/dev` |
-| #aud | `~/.codex/skills/aud` |
-| #checkpoint | `~/.codex/skills/checkpoint` |
-| #cso | `~/.codex/skills/cso` |
-| #report | `~/.codex/skills/report` |
-| #sigma-test | `~/.codex/skills/sigma-test` |
+| #arc | `~/.codex/skills/arc/` |
+| #fmn | `~/.codex/skills/fmn/` |
+| #dev | `~/.codex/skills/dev/` |
+| #aud | `~/.codex/skills/aud/` |
+| #checkpoint | `~/.codex/skills/checkpoint/` |
+| #cso | `~/.codex/skills/cso/` |
+| #report | `~/.codex/skills/report/` |
+| #sigma-test | `~/.codex/skills/sigma-test/` |
 
-- PASS if file exists
-- FAIL if file is missing (run `sigma setup install` to redeploy)
+Each skill directory should contain `SKILL.md` and `agents/openai.yaml`.
+
+- PASS if directory exists and contains SKILL.md
+- FAIL if directory or SKILL.md is missing (run `sigma setup install` to redeploy)
 
 ### 5. Global Setup Check
 

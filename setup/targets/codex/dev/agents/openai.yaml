@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sigma DEV"
+  short_description: "Activate Sigma Developer — draft DEV-EXEC after FMN-PLAN is locked"
+  default_prompt: "Use #dev to activate the Sigma DEV (Developer) role."

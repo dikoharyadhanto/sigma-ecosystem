@@ -1,4 +1,5 @@
 ---
+name: checkpoint
 description: Sigma CHECKPOINT — capture mid-work state as a CSO artifact before handoff or break
 ---
 

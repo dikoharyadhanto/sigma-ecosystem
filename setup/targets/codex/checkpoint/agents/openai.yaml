@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sigma CHECKPOINT"
+  short_description: "Capture mid-work state as a CSO artifact before handoff or break"
+  default_prompt: "Use #checkpoint to capture the current Sigma session state as a CSO artifact."

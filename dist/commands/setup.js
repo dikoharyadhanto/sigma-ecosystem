@@ -172,10 +172,16 @@ async function runInstall(opts) {
                 const src = path_1.default.join(sourceDir, fileName);
                 const dst = path_1.default.join(targetDir, fileName);
                 try {
-                    // If a previous install left a directory at this path (e.g. Delta's directory-based
-                    // codex skills), remove it so fs.copySync can write a file in its place.
-                    if ((0, fs_1.fileExists)(dst) && fs_extra_1.default.statSync(dst).isDirectory()) {
-                        fs_extra_1.default.removeSync(dst);
+                    // Remove dst if its type conflicts with src (directory vs file).
+                    // A previous install may have left a flat file where a directory is now expected
+                    // (Sigma codex skills were flat files before; they are now directories).
+                    // Delta's directory-based skills at this path are also handled.
+                    if ((0, fs_1.fileExists)(dst)) {
+                        const srcIsDir = fs_extra_1.default.statSync(src).isDirectory();
+                        const dstIsDir = fs_extra_1.default.statSync(dst).isDirectory();
+                        if (srcIsDir !== dstIsDir) {
+                            fs_extra_1.default.removeSync(dst);
+                        }
                     }
                     fs_extra_1.default.copySync(src, dst, { overwrite: true });
                     ok++;

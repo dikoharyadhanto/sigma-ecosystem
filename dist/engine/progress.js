@@ -13,6 +13,7 @@ exports.createInitialProgress = createInitialProgress;
 exports.getGateStatus = getGateStatus;
 exports.isStaleIntentPresent = isStaleIntentPresent;
 exports.nextMajorVersion = nextMajorVersion;
+exports.nextPlanVersion = nextPlanVersion;
 exports.nextExecVersion = nextExecVersion;
 exports.registerIntentDraft = registerIntentDraft;
 exports.lockActiveIntent = lockActiveIntent;
@@ -148,17 +149,15 @@ function hasActiveLockedPlan(data) {
     return data.plan.versions.some(v => v.state === 'LOCKED');
 }
 function hasCleanGate3Chain(data) {
-    const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
-    if (!lockedIntent)
+    const activeExec = data.exec.versions.find(v => v.version === data.exec.active_version && v.state === 'LOCKED');
+    if (!activeExec?.plan_version_ref)
         return false;
-    const qualifyingPlan = data.plan.versions.find(v => v.state === 'LOCKED' &&
-        v.intent_version_ref === lockedIntent.version &&
+    const referencedPlan = data.plan.versions.find(v => v.version === activeExec.plan_version_ref &&
+        v.state === 'LOCKED' &&
         !v.stale_intent);
-    if (!qualifyingPlan)
+    if (!referencedPlan?.intent_version_ref)
         return false;
-    return data.exec.versions.some(v => v.state === 'LOCKED' &&
-        v.plan_version_ref === qualifyingPlan.version &&
-        !v.stale_intent);
+    return data.intent.versions.some(v => v.version === referencedPlan.intent_version_ref && v.state === 'LOCKED');
 }
 function validateProgressSemantics(data) {
     if (data.schema_version !== config_1.SCHEMA_VERSION && isNewerSchema(data.schema_version, config_1.SCHEMA_VERSION)) {
@@ -271,11 +270,32 @@ function isStaleIntentPresent(data) {
     return warnings;
 }
 // ── Version Helpers ───────────────────────────────────────────────────────────
+function parseMajorVersion(version) {
+    const match = version.match(/^v(\d+)/);
+    if (!match)
+        throw new Error(`Cannot parse major version from "${version}"`);
+    return parseInt(match[1], 10);
+}
 function nextMajorVersion(versions) {
     return `v${versions.length + 1}`;
 }
-function nextExecVersion(versions) {
-    return `v0.${versions.length + 1}`;
+// PLAN major = INTENT major − 1; minor starts at 1
+function nextPlanVersion(data) {
+    const intentVersion = data.intent.active_version;
+    if (!intentVersion)
+        throw new Error('No active INTENT version');
+    const planMajor = parseMajorVersion(intentVersion) - 1;
+    const existingUnderMajor = data.plan.versions.filter(v => parseMajorVersion(v.version) === planMajor);
+    return `v${planMajor}.${existingUnderMajor.length + 1}`;
+}
+// EXEC major must equal PLAN major; minor starts at 1
+function nextExecVersion(data) {
+    const planVersion = data.plan.active_version;
+    if (!planVersion)
+        throw new Error('No active PLAN version');
+    const execMajor = parseMajorVersion(planVersion);
+    const existingUnderMajor = data.exec.versions.filter(v => parseMajorVersion(v.version) === execMajor);
+    return `v${execMajor}.${existingUnderMajor.length + 1}`;
 }
 // ── INTENT Mutations ──────────────────────────────────────────────────────────
 function registerIntentDraft(data, version, filePath) {
@@ -327,6 +347,13 @@ function lockActiveIntent(data) {
 }
 // ── PLAN Mutations ────────────────────────────────────────────────────────────
 function registerPlanDraft(data, version, filePath, intentVersionRef) {
+    const planMajor = parseMajorVersion(version);
+    const expectedPlanMajor = parseMajorVersion(intentVersionRef) - 1;
+    if (planMajor !== expectedPlanMajor) {
+        throw new Error(`Version sync error: FMN-PLAN ${version} (major ${planMajor}) is not valid under DIR-INTENT ${intentVersionRef}. ` +
+            `Expected PLAN major: ${expectedPlanMajor} (INTENT major ${parseMajorVersion(intentVersionRef)} − 1). ` +
+            `Valid PLAN versions: v${expectedPlanMajor}.1, v${expectedPlanMajor}.2, ...`);
+    }
     const now = new Date().toISOString();
     data.plan.versions.push({
         version, state: 'DRAFT', file: filePath,
@@ -363,6 +390,12 @@ function supersedePlanVersion(data, version, reason) {
 }
 // ── EXEC Mutations ────────────────────────────────────────────────────────────
 function registerExecDraft(data, version, filePath, planVersionRef) {
+    const execMajor = parseMajorVersion(version);
+    const planMajor = parseMajorVersion(planVersionRef);
+    if (execMajor !== planMajor) {
+        throw new Error(`Version sync error: DEV-EXEC ${version} (major ${execMajor}) does not match FMN-PLAN ${planVersionRef} (major ${planMajor}). ` +
+            `EXEC major must equal PLAN major. Valid EXEC versions: v${planMajor}.1, v${planMajor}.2, ...`);
+    }
     const now = new Date().toISOString();
     data.exec.versions.push({
         version, state: 'DRAFT', file: filePath,
@@ -371,6 +404,7 @@ function registerExecDraft(data, version, filePath, planVersionRef) {
     });
     data.exec.active_version = version;
     data.exec.active_state = 'DRAFT';
+    data.gates.gate_3_satisfied = false;
 }
 function advanceExecState(data, toState) {
     const now = new Date().toISOString();
@@ -394,18 +428,15 @@ function advanceExecState(data, toState) {
     data.exec.active_state = toState;
 }
 function evaluateGate3(data) {
-    const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
-    if (!lockedIntent)
+    const activeExec = data.exec.versions.find(v => v.version === data.exec.active_version && v.state === 'LOCKED');
+    if (!activeExec?.plan_version_ref)
         return false;
-    const qualifyingPlan = data.plan.versions.find(v => v.state === 'LOCKED' &&
-        v.intent_version_ref === lockedIntent.version &&
-        !v.stale_intent);
-    if (!qualifyingPlan)
-        return false;
-    const qualifyingExec = data.exec.versions.find(v => v.version === data.exec.active_version &&
+    const referencedPlan = data.plan.versions.find(v => v.version === activeExec.plan_version_ref &&
         v.state === 'LOCKED' &&
-        v.plan_version_ref === qualifyingPlan.version);
-    return !!qualifyingExec;
+        !v.stale_intent);
+    if (!referencedPlan?.intent_version_ref)
+        return false;
+    return data.intent.versions.some(v => v.version === referencedPlan.intent_version_ref && v.state === 'LOCKED');
 }
 function lockActiveExec(data) {
     const now = new Date().toISOString();

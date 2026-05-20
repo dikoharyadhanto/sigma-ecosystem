@@ -9,7 +9,9 @@
       "Bash(sigma exec *)",
       "Bash(sigma --help)",
       "Bash(sigma send *)",
-      "Bash(sigma inbox *)"
+      "Bash(sigma inbox *)",
+      "Read(//i/Works/Project/MO2_Hardlink_Builder/**)",
+      "Bash(sigma session:*)"
     ]
   },
   "enabledMcpjsonServers": [
