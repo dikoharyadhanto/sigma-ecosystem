@@ -39,7 +39,7 @@ const ROLE_FILES: Record<string, Record<string, string>> = {
   claudeCode:  { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
   codex:       { arc: 'arc',    fmn: 'fmn',    dev: 'dev',    aud: 'aud',    checkpoint: 'checkpoint',    cso: 'cso',    report: 'report',    sigmaTest: 'sigma-test'    },
   reasonix:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
-  antigravity: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
+  antigravity: { arc: 'sigma-arc', fmn: 'sigma-fmn', dev: 'sigma-dev', aud: 'sigma-aud', checkpoint: 'sigma-checkpoint', cso: 'sigma-cso', report: 'sigma-report', sigmaTest: 'sigma-test' },
   cursor:      { sigma: 'SIGMA.mdc' },
 };
 
@@ -47,7 +47,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   claudeCode:  'Claude Code  (~/.claude/commands/)',
   codex:       'Codex CLI    (~/.codex/skills/)',
   reasonix:    'Reasonix     (~/.reasonix/skills/)',
-  antigravity: 'Antigravity  (~/.gemini/agents/)',
+  antigravity: 'Antigravity  (~/.gemini/config/plugins/)',
   cursor:      'Cursor       (~/.cursor/rules/)',
 };
 
@@ -230,6 +230,17 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
         console.log(`  OK  Reasonix MCP: mcpServers written to ${paths.reasonixConfig}`);
       } catch (e) {
         warn(`  ERR: Reasonix MCP config — ${(e as Error).message}`);
+      }
+    }
+
+    // Step E2 — Antigravity MCP config (when Antigravity is selected)
+    if (selectedPlatforms.includes('antigravity')) {
+      try {
+        writeGeminiMcpConfig();
+        const geminiMcpPath = path.join(os.homedir(), '.gemini', 'antigravity', 'mcp_config.json');
+        console.log(`  OK  Antigravity MCP: sigma-memory written to ${geminiMcpPath}`);
+      } catch (e) {
+        warn(`  ERR: Antigravity MCP config — ${(e as Error).message}`);
       }
     }
 

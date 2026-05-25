@@ -1,0 +1,15 @@
+{
+  "name": "sigma-report",
+  "version": "1.0.0",
+  "description": "Sigma instant Director briefing — current state, decisions, risks, next action",
+  "author": {
+    "name": "Sigma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sigma",
+    "governance",
+    "report",
+    "briefing"
+  ]
+}

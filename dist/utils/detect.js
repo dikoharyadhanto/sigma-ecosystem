@@ -15,7 +15,7 @@ function targetPaths() {
         codexSkills: path_1.default.join(home, '.codex', 'skills'),
         reasonixSkills: path_1.default.join(home, '.reasonix', 'skills'),
         reasonixConfig: path_1.default.join(home, '.reasonix', 'config.json'),
-        antigravityAgents: path_1.default.join(home, '.gemini', 'agents'),
+        antigravityAgents: path_1.default.join(home, '.gemini', 'config', 'plugins'),
         cursorRules: path_1.default.join(home, '.cursor', 'rules'),
     };
 }

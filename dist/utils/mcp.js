@@ -47,28 +47,48 @@ function writeVscodeMcpJson(filePath, options = {}) {
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(filePath));
     fs_extra_1.default.writeFileSync(filePath, JSON.stringify(createVscodeMcpConfig(options), null, 2) + '\n', 'utf8');
 }
+// Antigravity 0.43.0+ reads MCP config from ~/.gemini/antigravity/mcp_config.json.
+// Server entries use the protobuf-style $typeName field required by the cascade plugin system.
+// We only inject sigma-memory (always) and sequential-thinking (if not already present).
+// Existing entries (e.g. Delta memory, github-mcp-server) are preserved untouched.
 function writeGeminiMcpConfig(options = {}) {
     const homeDir = options.homeDir ?? os_1.default.homedir();
-    const settingsPath = path_1.default.join(homeDir, '.gemini', 'settings.json');
+    const mcpConfigPath = path_1.default.join(homeDir, '.gemini', 'antigravity', 'mcp_config.json');
     const memoryFilePath = path_1.default.join(homeDir, '.sigma', 'memory_sigma.jsonl');
+    const TYPENAME = 'exa.cascade_plugins_pb.CascadePluginCommandTemplate';
     let existing = {};
-    if (fs_extra_1.default.existsSync(settingsPath)) {
+    if (fs_extra_1.default.existsSync(mcpConfigPath)) {
         try {
-            existing = fs_extra_1.default.readJsonSync(settingsPath);
+            existing = fs_extra_1.default.readJsonSync(mcpConfigPath);
         }
-        catch { /* ignore parse errors; start fresh */ }
+        catch { /* start fresh on parse error */ }
     }
-    const sigmaServers = {
-        'sequential-thinking': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-sequential-thinking'] },
-        'sigma-memory': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'], env: { MEMORY_FILE_PATH: memoryFilePath } },
-    };
     const existingServers = (existing.mcpServers ?? {});
+    const sigmaMemoryServer = {
+        $typeName: TYPENAME,
+        command: 'npx',
+        args: ['-y', '@modelcontextprotocol/server-memory'],
+        env: { MEMORY_FILE_PATH: memoryFilePath },
+    };
+    const sequentialThinkingServer = {
+        $typeName: TYPENAME,
+        command: 'npx',
+        args: ['-y', '@modelcontextprotocol/server-sequential-thinking'],
+        env: {},
+    };
     const merged = {
         ...existing,
-        mcpServers: { ...existingServers, ...sigmaServers },
+        mcpServers: {
+            // Preserve all existing entries (Delta memory, github-mcp-server, etc.)
+            ...existingServers,
+            // Only add sequential-thinking if not already configured
+            ...(!existingServers['sequential-thinking'] ? { 'sequential-thinking': sequentialThinkingServer } : {}),
+            // Always write sigma-memory to ensure correct MEMORY_FILE_PATH
+            'sigma-memory': sigmaMemoryServer,
+        },
     };
-    fs_extra_1.default.ensureDirSync(path_1.default.dirname(settingsPath));
-    fs_extra_1.default.writeFileSync(settingsPath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
+    fs_extra_1.default.ensureDirSync(path_1.default.dirname(mcpConfigPath));
+    fs_extra_1.default.writeFileSync(mcpConfigPath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
 }
 // Reasonix reads MCP servers exclusively from the `mcp` array in ~/.reasonix/config.json.
 // That array requires the inline "name=command args" format — bare names are treated as

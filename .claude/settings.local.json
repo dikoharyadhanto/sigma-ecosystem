@@ -11,7 +11,11 @@
       "Bash(sigma send *)",
       "Bash(sigma inbox *)",
       "Read(//i/Works/Project/MO2_Hardlink_Builder/**)",
-      "Bash(sigma session:*)"
+      "Bash(sigma session:*)",
+      "Bash(rm /home/dikoharyadhanto/Documents/Works/Projects/sigma-ecosystem/setup/targets/antigravity/arc.md \\\\ *)"
+    ],
+    "additionalDirectories": [
+      "/home/dikoharyadhanto/Documents/Works/Projects/sigma-ecosystem/setup/targets/antigravity"
     ]
   },
   "enabledMcpjsonServers": [

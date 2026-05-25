@@ -1,5 +1,5 @@
 ---
-name: aud
+name: sigma-aud
 description: "Sigma AUD — Auditor: passive external auditor; reviews Director-provided evidence only"
 ---
 

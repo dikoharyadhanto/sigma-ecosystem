@@ -1,5 +1,5 @@
 ---
-name: report
+name: sigma-report
 description: "Instant Director briefing — current state, decisions, risks, next action"
 ---
 

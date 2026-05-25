@@ -15,7 +15,7 @@ export interface ToolTargetPaths {
   codexSkills: string;       // ~/.codex/skills/
   reasonixSkills: string;    // ~/.reasonix/skills/
   reasonixConfig: string;    // ~/.reasonix/config.json
-  antigravityAgents: string; // ~/.gemini/agents/
+  antigravityAgents: string; // ~/.gemini/config/plugins/
   cursorRules: string;       // ~/.cursor/rules/
 }
 
@@ -26,7 +26,7 @@ export function targetPaths(): ToolTargetPaths {
     codexSkills: path.join(home, '.codex', 'skills'),
     reasonixSkills: path.join(home, '.reasonix', 'skills'),
     reasonixConfig: path.join(home, '.reasonix', 'config.json'),
-    antigravityAgents: path.join(home, '.gemini', 'agents'),
+    antigravityAgents: path.join(home, '.gemini', 'config', 'plugins'),
     cursorRules: path.join(home, '.cursor', 'rules'),
   };
 }

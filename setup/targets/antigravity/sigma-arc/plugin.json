@@ -1,0 +1,15 @@
+{
+  "name": "sigma-arc",
+  "version": "1.0.0",
+  "description": "Sigma Architect role — interview Director, draft DIR-INTENT",
+  "author": {
+    "name": "Sigma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sigma",
+    "governance",
+    "architect",
+    "arc"
+  ]
+}

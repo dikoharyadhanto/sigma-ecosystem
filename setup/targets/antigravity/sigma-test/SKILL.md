@@ -50,7 +50,7 @@ Read the file and verify its contents:
 - WARN if file exists but is missing one of the expected server entries
 - FAIL if file does not exist
 
-Also inspect `~/.gemini/settings.json`:
+Also inspect `~/.gemini/antigravity/mcp_config.json`:
 
 - PASS if `mcpServers` contains `sigma-memory` with a `MEMORY_FILE_PATH` env pointing to `~/.sigma/memory_sigma.jsonl`
 - WARN if `sigma-memory` entry is present but `MEMORY_FILE_PATH` is missing or incorrect
@@ -75,21 +75,23 @@ Also check file existence: `~/.sigma/memory_sigma.jsonl`
 
 ### 4. Skill Files Check
 
-Check that the following files exist in `~/.gemini/agents/`:
+Check that the following skill directories exist in `~/.gemini/config/plugins/`:
 
-| Skill | Expected file |
+| Skill | Expected directory |
 | :--- | :--- |
-| /arc | `~/.gemini/agents/arc.md` |
-| /fmn | `~/.gemini/agents/fmn.md` |
-| /dev | `~/.gemini/agents/dev.md` |
-| /aud | `~/.gemini/agents/aud.md` |
-| /checkpoint | `~/.gemini/agents/checkpoint.md` |
-| /cso | `~/.gemini/agents/cso.md` |
-| /report | `~/.gemini/agents/report.md` |
-| /sigma-test | `~/.gemini/agents/sigma-test.md` |
+| /arc | `~/.gemini/config/plugins/sigma-arc/` |
+| /fmn | `~/.gemini/config/plugins/sigma-fmn/` |
+| /dev | `~/.gemini/config/plugins/sigma-dev/` |
+| /aud | `~/.gemini/config/plugins/sigma-aud/` |
+| /checkpoint | `~/.gemini/config/plugins/sigma-checkpoint/` |
+| /cso | `~/.gemini/config/plugins/sigma-cso/` |
+| /report | `~/.gemini/config/plugins/sigma-report/` |
+| /sigma-test | `~/.gemini/config/plugins/sigma-test/` |
 
-- PASS if file exists
-- FAIL if file is missing (run `sigma setup install` to redeploy)
+For each directory, verify it contains both `SKILL.md` and `plugin.json`.
+
+- PASS if directory and both files exist
+- FAIL if directory or files are missing (run `sigma setup install` to redeploy)
 
 ### 5. Global Setup Check
 
@@ -142,7 +144,7 @@ Platform: Antigravity (Gemini)
 | MCP | `.mcp.json` present | PASS/FAIL | |
 | MCP | `sigma-memory` server | PASS/WARN/FAIL | {entity count} entities |
 | MCP | `sequential-thinking` server | PASS/WARN/FAIL | |
-| MCP | Gemini settings (`~/.gemini/settings.json`) | PASS/WARN/FAIL | |
+| MCP | Antigravity MCP (`~/.gemini/antigravity/mcp_config.json`) | PASS/WARN/FAIL | |
 | Memory | `memory_sigma.jsonl` | PASS/WARN/FAIL | |
 | Skills | `/arc` | PASS/FAIL | |
 | Skills | `/fmn` | PASS/FAIL | |

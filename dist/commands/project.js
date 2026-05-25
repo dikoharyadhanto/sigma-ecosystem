@@ -205,6 +205,10 @@ async function runStart(opts) {
     (0, mcp_1.writeMcpJson)(mcpJsonPath);
     ensureMemoryFileSeeded();
     console.log(`  MCP: ${mcpJsonPath} written (sigma-memory + sequential-thinking).`);
+    // Write .vscode/mcp.json for VS Code/Antigravity integration
+    const vscodeMcpPath = path_1.default.join(projectRoot, '.vscode', 'mcp.json');
+    (0, mcp_1.writeVscodeMcpJson)(vscodeMcpPath);
+    console.log(`  VS Code MCP: ${vscodeMcpPath} written.`);
     console.log(`  Memory file: ${config_1.GLOBAL_MEMORY_FILE}`);
     (0, output_1.success)(`Sigma project initialized: ${projectName} (${projectId})`);
     console.log(`  Location: ${sigmaDir}`);

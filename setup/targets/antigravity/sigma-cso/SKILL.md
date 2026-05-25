@@ -1,5 +1,5 @@
 ---
-name: cso
+name: sigma-cso
 description: "Sigma CSO Handler — create inter-session context transfer artifacts via sigma cso new"
 ---
 

@@ -1,0 +1,15 @@
+{
+  "name": "sigma-dev",
+  "version": "1.0.0",
+  "description": "Sigma Developer role — draft DEV-EXEC (implementation + report) after PLAN locked",
+  "author": {
+    "name": "Sigma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sigma",
+    "governance",
+    "developer",
+    "dev"
+  ]
+}

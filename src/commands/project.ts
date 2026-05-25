@@ -14,7 +14,7 @@ import {
   MESSAGES_INDEX_FILE,
   MESSAGE_SUBFOLDERS,
 } from '../config';
-import { writeMcpJson } from '../utils/mcp';
+import { writeMcpJson, writeVscodeMcpJson } from '../utils/mcp';
 import {
   readProgress,
   writeProgress,
@@ -259,6 +259,11 @@ async function runStart(opts: {
   writeMcpJson(mcpJsonPath);
   ensureMemoryFileSeeded();
   console.log(`  MCP: ${mcpJsonPath} written (sigma-memory + sequential-thinking).`);
+
+  // Write .vscode/mcp.json for VS Code/Antigravity integration
+  const vscodeMcpPath = path.join(projectRoot, '.vscode', 'mcp.json');
+  writeVscodeMcpJson(vscodeMcpPath);
+  console.log(`  VS Code MCP: ${vscodeMcpPath} written.`);
   console.log(`  Memory file: ${GLOBAL_MEMORY_FILE}`);
 
   success(`Sigma project initialized: ${projectName} (${projectId})`);

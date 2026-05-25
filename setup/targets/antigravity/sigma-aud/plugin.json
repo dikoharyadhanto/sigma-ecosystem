@@ -1,0 +1,15 @@
+{
+  "name": "sigma-aud",
+  "version": "1.0.0",
+  "description": "Sigma Auditor role — passive external auditor; reviews Director-provided evidence only",
+  "author": {
+    "name": "Sigma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sigma",
+    "governance",
+    "auditor",
+    "aud"
+  ]
+}
