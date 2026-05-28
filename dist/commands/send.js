@@ -52,17 +52,17 @@ function runSend(opts) {
     const msgType = opts.type ? validateType(opts.type) : 'NOTE';
     const subject = opts.subject?.trim() || '(no subject)';
     const projectRoot = (0, fs_1.findProjectRoot)();
-    // Gate: recipient must have an empty unread queue before receiving new messages.
-    // This enforces sequential processing — roles cannot be buried in unread messages.
+    // Gate: sender must have an empty unread queue before sending new messages.
+    // This enforces sequential processing — a role cannot send while ignoring its own inbox.
     const existingIndex = (0, mailbox_1.readIndex)(projectRoot);
-    const unread = (0, mailbox_1.getUnreadForRole)(existingIndex, toRole);
+    const unread = (0, mailbox_1.getUnreadForRole)(existingIndex, fromRole);
     if (unread.length > 0) {
         const ids = unread.map(m => `  - ${m.id}  [${m.from} → ${m.to}] ${m.type}: ${m.subject}`).join('\n');
-        throw new Error(`SEND BLOCKED — ${toRole} has ${unread.length} unread message${unread.length > 1 ? 's' : ''}.\n` +
+        throw new Error(`SEND BLOCKED — ${fromRole} has ${unread.length} unread message${unread.length > 1 ? 's' : ''} in their own inbox.\n` +
             `${ids}\n\n` +
-            `Policy: a recipient must read all unread messages before receiving new ones.\n` +
-            `This prevents AI roles from skipping unread mailbox entries.\n` +
-            `Run: sigma inbox read <id>   (or: sigma inbox --role ${toRole.toLowerCase()} to list them)`);
+            `Policy: a sender must read all their own unread messages before sending new ones.\n` +
+            `This prevents AI roles from sending while ignoring their own unread mailbox entries.\n` +
+            `Run: sigma inbox read <id>   (or: sigma inbox --role ${fromRole.toLowerCase()} to list them)`);
     }
     const ts = (0, mailbox_1.generateTimestamp)();
     const suffix = (0, mailbox_1.generateRandomSuffix)();
@@ -119,7 +119,7 @@ function runSend(opts) {
 function sendCommand() {
     const cmd = new commander_1.Command('send');
     cmd.description('Send a message from one role to another.\n' +
-        '  Policy: a recipient must have no unread messages before receiving a new one.\n' +
+        '  Policy: a sender must have no unread messages in their own inbox before sending.\n' +
         '  Clear unread messages with: sigma inbox read <id>');
     cmd
         .requiredOption('--from <role>', `Sender role (${config_1.VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)

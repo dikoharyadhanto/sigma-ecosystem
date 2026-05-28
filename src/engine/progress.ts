@@ -384,10 +384,8 @@ export function nextMajorVersion(versions: ArtifactVersion[]): string {
 }
 
 // PLAN major = INTENT major − 1; minor starts at 1
-export function nextPlanVersion(data: ProgressJson): string {
-  const intentVersion = data.intent.active_version;
-  if (!intentVersion) throw new Error('No active INTENT version');
-  const planMajor = parseMajorVersion(intentVersion) - 1;
+export function nextPlanVersion(data: ProgressJson, intentVersionRef: string): string {
+  const planMajor = parseMajorVersion(intentVersionRef) - 1;
   const existingUnderMajor = data.plan.versions.filter(
     v => parseMajorVersion(v.version) === planMajor
   );
@@ -395,10 +393,8 @@ export function nextPlanVersion(data: ProgressJson): string {
 }
 
 // EXEC major must equal PLAN major; minor starts at 1
-export function nextExecVersion(data: ProgressJson): string {
-  const planVersion = data.plan.active_version;
-  if (!planVersion) throw new Error('No active PLAN version');
-  const execMajor = parseMajorVersion(planVersion);
+export function nextExecVersion(data: ProgressJson, planVersionRef: string): string {
+  const execMajor = parseMajorVersion(planVersionRef);
   const existingUnderMajor = data.exec.versions.filter(
     v => parseMajorVersion(v.version) === execMajor
   );

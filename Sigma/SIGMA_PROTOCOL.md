@@ -525,6 +525,37 @@ Director-facing output — skill files, session reports, status messages, approv
 
 ## 6. State Machine
 
+### 6.0 Artifact Content Mutability
+
+**LOCKED is a governance gate marker, not a content freeze.**
+
+When an artifact reaches LOCKED state, it means the Director has approved it and the artifact satisfies a gate pre-condition. It does **not** mean the document file is immutable.
+
+**What LOCKED controls:**
+
+- `progress.json` state — CLI-managed, must never be edited directly by agents
+- Gate passage — once LOCKED, the artifact satisfies its gate and unlocks downstream operations
+
+**What LOCKED does NOT control:**
+
+- The markdown content of the artifact file — this can be edited in place at any time, provided the Director is aware of the change
+
+**AI role obligation:**
+
+AI roles must not refuse to edit a LOCKED artifact's markdown content on the grounds that it is LOCKED. If the Director asks for a correction, clarification, or addition to a LOCKED document, edit the file directly. Do not create a new artifact version just to make minor content changes to a LOCKED document.
+
+A new version is appropriate when:
+
+- The change is substantive enough to alter the governance scope, evidence chain, or closure evidence
+- The artifact type follows a new-version-for-revision policy (see Section 11 — Versioning Tiers)
+- The Director explicitly requests a new version
+
+A new version is **not** required for typo fixes, formatting corrections, adding clarifications, filling in incomplete sections, or any content edit the Director approves in place.
+
+**Summary:** LOCKED = "gate open." The document can still be edited. Only `progress.json` is off-limits.
+
+---
+
 ### 6.1 DIR-INTENT States
 
 ```

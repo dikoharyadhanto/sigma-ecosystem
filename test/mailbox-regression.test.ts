@@ -68,12 +68,14 @@ describe('Mailbox regression', () => {
   // ── Unread gate ────────────────────────────────────────────────────────────
 
   describe('sigma send — unread gate', () => {
-    it('is blocked when recipient already has an unread message', () => {
+    it('is blocked when the sender has unread messages in their own inbox', () => {
       env = setupTestEnv();
       fs.writeJsonSync(env.progressPath, makeProgress());
 
-      runCli('send --from arc --to fmn --subject "First" --message "A"', env.projectDir, env.homeDir);
-      const r = runCli('send --from arc --to fmn --subject "Second" --message "B"', env.projectDir, env.homeDir);
+      // ARC sends to FMN → FMN now has 1 unread
+      runCli('send --from arc --to fmn --subject "For FMN" --message "A"', env.projectDir, env.homeDir);
+      // FMN tries to send while FMN still has unread → should be blocked
+      const r = runCli('send --from fmn --to dev --subject "From FMN" --message "B"', env.projectDir, env.homeDir);
 
       expect(r.exitCode).toBe(1);
       expect(r.stderr).toMatch(/SEND BLOCKED/i);
@@ -81,24 +83,40 @@ describe('Mailbox regression', () => {
       expect(r.stderr).toMatch(/Policy/i);
     });
 
-    it('allows send after the unread message is read', () => {
+    it('allows send after the sender reads their own unread messages', () => {
+      env = setupTestEnv();
+      fs.writeJsonSync(env.progressPath, makeProgress());
+
+      // ARC sends to FMN → FMN has 1 unread
+      runCli('send --from arc --to fmn --subject "For FMN" --message "A"', env.projectDir, env.homeDir);
+      const msgId = readMailboxIndex(env).messages[0].id;
+      // FMN reads the unread message
+      runCli(`inbox read ${msgId}`, env.projectDir, env.homeDir);
+
+      // FMN can now send
+      const r = runCli('send --from fmn --to dev --subject "From FMN" --message "B"', env.projectDir, env.homeDir);
+      expect(r.exitCode).toBe(0);
+    });
+
+    it('gate is per-sender — sender with no unread can send regardless of recipient unread state', () => {
+      env = setupTestEnv();
+      fs.writeJsonSync(env.progressPath, makeProgress());
+
+      // ARC sends to FMN → FMN gets unread; ARC itself has no unread
+      runCli('send --from arc --to fmn --subject "For FMN" --message "A"', env.projectDir, env.homeDir);
+      // ARC can send again (ARC has no unread, even though FMN does)
+      const r = runCli('send --from arc --to dev --subject "For DEV" --message "B"', env.projectDir, env.homeDir);
+
+      expect(r.exitCode).toBe(0);
+    });
+
+    it('sender can send multiple messages to same recipient when sender has no unread', () => {
       env = setupTestEnv();
       fs.writeJsonSync(env.progressPath, makeProgress());
 
       runCli('send --from arc --to fmn --subject "First" --message "A"', env.projectDir, env.homeDir);
-      const msgId = readMailboxIndex(env).messages[0].id;
-      runCli(`inbox read ${msgId}`, env.projectDir, env.homeDir);
-
+      // ARC still has no unread, so a second send from ARC is allowed
       const r = runCli('send --from arc --to fmn --subject "Second" --message "B"', env.projectDir, env.homeDir);
-      expect(r.exitCode).toBe(0);
-    });
-
-    it('gate is per-recipient — blocked for FMN does not block DEV', () => {
-      env = setupTestEnv();
-      fs.writeJsonSync(env.progressPath, makeProgress());
-
-      runCli('send --from arc --to fmn --subject "For FMN" --message "A"', env.projectDir, env.homeDir);
-      const r = runCli('send --from arc --to dev --subject "For DEV" --message "B"', env.projectDir, env.homeDir);
 
       expect(r.exitCode).toBe(0);
     });

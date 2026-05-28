@@ -280,20 +280,14 @@ function nextMajorVersion(versions) {
     return `v${versions.length + 1}`;
 }
 // PLAN major = INTENT major − 1; minor starts at 1
-function nextPlanVersion(data) {
-    const intentVersion = data.intent.active_version;
-    if (!intentVersion)
-        throw new Error('No active INTENT version');
-    const planMajor = parseMajorVersion(intentVersion) - 1;
+function nextPlanVersion(data, intentVersionRef) {
+    const planMajor = parseMajorVersion(intentVersionRef) - 1;
     const existingUnderMajor = data.plan.versions.filter(v => parseMajorVersion(v.version) === planMajor);
     return `v${planMajor}.${existingUnderMajor.length + 1}`;
 }
 // EXEC major must equal PLAN major; minor starts at 1
-function nextExecVersion(data) {
-    const planVersion = data.plan.active_version;
-    if (!planVersion)
-        throw new Error('No active PLAN version');
-    const execMajor = parseMajorVersion(planVersion);
+function nextExecVersion(data, planVersionRef) {
+    const execMajor = parseMajorVersion(planVersionRef);
     const existingUnderMajor = data.exec.versions.filter(v => parseMajorVersion(v.version) === execMajor);
     return `v${execMajor}.${existingUnderMajor.length + 1}`;
 }

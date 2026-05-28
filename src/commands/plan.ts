@@ -28,8 +28,13 @@ export function planCommand(): Command {
         if (!data.gates.gate_1_open) {
           throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
         }
-        const intentVersionRef = data.intent.active_version!;
-        const version = nextPlanVersion(data);
+        // Use the LOCKED intent version (single-active), not the active version which may be a newer DRAFT.
+        const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
+        if (!lockedIntent) {
+          throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
+        }
+        const intentVersionRef = lockedIntent.version;
+        const version = nextPlanVersion(data, intentVersionRef);
         const relPath = path.join('Sigma', 'build', `FMN-PLAN-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
         copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);
