@@ -75,6 +75,7 @@ export declare function lockActiveIntent(data: ProgressJson): void;
 export declare function registerPlanDraft(data: ProgressJson, version: string, filePath: string, intentVersionRef: string): void;
 export declare function lockActivePlan(data: ProgressJson): void;
 export declare function supersedePlanVersion(data: ProgressJson, version: string, reason: string): void;
+export declare function activatePlanDraft(data: ProgressJson, version: string): void;
 export declare function registerExecDraft(data: ProgressJson, version: string, filePath: string, planVersionRef: string): void;
 export declare function advanceExecState(data: ProgressJson, toState: 'BUILDING' | 'TESTING' | 'COMPLETED'): void;
 export declare function lockActiveExec(data: ProgressJson): void;

@@ -20,6 +20,7 @@ exports.lockActiveIntent = lockActiveIntent;
 exports.registerPlanDraft = registerPlanDraft;
 exports.lockActivePlan = lockActivePlan;
 exports.supersedePlanVersion = supersedePlanVersion;
+exports.activatePlanDraft = activatePlanDraft;
 exports.registerExecDraft = registerExecDraft;
 exports.advanceExecState = advanceExecState;
 exports.lockActiveExec = lockActiveExec;
@@ -382,6 +383,17 @@ function supersedePlanVersion(data, version, reason) {
     target.supersede_reason = reason;
     target.updated_at = now;
 }
+function activatePlanDraft(data, version) {
+    const target = data.plan.versions.find(v => v.version === version);
+    if (!target)
+        throw new Error(`PLAN version ${version} not found`);
+    if (target.state !== 'DRAFT') {
+        throw new Error(`PLAN ${version} is in state "${target.state}"; activate requires a DRAFT version. ` +
+            `Use 'sigma plan supersede' to supersede a LOCKED version instead.`);
+    }
+    data.plan.active_version = version;
+    data.plan.active_state = 'DRAFT';
+}
 // ── EXEC Mutations ────────────────────────────────────────────────────────────
 function registerExecDraft(data, version, filePath, planVersionRef) {
     const execMajor = parseMajorVersion(version);
@@ -544,8 +556,12 @@ function getNextValidOperations(data) {
         ops.push('roadmap lock');
     }
     // plan domain
-    if (intentLocked) {
+    const existingPlanDraft = data.plan.versions.find(v => v.state === 'DRAFT');
+    if (intentLocked && !existingPlanDraft) {
         ops.push('plan new');
+    }
+    if (existingPlanDraft && data.plan.active_version !== existingPlanDraft.version) {
+        ops.push(`plan activate --v ${existingPlanDraft.version}`);
     }
     if (data.plan.active_state === 'DRAFT') {
         ops.push('plan lock');

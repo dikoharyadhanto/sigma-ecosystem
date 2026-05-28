@@ -8,6 +8,7 @@ import {
   registerPlanDraft,
   lockActivePlan,
   supersedePlanVersion,
+  activatePlanDraft,
   assertProgressCanMutate,
 } from '../engine/progress';
 import { harvestPlanLock } from '../engine/memory';
@@ -32,6 +33,15 @@ export function planCommand(): Command {
         const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
         if (!lockedIntent) {
           throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
+        }
+        const existingDraft = data.plan.versions.find(v => v.state === 'DRAFT');
+        if (existingDraft) {
+          throw new Error(
+            `DRAFT CONFLICT: FMN-PLAN ${existingDraft.version} is already in DRAFT state. ` +
+            `Lock or supersede the existing draft before creating a new plan.\n` +
+            `  Activate it first: sigma plan activate --v ${existingDraft.version}\n` +
+            `  Then lock it:      sigma plan lock`
+          );
         }
         const intentVersionRef = lockedIntent.version;
         const version = nextPlanVersion(data, intentVersionRef);
@@ -85,6 +95,23 @@ export function planCommand(): Command {
         const sourceFile = data.plan.versions.find(v => v.version === version)?.file ?? '';
         harvestPlanLock(projectRoot, version, sourceFile);
         console.log(`FMN-PLAN ${version} LOCKED. Gate 2 open. Next: sigma exec new`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  cmd.command('activate')
+    .description('Set an existing DRAFT FMN-PLAN version as the active plan')
+    .requiredOption('--v <version>', 'DRAFT version to activate (e.g. v1.10)')
+    .action((opts: { v: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
+        activatePlanDraft(data, opts.v);
+        writeProgress(projectRoot, data);
+        console.log(`FMN-PLAN ${opts.v} is now the active draft. Run: sigma plan lock`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

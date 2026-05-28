@@ -512,6 +512,19 @@ export function supersedePlanVersion(data: ProgressJson, version: string, reason
   target.updated_at = now;
 }
 
+export function activatePlanDraft(data: ProgressJson, version: string): void {
+  const target = data.plan.versions.find(v => v.version === version);
+  if (!target) throw new Error(`PLAN version ${version} not found`);
+  if (target.state !== 'DRAFT') {
+    throw new Error(
+      `PLAN ${version} is in state "${target.state}"; activate requires a DRAFT version. ` +
+      `Use 'sigma plan supersede' to supersede a LOCKED version instead.`
+    );
+  }
+  data.plan.active_version = version;
+  data.plan.active_state = 'DRAFT';
+}
+
 // ── EXEC Mutations ────────────────────────────────────────────────────────────
 
 export function registerExecDraft(
@@ -719,8 +732,12 @@ export function getNextValidOperations(data: ProgressJson): string[] {
   }
 
   // plan domain
-  if (intentLocked) {
+  const existingPlanDraft = data.plan.versions.find(v => v.state === 'DRAFT');
+  if (intentLocked && !existingPlanDraft) {
     ops.push('plan new');
+  }
+  if (existingPlanDraft && data.plan.active_version !== existingPlanDraft.version) {
+    ops.push(`plan activate --v ${existingPlanDraft.version}`);
   }
   if (data.plan.active_state === 'DRAFT') {
     ops.push('plan lock');

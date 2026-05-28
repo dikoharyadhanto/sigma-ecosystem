@@ -29,6 +29,13 @@ function planCommand() {
             if (!lockedIntent) {
                 throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
             }
+            const existingDraft = data.plan.versions.find(v => v.state === 'DRAFT');
+            if (existingDraft) {
+                throw new Error(`DRAFT CONFLICT: FMN-PLAN ${existingDraft.version} is already in DRAFT state. ` +
+                    `Lock or supersede the existing draft before creating a new plan.\n` +
+                    `  Activate it first: sigma plan activate --v ${existingDraft.version}\n` +
+                    `  Then lock it:      sigma plan lock`);
+            }
             const intentVersionRef = lockedIntent.version;
             const version = (0, progress_1.nextPlanVersion)(data, intentVersionRef);
             const relPath = path_1.default.join('Sigma', 'build', `FMN-PLAN-${version}.md`);
@@ -82,6 +89,23 @@ function planCommand() {
             const sourceFile = data.plan.versions.find(v => v.version === version)?.file ?? '';
             (0, memory_1.harvestPlanLock)(projectRoot, version, sourceFile);
             console.log(`FMN-PLAN ${version} LOCKED. Gate 2 open. Next: sigma exec new`);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
+    cmd.command('activate')
+        .description('Set an existing DRAFT FMN-PLAN version as the active plan')
+        .requiredOption('--v <version>', 'DRAFT version to activate (e.g. v1.10)')
+        .action((opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const data = (0, progress_1.readProgress)(projectRoot);
+            (0, progress_1.assertProgressCanMutate)(data);
+            (0, progress_1.activatePlanDraft)(data, opts.v);
+            (0, progress_1.writeProgress)(projectRoot, data);
+            console.log(`FMN-PLAN ${opts.v} is now the active draft. Run: sigma plan lock`);
         }
         catch (e) {
             console.error(e.message);
