@@ -30,6 +30,9 @@ export declare function writeGeminiMcpConfig(options?: {
 }): void;
 export declare function writeReasonixMcpConfig(filePath: string, options?: {
     homeDir?: string;
-}): void;
+    projectRoot?: string;
+}): {
+    editModeChanged: boolean;
+};
 export {};
 //# sourceMappingURL=mcp.d.ts.map

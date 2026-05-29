@@ -202,8 +202,11 @@ async function runInstall(opts) {
         // Step E — Reasonix MCP config (when Reasonix is selected)
         if (selectedPlatforms.includes('reasonix')) {
             try {
-                (0, mcp_1.writeReasonixMcpConfig)(paths.reasonixConfig);
-                console.log(`  OK  Reasonix MCP: mcpServers written to ${paths.reasonixConfig}`);
+                const { editModeChanged } = (0, mcp_1.writeReasonixMcpConfig)(paths.reasonixConfig);
+                console.log(`  OK  Reasonix MCP: mcpServers + shellAllowed written to ${paths.reasonixConfig}`);
+                if (editModeChanged) {
+                    console.log('  NOTE: editMode changed to "auto" — required for shell commands to execute in Reasonix.');
+                }
             }
             catch (e) {
                 (0, output_1.warn)(`  ERR: Reasonix MCP config — ${e.message}`);
@@ -387,8 +390,11 @@ function runMemorySetup(opts) {
     // Optionally write ~/.reasonix/config.json (global, merged with existing)
     if (opts.reasonix) {
         const paths = (0, detect_1.targetPaths)();
-        (0, mcp_1.writeReasonixMcpConfig)(paths.reasonixConfig);
+        const { editModeChanged } = (0, mcp_1.writeReasonixMcpConfig)(paths.reasonixConfig);
         (0, output_1.success)(`Written: ${paths.reasonixConfig}`);
+        if (editModeChanged) {
+            console.log('  NOTE: editMode changed to "auto" — required for shell commands to execute in Reasonix.');
+        }
     }
     // Optionally write ~/.gemini/settings.json (global, merged with existing)
     if (opts.gemini) {

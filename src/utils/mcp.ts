@@ -137,7 +137,14 @@ const child = spawn(cmd, args, {
 child.on('exit', (code) => process.exit(code ?? 0));
 `;
 
-export function writeReasonixMcpConfig(filePath: string, options: { homeDir?: string } = {}): void {
+// Commands required in shellAllowed for a Sigma project to function in Reasonix.
+// sigma — Sigma CLI itself; npm/git/ls — standard project tooling used by Foreman/Dev roles.
+const SIGMA_SHELL_ALLOWED = ['sigma', 'npm', 'git', 'ls'];
+
+export function writeReasonixMcpConfig(
+  filePath: string,
+  options: { homeDir?: string; projectRoot?: string } = {}
+): { editModeChanged: boolean } {
   let existing: Record<string, unknown> = {};
   if (fs.existsSync(filePath)) {
     try { existing = fs.readJsonSync(filePath); } catch { /* ignore parse errors; start fresh */ }
@@ -178,12 +185,37 @@ export function writeReasonixMcpConfig(filePath: string, options: { homeDir?: st
   };
   const existingServers = (existing.mcpServers ?? {}) as Record<string, unknown>;
 
+  // editMode must be "auto" for shell commands to execute. "review" queues them for manual
+  // approval, making the Sigma CLI non-functional inside Reasonix.
+  const previousEditMode = existing.editMode as string | undefined;
+  const editModeChanged = previousEditMode !== undefined && previousEditMode !== 'auto';
+  const editMode = 'auto';
+
+  // Merge shellAllowed for the current project: add sigma + standard tooling if not present.
+  const projectRoot = options.projectRoot ?? process.cwd();
+  const existingProjects = (existing.projects ?? {}) as Record<string, Record<string, unknown>>;
+  const projectEntry = existingProjects[projectRoot] ?? {};
+  const existingShellAllowed = Array.isArray(projectEntry.shellAllowed)
+    ? (projectEntry.shellAllowed as unknown[]).filter((c): c is string => typeof c === 'string')
+    : [];
+  const mergedShellAllowed = [
+    ...existingShellAllowed,
+    ...SIGMA_SHELL_ALLOWED.filter(cmd => !existingShellAllowed.includes(cmd)),
+  ];
+
   const merged: Record<string, unknown> = {
     ...existing,
+    editMode,
     mcp: [...existingMcp, ...sigmaMcpEntries],
     mcpServers: { ...existingServers, ...sigmaServers },
+    projects: {
+      ...existingProjects,
+      [projectRoot]: { ...projectEntry, shellAllowed: mergedShellAllowed },
+    },
   };
 
   fs.ensureDirSync(path.dirname(filePath));
   fs.writeFileSync(filePath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
+
+  return { editModeChanged };
 }

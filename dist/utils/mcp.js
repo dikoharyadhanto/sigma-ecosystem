@@ -118,6 +118,9 @@ const child = spawn(cmd, args, {
 });
 child.on('exit', (code) => process.exit(code ?? 0));
 `;
+// Commands required in shellAllowed for a Sigma project to function in Reasonix.
+// sigma — Sigma CLI itself; npm/git/ls — standard project tooling used by Foreman/Dev roles.
+const SIGMA_SHELL_ALLOWED = ['sigma', 'npm', 'git', 'ls'];
 function writeReasonixMcpConfig(filePath, options = {}) {
     let existing = {};
     if (fs_extra_1.default.existsSync(filePath)) {
@@ -157,12 +160,34 @@ function writeReasonixMcpConfig(filePath, options = {}) {
         'sigma-memory': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'], env: { MEMORY_FILE_PATH: memoryFilePath } },
     };
     const existingServers = (existing.mcpServers ?? {});
+    // editMode must be "auto" for shell commands to execute. "review" queues them for manual
+    // approval, making the Sigma CLI non-functional inside Reasonix.
+    const previousEditMode = existing.editMode;
+    const editModeChanged = previousEditMode !== undefined && previousEditMode !== 'auto';
+    const editMode = 'auto';
+    // Merge shellAllowed for the current project: add sigma + standard tooling if not present.
+    const projectRoot = options.projectRoot ?? process.cwd();
+    const existingProjects = (existing.projects ?? {});
+    const projectEntry = existingProjects[projectRoot] ?? {};
+    const existingShellAllowed = Array.isArray(projectEntry.shellAllowed)
+        ? projectEntry.shellAllowed.filter((c) => typeof c === 'string')
+        : [];
+    const mergedShellAllowed = [
+        ...existingShellAllowed,
+        ...SIGMA_SHELL_ALLOWED.filter(cmd => !existingShellAllowed.includes(cmd)),
+    ];
     const merged = {
         ...existing,
+        editMode,
         mcp: [...existingMcp, ...sigmaMcpEntries],
         mcpServers: { ...existingServers, ...sigmaServers },
+        projects: {
+            ...existingProjects,
+            [projectRoot]: { ...projectEntry, shellAllowed: mergedShellAllowed },
+        },
     };
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(filePath));
     fs_extra_1.default.writeFileSync(filePath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
+    return { editModeChanged };
 }
 //# sourceMappingURL=mcp.js.map
