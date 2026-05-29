@@ -7,10 +7,9 @@ import { PROGRESS_FILE, SCHEMA_VERSION } from '../config';
 export type LifecycleState = 'DESIGN' | 'BUILD' | 'CLOSE' | 'CLOSED';
 export type IntentState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type PlanState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
-export type ExecState = 'DRAFT' | 'BUILDING' | 'TESTING' | 'COMPLETED' | 'LOCKED' | 'SUPERSEDED';
+export type ExecState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type CloseState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type RoadmapState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
-export type CsoState = 'DRAFT' | 'COMPLETE';
 
 export interface ArtifactVersion {
   version: string;
@@ -32,13 +31,6 @@ export interface ArtifactTracker {
   versions: ArtifactVersion[];
 }
 
-export interface CsoEntry {
-  version: string;
-  state: CsoState;
-  file: string;
-  created_at: string;
-}
-
 export interface Gates {
   gate_1_open: boolean;
   gate_2_open: boolean;
@@ -58,7 +50,6 @@ export interface ProgressJson {
   close: ArtifactTracker;
   roadmap: ArtifactTracker;
   gates: Gates;
-  cso: CsoEntry[];
 }
 
 export interface GateStatus {
@@ -77,7 +68,7 @@ type ArtifactDomain = 'intent' | 'plan' | 'exec' | 'close' | 'roadmap';
 const TRACKER_STATES: Record<ArtifactDomain, string[]> = {
   intent: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
   plan: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
-  exec: ['DRAFT', 'BUILDING', 'TESTING', 'COMPLETED', 'LOCKED', 'SUPERSEDED'],
+  exec: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
   close: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
   roadmap: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
 };
@@ -94,7 +85,7 @@ export function validateProgress(data: unknown): ProgressJson {
   const required = [
     'schema_version', 'project_id', 'project_name', 'lifecycle_state',
     'created_at', 'updated_at', 'intent', 'plan', 'exec', 'close',
-    'roadmap', 'gates', 'cso',
+    'roadmap', 'gates',
   ];
 
   for (const field of required) {
@@ -115,10 +106,6 @@ export function validateProgress(data: unknown): ProgressJson {
     typeof gates.gate_3_satisfied !== 'boolean'
   ) {
     throw new Error('progress.json gates block is malformed');
-  }
-
-  if (!Array.isArray(d.cso)) {
-    throw new Error('progress.json cso must be an array');
   }
 
   return data as ProgressJson;
@@ -343,7 +330,6 @@ export function createInitialProgress(projectId: string, projectName: string): P
       gate_2_open: false,
       gate_3_satisfied: false,
     },
-    cso: [],
   };
 }
 
@@ -552,34 +538,6 @@ export function registerExecDraft(
   data.gates.gate_3_satisfied = false;
 }
 
-export function advanceExecState(
-  data: ProgressJson,
-  toState: 'BUILDING' | 'TESTING' | 'COMPLETED'
-): void {
-  const now = new Date().toISOString();
-  const activeVersion = data.exec.active_version;
-  if (!activeVersion) throw new Error('No active EXEC version to advance');
-
-  const expectedSource: Record<string, string> = {
-    BUILDING: 'DRAFT',
-    TESTING: 'BUILDING',
-    COMPLETED: 'TESTING',
-  };
-
-  const currentState = data.exec.active_state;
-  if (currentState !== expectedSource[toState]) {
-    throw new Error(
-      `Cannot advance to ${toState}: current state is ${currentState}, expected ${expectedSource[toState]}`
-    );
-  }
-
-  const active = data.exec.versions.find(v => v.version === activeVersion);
-  if (!active) throw new Error(`EXEC version ${activeVersion} not found`);
-  active.state = toState;
-  active.updated_at = now;
-  data.exec.active_state = toState;
-}
-
 function evaluateGate3(data: ProgressJson): boolean {
   const activeExec = data.exec.versions.find(
     v => v.version === data.exec.active_version && v.state === 'LOCKED'
@@ -700,12 +658,6 @@ export function lockActiveRoadmap(data: ProgressJson): void {
   data.roadmap.active_state = 'LOCKED';
 }
 
-// ── CSO Registration ──────────────────────────────────────────────────────────
-
-export function registerCsoEntry(data: ProgressJson, entry: CsoEntry): void {
-  data.cso.push(entry);
-}
-
 export function getNextValidOperations(data: ProgressJson): string[] {
   const ops: string[] = [];
   const intentLocked = data.intent.active_state === 'LOCKED';
@@ -746,9 +698,6 @@ export function getNextValidOperations(data: ProgressJson): string[] {
   // exec domain
   if (planLocked) {
     ops.push('exec new');
-  }
-  if (data.exec.active_state === 'BUILDING' || data.exec.active_state === 'TESTING') {
-    ops.push('exec complete');
   }
 
   // close domain

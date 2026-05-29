@@ -1285,7 +1285,7 @@ Batch A → Batch B → Batch C → Batch D → Batch E
 | Batch | Status |
 | :--- | :--- |
 | A | **DONE** — 2026-05-30 |
-| B | Pending |
+| B | **DONE** — 2026-05-30 |
 | C | Pending |
 | D | Pending |
 | E | Pending |

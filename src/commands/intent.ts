@@ -9,7 +9,6 @@ import {
   lockActiveIntent,
   assertProgressCanMutate,
 } from '../engine/progress';
-import { harvestIntentLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
 import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
 
@@ -72,8 +71,6 @@ export function intentCommand(): Command {
         const version = data.intent.active_version!;
         lockActiveIntent(data);
         writeProgress(projectRoot, data);
-        const sourceFile = data.intent.versions.find(v => v.version === version)?.file ?? '';
-        harvestIntentLock(projectRoot, version, sourceFile);
         console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma plan new`);
       } catch (e) {
         console.error((e as Error).message);

@@ -23,7 +23,6 @@ import {
   isStaleIntentPresent,
   getNextValidOperations,
 } from '../engine/progress';
-import { initDecisionsFile } from '../engine/memory';
 import { createDefaultProjectConfig, writeProjectConfig, langLabel } from '../engine/projectConfig';
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, fileExists, findProjectRoot, backupFile } from '../utils/fs';
@@ -221,9 +220,6 @@ async function runStart(opts: {
   // Create progress.json
   const initial = createInitialProgress(projectId, projectName);
   fs.writeJsonSync(progressPath, initial, { spaces: 2 });
-
-  initDecisionsFile(projectRoot);
-  console.log('  Memory: Sigma/memory/decisions.jsonl initialized (empty).');
 
   // Write project.config.json with language preference
   const lang = opts.lang?.trim().toLowerCase() || 'en';

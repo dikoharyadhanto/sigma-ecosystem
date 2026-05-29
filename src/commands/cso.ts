@@ -1,13 +1,6 @@
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
-import {
-  readProgress,
-  writeProgress,
-  registerCsoEntry,
-  CsoEntry,
-  assertProgressCanMutate,
-} from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 
@@ -45,8 +38,6 @@ export function csoCommand(): Command {
           process.exit(1);
         }
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
         const ts = buildTimestamp();
         const baseName = `CSO-${role}-${ts}`;
         const fileName = `${baseName}.md`;
@@ -64,16 +55,6 @@ export function csoCommand(): Command {
           copyTemplateToArtifact('CSO-TEMPLATE.md', absPath);
         }
 
-        const now = new Date().toISOString();
-        const entry: CsoEntry = {
-          version: baseName,
-          state: 'COMPLETE',
-          file: relPath,
-          created_at: now,
-        };
-
-        registerCsoEntry(data, entry);
-        writeProgress(projectRoot, data);
         console.log(`CSO created: ${relPath}`);
       } catch (e) {
         console.error((e as Error).message);

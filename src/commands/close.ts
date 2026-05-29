@@ -10,7 +10,6 @@ import {
   ProgressJson,
   assertProgressCanMutate,
 } from '../engine/progress';
-import { harvestCloseLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
 import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
 
@@ -117,8 +116,6 @@ export function closeCommand(): Command {
         const version = data.close.active_version!;
         lockActiveClose(data);
         writeProgress(projectRoot, data);
-        const sourceFile = data.close.versions.find(v => v.version === version)?.file ?? '';
-        harvestCloseLock(projectRoot, version, sourceFile);
         console.log(`DIR-CLOSE ${version} LOCKED. Lifecycle → CLOSED. Project is complete.`);
       } catch (e) {
         console.error((e as Error).message);

@@ -3,7 +3,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import { readProgress, writeProgress, ProgressJson } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
-import { PROJECT_DECISIONS_FILE } from '../config';
+
+const OVERRIDE_LOG_FILE = path.join('Sigma', 'memory', 'overrides.jsonl');
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ interface OverrideEntry {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function appendOverrideEntry(projectRoot: string, entry: OverrideEntry): void {
-  const filePath = path.join(projectRoot, PROJECT_DECISIONS_FILE);
+  const filePath = path.join(projectRoot, OVERRIDE_LOG_FILE);
   fs.ensureFileSync(filePath);
   fs.appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf8');
 }
@@ -116,7 +117,7 @@ function runOverride(opts: { reason?: string; dryRun?: boolean; directorConfirm?
   appendOverrideEntry(projectRoot, entry);
 
   console.log(`\nOverride applied: ${blocked.gate} (${blocked.artifact}) bypassed.`);
-  console.log('Audit record written to Sigma/memory/decisions.jsonl.');
+  console.log('Audit record written to Sigma/memory/overrides.jsonl.');
   console.log(`Next valid operations: sigma project status`);
 }
 
@@ -124,7 +125,7 @@ function runOverride(opts: { reason?: string; dryRun?: boolean; directorConfirm?
 
 export function overrideCommand(): Command {
   const cmd = new Command('override');
-  cmd.description('Bypass the current lifecycle gate under Director authority (recorded in decisions.jsonl)');
+  cmd.description('Bypass the current lifecycle gate under Director authority (recorded in Sigma/memory/overrides.jsonl)');
 
   cmd
     .option('--reason <reason>', 'Required. Describe why this override is authorized.')

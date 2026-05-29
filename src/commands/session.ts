@@ -21,16 +21,8 @@ import { readProjectConfig, langLabel } from '../engine/projectConfig';
 
 // ── CSO log reader ────────────────────────────────────────────────────────────
 
-function recentCsoFiles(data: ProgressJson, sigmaDir: string): string[] {
-  // Prefer CSO entries from progress.json if available
-  if (data.cso.length > 0) {
-    return data.cso
-      .slice(-3)
-      .reverse()
-      .map(e => e.file);
-  }
-
-  // Fallback: scan Sigma/logs/ for CSO-*.md files by mtime
+function recentCsoFiles(_data: ProgressJson, sigmaDir: string): string[] {
+  // Scan Sigma/logs/ for CSO-*.md files by mtime (CSO tracking removed from progress.json)
   const logsDir = path.join(sigmaDir, 'logs');
   if (!fs.existsSync(logsDir)) return [];
 

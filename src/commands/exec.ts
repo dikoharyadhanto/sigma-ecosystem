@@ -6,20 +6,12 @@ import {
   writeProgress,
   nextExecVersion,
   registerExecDraft,
-  advanceExecState,
   lockActiveExec,
   supersedeExecVersion,
   assertProgressCanMutate,
 } from '../engine/progress';
-import { harvestExecLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
 import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
-
-const STAGE_MAP: Record<string, 'BUILDING' | 'TESTING' | 'COMPLETED'> = {
-  building: 'BUILDING',
-  testing: 'TESTING',
-  complete: 'COMPLETED',
-};
 
 export function execCommand(): Command {
   const cmd = new Command('exec');
@@ -76,30 +68,6 @@ export function execCommand(): Command {
       }
     });
 
-  cmd.command('advance <stage>')
-    .description('Advance DEV-EXEC state: building → testing → complete')
-    .action((stage: string) => {
-      try {
-        const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
-
-        const validStages = Object.keys(STAGE_MAP);
-        if (!validStages.includes(stage)) {
-          throw new Error(`Invalid stage "${stage}". Must be one of: ${validStages.join(', ')}`);
-        }
-
-        const oldState = data.exec.active_state;
-        const toState = STAGE_MAP[stage];
-        advanceExecState(data, toState);
-        writeProgress(projectRoot, data);
-        console.log(`DEV-EXEC ${data.exec.active_version}: ${oldState} → ${toState}`);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
   cmd.command('lock')
     .description('Lock active DEV-EXEC (re-evaluates Gate 3)')
     .action(() => {
@@ -107,16 +75,12 @@ export function execCommand(): Command {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
         assertProgressCanMutate(data);
-        if (data.exec.active_state !== 'COMPLETED') {
-          throw new Error(
-            'Active DEV-EXEC must be in COMPLETED state to lock. Run: sigma exec advance complete'
-          );
+        if (data.exec.active_state !== 'DRAFT') {
+          throw new Error('Active DEV-EXEC is not in DRAFT state. Cannot lock.');
         }
         const version = data.exec.active_version!;
         lockActiveExec(data);
         writeProgress(projectRoot, data);
-        const sourceFile = data.exec.versions.find(v => v.version === version)?.file ?? '';
-        harvestExecLock(projectRoot, version, sourceFile);
         const gate3 = data.gates.gate_3_satisfied
           ? 'SATISFIED'
           : 'not satisfied — stale chain or incomplete chain';

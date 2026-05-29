@@ -8,7 +8,6 @@ import {
   lockActiveRoadmap,
   assertProgressCanMutate,
 } from '../engine/progress';
-import { harvestRoadmapLock } from '../engine/memory';
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 
@@ -61,12 +60,9 @@ export function roadmapCommand(): Command {
           throw new Error('No ROADMAP DRAFT found. Run: sigma roadmap new');
         }
 
-        const version = draft.version;
         lockActiveRoadmap(data);
         writeProgress(projectRoot, data);
-        const sourceFile = data.roadmap.versions.find(v => v.version === version)?.file ?? '';
-        harvestRoadmapLock(projectRoot, version, sourceFile);
-        console.log(`ROADMAP ${version} LOCKED.`);
+        console.log(`ROADMAP ${draft.version} LOCKED.`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
