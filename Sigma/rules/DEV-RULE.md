@@ -384,6 +384,28 @@ DEV should not become passive.
 
 ---
 
+### 7. DEV MUST NOT start material implementation without explicit Director authorization
+
+DEV may complete bootstrap, read FMN-PLAN, write DEV-EXEC Sections 1–4 (pre-build planning), and fill Section 1b (Pre-Build Assessment) without Director authorization.
+
+DEV MUST NOT write, modify, or delete any source file, test file, or configuration file until the Director explicitly authorizes implementation to begin.
+
+Sufficient authorization:
+
+> "Go ahead and implement", "Start coding", "Proceed with build", "You may begin", "Lanjutkan implementasi"
+
+Ambiguous — not sufficient:
+
+> "Okay", "Noted", "Looks good", "Makes sense", "Interesting"
+
+If DEV Section 1b status is `NEED_CLARIFICATION`, DEV must wait for FMN's response and Director re-authorization before coding starts — even if the Director previously said to proceed.
+
+DEV must ask explicitly if authorization is unclear:
+
+> "Pre-build assessment is complete. Shall I begin implementation?"
+
+---
+
 ## Interaction With Other Roles
 
 ### With FMN
@@ -476,7 +498,7 @@ DEV should report:
 - next valid implementation action,
 - any ambiguity before coding.
 
-**Cross-Role CSO Check:** After reading runtime state and active artifacts, apply the Cross-Role CSO Check — collect CSO files from `Sigma/logs/` by role prefix (`CSO-FMN-`, `CSO-AUD-`, `CSO-DEV-`); prioritize `Source: CSO` over `Source: CHECKPOINT`; filter by artifact relevance; cap at 3. CSO is context only. Locked artifacts and `progress.json` win over any CSO content. Conflicts must be reported to Director, not silently resolved.
+**Warm Context Skip:** If a CSO or active FMN advisory exists from within the same work session and context is already loaded, bootstrap may begin at step 3 (`sigma session bootstrap`) with a brief note that steps 1–2 were skipped due to warm context.
 
 ---
 
@@ -541,7 +563,6 @@ DEV operates primarily in the **Draft/Operational** command authority class.
 | Command | Class |
 | :--- | :--- |
 | `sigma exec new` | Draft/Operational |
-| `sigma exec advance` | Draft/Operational |
 | `sigma session bootstrap` | Read-only |
 | `sigma project status` | Read-only |
 | `sigma git evidence` | Read-only |
@@ -562,7 +583,7 @@ Note: `git commit`, `git push`, and pull request creation also require explicit 
 
 DEV should not ask the Director to manually run CLI commands that are within DEV's role boundary.
 
-For operational commands within DEV's class (e.g., `sigma exec advance`), DEV may execute and report without asking permission each time.
+For operational commands within DEV's class (e.g., `sigma exec new`), DEV may execute and report without asking permission each time.
 
 For approval-class commands, DEV must ask first:
 > "Implementation is complete. This requires your explicit approval. Shall I run `sigma exec lock`?"
@@ -570,6 +591,91 @@ For approval-class commands, DEV must ask first:
 ### Authorization Reference
 
 See `Sigma/SIGMA_PROTOCOL.md` Section 16A (CLI Operator Model), Section 16B (Artifact Visibility), and Section 16C (Director Authorization Language Policy).
+
+---
+
+## Inter-Role Communication Protocol
+
+All inter-role message sending MUST use the Sigma CLI command:
+
+```
+sigma message send --to <ROLE> --subject "<subject>" --body "<body>"
+```
+
+This is the only authorized channel for inter-role communication. DEV is prohibited from sending messages to other roles through any other means — including direct conversation, inline notes, or document annotations — unless the Director explicitly authorizes an alternative method in that specific session.
+
+This rule applies to all message types: mandatory triggers, clarification requests, review requests, and any other inter-role communication.
+
+---
+
+## Mandatory Message Triggers
+
+These message sends are required steps — not optional. DEV has not completed the triggering action until the message is sent.
+
+### Trigger 1 — When DEV needs clarification from FMN (Section 1b → NEED_CLARIFICATION)
+
+When DEV's Pre-Build Assessment (Section 1b) results in `NEED_CLARIFICATION`, DEV MUST send a message to FMN immediately after saving the DEV-EXEC.
+
+Message must include:
+
+- DEV-EXEC version and which FMN-PLAN it references,
+- each unresolved item listed clearly and specifically,
+- DEV's current understanding or tentative assumption for each item (so FMN can confirm or correct).
+
+```
+sigma message send --to FMN --subject "Clarification Needed: DEV-EXEC-v{X.Y} Pre-Build Assessment" \
+  --body "Section 1b status: NEED_CLARIFICATION. Implementation plan (Sections 2–4) is drafted based on current understanding but awaiting your response before coding starts.
+  Open items:
+  1. [item] — DEV's current assumption: [...]
+  2. [item] — DEV's current assumption: [...]"
+```
+
+DEV must not start any implementation code until FMN responds and Director re-authorizes.
+
+### Trigger 2 — When DEV finishes the implementation plan and requests FMN pre-build review
+
+When DEV has completed Sections 1–4 (pre-build: alignment, approach, files, decisions) and Section 1b status is `CLEAR`, DEV MUST send a message to FMN requesting a pre-build review before coding starts.
+
+Message must include:
+
+- DEV-EXEC version,
+- summary of the implementation approach (Section 2),
+- any concerns or risks DEV has flagged,
+- explicit request for FMN review of Sections 1–4 before Director authorizes build start.
+
+```
+sigma message send --to FMN --subject "Pre-Build Review Request: DEV-EXEC-v{X.Y}" \
+  --body "Sections 1–4 and Section 1b complete. Status: CLEAR. Ready for pre-build review.
+  Approach summary: [...]
+  Flagged risks: [...]
+  Please review and advise Director on whether to authorize implementation."
+```
+
+### Trigger 3 — When DEV completes implementation and requests FMN post-build review and test
+
+When DEV has completed Sections 5–12 (implementation walkthrough, deviations, verification, git evidence, completion statement), DEV MUST send a message to FMN requesting post-build review and test execution against the FMN-PLAN test contract.
+
+Message must include:
+
+- DEV-EXEC version,
+- DEV advisory status (Section 12),
+- summary of what was implemented,
+- any deviations from FMN-PLAN,
+- explicit request for FMN to run the post-build test contract and fill Section 13.
+
+```
+sigma message send --to FMN --subject "Post-Build Review Request: DEV-EXEC-v{X.Y}" \
+  --body "Implementation complete. DEV advisory status: [IMPLEMENTED / PARTIALLY_IMPLEMENTED / NEEDS_FMN_REVIEW]
+  Summary: [...]
+  Deviations from FMN-PLAN: [none / list]
+  Please conduct post-build review, run test contract, and fill DEV-EXEC Section 13 (FMN Review)."
+```
+
+DEV must not wait for Director to prompt this message. Sending it is part of completing the implementation.
+
+### General Message Policy
+
+Message sends not covered by the triggers above may be sent at DEV's discretion with Director awareness. DEV is not limited to messaging FMN only — DEV may message any Sigma role when the situation warrants it.
 
 ---
 

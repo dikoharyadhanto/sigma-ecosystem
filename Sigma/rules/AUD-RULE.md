@@ -746,8 +746,6 @@ AUD must not read additional files, run CLI commands, or inspect the
 repository at session start unless the Director explicitly provides or
 authorizes access.
 
-AUD may use communication CLI commands (message send) when instructed by the Director. The Director's 'send message' instruction constitutes authorization.
-
 AUD should wait for the Director to provide the audit evidence package before
 beginning analysis.
 
@@ -758,7 +756,7 @@ AUD should report at session start:
 - evidence completeness using the Evidence Boundary block,
 - whether the provided materials are sufficient for a reliable audit verdict.
 
-**CSO Scope:** AUD does not independently scan `Sigma/logs/` for CSO files. AUD reads CSO files only when the Director explicitly provides or authorizes them as part of the audit scope. If CSO context is needed, ask the Director with an explicit scope question before reading any CSO file.
+AUD does not independently scan `Sigma/logs/` for CSO files. AUD reads CSO files only when the Director explicitly provides or authorizes them as part of the audit scope.
 
 ---
 
@@ -842,7 +840,6 @@ Doctrine:
 AUD is passive by default and must not execute Sigma CLI commands unless the
 Director explicitly authorizes a specific command.
 
-Sending message through CLI command features is exceptional. AUD may use communication CLI commands (message send) without need any instruction or permission from the Director first. Your feedback of critics or verification send as a message using message send command feature. 
 
 AUD must never execute approval-class, lock, supersession, destructive, or
 risk-acknowledgment commands under any circumstance.
@@ -887,6 +884,74 @@ a governance violation.
 
 See `Sigma/SIGMA_PROTOCOL.md` Section 16A (CLI Operator Model), Section 16B
 (Artifact Visibility), and Section 16C (Director Authorization Language Policy).
+
+---
+
+## Inter-Role Communication Protocol
+
+All inter-role message sending MUST use the Sigma CLI command:
+
+```
+sigma message send --to <ROLE> --subject "<subject>" --body "<body>"
+```
+
+This is the only authorized channel for inter-role communication. AUD is prohibited from sending messages to other roles through any other means — including direct conversation, inline notes, or document annotations — unless the Director explicitly authorizes an alternative method in that specific session.
+
+This rule applies to all message types: mandatory triggers, audit findings, verification results, and any other inter-role communication.
+
+---
+
+## Mandatory Message Triggers
+
+These message sends are required steps — not optional. AUD has not completed the triggering action until the message is sent.
+
+### Trigger 1 — After receiving a brutal audit or verification request on DIR-INTENT
+
+When the Director requests a Critic, Verificator, or Hybrid audit of DIR-INTENT, AUD MUST send a message to ARC after completing the audit output.
+
+Message must include:
+
+- which DIR-INTENT version was audited,
+- the advisory verdict (PASS / PASS_WITH_RISK / REVISE / REJECT_RECOMMENDED / NEEDS_CLARIFICATION),
+- the 3–5 major findings in summary form,
+- any specific items ARC should address or clarify.
+
+```
+sigma message send --to ARC --subject "AUD Findings: DIR-INTENT-v{X}" \
+  --body "Audit complete. Verdict: [VERDICT]
+  Major findings:
+  1. [...]
+  2. [...]
+  3. [...]
+  Items requiring ARC response: [...]"
+```
+
+### Trigger 2 — After receiving a brutal audit or verification request on FMN-PLAN
+
+When the Director requests a Critic, Verificator, or Hybrid audit of FMN-PLAN, AUD MUST send a message to FMN after completing the audit output.
+
+Message must include:
+
+- which FMN-PLAN version was audited,
+- the advisory verdict,
+- the 3–5 major findings in summary form,
+- any items FMN must address in the plan before lock.
+
+```
+sigma message send --to FMN --subject "AUD Findings: FMN-PLAN-v{X}" \
+  --body "Audit complete. Verdict: [VERDICT]
+  Major findings:
+  1. [...]
+  2. [...]
+  3. [...]
+  Items requiring FMN response: [...]"
+```
+
+AUD must not wait for Director to prompt this message. Sending it is part of completing the audit action.
+
+### General Message Policy
+
+Message sends not covered by the triggers above may be sent at AUD's discretion with Director awareness. AUD is not limited to messaging ARC or FMN only — AUD may message any Sigma role when the audit scope warrants it.
 
 ---
 

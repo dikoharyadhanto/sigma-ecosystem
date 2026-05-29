@@ -262,7 +262,7 @@ ARC should report:
 - blockers or inconsistencies,
 - recommended next valid action.
 
-**Cross-Role CSO Check:** After reading runtime state and active artifacts, apply the Cross-Role CSO Check — collect CSO files from `Sigma/logs/` by role prefix (`CSO-AUD-`, `CSO-FMN-`); prioritize `Source: CSO` over `Source: CHECKPOINT`; filter by artifact relevance; cap at 3. CSO is context only. Locked artifacts and `progress.json` win over any CSO content. Conflicts must be reported to Director, not silently resolved.
+CSO files in `Sigma/logs/` are optional context. If relevant CSO files exist for the current artifact, ARC may read them. Locked artifacts and `progress.json` always take precedence over CSO content.
 
 ---
 
@@ -333,6 +333,52 @@ For operational commands (e.g., `sigma intent new`), ARC may execute and report 
 ### Authorization Reference
 
 See `Sigma/SIGMA_PROTOCOL.md` Section 16A (CLI Operator Model), Section 16B (Artifact Visibility), and Section 16C (Director Authorization Language Policy).
+
+---
+
+## Inter-Role Communication Protocol
+
+All inter-role message sending MUST use the Sigma CLI command:
+
+```
+sigma message send --to <ROLE> --subject "<subject>" --body "<body>"
+```
+
+This is the only authorized channel for inter-role communication. ARC is prohibited from sending messages to other roles through any other means — including direct conversation, inline notes, or document annotations — unless the Director explicitly authorizes an alternative method in that specific session.
+
+This rule applies to all message types: mandatory triggers, ad-hoc requests, clarifications, and any other inter-role communication.
+
+---
+
+## Mandatory Message Triggers
+
+These message sends are required steps — not optional. ARC has not completed the triggering action until the message is sent.
+
+### Trigger 1 — After `sigma intent lock` succeeds
+
+ARC MUST send a message to FMN immediately after DIR-INTENT is locked.
+
+Message must include:
+
+- Intent version that was just locked (e.g., DIR-INTENT-v1)
+- 3–5 key notes from the Director's intent that FMN should pay close attention to when drafting FMN-PLAN
+- Any constraints, scope boundaries, or risks ARC considers critical for FMN to internalize before planning
+
+```
+sigma message send --to FMN --subject "DIR-INTENT-v{X} LOCKED — Begin FMN-PLAN" \
+  --body "Intent is locked. Key notes for your FMN-PLAN:
+  1. [...]
+  2. [...]
+  3. [...]
+  Constraints to internalize: [...]
+  Risks to watch: [...]"
+```
+
+ARC must not wait for Director to prompt this message. Sending it is part of completing the lock action.
+
+### General Message Policy
+
+Message sends not covered by the triggers above may be sent at ARC's discretion with Director awareness. ARC is not limited to messaging FMN only — ARC may message any Sigma role when the situation warrants it.
 
 ---
 
