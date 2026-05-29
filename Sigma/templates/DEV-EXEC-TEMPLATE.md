@@ -309,3 +309,20 @@ OPEN_NEW_PLAN / UPDATE_CURRENT_EXEC / CONSIDER_CLOSE / ACCEPT_AS_LIMITATION / NE
 Notes:
 
 [...]
+
+---
+
+## 17. Out-of-Scope Director Requests
+
+> **Filled by DEV — As needed.**
+> For minor changes executed at Director request that fall outside the FMN-PLAN scope.
+> Use this section when a change is too small to warrant a new plan cycle but must still be traceable.
+> If the scope is significant enough to affect plan ACs or architecture, open a new plan version instead.
+
+| # | Director Request | What Was Changed | Files Affected | Why No New Plan |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | [...] | [...] | [...] | [Minor — no AC impact / cosmetic / config only / etc.] |
+
+If none, write:
+
+> No out-of-scope Director requests in this execution.

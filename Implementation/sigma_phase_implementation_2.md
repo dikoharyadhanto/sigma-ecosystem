@@ -103,19 +103,21 @@ either auto-coerce those states to DRAFT on read, or a `sigma migrate` command i
 
 ---
 
-### 4. ROADMAP Mandatory Gate + Version Tied to INTENT + Auto-Lock on Closure
+### 4. ROADMAP Mandatory Gate + Version Tied to INTENT + State Machine Redesign
 
 **Context**: `sigma roadmap new`, `sigma roadmap lock`, and `sigma roadmap list` already
-exist. The original pain (locked roadmap can't be revised) is solved. This proposal
-replaces the original Proposal 4 with a deeper governance redesign.
+exist. This proposal redesigns ROADMAP into the trace backbone: mandatory gate for `plan new`,
+version bound to INTENT major, and a four-state lifecycle that handles projects that pivot
+without formal closure.
 
 **Three problems with current design**:
 
 1. ROADMAP is optional — `plan new` has no dependency on ROADMAP existence
-2. ROADMAP version auto-increments independently from INTENT (`length + 1`), no explicit
-   binding — nothing prevents ROADMAP v3 being created while INTENT is still v1
-3. ROADMAP can be manually locked at any time, which is too strict for a document
-   that legitimately changes as stages are added throughout the project
+2. ROADMAP version auto-increments independently from INTENT (`length + 1`), no binding —
+   nothing prevents ROADMAP v3 being created while INTENT is still v1
+3. Two-state model (`DRAFT → LOCKED`) cannot represent a roadmap displaced by a newer active
+   roadmap without formal closure — creating ambiguity in `plan new`, `session bootstrap`,
+   render, and audit traceability
 
 **New design**:
 
@@ -133,51 +135,141 @@ To create a new roadmap, create a new INTENT version first.
 
 ROADMAP stores `intent_version_ref` in `progress.json` (same pattern as PLAN → INTENT).
 
-**B — `plan new` requires ROADMAP for matching INTENT**
+**B — `plan new` requires ACTIVE ROADMAP for matching INTENT**
 
-`plan new` adds a new gate check: a ROADMAP must exist (DRAFT state is sufficient)
-for the same INTENT major version. PLAN v0.x needs ROADMAP v1, PLAN v1.x needs ROADMAP v2.
+`plan new` adds a new gate check: a ROADMAP must exist in ACTIVE state for the same
+INTENT major version.
 
 ```
-GATE BLOCKED: No ROADMAP found for INTENT v1.
+GATE BLOCKED: No active ROADMAP found for INTENT v1.
 Run: sigma roadmap new
 ```
 
-**C — ROADMAP stays DRAFT for entire project lifecycle; auto-locks on CLOSURE**
+**C — Four-state ROADMAP lifecycle**
 
-Remove `sigma roadmap lock` from the public CLI surface. ROADMAP is a living document —
-freely editable as long as the project is active. It auto-locks only when
-`sigma close lock` is executed.
+```
+DRAFT → ACTIVE → INACTIVE  (terminal — displaced without formal closure)
+DRAFT → ACTIVE → LOCKED    (terminal — formally closed via sigma close lock)
+```
 
-`close lock` internally calls `lockActiveRoadmap` before writing progress. This is the
-only path to a LOCKED ROADMAP.
+| State | Meaning |
+| :--- | :--- |
+| `DRAFT` | Created but not yet the execution backbone. Cannot receive new plans. |
+| `ACTIVE` | Current execution backbone. Only ACTIVE ROADMAP receives new official PLAN artifacts. |
+| `INACTIVE` | Displaced by a newer active ROADMAP without formal closure. Terminal historical state — readable, not writable for new plans. |
+| `LOCKED` | Formally closed by `sigma close lock`. Terminal final state. |
 
-This design reflects real usage: closure is rare and intentional. Until then, ROADMAP
-should always be current and editable without ceremony.
+Core invariant: **only one ROADMAP may be ACTIVE at any time.**
+
+**D — `roadmap new` auto-activate behavior**
+
+| Situation | `sigma roadmap new` behavior |
+| :--- | :--- |
+| No ACTIVE roadmap exists | Creates ROADMAP vX directly in **ACTIVE** state |
+| ACTIVE roadmap already exists | Creates ROADMAP vX in **DRAFT** state; prints message to run `sigma roadmap activate --v vX` |
+
+**E — `sigma roadmap activate --v <version>` (new command)**
+
+Promotes a DRAFT ROADMAP to ACTIVE. If another ROADMAP is currently ACTIVE, it is demoted
+to INACTIVE in the same atomic write.
+
+```
+Roadmap Activation Preflight
+
+New active roadmap:   ROADMAP v2
+Currently active:     ROADMAP v1
+
+Effect:
+  ROADMAP v1 will become INACTIVE.
+  ROADMAP v2 will become ACTIVE.
+  New FMN-PLAN artifacts will link to ROADMAP v2.
+
+Type APPROVE to continue.  (or add --yes to skip prompt)
+```
+
+This preflight is **interactive** (blocking, requires APPROVE or `--yes`) because it has a
+permanent side effect: ROADMAP v1 can never become ACTIVE again after demotion. INACTIVE is
+a terminal state.
+
+If no other ROADMAP is currently ACTIVE, promotes directly without prompt.
+
+**F — `sigma close lock` auto-locks the ACTIVE ROADMAP**
+
+`close lock` internally calls `lockActiveRoadmap` before writing progress. Only the ACTIVE
+ROADMAP can be locked via close. INACTIVE roadmaps cannot be locked by `close lock` — they
+are terminal historical records.
+
+`close lock` requires interactive APPROVE because it auto-locks the ROADMAP as a side effect:
+
+```
+Close Lock Preflight
+
+Artifact to lock:    DIR-CLOSE v1
+Linked roadmap:      ROADMAP v1 ACTIVE
+
+Side effects:
+  - DIR-CLOSE v1 will become LOCKED
+  - ROADMAP v1 will become LOCKED
+  - No more plans can be added to ROADMAP v1
+
+Type APPROVE to continue.  (or add --yes to skip prompt)
+```
+
+Remove `sigma roadmap lock` from the public CLI surface. Auto-lock on close is the only
+path to a LOCKED ROADMAP.
+
+**G — Normal lock commands remain informational (no blocking prompt)**
+
+`sigma intent lock`, `sigma plan lock`, `sigma exec lock` print an informational preflight
+summary then execute immediately. No APPROVE prompt. Director authorization is assumed to
+have been obtained by the AI role before invoking the command.
+
+Interactive APPROVE is required only for:
+- `sigma roadmap activate` — when demoting an existing ACTIVE ROADMAP
+- `sigma close lock` — auto-locks ROADMAP as a side effect
+- `sigma sync roadmap --write` — migration/overwrite
+
+Add `--yes` flag to all interactive commands for agent-mode operation (skips prompt; still
+prints preflight).
+
+**Implementation guardrails (required before PR opens):**
+
+1. **Atomic activation**: `roadmap activate` must write `progress.json` exactly once.
+   Demotion of old ACTIVE and promotion of new DRAFT happen in a single `writeProgress` call.
+   No two-step write. If the process crashes before the write completes, no state change occurs.
+
+2. **Write-order guarantee**: For all commands that create artifact files AND update
+   `progress.json` (`plan new`, `plan promote`, `roadmap new`, `roadmap activate`, `close lock`),
+   artifact files must be written first. `writeProgress` is always the final step. If any
+   artifact write fails before `writeProgress` is called, `progress.json` must not be updated.
 
 **Lifecycle**:
 ```
 sigma intent lock (v1)
-  → sigma roadmap new  (creates ROADMAP v1, DRAFT)
-    → freely editable throughout project
-    → sigma plan new / lock / exec cycles ... (all require ROADMAP v1 to exist)
-    → sigma close lock  (auto-locks ROADMAP v1 → LOCKED)
+  → sigma roadmap new       (creates ROADMAP v1, ACTIVE — no existing ACTIVE)
+    → sigma plan new / lock / exec cycles ... (all require ROADMAP v1 ACTIVE)
+    → sigma close lock       (auto-locks ROADMAP v1 → LOCKED)
 
-If project continues:
+If project pivots without closure:
   → sigma intent new / lock (v2)
-    → sigma roadmap new (creates ROADMAP v2, DRAFT)
-    → sigma plan new ... (requires ROADMAP v2)
+    → sigma roadmap new      (creates ROADMAP v2, DRAFT — v1 still ACTIVE)
+    → sigma roadmap activate --v v2
+      (ROADMAP v1 ACTIVE → INACTIVE, ROADMAP v2 DRAFT → ACTIVE)
+    → sigma plan new ...     (requires ROADMAP v2 ACTIVE)
 ```
 
 **Scope of changes**:
-- `roadmap.ts`: derive version from INTENT major; add existence guard; remove public `lock` subcommand
-- `close.ts`: call `lockActiveRoadmap` before writing close lock progress
-- `plan.ts`: add ROADMAP existence check in `plan new`
-- `progress.ts`: add `intent_version_ref` to roadmap version entries; update `registerRoadmapDraft` signature
+- `roadmap.ts`: derive version from INTENT major; add existence guard; add `activate`
+  subcommand with interactive preflight; remove public `lock` subcommand
+- `close.ts`: call `lockActiveRoadmap` before writing close lock progress; add interactive preflight
+- `plan.ts`: change ROADMAP gate to require ACTIVE (not DRAFT) state
+- `progress.ts`: add `ACTIVE` and `INACTIVE` to `RoadmapState`; add `activateRoadmap` function
+  (atomic demotion + promotion in single write); update `registerRoadmapDraft` signature;
+  update `TRACKER_STATES.roadmap`; add `intent_version_ref` to roadmap version entries
 
 **Implementation type**: CLI + governance model change
-**Complexity**: Medium. No new commands — modifications to existing commands and one
-new gate check. The version derivation logic is straightforward.
+**Complexity**: Medium-High. New `activate` subcommand, four-state machine expansion, atomic
+write requirement, interactive preflight for two commands. No external dependencies.
 **Dependency**: None. Can be implemented standalone.
 
 ---
@@ -229,8 +321,15 @@ or any status output. Plans exist but the system doesn't know they exist.
 - Finds pending plan by ID
 - Auto-assigns next plan version (e.g., v1.14)
 - Renames file: `Sigma/pending/FMN-PLAN-{id}.md` → `Sigma/build/FMN-PLAN-v1.14.md`
-- Moves entry from `plan.pending` to `plan.versions` as DRAFT
+- Writes `progress.json` (moves entry from `plan.pending` to `plan.versions` as DRAFT) — **last, after file rename succeeds**
 - Promoted plan joins the FIFO lock queue at the back
+- Appends stage stub to active ROADMAP file (same stub as `plan new` — `## Stage X.Y — (title TBD)`)
+- Auto-calls `sigma roadmap render` to regenerate derived sections
+
+`promote` must trigger the same ROADMAP side-effects as `plan new`. A promoted plan
+becomes an official versioned plan — it must have a ROADMAP stage entry from the moment
+it enters the official sequence. Omitting the append would leave a plan in `progress.json`
+with no corresponding ROADMAP H2, violating the core consistency invariant (P21).
 
 **Two-tier planning system:**
 
@@ -239,10 +338,42 @@ or any status output. Plans exist but the system doesn't know they exist.
 | Pending | `plan new --pending`, `plan promote` | No (ID only) | No | Yes |
 | Draft | `plan new`, `plan lock` | Yes | Yes (FIFO) | Yes |
 
+**D — `sigma plan queue` — diagnostic visibility for FIFO and pending state**
+
+Without a queue view, the Director and FMN have no CLI-native way to see which DRAFT plans
+are in the lock queue, which plan locks next (FIFO oldest), or which pending plans exist.
+
+Fix: add `sigma plan queue` as a read-only diagnostic command.
+
+Suggested output:
+```
+Official Draft Queue (FIFO — oldest locks first):
+  1. FMN-PLAN v1.11  DRAFT  (created 2026-05-20)
+  2. FMN-PLAN v1.12  DRAFT  (created 2026-05-22)
+
+Next lock target: FMN-PLAN v1.11
+
+Pending Plans (not in lock queue):
+  p7f3a — Future export feature  (created 2026-05-28)
+  k9d2c — Admin dashboard idea   (created 2026-05-29)
+
+Run: sigma plan promote --id p7f3a    to promote a pending plan to the draft queue
+Run: sigma plan lock                  to lock the oldest draft
+```
+
+If no drafts and no pending, print: `No plans in queue.`
+
+**Implementation type**: CLI addition
+**Scope**: `plan.ts` — new `queue` subcommand; reads `progress.json` plan.versions (filter
+DRAFT by created_at order) and plan.pending; no state change
+**Complexity**: Low. Read-only output command.
+**Dependency**: Parts A and C of this proposal must be implemented first (pending schema +
+DRAFT guard removal).
+
 **Implementation type**: CLI + engine + schema change
-**Scope**: `plan.ts` (remove guard, add `--pending` flag, add `promote` subcommand);
-`progress.ts` (add `plan.pending` array to schema, `registerPendingPlan`, `promotePendingPlan`);
-`session bootstrap` output (show pending count)
+**Scope**: `plan.ts` (remove guard, add `--pending` flag, add `promote` subcommand,
+add `queue` subcommand); `progress.ts` (add `plan.pending` array to schema,
+`registerPendingPlan`, `promotePendingPlan`); `session bootstrap` output (show pending count)
 **Complexity**: Medium.
 **Dependency**: Proposal 4 (ROADMAP gate) should land first — `plan new` without the
 DRAFT guard relies on ROADMAP as the primary creation gate.
@@ -698,20 +829,22 @@ Every stage section in ROADMAP must be a top-level H2:
 ```
 
 H2 sections are never written manually. Stage sections are created automatically by
-`sigma plan new` — section number = plan version number, always 1:1.
+`sigma plan new` and `sigma plan promote` — section number = plan version number, always 1:1.
 Non-stage H2 headings (e.g., `## Roadmap Policy`) are ignored by the CLI because they
 don't match the `## Stage X.Y` pattern. All content within an H2 (H3 and below) is
 the section body, filled by FMN after auto-creation.
 
 ---
 
-### 13. ~~`sigma roadmap section`~~ — Replaced by auto-section on `sigma plan new`
+### 13. ~~`sigma roadmap section`~~ — Replaced by auto-section on `sigma plan new` and `sigma plan promote`
 
 **Original pain**: Inserting a new stage required 7+ manual edits across ROADMAP sections.
 Observed in CanopySense Stage 1.15 insertion (2026-05-30).
 
-**Decision**: No dedicated `sigma roadmap section` command. Instead, `sigma plan new`
-auto-appends a stage stub to the active ROADMAP file as part of plan creation.
+**Decision**: No dedicated `sigma roadmap section` command. Instead, both `sigma plan new`
+and `sigma plan promote` auto-append a stage stub to the active ROADMAP file as part of
+plan creation/promotion. Any path that creates an official versioned plan must also create
+its ROADMAP stage entry — no exceptions.
 
 **New behavior in `sigma plan new`**:
 
@@ -739,19 +872,38 @@ also appends this stub to the bottom of the active ROADMAP file:
 FMN fills the title and body after creation. Section number is always equal to the
 plan version — no bump logic, no mid-sequence insertion, no mismatch risk.
 
+**New behavior in `sigma plan promote`**:
+
+After renaming the pending plan file and writing `progress.json`, the CLI performs the
+same ROADMAP append + render sequence. The promoted plan receives the same auto-generated
+stage stub as a `plan new`-created plan. This is required: a promoted plan enters the
+official sequence and must have a ROADMAP H2 entry from the moment it becomes versioned.
+
 **Eliminated problems**:
 - No plan version vs stage number mismatch (they are the same by definition)
 - No bump logic needed (sections always append sequentially)
 - No separate CLI command to remember or invoke
+- No gap between `plan new` and `plan promote` paths — both trigger ROADMAP update
 
 **Full `sigma plan new` flow after this change**:
 ```
-1. Validate gates (locked INTENT + ROADMAP exists)
+1. Validate gates (locked INTENT + ACTIVE ROADMAP exists)
 2. Create FMN-PLAN-vX.Y.md from template
-3. Register draft in progress.json
+3. Write progress.json (register draft) — last file write
 4. Append stage stub to active ROADMAP file
 5. Auto-call sigma roadmap render → regenerate Stage Overview, mermaid, PLAN Breakdown
 6. Print: Created FMN-PLAN-vX.Y.md + ROADMAP updated
+```
+
+**Full `sigma plan promote --id xxxx` flow after this change**:
+```
+1. Validate: pending plan ID exists + ACTIVE ROADMAP exists
+2. Assign next plan version (e.g., v1.14)
+3. Rename: Sigma/pending/FMN-PLAN-{id}.md → Sigma/build/FMN-PLAN-v1.14.md
+4. Write progress.json (move from plan.pending to plan.versions as DRAFT) — last file write
+5. Append stage stub to active ROADMAP file
+6. Auto-call sigma roadmap render → regenerate derived sections
+7. Print: Promoted FMN-PLAN-v1.14.md + ROADMAP updated
 ```
 
 `sigma roadmap render` also remains available as a standalone command — useful when
@@ -759,7 +911,8 @@ FMN edits a stage title or body and wants to re-sync the derived sections manual
 
 **Scope of changes**:
 - `plan.ts`: after `registerPlanDraft` + `writeProgress`, call
-  `appendRoadmapSection(projectRoot, version)` then `renderRoadmap(projectRoot)`
+  `appendRoadmapSection(projectRoot, version)` then `renderRoadmap(projectRoot)`;
+  same sequence added to `promotePendingPlan` handler
 - `utils/artifacts.ts`: new `appendRoadmapSection` helper (append stub)
 - `roadmap.ts`: new `render` subcommand wrapping `renderRoadmap(projectRoot)`
 - `utils/roadmap.ts` (new): `renderRoadmap` — H2 parser, table/mermaid generator,
@@ -1248,16 +1401,198 @@ session as the proposals it references.
 
 ---
 
+### 21. `sigma roadmap reconcile` — ROADMAP / progress.json Consistency Check
+
+**Context**: Even with correct `plan new` write-order behavior (P4 guardrail), manual edits
+or migration can still create mismatch between `progress.json` plan entries and ROADMAP
+document H2 stage sections. Without a reconciliation check, Sigma can appear traceable in
+JSON while the human-readable roadmap is outdated — false governance truth.
+
+**Core invariant to enforce**:
+```
+If a PLAN version is registered in progress.json,
+then the FMN-PLAN file must exist,
+and the matching ROADMAP H2 stage section (## Stage X.Y — ...) must exist.
+
+If an ## Stage X.Y heading exists in ROADMAP,
+then a corresponding FMN-PLAN version must be registered in progress.json,
+unless the stage is marked as pending or legacy.
+```
+
+**Two-phase implementation**:
+
+**Phase 1 — `sigma roadmap reconcile --check` (Batch D)**
+
+Read-only check. No state changes. Validates both directions:
+
+```
+sigma roadmap reconcile --check
+
+Checking progress.json → ROADMAP document...
+  FMN-PLAN v1.11  ✓  Stage 1.11 found in ROADMAP
+  FMN-PLAN v1.12  ✗  Stage 1.12 NOT found in ROADMAP
+  FMN-PLAN v1.13  ✓  Stage 1.13 found in ROADMAP
+
+Checking ROADMAP document → progress.json...
+  Stage 1.11  ✓  FMN-PLAN v1.11 registered
+  Stage 1.12  ✓  FMN-PLAN v1.12 registered (mismatch above is document-only)
+  Stage 1.13  ✓  FMN-PLAN v1.13 registered
+
+Result: 1 mismatch found. Run sigma roadmap render to regenerate derived sections,
+or manually add the missing H2 heading to ROADMAP.
+```
+
+**Blocking behavior** (applied by other commands, not by reconcile itself):
+
+| Command | Behavior if mismatch exists |
+| :--- | :--- |
+| `sigma project status` | Warn only |
+| `sigma session bootstrap` | Warn only |
+| `sigma plan lock` | Block |
+| `sigma exec new` | Block |
+| `sigma close lock` | Block |
+| `sigma roadmap render` | Warn or fail depending on severity |
+
+**Phase 2 — `sigma roadmap reconcile --fix` (Batch E, optional)**
+
+For each missing ROADMAP H2 section: append a stub stage section to the ROADMAP file.
+For each orphan ROADMAP H2 (no matching plan version): print warning only, do not delete.
+
+**Implementation type**: CLI — new subcommand under `sigma roadmap`
+**Scope**: `roadmap.ts` — new `reconcile` subcommand; reads `progress.json` plan.versions
++ ROADMAP file H2 headings; `--check` is read-only; `--fix` appends stub sections
+**Complexity**: Low (`--check`). Low-Medium (`--fix` — requires H2 parser from P14).
+**Dependency**: `--check` is standalone. `--fix` requires P14 (`renderRoadmap` / H2 parser).
+
+---
+
+### 22. Messaging System — DIRECTOR Removal + Core Improvements
+
+**Context**: AUD review identified four corrections to the messaging system before it is
+used intensively. All are low-complexity and standalone.
+
+---
+
+**A — Remove DIRECTOR from valid messaging roles**
+
+DIRECTOR is currently a valid sender and recipient (`--from director`, `--to director`,
+`sigma inbox --role director`). In practice, Director never receives CLI notifications
+and communicates with AI roles directly through conversation. Sending to or from DIRECTOR
+via CLI is always wasted — the message goes into an inbox that Director never checks.
+
+Decision: remove DIRECTOR from the valid role set for messaging commands only.
+`VALID_ROLES` in `config.ts` is unchanged — it is used elsewhere. A separate
+`MESSAGING_ROLES` constant is introduced for send and inbox.
+
+```
+Invalid role "director" for messaging. Valid messaging roles: arc, fmn, dev, aud.
+DIRECTOR communicates directly — no CLI inbox needed.
+```
+
+Changes:
+- `config.ts`: add `export const MESSAGING_ROLES = ['ARC', 'FMN', 'DEV', 'AUD'] as const`
+- `send.ts`: use `MESSAGING_ROLES` for `--from` and `--to` validation
+- `inbox.ts`: use `MESSAGING_ROLES` for `--role` validation
+- `session.ts`: skip DIRECTOR in the unread-by-role loop in bootstrap output
+
+---
+
+**B — Bootstrap: show total unread count before truncating to latest N**
+
+Current behavior: `session.ts` shows only the last 3 unread per role (`slice(-3).reverse()`).
+If a role has 17 unread messages, the bootstrap summary hides 14 of them with no indication.
+This is dangerous because the send gate blocks the sender who has unread — a role could
+believe its inbox is light and be surprised by a block.
+
+Fix: always print total unread count first, then "showing latest N":
+
+```
+--- Role Inbox — FMN ---
+17 unread messages (showing latest 3):
+
+  1. [ARC → FMN] CHECK: Gate 2 preflight approval
+  2. [DEV → FMN] RESPONSE: AC-003 clarification
+  3. [ARC → FMN] HANDOFF: Intent v1 locked
+
+Run: sigma inbox --role fmn
+```
+
+Changes:
+- `session.ts`: print `${total} unread messages (showing latest ${shown}):` before the list
+
+---
+
+**C — Add `reply_to` optional field to `MessageEntry`**
+
+Without a reply reference, revision loops become untraceable:
+
+```
+FMN → DEV: revision request (MSG-012)
+DEV → FMN: response         (MSG-013) — which request does this answer?
+FMN → DEV: follow-up        (MSG-014) — which response does this follow?
+```
+
+Fix: add `reply_to?: string` (optional message ID) to `MessageEntry` and a `--reply-to`
+flag to `sigma send`.
+
+```
+sigma send --from DEV --to FMN --type response --reply-to MSG-012 --message "..."
+```
+
+Validation at send time: if `--reply-to` is provided, check that the referenced ID exists
+in the index. If not found: print a warning but do not block — referenced message may have
+been archived or index repaired manually (soft check, not hard block).
+
+`reply_to` is omitted from existing messages (backward compatible — optional field).
+
+Changes:
+- `engine/mailbox.ts`: add `reply_to?: string` to `MessageEntry` interface
+- `send.ts`: add `--reply-to <id>` option; soft-check ID existence; populate field
+- `engine/mailbox.ts`: `buildMessageMarkdown` — render `Reply To` row in metadata table
+  if `reply_to` is present
+
+---
+
+**D — `sigma inbox check` — standalone integrity check (optional, P1 tier)**
+
+Source of truth is split: `index.json` (metadata + status) and per-role `.md` files (body).
+A lightweight standalone check prevents silent desync.
+
+`sigma inbox check` validates:
+- Every `MessageEntry` in index has a corresponding `.md` file on disk
+- Every `.md` file in per-role folders has a corresponding entry in index
+- All attachment paths in entries exist on disk
+- No duplicate IDs (already enforced at read time, but explicit report here)
+- All roles and statuses are valid values
+
+This check must NOT run automatically at bootstrap — bootstrap must stay fast.
+`readIndex` already throws on duplicate IDs via `validateIndexData`; that lightweight
+guard stays as-is. `sigma inbox check` is the deeper explicit scan.
+
+Changes:
+- `inbox.ts`: new `check` subcommand; scans index + filesystem in both directions; prints
+  pass/warn/fail per check; exits non-zero if any failure found
+
+---
+
+**Implementation type**: CLI + schema change
+**Scope**: `config.ts`, `send.ts`, `inbox.ts`, `session.ts`, `engine/mailbox.ts`
+**Complexity**: Low-Medium. Parts A and B are trivial. Part C adds an optional schema
+field and soft-check logic. Part D is a new subcommand but read-only.
+**Dependency**: None — fully standalone. Part D can be deferred if needed.
+
+---
+
 ## Summary Count
 
 | Type | Count | Proposals |
 | :--- | :--- | :--- |
-| CLI only | 7 | 1, 2, 4, 5, 13, 14, 18 |
+| CLI only | 9 | 1, 2, 4, 5, 13, 14, 18, 21, 22 |
 | Rule/template only | 7 | 7, 8, 9, 12, 16, 19, 20 |
 | Both (CLI + rule) | 3 | 10 (config command + rule/protocol), 11 (engine removal + rule cleanup), 17 (CLI + skill removal) |
 | Removed / resolved | 3 | 3 (resolved by P2), 6 (unnecessary), 15 (resolved by P13) |
-| New proposals | 4 | 17 (CSO simplification), 18 (sigma sync — backward compat), 19 (rule & skill cleanup), 20 (protocol slim-down) |
-| Total active | 18 | |
+| New proposals | 6 | 17 (CSO simplification), 18 (sigma sync — backward compat), 19 (rule & skill cleanup), 20 (protocol slim-down), 21 (roadmap reconcile), 22 (messaging DIRECTOR removal) |
+| Total active | 20 | |
 
 ---
 
@@ -1271,8 +1606,8 @@ Reason: proposals of the same type share file context and edit patterns — batc
 | **A** | P7, P8, P9, P12, P16, P19 | Rule/template only | None | Pure document edits — zero risk, zero CLI dependency. Highest leverage, lowest friction. Start here. |
 | **B** | P2, P11, P17 | CLI removal | None | Mechanical deletion of engine/memory.ts, exec intermediate states, CSO tracking. Standalone, no new logic. |
 | **C** | P20 | Document edit (protocol) | P2, P17 (content refs) | SIGMA_PROTOCOL.md slim-down syncs content decisions from P2 and P17. Do after B. |
-| **D** | P4, P14 | CLI medium (new infrastructure) | None | ROADMAP mandatory gate (P4) + roadmap render engine (P14). Core infrastructure that downstream batches depend on. |
-| **E** | P1, P5, P10, P13, P18 | CLI medium | P4 (for P5, P13) | Remaining CLI changes. P5 and P13 require ROADMAP gate from P4. P1, P10, P18 are standalone but grouped here for final pass. |
+| **D** | P4, P14, P21-check | CLI medium (new infrastructure) | None | ROADMAP mandatory gate + state machine (P4) + roadmap render engine (P14) + reconcile check (P21-check). Core infrastructure for downstream batches. |
+| **E** | P1, P5, P10, P13, P18, P22, P21-fix (optional) | CLI medium | P4 (for P5, P13) | Remaining CLI changes. P5 and P13 require ROADMAP gate from P4. P1, P10, P18, P22 are standalone. P21-fix requires P14 H2 parser. |
 
 ### Execution Order
 ```
