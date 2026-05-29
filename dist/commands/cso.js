@@ -7,7 +7,6 @@ exports.csoCommand = csoCommand;
 const commander_1 = require("commander");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
-const progress_1 = require("../engine/progress");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const CSO_VALID_ROLES = ['ARC', 'FMN', 'DEV', 'AUD'];
@@ -40,8 +39,6 @@ function csoCommand() {
                 process.exit(1);
             }
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
             const ts = buildTimestamp();
             const baseName = `CSO-${role}-${ts}`;
             const fileName = `${baseName}.md`;
@@ -58,15 +55,6 @@ function csoCommand() {
             else {
                 (0, artifacts_1.copyTemplateToArtifact)('CSO-TEMPLATE.md', absPath);
             }
-            const now = new Date().toISOString();
-            const entry = {
-                version: baseName,
-                state: 'COMPLETE',
-                file: relPath,
-                created_at: now,
-            };
-            (0, progress_1.registerCsoEntry)(data, entry);
-            (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`CSO created: ${relPath}`);
         }
         catch (e) {

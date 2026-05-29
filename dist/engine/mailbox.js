@@ -107,6 +107,7 @@ function buildMessageMarkdown(entry, body) {
     const attachmentCell = entry.attachments.length > 0
         ? entry.attachments.join(', ')
         : '—';
+    const replyToRow = entry.reply_to ? `| Reply To | ${entry.reply_to} |\n` : '';
     return `# Sigma Role Message
 
 ## Metadata
@@ -120,7 +121,7 @@ function buildMessageMarkdown(entry, body) {
 | Subject | ${entry.subject} |
 | Status | ${entry.status} |
 | Created At | ${entry.created_at} |
-| Authority Level | Context Only |
+${replyToRow}| Authority Level | Context Only |
 | Attachments | ${attachmentCell} |
 
 ---

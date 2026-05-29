@@ -1,10 +1,9 @@
 export type LifecycleState = 'DESIGN' | 'BUILD' | 'CLOSE' | 'CLOSED';
 export type IntentState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type PlanState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
-export type ExecState = 'DRAFT' | 'BUILDING' | 'TESTING' | 'COMPLETED' | 'LOCKED' | 'SUPERSEDED';
+export type ExecState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type CloseState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
-export type RoadmapState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
-export type CsoState = 'DRAFT' | 'COMPLETE';
+export type RoadmapState = 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUPERSEDED';
 export interface ArtifactVersion {
     version: string;
     state: string;
@@ -23,11 +22,13 @@ export interface ArtifactTracker {
     active_state: string | null;
     versions: ArtifactVersion[];
 }
-export interface CsoEntry {
-    version: string;
-    state: CsoState;
+export interface PendingPlanEntry {
+    id: string;
     file: string;
     created_at: string;
+}
+export interface PlanTracker extends ArtifactTracker {
+    pending: PendingPlanEntry[];
 }
 export interface Gates {
     gate_1_open: boolean;
@@ -42,12 +43,11 @@ export interface ProgressJson {
     created_at: string;
     updated_at: string;
     intent: ArtifactTracker;
-    plan: ArtifactTracker;
+    plan: PlanTracker;
     exec: ArtifactTracker;
     close: ArtifactTracker;
     roadmap: ArtifactTracker;
     gates: Gates;
-    cso: CsoEntry[];
 }
 export interface GateStatus {
     gate_1_open: boolean;
@@ -73,17 +73,18 @@ export declare function nextExecVersion(data: ProgressJson, planVersionRef: stri
 export declare function registerIntentDraft(data: ProgressJson, version: string, filePath: string): void;
 export declare function lockActiveIntent(data: ProgressJson): void;
 export declare function registerPlanDraft(data: ProgressJson, version: string, filePath: string, intentVersionRef: string): void;
-export declare function lockActivePlan(data: ProgressJson): void;
+export declare function lockOldestPlanDraft(data: ProgressJson): string;
+export declare function registerPendingPlan(data: ProgressJson, id: string, filePath: string): void;
+export declare function promotePendingPlan(data: ProgressJson, id: string, version: string, newFilePath: string, intentVersionRef: string): void;
 export declare function supersedePlanVersion(data: ProgressJson, version: string, reason: string): void;
 export declare function activatePlanDraft(data: ProgressJson, version: string): void;
 export declare function registerExecDraft(data: ProgressJson, version: string, filePath: string, planVersionRef: string): void;
-export declare function advanceExecState(data: ProgressJson, toState: 'BUILDING' | 'TESTING' | 'COMPLETED'): void;
 export declare function lockActiveExec(data: ProgressJson): void;
 export declare function supersedeExecVersion(data: ProgressJson, version: string, reason: string): void;
 export declare function registerCloseDraft(data: ProgressJson, version: string, filePath: string, staleAcknowledged: boolean): void;
 export declare function lockActiveClose(data: ProgressJson): void;
-export declare function registerRoadmapDraft(data: ProgressJson, version: string, filePath: string): void;
+export declare function registerRoadmapDraft(data: ProgressJson, version: string, filePath: string, intentVersionRef: string): void;
+export declare function activateRoadmap(data: ProgressJson, version: string): void;
 export declare function lockActiveRoadmap(data: ProgressJson): void;
-export declare function registerCsoEntry(data: ProgressJson, entry: CsoEntry): void;
 export declare function getNextValidOperations(data: ProgressJson): string[];
 //# sourceMappingURL=progress.d.ts.map

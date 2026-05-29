@@ -29,5 +29,9 @@ export const MESSAGE_SUBFOLDERS = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR', 'atta
 export const VALID_ROLES = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR'] as const;
 export type SigmaRole = typeof VALID_ROLES[number];
 
+// DIRECTOR is excluded from messaging — Director communicates directly, not via CLI inbox
+export const MESSAGING_ROLES = ['ARC', 'FMN', 'DEV', 'AUD'] as const;
+export type MessagingRole = typeof MESSAGING_ROLES[number];
+
 export const VALID_MESSAGE_TYPES = ['NOTE', 'CHECK', 'RESPONSE', 'HANDOFF', 'QUESTION', 'RISK'] as const;
 export type MessageType = typeof VALID_MESSAGE_TYPES[number];

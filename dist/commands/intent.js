@@ -8,7 +8,6 @@ const commander_1 = require("commander");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
-const memory_1 = require("../engine/memory");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 function intentCommand() {
@@ -70,8 +69,6 @@ function intentCommand() {
             const version = data.intent.active_version;
             (0, progress_1.lockActiveIntent)(data);
             (0, progress_1.writeProgress)(projectRoot, data);
-            const sourceFile = data.intent.versions.find(v => v.version === version)?.file ?? '';
-            (0, memory_1.harvestIntentLock)(projectRoot, version, sourceFile);
             console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma plan new`);
         }
         catch (e) {

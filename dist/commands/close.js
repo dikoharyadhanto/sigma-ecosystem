@@ -7,10 +7,19 @@ exports.closeCommand = closeCommand;
 const commander_1 = require("commander");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
+const readline_1 = __importDefault(require("readline"));
 const progress_1 = require("../engine/progress");
-const memory_1 = require("../engine/memory");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
+function promptApprove(message) {
+    return new Promise(resolve => {
+        const rl = readline_1.default.createInterface({ input: process.stdin, output: process.stdout });
+        rl.question(`${message}\nType APPROVE to continue: `, answer => {
+            rl.close();
+            resolve(answer.trim().toUpperCase() === 'APPROVE');
+        });
+    });
+}
 function evaluateCloseChain(data) {
     const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
     if (!lockedIntent)
@@ -84,8 +93,9 @@ function closeCommand() {
         }
     });
     cmd.command('lock')
-        .description('Lock active DIR-CLOSE (lifecycle → CLOSED)')
-        .action(() => {
+        .description('Lock active DIR-CLOSE (lifecycle → CLOSED); auto-locks the ACTIVE ROADMAP as a side effect')
+        .option('--yes', 'Skip interactive APPROVE prompt')
+        .action(async (opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
@@ -93,12 +103,40 @@ function closeCommand() {
             if (data.close.active_state !== 'DRAFT') {
                 throw new Error('Active DIR-CLOSE is not in DRAFT state. Cannot lock.');
             }
-            const version = data.close.active_version;
+            const closeVersion = data.close.active_version;
+            const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
+            console.log('\nClose Lock Preflight\n');
+            console.log(`Artifact to lock:  DIR-CLOSE ${closeVersion}`);
+            if (activeRoadmap) {
+                console.log(`Linked roadmap:    ROADMAP ${activeRoadmap.version} ACTIVE`);
+                console.log('\nSide effects:');
+                console.log(`  - DIR-CLOSE ${closeVersion} will become LOCKED`);
+                console.log(`  - ROADMAP ${activeRoadmap.version} will become LOCKED`);
+                console.log('  - No more plans can be added to this ROADMAP');
+                console.log('  - Project lifecycle will be considered CLOSED\n');
+            }
+            else {
+                console.log('Linked roadmap:    none (no ACTIVE ROADMAP)\n');
+                console.log('Side effects:');
+                console.log(`  - DIR-CLOSE ${closeVersion} will become LOCKED`);
+                console.log('  - Project lifecycle will be considered CLOSED\n');
+            }
+            if (!opts.yes) {
+                const approved = await promptApprove('');
+                if (!approved) {
+                    console.log('Close lock cancelled.');
+                    process.exit(0);
+                }
+            }
+            if (activeRoadmap) {
+                (0, progress_1.lockActiveRoadmap)(data);
+            }
             (0, progress_1.lockActiveClose)(data);
             (0, progress_1.writeProgress)(projectRoot, data);
-            const sourceFile = data.close.versions.find(v => v.version === version)?.file ?? '';
-            (0, memory_1.harvestCloseLock)(projectRoot, version, sourceFile);
-            console.log(`DIR-CLOSE ${version} LOCKED. Lifecycle → CLOSED. Project is complete.`);
+            if (activeRoadmap) {
+                console.log(`ROADMAP ${activeRoadmap.version} LOCKED.`);
+            }
+            console.log(`DIR-CLOSE ${closeVersion} LOCKED. Lifecycle → CLOSED. Project is complete.`);
         }
         catch (e) {
             console.error(e.message);

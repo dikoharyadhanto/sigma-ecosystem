@@ -17,6 +17,7 @@ export interface MessageEntry {
   status: 'UNREAD' | 'READ' | 'ARCHIVED';
   created_at: string;
   attachments: string[];
+  reply_to?: string;
 }
 
 export interface MessageIndex {
@@ -126,6 +127,7 @@ export function buildMessageMarkdown(entry: MessageEntry, body: string): string 
   const attachmentCell = entry.attachments.length > 0
     ? entry.attachments.join(', ')
     : '—';
+  const replyToRow = entry.reply_to ? `| Reply To | ${entry.reply_to} |\n` : '';
 
   return `# Sigma Role Message
 
@@ -140,7 +142,7 @@ export function buildMessageMarkdown(entry: MessageEntry, body: string): string 
 | Subject | ${entry.subject} |
 | Status | ${entry.status} |
 | Created At | ${entry.created_at} |
-| Authority Level | Context Only |
+${replyToRow}| Authority Level | Context Only |
 | Attachments | ${attachmentCell} |
 
 ---

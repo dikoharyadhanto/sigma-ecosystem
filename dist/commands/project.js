@@ -11,7 +11,6 @@ const inquirer_1 = __importDefault(require("inquirer"));
 const config_1 = require("../config");
 const mcp_1 = require("../utils/mcp");
 const progress_1 = require("../engine/progress");
-const memory_1 = require("../engine/memory");
 const projectConfig_1 = require("../engine/projectConfig");
 const output_1 = require("../utils/output");
 const fs_1 = require("../utils/fs");
@@ -176,8 +175,6 @@ async function runStart(opts) {
     // Create progress.json
     const initial = (0, progress_1.createInitialProgress)(projectId, projectName);
     fs_extra_1.default.writeJsonSync(progressPath, initial, { spaces: 2 });
-    (0, memory_1.initDecisionsFile)(projectRoot);
-    console.log('  Memory: Sigma/memory/decisions.jsonl initialized (empty).');
     // Write project.config.json with language preference
     const lang = opts.lang?.trim().toLowerCase() || 'en';
     (0, projectConfig_1.writeProjectConfig)(projectRoot, (0, projectConfig_1.createDefaultProjectConfig)(lang));

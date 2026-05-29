@@ -14,6 +14,8 @@ import { csoCommand } from './commands/cso';
 import { overrideCommand } from './commands/override';
 import { sendCommand } from './commands/send';
 import { inboxCommand } from './commands/inbox';
+import { configCommand } from './commands/config';
+import { syncCommand } from './commands/sync';
 
 const program = new Command();
 
@@ -36,6 +38,8 @@ program.addCommand(csoCommand());
 program.addCommand(overrideCommand());
 program.addCommand(sendCommand());
 program.addCommand(inboxCommand());
+program.addCommand(configCommand());
+program.addCommand(syncCommand());
 
 program.on('command:*', (operands: string[]) => {
   console.error(`Unknown command: sigma ${operands.join(' ')}`);

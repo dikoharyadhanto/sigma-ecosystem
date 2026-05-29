@@ -12,8 +12,9 @@ const mailbox_1 = require("../engine/mailbox");
 const fs_1 = require("../utils/fs");
 function validateRole(value, flag) {
     const upper = value.toUpperCase();
-    if (!config_1.VALID_ROLES.includes(upper)) {
-        throw new Error(`Invalid ${flag} role "${value}". Valid roles: ${config_1.VALID_ROLES.map(r => r.toLowerCase()).join(', ')}`);
+    if (!config_1.MESSAGING_ROLES.includes(upper)) {
+        throw new Error(`Invalid ${flag} role "${value}". Valid messaging roles: ${config_1.MESSAGING_ROLES.map(r => r.toLowerCase()).join(', ')}.\n` +
+            `DIRECTOR communicates directly — no CLI inbox needed.`);
     }
     return upper;
 }
@@ -53,7 +54,6 @@ function runSend(opts) {
     const subject = opts.subject?.trim() || '(no subject)';
     const projectRoot = (0, fs_1.findProjectRoot)();
     // Gate: sender must have an empty unread queue before sending new messages.
-    // This enforces sequential processing — a role cannot send while ignoring its own inbox.
     const existingIndex = (0, mailbox_1.readIndex)(projectRoot);
     const unread = (0, mailbox_1.getUnreadForRole)(existingIndex, fromRole);
     if (unread.length > 0) {
@@ -63,6 +63,13 @@ function runSend(opts) {
             `Policy: a sender must read all their own unread messages before sending new ones.\n` +
             `This prevents AI roles from sending while ignoring their own unread mailbox entries.\n` +
             `Run: sigma inbox read <id>   (or: sigma inbox --role ${fromRole.toLowerCase()} to list them)`);
+    }
+    // Soft-check reply_to if provided
+    if (opts.replyTo) {
+        const referenced = existingIndex.messages.find(m => m.id === opts.replyTo);
+        if (!referenced) {
+            console.warn(`Warning: --reply-to "${opts.replyTo}" not found in index. Sending anyway (message may have been archived or index repaired).`);
+        }
     }
     const ts = (0, mailbox_1.generateTimestamp)();
     const suffix = (0, mailbox_1.generateRandomSuffix)();
@@ -96,6 +103,7 @@ function runSend(opts) {
         status: 'UNREAD',
         created_at: ts,
         attachments: attachmentPaths,
+        ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
     };
     // Write message markdown
     const absFilePath = path_1.default.join(inboxDir, filename);
@@ -111,6 +119,9 @@ function runSend(opts) {
     console.log(`  Type    : ${msgType}`);
     console.log(`  Subject : ${subject}`);
     console.log(`  File    : ${relFilePath}`);
+    if (opts.replyTo) {
+        console.log(`  Reply-To: ${opts.replyTo}`);
+    }
     if (attachmentPaths.length > 0) {
         console.log(`  Attach  : ${attachmentPaths[0]}`);
     }
@@ -120,15 +131,17 @@ function sendCommand() {
     const cmd = new commander_1.Command('send');
     cmd.description('Send a message from one role to another.\n' +
         '  Policy: a sender must have no unread messages in their own inbox before sending.\n' +
-        '  Clear unread messages with: sigma inbox read <id>');
+        '  Clear unread messages with: sigma inbox read <id>\n' +
+        '  Valid messaging roles: arc, fmn, dev, aud (director communicates directly)');
     cmd
-        .requiredOption('--from <role>', `Sender role (${config_1.VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)
-        .requiredOption('--to <role>', `Recipient role (${config_1.VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)
+        .requiredOption('--from <role>', `Sender role (${config_1.MESSAGING_ROLES.map(r => r.toLowerCase()).join('|')})`)
+        .requiredOption('--to <role>', `Recipient role (${config_1.MESSAGING_ROLES.map(r => r.toLowerCase()).join('|')})`)
         .option('--type <type>', `Message type (${config_1.VALID_MESSAGE_TYPES.map(t => t.toLowerCase()).join('|')})`, 'note')
         .option('--subject <subject>', 'Short subject line')
         .option('--message <body>', 'Message body (single-line; use --message-file for multi-line content)')
         .option('--message-file <path>', 'Path to a file whose contents become the message body (preserves newlines)')
         .option('--attach <file>', 'File to attach (copied into Sigma/messages/attachments/)')
+        .option('--reply-to <id>', 'Message ID this message is responding to (soft-check; does not block if not found)')
         .action((opts) => {
         try {
             runSend(opts);

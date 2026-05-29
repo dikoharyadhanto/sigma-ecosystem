@@ -12,7 +12,6 @@ export declare const PROJECT_SIGMA_DIR = "Sigma";
 export declare const PROGRESS_FILE: string;
 export declare const OPERATION_REGISTRY_FILE: string;
 export declare const DOCUMENT_REGISTRY_FILE: string;
-export declare const PROJECT_DECISIONS_FILE: string;
 export declare const PROJECT_CONFIG_FILE: string;
 export declare const SUBFOLDERS: string[];
 export declare const MESSAGES_DIR: string;
@@ -21,6 +20,8 @@ export declare const MESSAGES_ATTACHMENTS_DIR: string;
 export declare const MESSAGE_SUBFOLDERS: string[];
 export declare const VALID_ROLES: readonly ["ARC", "FMN", "DEV", "AUD", "DIRECTOR"];
 export type SigmaRole = typeof VALID_ROLES[number];
+export declare const MESSAGING_ROLES: readonly ["ARC", "FMN", "DEV", "AUD"];
+export type MessagingRole = typeof MESSAGING_ROLES[number];
 export declare const VALID_MESSAGE_TYPES: readonly ["NOTE", "CHECK", "RESPONSE", "HANDOFF", "QUESTION", "RISK"];
 export type MessageType = typeof VALID_MESSAGE_TYPES[number];
 //# sourceMappingURL=config.d.ts.map

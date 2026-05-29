@@ -9,6 +9,7 @@ export interface MessageEntry {
     status: 'UNREAD' | 'READ' | 'ARCHIVED';
     created_at: string;
     attachments: string[];
+    reply_to?: string;
 }
 export interface MessageIndex {
     messages: MessageEntry[];

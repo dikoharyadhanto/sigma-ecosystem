@@ -8,20 +8,15 @@ const commander_1 = require("commander");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
-const memory_1 = require("../engine/memory");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
-const STAGE_MAP = {
-    building: 'BUILDING',
-    testing: 'TESTING',
-    complete: 'COMPLETED',
-};
 function execCommand() {
     const cmd = new commander_1.Command('exec');
     cmd.description('Manage DEV-EXEC artifact');
     cmd.command('new')
         .description('Create a new DEV-EXEC draft (requires locked FMN-PLAN)')
-        .action(() => {
+        .option('--plan <version>', 'Explicitly specify which locked plan to execute (required when multiple unexecuted locked plans exist)')
+        .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
@@ -29,12 +24,41 @@ function execCommand() {
             if (!data.gates.gate_2_open) {
                 throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
             }
-            // Use the newest LOCKED plan version, not the active version which may be a newer DRAFT.
-            const lockedPlans = data.plan.versions.filter(v => v.state === 'LOCKED');
-            if (lockedPlans.length === 0) {
-                throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
+            // Guard: block if any exec is in a non-final state (not LOCKED or SUPERSEDED)
+            const activeExec = data.exec.versions.find(v => v.state !== 'LOCKED' && v.state !== 'SUPERSEDED');
+            if (activeExec) {
+                throw new Error(`EXEC CONFLICT: DEV-EXEC ${activeExec.version} is in ${activeExec.state} state.\n` +
+                    `Lock it before creating a new exec: sigma exec lock`);
             }
-            const planVersionRef = lockedPlans[lockedPlans.length - 1].version;
+            // Find LOCKED plans that do NOT have a corresponding LOCKED exec
+            const lockedPlans = data.plan.versions.filter(v => v.state === 'LOCKED');
+            const lockedExecPlanRefs = new Set(data.exec.versions
+                .filter(v => v.state === 'LOCKED')
+                .map(v => v.plan_version_ref)
+                .filter(Boolean));
+            const unexecutedPlans = lockedPlans.filter(p => !lockedExecPlanRefs.has(p.version));
+            let planVersionRef;
+            if (unexecutedPlans.length === 0) {
+                throw new Error('All locked plans already have locked execs.\n' +
+                    'Run: sigma plan new   to create a new plan');
+            }
+            else if (opts.plan) {
+                const specified = unexecutedPlans.find(p => p.version === opts.plan);
+                if (!specified) {
+                    const available = unexecutedPlans.map(p => p.version).join(', ');
+                    throw new Error(`FMN-PLAN ${opts.plan} is not an unexecuted locked plan.\n` +
+                        `Unexecuted locked plans: ${available}`);
+                }
+                planVersionRef = opts.plan;
+            }
+            else if (unexecutedPlans.length === 1) {
+                planVersionRef = unexecutedPlans[0].version;
+            }
+            else {
+                const versions = unexecutedPlans.map(p => p.version).join(', ');
+                throw new Error(`${unexecutedPlans.length} unexecuted locked plans found: ${versions}\n` +
+                    `Specify which to execute: sigma exec new --plan ${unexecutedPlans[0].version}`);
+            }
             const version = (0, progress_1.nextExecVersion)(data, planVersionRef);
             const relPath = path_1.default.join('Sigma', 'build', `DEV-EXEC-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
@@ -71,28 +95,6 @@ function execCommand() {
             process.exit(1);
         }
     });
-    cmd.command('advance <stage>')
-        .description('Advance DEV-EXEC state: building → testing → complete')
-        .action((stage) => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            const validStages = Object.keys(STAGE_MAP);
-            if (!validStages.includes(stage)) {
-                throw new Error(`Invalid stage "${stage}". Must be one of: ${validStages.join(', ')}`);
-            }
-            const oldState = data.exec.active_state;
-            const toState = STAGE_MAP[stage];
-            (0, progress_1.advanceExecState)(data, toState);
-            (0, progress_1.writeProgress)(projectRoot, data);
-            console.log(`DEV-EXEC ${data.exec.active_version}: ${oldState} → ${toState}`);
-        }
-        catch (e) {
-            console.error(e.message);
-            process.exit(1);
-        }
-    });
     cmd.command('lock')
         .description('Lock active DEV-EXEC (re-evaluates Gate 3)')
         .action(() => {
@@ -100,14 +102,12 @@ function execCommand() {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
             (0, progress_1.assertProgressCanMutate)(data);
-            if (data.exec.active_state !== 'COMPLETED') {
-                throw new Error('Active DEV-EXEC must be in COMPLETED state to lock. Run: sigma exec advance complete');
+            if (data.exec.active_state !== 'DRAFT') {
+                throw new Error('Active DEV-EXEC is not in DRAFT state. Cannot lock.');
             }
             const version = data.exec.active_version;
             (0, progress_1.lockActiveExec)(data);
             (0, progress_1.writeProgress)(projectRoot, data);
-            const sourceFile = data.exec.versions.find(v => v.version === version)?.file ?? '';
-            (0, memory_1.harvestExecLock)(projectRoot, version, sourceFile);
             const gate3 = data.gates.gate_3_satisfied
                 ? 'SATISFIED'
                 : 'not satisfied — stale chain or incomplete chain';

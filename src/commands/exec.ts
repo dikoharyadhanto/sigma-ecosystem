@@ -19,20 +19,64 @@ export function execCommand(): Command {
 
   cmd.command('new')
     .description('Create a new DEV-EXEC draft (requires locked FMN-PLAN)')
-    .action(() => {
+    .option('--plan <version>', 'Explicitly specify which locked plan to execute (required when multiple unexecuted locked plans exist)')
+    .action((opts: { plan?: string }) => {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
         assertProgressCanMutate(data);
+
         if (!data.gates.gate_2_open) {
           throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
         }
-        // Use the newest LOCKED plan version, not the active version which may be a newer DRAFT.
-        const lockedPlans = data.plan.versions.filter(v => v.state === 'LOCKED');
-        if (lockedPlans.length === 0) {
-          throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
+
+        // Guard: block if any exec is in a non-final state (not LOCKED or SUPERSEDED)
+        const activeExec = data.exec.versions.find(
+          v => v.state !== 'LOCKED' && v.state !== 'SUPERSEDED'
+        );
+        if (activeExec) {
+          throw new Error(
+            `EXEC CONFLICT: DEV-EXEC ${activeExec.version} is in ${activeExec.state} state.\n` +
+            `Lock it before creating a new exec: sigma exec lock`
+          );
         }
-        const planVersionRef = lockedPlans[lockedPlans.length - 1].version;
+
+        // Find LOCKED plans that do NOT have a corresponding LOCKED exec
+        const lockedPlans = data.plan.versions.filter(v => v.state === 'LOCKED');
+        const lockedExecPlanRefs = new Set(
+          data.exec.versions
+            .filter(v => v.state === 'LOCKED')
+            .map(v => v.plan_version_ref)
+            .filter(Boolean)
+        );
+        const unexecutedPlans = lockedPlans.filter(p => !lockedExecPlanRefs.has(p.version));
+
+        let planVersionRef: string;
+        if (unexecutedPlans.length === 0) {
+          throw new Error(
+            'All locked plans already have locked execs.\n' +
+            'Run: sigma plan new   to create a new plan'
+          );
+        } else if (opts.plan) {
+          const specified = unexecutedPlans.find(p => p.version === opts.plan);
+          if (!specified) {
+            const available = unexecutedPlans.map(p => p.version).join(', ');
+            throw new Error(
+              `FMN-PLAN ${opts.plan} is not an unexecuted locked plan.\n` +
+              `Unexecuted locked plans: ${available}`
+            );
+          }
+          planVersionRef = opts.plan;
+        } else if (unexecutedPlans.length === 1) {
+          planVersionRef = unexecutedPlans[0].version;
+        } else {
+          const versions = unexecutedPlans.map(p => p.version).join(', ');
+          throw new Error(
+            `${unexecutedPlans.length} unexecuted locked plans found: ${versions}\n` +
+            `Specify which to execute: sigma exec new --plan ${unexecutedPlans[0].version}`
+          );
+        }
+
         const version = nextExecVersion(data, planVersionRef);
         const relPath = path.join('Sigma', 'build', `DEV-EXEC-${version}.md`);
         const absPath = path.join(projectRoot, relPath);

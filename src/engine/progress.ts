@@ -9,7 +9,7 @@ export type IntentState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type PlanState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type ExecState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type CloseState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
-export type RoadmapState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
+export type RoadmapState = 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUPERSEDED';
 
 export interface ArtifactVersion {
   version: string;
@@ -31,6 +31,16 @@ export interface ArtifactTracker {
   versions: ArtifactVersion[];
 }
 
+export interface PendingPlanEntry {
+  id: string;
+  file: string;
+  created_at: string;
+}
+
+export interface PlanTracker extends ArtifactTracker {
+  pending: PendingPlanEntry[];
+}
+
 export interface Gates {
   gate_1_open: boolean;
   gate_2_open: boolean;
@@ -45,7 +55,7 @@ export interface ProgressJson {
   created_at: string;
   updated_at: string;
   intent: ArtifactTracker;
-  plan: ArtifactTracker;
+  plan: PlanTracker;
   exec: ArtifactTracker;
   close: ArtifactTracker;
   roadmap: ArtifactTracker;
@@ -70,7 +80,7 @@ const TRACKER_STATES: Record<ArtifactDomain, string[]> = {
   plan: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
   exec: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
   close: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
-  roadmap: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
+  roadmap: ['DRAFT', 'ACTIVE', 'INACTIVE', 'LOCKED', 'SUPERSEDED'],
 };
 
 // ── Validation ───────────────────────────────────────────────────────────────
@@ -279,6 +289,10 @@ export function readProgress(projectRoot: string): ProgressJson {
 
   const data = validateProgress(raw);
   checkSchemaVersion(data);
+  // Backward compat: plan.pending may not exist in older progress.json files
+  if (!Array.isArray((data.plan as PlanTracker).pending)) {
+    (data.plan as PlanTracker).pending = [];
+  }
   return data;
 }
 
@@ -321,7 +335,7 @@ export function createInitialProgress(projectId: string, projectName: string): P
     created_at: now,
     updated_at: now,
     intent: { ...emptyTracker },
-    plan: { ...emptyTracker },
+    plan: { ...emptyTracker, pending: [] },
     exec: { ...emptyTracker },
     close: { ...emptyTracker },
     roadmap: { ...emptyTracker },
@@ -473,19 +487,52 @@ export function registerPlanDraft(
   data.plan.active_state = 'DRAFT';
 }
 
-export function lockActivePlan(data: ProgressJson): void {
+export function lockOldestPlanDraft(data: ProgressJson): string {
+  const drafts = data.plan.versions
+    .filter(v => v.state === 'DRAFT')
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+  if (drafts.length === 0) throw new Error('No DRAFT FMN-PLAN to lock. Run: sigma plan new');
+
+  const oldest = drafts[0];
   const now = new Date().toISOString();
-  const activeVersion = data.plan.active_version;
-  if (!activeVersion) throw new Error('No active PLAN version to lock');
+  oldest.state = 'LOCKED';
+  oldest.locked_at = now;
+  oldest.updated_at = now;
 
-  const active = data.plan.versions.find(v => v.version === activeVersion);
-  if (!active) throw new Error(`PLAN version ${activeVersion} not found`);
-  active.state = 'LOCKED';
-  active.locked_at = now;
-  active.updated_at = now;
-
+  data.plan.active_version = oldest.version;
   data.plan.active_state = 'LOCKED';
   data.gates.gate_2_open = true;
+
+  return oldest.version;
+}
+
+export function registerPendingPlan(data: ProgressJson, id: string, filePath: string): void {
+  const now = new Date().toISOString();
+  data.plan.pending.push({ id, file: filePath, created_at: now });
+}
+
+export function promotePendingPlan(
+  data: ProgressJson,
+  id: string,
+  version: string,
+  newFilePath: string,
+  intentVersionRef: string
+): void {
+  const idx = data.plan.pending.findIndex(p => p.id === id);
+  if (idx === -1) throw new Error(`Pending plan ID "${id}" not found`);
+
+  const pending = data.plan.pending[idx];
+  data.plan.pending.splice(idx, 1);
+
+  const now = new Date().toISOString();
+  data.plan.versions.push({
+    version, state: 'DRAFT', file: newFilePath,
+    created_at: pending.created_at,
+    updated_at: now,
+    intent_version_ref: intentVersionRef,
+  });
+  data.plan.active_version = version;
+  data.plan.active_state = 'DRAFT';
 }
 
 export function supersedePlanVersion(data: ProgressJson, version: string, reason: string): void {
@@ -629,32 +676,67 @@ export function lockActiveClose(data: ProgressJson): void {
 export function registerRoadmapDraft(
   data: ProgressJson,
   version: string,
-  filePath: string
+  filePath: string,
+  intentVersionRef: string
 ): void {
+  const intentMajor = parseMajorVersion(intentVersionRef);
+  const conflict = data.roadmap.versions.find(v => {
+    try { return parseMajorVersion(v.version) === intentMajor; } catch { return false; }
+  });
+  if (conflict) {
+    throw new Error(
+      `ROADMAP ${version} already exists for INTENT ${intentVersionRef}. ` +
+      `To create a new roadmap, create a new INTENT version first.`
+    );
+  }
+
   const now = new Date().toISOString();
-  data.roadmap.versions.push({ version, state: 'DRAFT', file: filePath, created_at: now, updated_at: now });
+  const hasActive = data.roadmap.versions.some(v => v.state === 'ACTIVE');
+  const state = hasActive ? 'DRAFT' : 'ACTIVE';
+
+  data.roadmap.versions.push({
+    version, state, file: filePath,
+    created_at: now, updated_at: now,
+    intent_version_ref: intentVersionRef,
+  });
+
+  if (!hasActive) {
+    data.roadmap.active_version = version;
+    data.roadmap.active_state = 'ACTIVE';
+  }
+}
+
+export function activateRoadmap(data: ProgressJson, version: string): void {
+  const now = new Date().toISOString();
+  const target = data.roadmap.versions.find(v => v.version === version);
+  if (!target) throw new Error(`ROADMAP ${version} not found`);
+  if (target.state !== 'DRAFT') {
+    throw new Error(`ROADMAP ${version} is in state "${target.state}"; activate requires a DRAFT version`);
+  }
+
+  const currentActive = data.roadmap.versions.find(v => v.state === 'ACTIVE');
+  if (currentActive) {
+    currentActive.state = 'INACTIVE';
+    currentActive.updated_at = now;
+  }
+
+  target.state = 'ACTIVE';
+  target.updated_at = now;
+
   data.roadmap.active_version = version;
-  data.roadmap.active_state = 'DRAFT';
+  data.roadmap.active_state = 'ACTIVE';
 }
 
 export function lockActiveRoadmap(data: ProgressJson): void {
   const now = new Date().toISOString();
-  const draft = data.roadmap.versions.find(v => v.state === 'DRAFT');
-  if (!draft) throw new Error('No ROADMAP DRAFT to lock');
+  const active = data.roadmap.versions.find(v => v.state === 'ACTIVE');
+  if (!active) throw new Error('No ACTIVE ROADMAP found. Run: sigma roadmap new or sigma roadmap activate');
 
-  for (const v of data.roadmap.versions) {
-    if (v.state === 'LOCKED') {
-      v.state = 'SUPERSEDED';
-      v.superseded_by = draft.version;
-      v.updated_at = now;
-    }
-  }
+  active.state = 'LOCKED';
+  active.locked_at = now;
+  active.updated_at = now;
 
-  draft.state = 'LOCKED';
-  draft.locked_at = now;
-  draft.updated_at = now;
-
-  data.roadmap.active_version = draft.version;
+  data.roadmap.active_version = active.version;
   data.roadmap.active_state = 'LOCKED';
 }
 
@@ -662,7 +744,8 @@ export function getNextValidOperations(data: ProgressJson): string[] {
   const ops: string[] = [];
   const intentLocked = data.intent.active_state === 'LOCKED';
   const planLocked = data.plan.active_state === 'LOCKED';
-  const roadmapDraftExists = data.roadmap.versions.some(v => v.state === 'DRAFT');
+  const roadmapActive = data.roadmap.versions.some(v => v.state === 'ACTIVE');
+  const roadmapDraft = data.roadmap.versions.find(v => v.state === 'DRAFT');
 
   // intent domain
   if (!intentLocked) {
@@ -675,24 +758,26 @@ export function getNextValidOperations(data: ProgressJson): string[] {
     ops.push('intent review');
   }
 
-  // roadmap domain (optional)
-  if (intentLocked && !roadmapDraftExists) {
+  // roadmap domain — mandatory gate for plan new
+  if (intentLocked && !roadmapActive) {
     ops.push('roadmap new');
   }
-  if (roadmapDraftExists) {
-    ops.push('roadmap lock');
+  if (roadmapDraft) {
+    ops.push(`roadmap activate --v ${roadmapDraft.version}`);
   }
 
-  // plan domain
-  const existingPlanDraft = data.plan.versions.find(v => v.state === 'DRAFT');
-  if (intentLocked && !existingPlanDraft) {
+  // plan domain — Gate 1.5: requires ACTIVE ROADMAP
+  if (intentLocked && roadmapActive) {
     ops.push('plan new');
   }
-  if (existingPlanDraft && data.plan.active_version !== existingPlanDraft.version) {
-    ops.push(`plan activate --v ${existingPlanDraft.version}`);
+  const draftPlans = data.plan.versions.filter(v => v.state === 'DRAFT');
+  if (draftPlans.length > 0) {
+    // FIFO lock — show oldest target
+    const oldest = draftPlans.sort((a, b) => a.created_at.localeCompare(b.created_at))[0];
+    ops.push(`plan lock    # will lock ${oldest.version} (oldest DRAFT)`);
   }
-  if (data.plan.active_state === 'DRAFT') {
-    ops.push('plan lock');
+  if (data.plan.pending.length > 0) {
+    ops.push('plan queue');
   }
 
   // exec domain

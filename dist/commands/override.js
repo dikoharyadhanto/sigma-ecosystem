@@ -9,10 +9,10 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const fs_1 = require("../utils/fs");
-const config_1 = require("../config");
+const OVERRIDE_LOG_FILE = path_1.default.join('Sigma', 'memory', 'overrides.jsonl');
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function appendOverrideEntry(projectRoot, entry) {
-    const filePath = path_1.default.join(projectRoot, config_1.PROJECT_DECISIONS_FILE);
+    const filePath = path_1.default.join(projectRoot, OVERRIDE_LOG_FILE);
     fs_extra_1.default.ensureFileSync(filePath);
     fs_extra_1.default.appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf8');
 }
@@ -98,13 +98,13 @@ function runOverride(opts) {
     (0, progress_1.writeProgress)(projectRoot, data);
     appendOverrideEntry(projectRoot, entry);
     console.log(`\nOverride applied: ${blocked.gate} (${blocked.artifact}) bypassed.`);
-    console.log('Audit record written to Sigma/memory/decisions.jsonl.');
+    console.log('Audit record written to Sigma/memory/overrides.jsonl.');
     console.log(`Next valid operations: sigma project status`);
 }
 // ── Command builder ───────────────────────────────────────────────────────────
 function overrideCommand() {
     const cmd = new commander_1.Command('override');
-    cmd.description('Bypass the current lifecycle gate under Director authority (recorded in decisions.jsonl)');
+    cmd.description('Bypass the current lifecycle gate under Director authority (recorded in Sigma/memory/overrides.jsonl)');
     cmd
         .option('--reason <reason>', 'Required. Describe why this override is authorized.')
         .option('--director-confirm', 'Required. Explicit Director authorization to execute the override.')

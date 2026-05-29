@@ -60,11 +60,12 @@ START → DESIGN → BUILD → CLOSE
 
 **DESIGN**: Director, assisted by ARC, produces DIR-INTENT. DESIGN is complete when DIR-INTENT is LOCKED. FMN and DEV do not operate during DESIGN.
 
-**BUILD**: Two sequential sub-components:
-1. FMN-PLAN — Foreman produces the work plan and pre-build test contract. Must be LOCKED before DEV-EXEC can begin (Gate 2).
-2. DEV-EXEC — Developer produces the implementation plan, executes the build, writes the implementation report.
+**BUILD**: Three sequential sub-components:
+1. ROADMAP — Foreman creates and activates a ROADMAP staging plan. Required before any FMN-PLAN can be created (Gate 1.5).
+2. FMN-PLAN — Foreman produces the work plan and pre-build test contract. Must be LOCKED before DEV-EXEC can begin (Gate 2).
+3. DEV-EXEC — Developer produces the implementation plan, executes the build, writes the implementation report.
 
-BUILD requires a ROADMAP to be ACTIVE before any FMN-PLAN can be created (Gate 1.5 — see Section 7). BUILD is iterative — multiple DEV-EXEC versions are permitted. Parallel execution is not permitted — EXEC must not begin before PLAN is locked.
+BUILD is iterative — multiple FMN-PLAN and DEV-EXEC versions are permitted under the same ROADMAP. Parallel execution is not permitted — EXEC must not begin before PLAN is locked.
 
 **CLOSE**: Director authors DIR-CLOSE, explicitly referencing FMN-PLAN and DEV-EXEC versions that support the closure claim. Requires minimum evidence from BUILD (Gate 3). Project is complete when DIR-CLOSE is LOCKED.
 
@@ -184,7 +185,7 @@ Cannot lock any artifact. Cannot author FMN-PLAN or DIR-CLOSE.
 
 ## 5. Artifact Definitions
 
-Sigma uses five artifact types: four governance artifacts and one optional handoff artifact (CSO).
+Sigma uses six artifact types: five governance artifacts (DIR-INTENT, ROADMAP, FMN-PLAN, DEV-EXEC, DIR-CLOSE) and one optional handoff artifact (CSO).
 
 ### 5.1 DIR-INTENT — Director's Intent
 
@@ -289,6 +290,8 @@ ROADMAP breaks a locked DIR-INTENT into large build stages. Each ROADMAP H2 stag
 
 **Core invariant**: Only one ROADMAP may be ACTIVE at a time. `sigma roadmap activate --v <ver>` atomically demotes the current ACTIVE to INACTIVE and promotes the target DRAFT to ACTIVE.
 
+**Reconcile invariant**: Every official FMN-PLAN version must correspond to exactly one ROADMAP H2 stage section. `sigma roadmap reconcile --check` verifies bidirectional consistency between `progress.json` and ROADMAP content — every plan registered in `progress.json` must have a matching H2 stage, and every H2 stage must map to a known plan version.
+
 If ROADMAP conflicts with DIR-INTENT, DIR-INTENT wins.
 
 > Template: `Sigma/templates/ROADMAP-TEMPLATE.md`
@@ -330,7 +333,7 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 | :--- | :--- |
 | Blocks | `sigma plan new` |
 | Pre-condition | At least one `ROADMAP` with status `ACTIVE` exists |
-| CLI error | `Gate 1.5 blocked: An ACTIVE ROADMAP must exist before FMN-PLAN can be created. Run: sigma roadmap new, then sigma roadmap activate.` |
+| CLI error | `Gate 1.5 blocked: An ACTIVE ROADMAP must exist before FMN-PLAN can be created. Run: sigma roadmap new. If another ROADMAP is already ACTIVE, create the new one as DRAFT then run sigma roadmap activate --v <ver>.` |
 
 ---
 
@@ -565,6 +568,16 @@ At session bootstrap, AI roles check `Sigma/sigma.config.json` and conduct all D
 
 ---
 
+## 16E. Role-to-Role Messaging Doctrine
+
+Formal role-to-role governance messages must be sent through Sigma CLI (`sigma send`). Valid messaging roles are AI governance roles only — DIRECTOR communicates directly and does not use the CLI inbox.
+
+A message may carry a handoff request, review request, clarification, revision signal, or advisory response. A role-to-role message never constitutes Director approval — authority still requires explicit Director instruction under Section 16C.
+
+An AI role may not send a new message while it has unread incoming messages. The sender-side unread gate enforces this. Read pending inbox messages (`sigma inbox read <id>`) before sending.
+
+---
+
 ## 17. Git Evidence
 
 Sigma provides minimal, read-only git evidence via `sigma git evidence`.
@@ -587,19 +600,17 @@ When a project outgrows Sigma's governance capacity, the Director may decide to 
 
 ---
 
-## Phase-Extended Sections
-
 ---
 
 ## 20. Document Templates
 
-> **[PHASE 1]** — Template content, section-by-section structure, sublayer authority labels, and Director lock verdict format for each artifact type will be defined in Phase 1.
+Template content, section-by-section structure, sublayer authority labels, and Director lock verdict format for each artifact type are authoritative in `Sigma/templates/`. This protocol defines artifact authority, ownership, and lifecycle semantics only.
 
 ---
 
 ## 21. Role Rule Files
 
-> **[PHASE 2]** — Detailed behavioral rules for ARC, AUD, FMN, and DEV — including session bootstrap procedures, prohibited actions, position response limits, revision limits, scope boundaries, and expected outputs — will be defined in Phase 2 as `Sigma/rules/{ROLE}-RULE.md` files.
+Detailed behavioral rules for ARC, AUD, FMN, and DEV — including bootstrap procedures, prohibited actions, position response limits, revision limits, scope boundaries, and expected outputs — are authoritative in `Sigma/rules/{ROLE}-RULE.md`. This protocol defines common doctrine and authority boundaries only.
 
 ---
 

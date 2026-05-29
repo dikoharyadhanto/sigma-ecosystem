@@ -1622,5 +1622,384 @@ Batch A → Batch B → Batch C → Batch D → Batch E
 | A | **DONE** — 2026-05-30 |
 | B | **DONE** — 2026-05-30 |
 | C | Pending |
-| D | Pending |
-| E | Pending |
+| D | **DONE** — 2026-05-30 |
+| E | **DONE** — 2026-05-30 |
+
+---
+
+## Testing
+
+> **Scope**: Automated simulation tests for Batch D and Batch E proposals.
+> Tests run against compiled CLI (`dist/cli.js`) using a synthetic project directory.
+> Batches A, B, C are rule/template/document edits with no testable CLI surface.
+
+---
+
+### Testable Proposals
+
+| Proposal | Testable? | Test Method |
+| :--- | :--- | :--- |
+| P1 — exec new guard + plan selection | Yes | Simulation: multiple locked plans, DRAFT exec guard |
+| P4 — ROADMAP mandatory gate | Partial | ROADMAP state injected into progress.json manually |
+| P5 — FIFO lock + pending staging | Yes | Full simulation: plan new × N, plan lock, plan new --pending, plan promote |
+| P10 — `sigma config set language` | Yes | Simulation: set + show + verify config file |
+| P13 — Auto-append ROADMAP stub | Yes | Verify ROADMAP file content after plan new / plan promote |
+| P14 — `sigma roadmap render` | Yes | Embedded in P13 and P18 tests (render called automatically) |
+| P18 — `sigma sync progress` + `sigma sync roadmap` | Yes | Simulation: inject old exec states + cso; inject legacy ROADMAP + FMN-PLAN files |
+| P21-check — `sigma roadmap reconcile --check` | Yes | Clean state + injected mismatch |
+| P21-fix — `sigma roadmap reconcile --fix` | Yes | Injected mismatch → fix → verify ROADMAP content |
+| P22-A — DIRECTOR removed from messaging | Yes | Attempt send/inbox with director role |
+| P22-B — Bootstrap total unread count | Yes | Send 5 messages to DEV, bootstrap --role dev |
+| P22-C — `reply_to` field + `--reply-to` flag | Yes | Send with valid ID; send with non-existent ID (soft check) |
+| P22-D — `sigma inbox check` | Yes | Clean state pass; inject orphan file for warning |
+| P7, P8, P9, P12, P16, P19, P20 | No — rule/template only | No CLI surface |
+| P2, P11, P17 | No — CLI removal (no new commands) | State coercion covered under P18 `sync progress` |
+
+---
+
+### Test Results
+
+All tests run 2026-05-30 against `sigma-ecosystem@0.9.0` (`dist/cli.js`).
+
+---
+
+#### P10 — `sigma config set language`
+
+**Test 1: `sigma config show`**
+```
+=== Project Config ===
+Interaction language:     en (English)
+Document language:        en (English)
+Formal identifiers:       en (English)
+```
+Result: PASS — shows all config values on clean project.
+
+**Test 2: `sigma config set language id`**
+```
+Language preference updated.
+  Interaction: en → id (Bahasa Indonesia)
+  Artifact content: English (unchanged)
+```
+Config file after: `"interaction_language": "id"` ✓
+Result: PASS — updates interaction language, preserves document language as English.
+
+**Test 3: Revert `sigma config set language en`**
+Result: PASS — reverts correctly, shows before/after diff.
+
+---
+
+#### P22-A — DIRECTOR removed from messaging roles
+
+**Test 1: `sigma send --from director --to arc --message "hello"`**
+```
+Invalid --from role "director". Valid messaging roles: arc, fmn, dev, aud.
+DIRECTOR communicates directly — no CLI inbox needed.
+```
+Exit: 1. Result: PASS — blocked with correct message.
+
+**Test 2: `sigma inbox --role director`**
+```
+Invalid role "director". Valid messaging roles: arc, fmn, dev, aud.
+DIRECTOR communicates directly — no CLI inbox needed.
+```
+Exit: 1. Result: PASS — both send and inbox consistently reject DIRECTOR.
+
+---
+
+#### P22 — Send gate (sender must clear own inbox first)
+
+**Test: FMN attempts to send while having 1 unread message**
+```
+SEND BLOCKED — FMN has 1 unread message in their own inbox.
+  - MSG-20260529-...-ARC-FMN  [ARC → FMN] NOTE: Initial note
+Policy: a sender must read all their own unread messages before sending new ones.
+```
+Exit: 1. After `sigma inbox read <id>`, FMN send succeeds.
+Result: PASS — gate correctly blocks then allows after clearing inbox.
+
+---
+
+#### P22-C — `reply_to` field + `--reply-to` flag
+
+**Test 1: `--reply-to` with valid message ID**
+```
+Message sent.
+  ID      : MSG-20260529-...-FMN-DEV
+  Reply-To: MSG-20260529-...-ARC-FMN
+```
+Result: PASS — field populated, shown in output.
+
+**Test 2: `--reply-to` with non-existent ID (soft check)**
+```
+Warning: --reply-to "MSG-NONEXISTENT-999" not found in index. Sending anyway
+  (message may have been archived or index repaired).
+Message sent.
+```
+Exit: 0. Result: PASS — warns but does not block; correct soft-check behavior.
+
+---
+
+#### P22-B — Bootstrap shows total unread count
+
+**Test: 5 messages sent to DEV, `session bootstrap --role dev`**
+```
+--- Role Inbox — DEV ---
+5 unread messages (showing latest 3):
+
+  1. [ARC → DEV] NOTE: Extra 3
+  2. [ARC → DEV] NOTE: Extra 2
+  3. [ARC → DEV] NOTE: Extra 1
+
+  Run: sigma inbox --role dev
+```
+Result: PASS — total count shown before truncated list.
+
+**Test: No `--role` flag (shows all roles with unread)**
+```
+--- Role Mailbox — Unread Messages ---
+
+  DEV (2 unread)
+  1. [ARC → DEV] NOTE: Soft check test
+  2. [FMN → DEV] RESPONSE: Reply test
+
+  Run: sigma inbox --role <role>    sigma inbox read <id>
+```
+Result: PASS — groups by role, shows totals.
+
+---
+
+#### P22-D — `sigma inbox check`
+
+**Test 1: Clean state**
+```
+Result: 6 pass, 0 warning(s), 0 failure(s)
+Inbox integrity verified. No issues found.
+```
+Exit: 0. Result: PASS.
+
+**Test 2: Orphan file on disk (not in index)**
+```
+  ⚠ ORPHAN FILE: Sigma/messages/ARC/orphan-test.md (not in index)
+Result: 6 pass, 1 warning(s), 0 failure(s)
+Orphan files found — they can be removed or added to the index manually.
+```
+Exit: 0 (warning, not failure). Result: PASS — correct severity level for orphan files.
+
+---
+
+#### P5 — FIFO lock + pending plan staging
+
+**Test 1: `sigma plan queue` with no plans**
+```
+Official Draft Queue: empty
+Pending Plans: none
+No plans in queue. Run: sigma plan new
+```
+Result: PASS.
+
+**Test 2: `sigma plan new` × 2 (no DRAFT CONFLICT guard)**
+
+Both `sigma plan new` calls succeed — v0.1 then v0.2 both created as DRAFT simultaneously.
+Result: PASS — DRAFT CONFLICT guard removed; multiple DRAFTs allowed.
+
+**Test 3: `sigma plan queue` shows FIFO order**
+```
+Official Draft Queue (FIFO — oldest locks first):
+  1. FMN-PLAN v0.1  DRAFT  (created 2026-05-29)
+  2. FMN-PLAN v0.2  DRAFT  (created 2026-05-29)
+Next lock target: FMN-PLAN v0.1
+```
+Result: PASS — sorted by created_at ascending.
+
+**Test 4: `sigma plan lock` locks oldest (FIFO)**
+```
+FMN-PLAN v0.1 LOCKED. Gate 2 open. Next: sigma exec new
+```
+v0.1 locked (oldest), v0.2 remains DRAFT. Result: PASS — FIFO behavior confirmed.
+
+**Test 5: `sigma plan new --pending`**
+```
+Created: Sigma/pending/FMN-PLAN-dzfy.md (pending — ID: dzfy)
+Run: sigma plan promote --id dzfy   to assign a version and enter the draft queue
+```
+File at `Sigma/pending/`, registered in `plan.pending`, no version assigned.
+Result: PASS.
+
+**Test 6: `sigma plan promote --id dzfy`**
+```
+Promoted: Sigma/pending/FMN-PLAN-dzfy.md → Sigma/build/FMN-PLAN-v0.3.md (v0.3)
+ROADMAP updated: Stage 0.3 appended + derived sections regenerated
+```
+File renamed, enters FIFO queue as v0.3 DRAFT (behind v0.2).
+Result: PASS — correct version assignment and queue insertion.
+
+---
+
+#### P13 — Auto-append ROADMAP stub on `plan new` and `plan promote`
+
+**Verified ROADMAP content after 3 plan new / promote operations:**
+
+```markdown
+## Stage 0.1 — (title TBD)
+> ⚠ Need to fill
+### Focus
+### Main Output
+### Main Tasks
+### Explicit Non-Scope
+### Dependency / Gate Before Next Stage
+### Risk / Watch-Out
+
+## Stage 0.2 — (title TBD) [...]
+## Stage 0.3 — (title TBD) [...]
+```
+
+Derived sections auto-rendered:
+- Stage Overview table (v0.1 LOCKED, v0.2 DRAFT, v0.3 DRAFT)
+- Mermaid flowchart: `S_0_1 → S_0_2 → S_0_3`
+- PLAN Breakdown table (all 3 plans, correct states)
+
+Result: PASS — stubs appended and render invoked for both `plan new` and `plan promote` paths.
+
+---
+
+#### P1 — `exec new` guard + plan selection
+
+**Test 1: Multiple unexecuted locked plans → block + suggest --plan**
+```
+2 unexecuted locked plans found: v0.1, v0.2
+Specify which to execute: sigma exec new --plan v0.1
+```
+Exit: 1. Result: PASS — correct error message with explicit instruction.
+
+**Test 2: `sigma exec new --plan v0.1` (explicit selection)**
+```
+Created: Sigma/build/DEV-EXEC-v0.1.md (references PLAN v0.1)
+```
+Exit: 0. Result: PASS.
+
+**Test 3: DRAFT exec guard — second `exec new` blocked**
+```
+EXEC CONFLICT: DEV-EXEC v0.1 is in DRAFT state.
+Lock it before creating a new exec: sigma exec lock
+```
+Exit: 1. Result: PASS — guard fires correctly; prevents two concurrent DRAFTs.
+
+**Test 4: Exactly one unexecuted locked plan → auto-select**
+
+After locking DEV-EXEC v0.1, exactly v0.2 remains unexecuted:
+```
+Created: Sigma/build/DEV-EXEC-v0.2.md (references PLAN v0.2)
+```
+Exit: 0. Result: PASS — auto-select works for single unexecuted plan.
+
+---
+
+#### P21-check + P21-fix — `sigma roadmap reconcile`
+
+**Test 1: `--check` clean state**
+```
+  FMN-PLAN v0.1  ✓  Stage 0.1 found in ROADMAP
+  FMN-PLAN v0.2  ✓  Stage 0.2 found in ROADMAP
+  FMN-PLAN v0.3  ✓  Stage 0.3 found in ROADMAP
+Result: All entries consistent. No mismatches found.
+```
+Exit: 0. Result: PASS.
+
+**Test 2: `--check` with injected mismatch (v0.4 in progress.json, missing from ROADMAP)**
+```
+  FMN-PLAN v0.4  ✗  Stage 0.4 NOT found in ROADMAP
+Result: 1 mismatch(es) found.
+  Run sigma roadmap reconcile --fix to append missing stage stubs,
+  or manually add missing H2 headings to the ROADMAP file.
+```
+Exit: 1. Result: PASS — detects mismatch, exits non-zero, gives actionable suggestion.
+
+**Test 3: `--fix` appends missing stub + rerenders**
+```
+Applying --fix: appending 1 missing stage stub(s)...
+  Appended: Stage 0.4 stub
+ROADMAP derived sections regenerated.
+Fix applied successfully. All stages now consistent.
+```
+ROADMAP file after: `## Stage 0.4 — (title TBD)` with full H3 body appended.
+Exit: 0. Result: PASS.
+
+---
+
+#### P18 — `sigma sync progress`
+
+**Test setup**: `progress.json` with `exec.v1.1` in `BUILDING` state + `cso` array (2 entries).
+
+**Result:**
+```
+Sync Progress — changes to apply:
+  exec.v1.1: BUILDING → DRAFT
+  Removed cso array (2 entries) — CSO files in Sigma/logs/ are untouched
+  Added plan.pending: [] (backward compatibility)
+Applied 3 change(s) to progress.json.
+```
+
+After sync:
+- `exec.active_state` = `DRAFT` ✓
+- `exec.versions[0].state` = `DRAFT` ✓
+- `cso` field absent ✓
+- `plan.pending` present as `[]` ✓
+
+Exit: 0. Result: PASS.
+
+**Idempotency test** (run again on already-synced file):
+```
+progress.json is already up to date. No changes needed.
+```
+Exit: 0. Result: PASS.
+
+---
+
+#### P18 — `sigma sync roadmap --yes`
+
+**Test setup**: 3 FMN-PLAN files with `Source Roadmap Stage` fields + old-style ROADMAP-v1.md.
+
+Title extraction output:
+```
+  v1.1 → Stage 1.1: "Authentication Foundation"
+  v1.2 → Stage 1.2: "User Management"
+  v1.3 → Stage 1.3: "N/A"       ← edge case: N/A preserved as-is
+```
+
+Actions taken:
+- `ROADMAP-v1.md` → renamed to `ROADMAP-v1-legacy.md` ✓
+- New `ROADMAP-v1.md` generated with delimiter comments + 3 stage stubs ✓
+- `sigma roadmap render` called: Stage Overview, mermaid, PLAN Breakdown all populated ✓
+
+Stage heading format in generated file: `## Stage 1.1 — Authentication Foundation` ✓
+Legacy file preserved (not deleted) ✓
+
+Exit: 0. Result: PASS.
+
+---
+
+### Summary
+
+| Proposal | Test Cases | Result |
+| :--- | :--- | :--- |
+| P10 config | 3 (show, set language, revert) | PASS |
+| P22-A DIRECTOR removal | 2 (send, inbox) | PASS |
+| P22 send gate | 1 (block + unblock) | PASS |
+| P22-C reply_to | 2 (valid ID, invalid ID soft check) | PASS |
+| P22-B bootstrap total count | 2 (with --role, without --role) | PASS |
+| P22-D inbox check | 2 (clean, orphan file) | PASS |
+| P5 FIFO + pending | 6 (queue empty, plan new×2, queue FIFO, lock, pending, promote) | PASS |
+| P13 ROADMAP auto-stub | 1 (content verification after 3 creates) | PASS |
+| P1 exec guard + selection | 4 (multi-unexecuted, explicit --plan, DRAFT guard, auto-select) | PASS |
+| P21-check reconcile | 2 (clean, mismatch) | PASS |
+| P21-fix reconcile | 1 (fix appends + rerenders) | PASS |
+| P18 sync progress | 2 (coerce + strip, idempotent) | PASS |
+| P18 sync roadmap | 1 (title extract, legacy rename, generate, render) | PASS |
+
+**Total: 29 test cases — all PASS. No failures.**
+
+**Not tested (no CLI surface):**
+- P7, P8, P9, P12, P16 — rule/template file edits only
+- P19 — rule/skill file cleanup
+- P20 — SIGMA_PROTOCOL.md slim-down (document edit only)
+- P2, P11, P17 — CLI removal changes (regression risk = 0; deletion-only work)

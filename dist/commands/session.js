@@ -14,15 +14,8 @@ const mailbox_1 = require("../engine/mailbox");
 const config_1 = require("../config");
 const projectConfig_1 = require("../engine/projectConfig");
 // ── CSO log reader ────────────────────────────────────────────────────────────
-function recentCsoFiles(data, sigmaDir) {
-    // Prefer CSO entries from progress.json if available
-    if (data.cso.length > 0) {
-        return data.cso
-            .slice(-3)
-            .reverse()
-            .map(e => e.file);
-    }
-    // Fallback: scan Sigma/logs/ for CSO-*.md files by mtime
+function recentCsoFiles(_data, sigmaDir) {
+    // Scan Sigma/logs/ for CSO-*.md files by mtime (CSO tracking removed from progress.json)
     const logsDir = path_1.default.join(sigmaDir, 'logs');
     if (!fs_extra_1.default.existsSync(logsDir))
         return [];
@@ -154,12 +147,19 @@ function runBootstrap(opts) {
         const index = (0, mailbox_1.readIndex)(projectRoot);
         if (opts.role) {
             const role = opts.role.toUpperCase();
-            if (config_1.VALID_ROLES.includes(role)) {
-                const unread = (0, mailbox_1.getUnreadForRole)(index, role).slice(-3).reverse();
-                if (unread.length > 0) {
+            if (config_1.MESSAGING_ROLES.includes(role)) {
+                const allUnread = (0, mailbox_1.getUnreadForRole)(index, role);
+                const total = allUnread.length;
+                const shown = allUnread.slice(-3).reverse();
+                if (total > 0) {
                     console.log(`\n--- Role Inbox — ${role} ---`);
-                    console.log(`${unread.length} unread message${unread.length > 1 ? 's' : ''}:`);
-                    unread.forEach((m, i) => {
+                    if (total > shown.length) {
+                        console.log(`${total} unread messages (showing latest ${shown.length}):`);
+                    }
+                    else {
+                        console.log(`${total} unread message${total > 1 ? 's' : ''}:`);
+                    }
+                    shown.forEach((m, i) => {
                         console.log(`\n  ${i + 1}. [${m.from} → ${m.to}] ${m.type}: ${m.subject}`);
                         console.log(`     File: ${m.file}`);
                         if (m.attachments.length > 0) {
@@ -171,20 +171,22 @@ function runBootstrap(opts) {
             }
         }
         else {
-            // Group unread by role — show up to 3 per role that has messages
+            // Group unread by messaging roles — show up to 3 per role that has messages
             const byRole = {};
-            for (const role of config_1.VALID_ROLES) {
-                const unread = (0, mailbox_1.getUnreadForRole)(index, role).slice(-3).reverse();
-                if (unread.length > 0)
-                    byRole[role] = unread;
+            for (const role of config_1.MESSAGING_ROLES) {
+                const allUnread = (0, mailbox_1.getUnreadForRole)(index, role);
+                if (allUnread.length > 0) {
+                    byRole[role] = { total: allUnread.length, shown: allUnread.slice(-3).reverse() };
+                }
             }
             const rolesWithMessages = Object.keys(byRole);
             if (rolesWithMessages.length > 0) {
                 console.log('\n--- Role Mailbox — Unread Messages ---');
                 for (const role of rolesWithMessages) {
-                    const msgs = byRole[role];
-                    console.log(`\n  ${role} (${msgs.length} unread)`);
-                    msgs.forEach((m, i) => {
+                    const { total, shown } = byRole[role];
+                    const suffix = total > shown.length ? ` (showing latest ${shown.length} of ${total})` : '';
+                    console.log(`\n  ${role} (${total} unread${suffix})`);
+                    shown.forEach((m, i) => {
                         console.log(`  ${i + 1}. [${m.from} → ${m.to}] ${m.type}: ${m.subject}`);
                     });
                 }

@@ -2,10 +2,10 @@ import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
 import {
-  VALID_ROLES,
+  MESSAGING_ROLES,
   VALID_MESSAGE_TYPES,
   MESSAGES_ATTACHMENTS_DIR,
-  SigmaRole,
+  MessagingRole,
   MessageType,
 } from '../config';
 import {
@@ -22,11 +22,12 @@ import {
 } from '../engine/mailbox';
 import { findProjectRoot } from '../utils/fs';
 
-function validateRole(value: string, flag: string): SigmaRole {
-  const upper = value.toUpperCase() as SigmaRole;
-  if (!(VALID_ROLES as readonly string[]).includes(upper)) {
+function validateRole(value: string, flag: string): MessagingRole {
+  const upper = value.toUpperCase() as MessagingRole;
+  if (!(MESSAGING_ROLES as readonly string[]).includes(upper)) {
     throw new Error(
-      `Invalid ${flag} role "${value}". Valid roles: ${VALID_ROLES.map(r => r.toLowerCase()).join(', ')}`
+      `Invalid ${flag} role "${value}". Valid messaging roles: ${MESSAGING_ROLES.map(r => r.toLowerCase()).join(', ')}.\n` +
+      `DIRECTOR communicates directly — no CLI inbox needed.`
     );
   }
   return upper;
@@ -50,6 +51,7 @@ function runSend(opts: {
   message?: string;
   messageFile?: string;
   attach?: string;
+  replyTo?: string;
 }): void {
   if (!opts.from) throw new Error('--from is required. Use: sigma send --from <role> --to <role> --message "..."');
   if (!opts.to) throw new Error('--to is required. Use: sigma send --from <role> --to <role> --message "..."');
@@ -78,7 +80,6 @@ function runSend(opts: {
   const projectRoot = findProjectRoot();
 
   // Gate: sender must have an empty unread queue before sending new messages.
-  // This enforces sequential processing — a role cannot send while ignoring its own inbox.
   const existingIndex = readIndex(projectRoot);
   const unread = getUnreadForRole(existingIndex, fromRole);
   if (unread.length > 0) {
@@ -91,6 +92,15 @@ function runSend(opts: {
       `Run: sigma inbox read <id>   (or: sigma inbox --role ${fromRole.toLowerCase()} to list them)`
     );
   }
+
+  // Soft-check reply_to if provided
+  if (opts.replyTo) {
+    const referenced = existingIndex.messages.find(m => m.id === opts.replyTo);
+    if (!referenced) {
+      console.warn(`Warning: --reply-to "${opts.replyTo}" not found in index. Sending anyway (message may have been archived or index repaired).`);
+    }
+  }
+
   const ts = generateTimestamp();
   const suffix = generateRandomSuffix();
   const msgId = generateMessageId(fromRole, toRole, ts, suffix);
@@ -126,6 +136,7 @@ function runSend(opts: {
     status: 'UNREAD',
     created_at: ts,
     attachments: attachmentPaths,
+    ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
   };
 
   // Write message markdown
@@ -144,6 +155,9 @@ function runSend(opts: {
   console.log(`  Type    : ${msgType}`);
   console.log(`  Subject : ${subject}`);
   console.log(`  File    : ${relFilePath}`);
+  if (opts.replyTo) {
+    console.log(`  Reply-To: ${opts.replyTo}`);
+  }
   if (attachmentPaths.length > 0) {
     console.log(`  Attach  : ${attachmentPaths[0]}`);
   }
@@ -155,18 +169,23 @@ export function sendCommand(): Command {
   cmd.description(
     'Send a message from one role to another.\n' +
     '  Policy: a sender must have no unread messages in their own inbox before sending.\n' +
-    '  Clear unread messages with: sigma inbox read <id>'
+    '  Clear unread messages with: sigma inbox read <id>\n' +
+    '  Valid messaging roles: arc, fmn, dev, aud (director communicates directly)'
   );
 
   cmd
-    .requiredOption('--from <role>', `Sender role (${VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)
-    .requiredOption('--to <role>', `Recipient role (${VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)
+    .requiredOption('--from <role>', `Sender role (${MESSAGING_ROLES.map(r => r.toLowerCase()).join('|')})`)
+    .requiredOption('--to <role>', `Recipient role (${MESSAGING_ROLES.map(r => r.toLowerCase()).join('|')})`)
     .option('--type <type>', `Message type (${VALID_MESSAGE_TYPES.map(t => t.toLowerCase()).join('|')})`, 'note')
     .option('--subject <subject>', 'Short subject line')
     .option('--message <body>', 'Message body (single-line; use --message-file for multi-line content)')
     .option('--message-file <path>', 'Path to a file whose contents become the message body (preserves newlines)')
     .option('--attach <file>', 'File to attach (copied into Sigma/messages/attachments/)')
-    .action((opts: { from: string; to: string; type?: string; subject?: string; message?: string; messageFile?: string; attach?: string }) => {
+    .option('--reply-to <id>', 'Message ID this message is responding to (soft-check; does not block if not found)')
+    .action((opts: {
+      from: string; to: string; type?: string; subject?: string;
+      message?: string; messageFile?: string; attach?: string; replyTo?: string;
+    }) => {
       try {
         runSend(opts);
       } catch (e) {
