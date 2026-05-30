@@ -18,11 +18,13 @@ project-level AI rule files.
 ## Operational Mode
 
 ### Professional Mode (Default)
+
 - Activation: active by default unless explicitly overridden
 - Capabilities: general coding, editing, review, discussion, debugging
 - Constraints: none — operates with full flexibility
 
 ### Flexible Mode
+
 - Activation: Director explicitly requests reference to CLAUDE.md, GEMINI.md,
   or AGENTS.md by name
 - Scope: inherits rules from the referenced file for that session only

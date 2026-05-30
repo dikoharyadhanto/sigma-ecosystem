@@ -23,7 +23,9 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "refresh-registries": "node scripts/refresh-registries.js",
+    "refresh-registries:dry": "node scripts/refresh-registries.js --dry-run"
   },
   "dependencies": {
     "commander": "^12.0.0",

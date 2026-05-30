@@ -77,8 +77,6 @@ Check that the following files exist in `~/.claude/commands/`:
 | /fmn | `~/.claude/commands/fmn.md` |
 | /dev | `~/.claude/commands/dev.md` |
 | /aud | `~/.claude/commands/aud.md` |
-| /checkpoint | `~/.claude/commands/checkpoint.md` |
-| /cso | `~/.claude/commands/cso.md` |
 | /report | `~/.claude/commands/report.md` |
 | /sigma-test | `~/.claude/commands/sigma-test.md` |
 
@@ -109,7 +107,6 @@ Check that the following paths exist relative to the project root:
 - `Sigma/close/`
 - `Sigma/rules/`
 - `Sigma/logs/`
-- `Sigma/memory/decisions.jsonl`
 
 - PASS if present
 - WARN if missing and lifecycle_state is START (expected for brand-new project)
@@ -141,8 +138,6 @@ Platform: Claude Code
 | Skills | `/fmn` | PASS/FAIL | |
 | Skills | `/dev` | PASS/FAIL | |
 | Skills | `/aud` | PASS/FAIL | |
-| Skills | `/checkpoint` | PASS/FAIL | |
-| Skills | `/cso` | PASS/FAIL | |
 | Skills | `/report` | PASS/FAIL | |
 | Skills | `/sigma-test` | PASS/FAIL | |
 | Global | `~/.sigma/` | PASS/FAIL | |
@@ -154,7 +149,6 @@ Platform: Claude Code
 | Project | `Sigma/build/` | PASS/WARN/N/A | |
 | Project | `Sigma/rules/` | PASS/WARN/N/A | |
 | Project | `Sigma/logs/` | PASS/WARN/N/A | |
-| Project | `decisions.jsonl` | PASS/WARN/N/A | |
 
 **Verdict:** PASS / WARN / FAIL
 

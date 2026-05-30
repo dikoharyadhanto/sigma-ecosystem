@@ -1,20 +1,25 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-05-16T00:00:00Z",
+  "generated_at": "2026-05-29T23:56:24.400Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 39,
+  "total_operations": 51,
   "domains": [
-    "project",
-    "session",
-    "intent",
-    "plan",
-    "exec",
     "close",
-    "roadmap",
-    "git",
+    "config",
     "cso",
+    "exec",
+    "git",
+    "gitignore",
+    "inbox",
+    "intent",
+    "override",
+    "plan",
+    "project",
+    "roadmap",
+    "send",
+    "session",
     "setup",
-    "gitignore"
+    "sync"
   ],
   "level_definitions": {
     "semantic": "Mutates project artifacts or runtime state (progress.json, Sigma/ files).",
@@ -35,12 +40,30 @@
       "description": "Initialize a Sigma project in the current directory. Creates Sigma/ folder structure (rules/, design/, build/, close/, logs/, memory/), seeds progress.json, copies doctrine files from ~/.sigma/templates/, and registers the project in ~/.sigma/projects.json. Lifecycle state set to DESIGN.",
       "inputs": [],
       "outputs": [
-        { "type": "folder", "description": "Sigma/ directory with all subdirectories" },
-        { "type": "file", "description": "Sigma/progress.json (seed state)" },
-        { "type": "file", "description": "Sigma/SIGMA_PROTOCOL.md (from template)" },
-        { "type": "file", "description": "Sigma/SIGMA_CONSTITUTION.md (from template)" },
-        { "type": "file", "description": "Bridge files at project root: CLAUDE.md, GEMINI.md, AGENTS.md" },
-        { "type": "registry_entry", "description": "~/.sigma/projects.json entry for this project" }
+        {
+          "type": "folder",
+          "description": "Sigma/ directory with all subdirectories"
+        },
+        {
+          "type": "file",
+          "description": "Sigma/progress.json (seed state)"
+        },
+        {
+          "type": "file",
+          "description": "Sigma/SIGMA_PROTOCOL.md (from template)"
+        },
+        {
+          "type": "file",
+          "description": "Sigma/SIGMA_CONSTITUTION.md (from template)"
+        },
+        {
+          "type": "file",
+          "description": "Bridge files at project root: CLAUDE.md, GEMINI.md, AGENTS.md"
+        },
+        {
+          "type": "registry_entry",
+          "description": "~/.sigma/projects.json entry for this project"
+        }
       ],
       "constraints": [],
       "gating": {
@@ -58,10 +81,17 @@
       "description": "Read progress.json and display current lifecycle phase, active artifact versions and states, gate status (gate_1, gate_2, gate_3), STALE_INTENT warnings, and pending actions.",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "Lifecycle state, active artifact versions, gate flags, STALE_INTENT warnings" }
+        {
+          "type": "display",
+          "description": "Lifecycle state, active artifact versions, gate flags, STALE_INTENT warnings"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -79,15 +109,34 @@
       "role": "director",
       "description": "Sync doctrine files inside the project's Sigma/ from global ~/.sigma/templates/. Targets: SIGMA_PROTOCOL.md, SIGMA_CONSTITUTION.md, rules/*, and bridge files at project root. Backs up all affected files to Sigma/logs/sync-backup-{timestamp}/ before writing. Does NOT auto-run on CLI update — must be explicitly invoked by Director.",
       "inputs": [
-        { "name": "--confirm", "type": "flag", "required": true, "description": "Required to proceed — touches existing project files" }
+        {
+          "name": "--confirm",
+          "type": "flag",
+          "required": true,
+          "description": "Required to proceed — touches existing project files"
+        }
       ],
       "outputs": [
-        { "type": "file", "description": "Updated Sigma/SIGMA_PROTOCOL.md, Sigma/SIGMA_CONSTITUTION.md, Sigma/rules/* from templates" },
-        { "type": "folder", "description": "Sigma/logs/sync-backup-{timestamp}/ containing pre-sync file backups" }
+        {
+          "type": "file",
+          "description": "Updated Sigma/SIGMA_PROTOCOL.md, Sigma/SIGMA_CONSTITUTION.md, Sigma/rules/* from templates"
+        },
+        {
+          "type": "folder",
+          "description": "Sigma/logs/sync-backup-{timestamp}/ containing pre-sync file backups"
+        }
       ],
       "constraints": [
-        { "type": "flag", "condition": "--confirm flag must be present", "error_message": "sigma project sync requires --confirm. This operation overwrites existing project files." },
-        { "type": "existence", "condition": "~/.sigma/templates/ must exist (CLI installed)", "error_message": "~/.sigma/templates/ not found. Run: sigma setup install" }
+        {
+          "type": "flag",
+          "condition": "--confirm flag must be present",
+          "error_message": "sigma project sync requires --confirm. This operation overwrites existing project files."
+        },
+        {
+          "type": "existence",
+          "condition": "~/.sigma/templates/ must exist (CLI installed)",
+          "error_message": "~/.sigma/templates/ not found. Run: sigma setup install"
+        }
       ],
       "gating": {
         "pre_condition": "--confirm present; ~/.sigma/templates/ exists",
@@ -106,17 +155,44 @@
       "role": "director",
       "description": "Reset progress.json to initial seed state. Requires --confirm. Backs up current progress.json to Sigma/logs/progress-backup-{timestamp}.json before reset. Artifact files in design/, build/, close/ are untouched by default. Add --wipe to also archive artifact files into Sigma/logs/reset-archive-{timestamp}/ — never permanent delete.",
       "inputs": [
-        { "name": "--confirm", "type": "flag", "required": true, "description": "Required for any reset mode" },
-        { "name": "--wipe", "type": "flag", "required": false, "description": "When combined with --confirm, archives artifact files. Both flags required for archive mode." }
+        {
+          "name": "--confirm",
+          "type": "flag",
+          "required": true,
+          "description": "Required for any reset mode"
+        },
+        {
+          "name": "--wipe",
+          "type": "flag",
+          "required": false,
+          "description": "When combined with --confirm, archives artifact files. Both flags required for archive mode."
+        }
       ],
       "outputs": [
-        { "type": "file", "description": "Sigma/logs/progress-backup-{timestamp}.json (backup of pre-reset state)" },
-        { "type": "file", "description": "Sigma/progress.json (reset to initial seed)" },
-        { "type": "folder", "description": "Sigma/logs/reset-archive-{timestamp}/ (only when --wipe is also passed)" }
+        {
+          "type": "file",
+          "description": "Sigma/logs/progress-backup-{timestamp}.json (backup of pre-reset state)"
+        },
+        {
+          "type": "file",
+          "description": "Sigma/progress.json (reset to initial seed)"
+        },
+        {
+          "type": "folder",
+          "description": "Sigma/logs/reset-archive-{timestamp}/ (only when --wipe is also passed)"
+        }
       ],
       "constraints": [
-        { "type": "flag", "condition": "--confirm flag must be present", "error_message": "sigma project reset requires --confirm." },
-        { "type": "flag", "condition": "--wipe requires --confirm to also be present", "error_message": "sigma project reset --wipe requires --confirm as well." }
+        {
+          "type": "flag",
+          "condition": "--confirm flag must be present",
+          "error_message": "sigma project reset requires --confirm."
+        },
+        {
+          "type": "flag",
+          "condition": "--wipe requires --confirm to also be present",
+          "error_message": "sigma project reset --wipe requires --confirm as well."
+        }
       ],
       "gating": {
         "pre_condition": "--confirm present",
@@ -136,10 +212,17 @@
       "description": "Re-register current project in ~/.sigma/projects.json. Reads project_id and project_name from Sigma/progress.json. Use when the project is moved to a new path or the global registry is missing or corrupted.",
       "inputs": [],
       "outputs": [
-        { "type": "registry_entry", "description": "~/.sigma/projects.json entry updated or created for this project" }
+        {
+          "type": "registry_entry",
+          "description": "~/.sigma/projects.json entry updated or created for this project"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -158,10 +241,17 @@
       "description": "Load runtime state for session start: lifecycle phase, active artifact versions and states, pending gates, STALE_INTENT flags, and list of documents to read for this session. Required at the start of every agent session. Returns a structured context summary — does not write any state.",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "Session context: lifecycle state, active artifacts, gate status, STALE_INTENT flags, documents to read" }
+        {
+          "type": "display",
+          "description": "Session context: lifecycle state, active artifacts, gate status, STALE_INTENT flags, documents to read"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -180,8 +270,14 @@
       "description": "Create a DIR-INTENT DRAFT from the template. No gate — DIR-INTENT is the first artifact in the Sigma lifecycle. Auto-names the file using the naming convention: design/DIR-INTENT-v{next_version}.md. Sets intent.active_version and active_state = DRAFT in progress.json.",
       "inputs": [],
       "outputs": [
-        { "type": "file", "description": "Sigma/design/DIR-INTENT-v{version}.md (DRAFT)" },
-        { "type": "state_change", "description": "intent.active_version set; intent.active_state = 'DRAFT'" }
+        {
+          "type": "file",
+          "description": "Sigma/design/DIR-INTENT-v{version}.md (DRAFT)"
+        },
+        {
+          "type": "state_change",
+          "description": "intent.active_version set; intent.active_state = 'DRAFT'"
+        }
       ],
       "constraints": [],
       "gating": {
@@ -199,10 +295,17 @@
       "description": "AUD advisory review of the active DIR-INTENT. Named 'review' not 'audit' — Intent Core is sovereign (clarity-only, not auditable). Outputs advisory findings section written to the document file. Director retains sole lock authority. Does NOT change progress.json runtime state — INTENT remains DRAFT after review.",
       "inputs": [],
       "outputs": [
-        { "type": "file_section", "description": "Advisory findings section appended to active DIR-INTENT document" }
+        {
+          "type": "file_section",
+          "description": "Advisory findings section appended to active DIR-INTENT document"
+        }
       ],
       "constraints": [
-        { "type": "state", "condition": "intent.active_version must not be null", "error_message": "No active DIR-INTENT. Run: sigma intent new" }
+        {
+          "type": "state",
+          "condition": "intent.active_version must not be null",
+          "error_message": "No active DIR-INTENT. Run: sigma intent new"
+        }
       ],
       "gating": {
         "pre_condition": "intent.active_version != null",
@@ -221,13 +324,29 @@
       "description": "Lock the active DIR-INTENT. Gate: INTENT must be DRAFT. Auto-supersedes any prior LOCKED INTENT (single-active policy). Sets gate_1_open = true and transitions lifecycle_state to BUILD. Propagates STALE_INTENT: any PLAN version with intent_version_ref pointing to the now-superseded INTENT gets stale_intent = true; EXEC versions whose referenced PLAN has stale_intent = true also get stale_intent = true.",
       "inputs": [],
       "outputs": [
-        { "type": "state_change", "description": "intent.active_state = 'LOCKED'; prior LOCKED version (if any) → 'SUPERSEDED'" },
-        { "type": "state_change", "description": "progress.lifecycle_state = 'BUILD'" },
-        { "type": "state_change", "description": "gates.gate_1_open = true" },
-        { "type": "state_change", "description": "stale_intent = true propagated to referencing PLAN and EXEC versions" }
+        {
+          "type": "state_change",
+          "description": "intent.active_state = 'LOCKED'; prior LOCKED version (if any) → 'SUPERSEDED'"
+        },
+        {
+          "type": "state_change",
+          "description": "progress.lifecycle_state = 'BUILD'"
+        },
+        {
+          "type": "state_change",
+          "description": "gates.gate_1_open = true"
+        },
+        {
+          "type": "state_change",
+          "description": "stale_intent = true propagated to referencing PLAN and EXEC versions"
+        }
       ],
       "constraints": [
-        { "type": "state", "condition": "intent.active_state == 'DRAFT'", "error_message": "Active DIR-INTENT is not in DRAFT state. Cannot lock." }
+        {
+          "type": "state",
+          "condition": "intent.active_state == 'DRAFT'",
+          "error_message": "Active DIR-INTENT is not in DRAFT state. Cannot lock."
+        }
       ],
       "gating": {
         "pre_condition": "intent.active_state == 'DRAFT'",
@@ -246,10 +365,17 @@
       "description": "Show active DIR-INTENT version, state, locked_at timestamp, and any STALE_INTENT propagation events.",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "Active INTENT version, state, timestamps" }
+        {
+          "type": "display",
+          "description": "Active INTENT version, state, timestamps"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -266,10 +392,17 @@
       "description": "List all DIR-INTENT versions with states, locked_at timestamps, and superseded_by references.",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "All INTENT versions: version, state, timestamps, superseded_by" }
+        {
+          "type": "display",
+          "description": "All INTENT versions: version, state, timestamps, superseded_by"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -286,11 +419,21 @@
       "description": "Create a FMN-PLAN DRAFT from the template. Gate 1: gates.gate_1_open == true (DIR-INTENT must be LOCKED). Records intent_version_ref from the currently locked INTENT version. File named: build/FMN-PLAN-v{next_version}.md.",
       "inputs": [],
       "outputs": [
-        { "type": "file", "description": "Sigma/build/FMN-PLAN-v{version}.md (DRAFT)" },
-        { "type": "state_change", "description": "plan.active_version set; plan.active_state = 'DRAFT'; plan.versions[].intent_version_ref recorded" }
+        {
+          "type": "file",
+          "description": "Sigma/build/FMN-PLAN-v{version}.md (DRAFT)"
+        },
+        {
+          "type": "state_change",
+          "description": "plan.active_version set; plan.active_state = 'DRAFT'; plan.versions[].intent_version_ref recorded"
+        }
       ],
       "constraints": [
-        { "type": "gate", "condition": "gates.gate_1_open == true", "error_message": "GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock" }
+        {
+          "type": "gate",
+          "condition": "gates.gate_1_open == true",
+          "error_message": "GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock"
+        }
       ],
       "gating": {
         "pre_condition": "gates.gate_1_open == true (INTENT is LOCKED)",
@@ -309,10 +452,17 @@
       "description": "AUD advisory audit of the active FMN-PLAN. Fully auditable (not sovereign). Outputs advisory findings section written to the document file. Does NOT lock, approve, or change runtime state.",
       "inputs": [],
       "outputs": [
-        { "type": "file_section", "description": "Advisory findings section appended to active FMN-PLAN document" }
+        {
+          "type": "file_section",
+          "description": "Advisory findings section appended to active FMN-PLAN document"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "plan.active_version must not be null", "error_message": "No active FMN-PLAN. Run: sigma plan new" }
+        {
+          "type": "existence",
+          "condition": "plan.active_version must not be null",
+          "error_message": "No active FMN-PLAN. Run: sigma plan new"
+        }
       ],
       "gating": {
         "pre_condition": "plan.active_version != null",
@@ -331,12 +481,25 @@
       "description": "Lock the active FMN-PLAN. Gate: PLAN must be DRAFT. Sets gates.gate_2_open = true. Triggers decision memory harvest. No auto-supersede — FMN-PLAN is multi-active (manual supersede only).",
       "inputs": [],
       "outputs": [
-        { "type": "state_change", "description": "plan.active_state = 'LOCKED'" },
-        { "type": "state_change", "description": "gates.gate_2_open = true" },
-        { "type": "decision_harvest", "description": "Decision memory harvest triggered from PLAN content" }
+        {
+          "type": "state_change",
+          "description": "plan.active_state = 'LOCKED'"
+        },
+        {
+          "type": "state_change",
+          "description": "gates.gate_2_open = true"
+        },
+        {
+          "type": "decision_harvest",
+          "description": "Decision memory harvest triggered from PLAN content"
+        }
       ],
       "constraints": [
-        { "type": "state", "condition": "plan.active_state == 'DRAFT'", "error_message": "Active FMN-PLAN is not in DRAFT state. Cannot lock." }
+        {
+          "type": "state",
+          "condition": "plan.active_state == 'DRAFT'",
+          "error_message": "Active FMN-PLAN is not in DRAFT state. Cannot lock."
+        }
       ],
       "gating": {
         "pre_condition": "plan.active_state == 'DRAFT'",
@@ -354,15 +517,36 @@
       "role": "director",
       "description": "Explicitly supersede a locked FMN-PLAN version. Requires --v <version> and --reason <string>. Sets the target version state to SUPERSEDED. Does NOT remove the file. Does NOT auto-trigger — must be explicitly called.",
       "inputs": [
-        { "name": "--v", "type": "string", "required": true, "description": "Version label to supersede, e.g. 'v1.0'" },
-        { "name": "--reason", "type": "string", "required": true, "description": "Human-readable reason for superseding this version" }
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "Version label to supersede, e.g. 'v1.0'"
+        },
+        {
+          "name": "--reason",
+          "type": "string",
+          "required": true,
+          "description": "Human-readable reason for superseding this version"
+        }
       ],
       "outputs": [
-        { "type": "state_change", "description": "Target version plan.versions[].state = 'SUPERSEDED'; supersede_reason recorded" }
+        {
+          "type": "state_change",
+          "description": "Target version plan.versions[].state = 'SUPERSEDED'; supersede_reason recorded"
+        }
       ],
       "constraints": [
-        { "type": "flag", "condition": "--v and --reason must both be present", "error_message": "sigma plan supersede requires --v <version> and --reason <reason>" },
-        { "type": "state", "condition": "target version must be LOCKED", "error_message": "Target FMN-PLAN version is not LOCKED. Only LOCKED versions can be superseded." }
+        {
+          "type": "flag",
+          "condition": "--v and --reason must both be present",
+          "error_message": "sigma plan supersede requires --v <version> and --reason <reason>"
+        },
+        {
+          "type": "state",
+          "condition": "target version must be LOCKED",
+          "error_message": "Target FMN-PLAN version is not LOCKED. Only LOCKED versions can be superseded."
+        }
       ],
       "gating": {
         "pre_condition": "--v and --reason present; target version is LOCKED",
@@ -382,10 +566,17 @@
       "description": "Show active FMN-PLAN version, state, intent_version_ref, gate_2 status, and STALE_INTENT flag.",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "Active PLAN version, state, intent ref, gate_2 open, stale_intent flag" }
+        {
+          "type": "display",
+          "description": "Active PLAN version, state, intent ref, gate_2 open, stale_intent flag"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -402,10 +593,17 @@
       "description": "List all FMN-PLAN versions with states, intent_version_refs, locked_at timestamps, and STALE_INTENT flags.",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "All PLAN versions: version, state, intent ref, stale_intent, timestamps" }
+        {
+          "type": "display",
+          "description": "All PLAN versions: version, state, intent ref, stale_intent, timestamps"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -422,11 +620,21 @@
       "description": "Create a DEV-EXEC DRAFT from the template. Gate 2: gates.gate_2_open == true (FMN-PLAN must be LOCKED). Records plan_version_ref from the currently locked PLAN version. File named: build/DEV-EXEC-v{next_version}.md.",
       "inputs": [],
       "outputs": [
-        { "type": "file", "description": "Sigma/build/DEV-EXEC-v{version}.md (DRAFT)" },
-        { "type": "state_change", "description": "exec.active_version set; exec.active_state = 'DRAFT'; exec.versions[].plan_version_ref recorded" }
+        {
+          "type": "file",
+          "description": "Sigma/build/DEV-EXEC-v{version}.md (DRAFT)"
+        },
+        {
+          "type": "state_change",
+          "description": "exec.active_version set; exec.active_state = 'DRAFT'; exec.versions[].plan_version_ref recorded"
+        }
       ],
       "constraints": [
-        { "type": "gate", "condition": "gates.gate_2_open == true", "error_message": "GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock" }
+        {
+          "type": "gate",
+          "condition": "gates.gate_2_open == true",
+          "error_message": "GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock"
+        }
       ],
       "gating": {
         "pre_condition": "gates.gate_2_open == true (PLAN is LOCKED)",
@@ -445,10 +653,17 @@
       "description": "AUD advisory audit of the active DEV-EXEC. Fully auditable. Audit can occur at any pre-lock state (DRAFT, BUILDING, TESTING, COMPLETED). Outputs advisory findings section written to the document file. Does NOT change runtime state.",
       "inputs": [],
       "outputs": [
-        { "type": "file_section", "description": "Advisory findings section appended to active DEV-EXEC document" }
+        {
+          "type": "file_section",
+          "description": "Advisory findings section appended to active DEV-EXEC document"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "exec.active_version must not be null", "error_message": "No active DEV-EXEC. Run: sigma exec new" }
+        {
+          "type": "existence",
+          "condition": "exec.active_version must not be null",
+          "error_message": "No active DEV-EXEC. Run: sigma exec new"
+        }
       ],
       "gating": {
         "pre_condition": "exec.active_version != null",
@@ -456,72 +671,6 @@
       },
       "error_messages": {
         "no_active_exec": "No active DEV-EXEC. Run: sigma exec new"
-      }
-    },
-    {
-      "operation_id": "exec_advance_building",
-      "domain": "exec",
-      "action": "advance building",
-      "level": "semantic",
-      "role": "any",
-      "description": "Advance active DEV-EXEC from DRAFT to BUILDING state. Signals that active development work has begun.",
-      "inputs": [],
-      "outputs": [
-        { "type": "state_change", "description": "exec.active_state: 'DRAFT' → 'BUILDING'" }
-      ],
-      "constraints": [
-        { "type": "state", "condition": "exec.active_state == 'DRAFT'", "error_message": "Active DEV-EXEC must be in DRAFT state to advance to BUILDING." }
-      ],
-      "gating": {
-        "pre_condition": "exec.active_state == 'DRAFT'",
-        "post_condition": "exec.active_state == 'BUILDING'"
-      },
-      "error_messages": {
-        "wrong_state": "Active DEV-EXEC must be in DRAFT state to advance to BUILDING."
-      }
-    },
-    {
-      "operation_id": "exec_advance_testing",
-      "domain": "exec",
-      "action": "advance testing",
-      "level": "semantic",
-      "role": "any",
-      "description": "Advance active DEV-EXEC from BUILDING to TESTING state. Signals that implementation is done and testing phase has begun.",
-      "inputs": [],
-      "outputs": [
-        { "type": "state_change", "description": "exec.active_state: 'BUILDING' → 'TESTING'" }
-      ],
-      "constraints": [
-        { "type": "state", "condition": "exec.active_state == 'BUILDING'", "error_message": "Active DEV-EXEC must be in BUILDING state to advance to TESTING." }
-      ],
-      "gating": {
-        "pre_condition": "exec.active_state == 'BUILDING'",
-        "post_condition": "exec.active_state == 'TESTING'"
-      },
-      "error_messages": {
-        "wrong_state": "Active DEV-EXEC must be in BUILDING state to advance to TESTING."
-      }
-    },
-    {
-      "operation_id": "exec_advance_complete",
-      "domain": "exec",
-      "action": "advance complete",
-      "level": "semantic",
-      "role": "any",
-      "description": "Advance active DEV-EXEC from TESTING to COMPLETED state. Signals that testing is done and the EXEC is ready for Director lock.",
-      "inputs": [],
-      "outputs": [
-        { "type": "state_change", "description": "exec.active_state: 'TESTING' → 'COMPLETED'" }
-      ],
-      "constraints": [
-        { "type": "state", "condition": "exec.active_state == 'TESTING'", "error_message": "Active DEV-EXEC must be in TESTING state to advance to COMPLETED." }
-      ],
-      "gating": {
-        "pre_condition": "exec.active_state == 'TESTING'",
-        "post_condition": "exec.active_state == 'COMPLETED'"
-      },
-      "error_messages": {
-        "wrong_state": "Active DEV-EXEC must be in TESTING state to advance to COMPLETED."
       }
     },
     {
@@ -533,12 +682,25 @@
       "description": "Lock the active DEV-EXEC. Gate: EXEC must be COMPLETED. Re-evaluates Gate 3 conditions and updates gates.gate_3_satisfied. Triggers decision memory harvest. No auto-supersede — DEV-EXEC is multi-active (manual supersede only).",
       "inputs": [],
       "outputs": [
-        { "type": "state_change", "description": "exec.active_state = 'LOCKED'" },
-        { "type": "state_change", "description": "gates.gate_3_satisfied re-evaluated: true if full chain INTENT LOCKED → PLAN LOCKED referencing it → this EXEC LOCKED referencing that PLAN" },
-        { "type": "decision_harvest", "description": "Decision memory harvest triggered from EXEC content" }
+        {
+          "type": "state_change",
+          "description": "exec.active_state = 'LOCKED'"
+        },
+        {
+          "type": "state_change",
+          "description": "gates.gate_3_satisfied re-evaluated: true if full chain INTENT LOCKED → PLAN LOCKED referencing it → this EXEC LOCKED referencing that PLAN"
+        },
+        {
+          "type": "decision_harvest",
+          "description": "Decision memory harvest triggered from EXEC content"
+        }
       ],
       "constraints": [
-        { "type": "state", "condition": "exec.active_state == 'COMPLETED'", "error_message": "Active DEV-EXEC must be in COMPLETED state to lock. Run: sigma exec advance complete" }
+        {
+          "type": "state",
+          "condition": "exec.active_state == 'COMPLETED'",
+          "error_message": "Active DEV-EXEC must be in COMPLETED state to lock. Run: sigma exec advance complete"
+        }
       ],
       "gating": {
         "pre_condition": "exec.active_state == 'COMPLETED'",
@@ -556,15 +718,36 @@
       "role": "director",
       "description": "Explicitly supersede a locked DEV-EXEC version. Requires --v <version> and --reason <string>. Sets the target version state to SUPERSEDED. Does NOT remove the file. Does NOT auto-trigger.",
       "inputs": [
-        { "name": "--v", "type": "string", "required": true, "description": "Version label to supersede, e.g. 'v0.1'" },
-        { "name": "--reason", "type": "string", "required": true, "description": "Human-readable reason for superseding this version" }
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "Version label to supersede, e.g. 'v0.1'"
+        },
+        {
+          "name": "--reason",
+          "type": "string",
+          "required": true,
+          "description": "Human-readable reason for superseding this version"
+        }
       ],
       "outputs": [
-        { "type": "state_change", "description": "Target version exec.versions[].state = 'SUPERSEDED'; supersede_reason recorded" }
+        {
+          "type": "state_change",
+          "description": "Target version exec.versions[].state = 'SUPERSEDED'; supersede_reason recorded"
+        }
       ],
       "constraints": [
-        { "type": "flag", "condition": "--v and --reason must both be present", "error_message": "sigma exec supersede requires --v <version> and --reason <reason>" },
-        { "type": "state", "condition": "target version must be LOCKED", "error_message": "Target DEV-EXEC version is not LOCKED. Only LOCKED versions can be superseded." }
+        {
+          "type": "flag",
+          "condition": "--v and --reason must both be present",
+          "error_message": "sigma exec supersede requires --v <version> and --reason <reason>"
+        },
+        {
+          "type": "state",
+          "condition": "target version must be LOCKED",
+          "error_message": "Target DEV-EXEC version is not LOCKED. Only LOCKED versions can be superseded."
+        }
       ],
       "gating": {
         "pre_condition": "--v and --reason present; target version is LOCKED",
@@ -584,10 +767,17 @@
       "description": "Show active DEV-EXEC version, state, plan_version_ref, gate_3 status, and STALE_INTENT flag.",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "Active EXEC version, state, plan ref, gate_3_satisfied, stale_intent flag" }
+        {
+          "type": "display",
+          "description": "Active EXEC version, state, plan ref, gate_3_satisfied, stale_intent flag"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -604,10 +794,17 @@
       "description": "List all DEV-EXEC versions with states, plan_version_refs, locked_at timestamps, and STALE_INTENT flags.",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "All EXEC versions: version, state, plan ref, stale_intent, timestamps" }
+        {
+          "type": "display",
+          "description": "All EXEC versions: version, state, plan ref, stale_intent, timestamps"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -623,12 +820,26 @@
       "role": "director",
       "description": "Create a DIR-CLOSE DRAFT from the template. Gate 3 chain: (1) active INTENT is LOCKED; (2) at least one PLAN is LOCKED; (3) that PLAN's intent_version_ref points to the active LOCKED INTENT; (4) at least one EXEC is LOCKED; (5) that EXEC's plan_version_ref points to the qualifying PLAN. If the qualifying chain has stale_intent = true, CLI blocks — Director must pass --ack-stale-intent to proceed. Acknowledgment is recorded in the DIR-CLOSE DRAFT metadata. Sets lifecycle_state to CLOSE.",
       "inputs": [
-        { "name": "--ack-stale-intent", "type": "flag", "required": false, "description": "Required (and only accepted) when the qualifying INTENT→PLAN→EXEC chain has stale_intent = true. Acknowledges stale chain and records it in DIR-CLOSE DRAFT metadata." }
+        {
+          "name": "--ack-stale-intent",
+          "type": "flag",
+          "required": false,
+          "description": "Required (and only accepted) when the qualifying INTENT→PLAN→EXEC chain has stale_intent = true. Acknowledges stale chain and records it in DIR-CLOSE DRAFT metadata."
+        }
       ],
       "outputs": [
-        { "type": "file", "description": "Sigma/close/DIR-CLOSE-v{version}.md (DRAFT)" },
-        { "type": "state_change", "description": "close.active_version set; close.active_state = 'DRAFT'" },
-        { "type": "state_change", "description": "progress.lifecycle_state = 'CLOSE'" }
+        {
+          "type": "file",
+          "description": "Sigma/close/DIR-CLOSE-v{version}.md (DRAFT)"
+        },
+        {
+          "type": "state_change",
+          "description": "close.active_version set; close.active_state = 'DRAFT'"
+        },
+        {
+          "type": "state_change",
+          "description": "progress.lifecycle_state = 'CLOSE'"
+        }
       ],
       "constraints": [
         {
@@ -660,10 +871,17 @@
       "description": "AUD advisory audit of the active DIR-CLOSE. Fully auditable. Writes advisory findings section to the document file. Does NOT change runtime state.",
       "inputs": [],
       "outputs": [
-        { "type": "file_section", "description": "Advisory findings section appended to active DIR-CLOSE document" }
+        {
+          "type": "file_section",
+          "description": "Advisory findings section appended to active DIR-CLOSE document"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "close.active_version must not be null", "error_message": "No active DIR-CLOSE. Run: sigma close new" }
+        {
+          "type": "existence",
+          "condition": "close.active_version must not be null",
+          "error_message": "No active DIR-CLOSE. Run: sigma close new"
+        }
       ],
       "gating": {
         "pre_condition": "close.active_version != null",
@@ -682,12 +900,25 @@
       "description": "Lock the active DIR-CLOSE. Gate: CLOSE must be DRAFT. Auto-supersedes any prior LOCKED CLOSE (single-active policy). Transitions lifecycle_state to CLOSED. Triggers decision memory harvest.",
       "inputs": [],
       "outputs": [
-        { "type": "state_change", "description": "close.active_state = 'LOCKED'; prior LOCKED version (if any) → 'SUPERSEDED'" },
-        { "type": "state_change", "description": "progress.lifecycle_state = 'CLOSED'" },
-        { "type": "decision_harvest", "description": "Decision memory harvest triggered from DIR-CLOSE content" }
+        {
+          "type": "state_change",
+          "description": "close.active_state = 'LOCKED'; prior LOCKED version (if any) → 'SUPERSEDED'"
+        },
+        {
+          "type": "state_change",
+          "description": "progress.lifecycle_state = 'CLOSED'"
+        },
+        {
+          "type": "decision_harvest",
+          "description": "Decision memory harvest triggered from DIR-CLOSE content"
+        }
       ],
       "constraints": [
-        { "type": "state", "condition": "close.active_state == 'DRAFT'", "error_message": "Active DIR-CLOSE is not in DRAFT state. Cannot lock." }
+        {
+          "type": "state",
+          "condition": "close.active_state == 'DRAFT'",
+          "error_message": "Active DIR-CLOSE is not in DRAFT state. Cannot lock."
+        }
       ],
       "gating": {
         "pre_condition": "close.active_state == 'DRAFT'",
@@ -706,10 +937,17 @@
       "description": "Show active DIR-CLOSE version, state, locked_at timestamp, and evidence chain references.",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "Active CLOSE version, state, timestamps, evidence references" }
+        {
+          "type": "display",
+          "description": "Active CLOSE version, state, timestamps, evidence references"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -726,10 +964,17 @@
       "description": "Read-only Git state summary: current branch, latest commit hash and message, changed files since last commit, and diff summary. Minimal and read-only — no publish layer, no heavy evidence lifecycle.",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "Branch name, latest commit (hash + message), changed files list, diff summary" }
+        {
+          "type": "display",
+          "description": "Branch name, latest commit (hash + message), changed files list, diff summary"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "git repository must exist at project root", "error_message": "No git repository found. Initialize with: git init" }
+        {
+          "type": "existence",
+          "condition": "git repository must exist at project root",
+          "error_message": "No git repository found. Initialize with: git init"
+        }
       ],
       "gating": {
         "pre_condition": "git repository exists at project root",
@@ -747,11 +992,22 @@
       "role": "any",
       "description": "Create a CSO (Cognitive State Object) artifact file. Optional handoff artifact between sessions. Accepts --from <file> to seed from an existing draft. Saves timestamped file to Sigma/logs/. Registers entry in progress.cso array. No gate.",
       "inputs": [
-        { "name": "--from", "type": "string", "required": false, "description": "Path to a source file to seed the CSO content from" }
+        {
+          "name": "--from",
+          "type": "string",
+          "required": false,
+          "description": "Path to a source file to seed the CSO content from"
+        }
       ],
       "outputs": [
-        { "type": "file", "description": "Sigma/logs/CSO-{ROLE}-{YYYYMMDD}-{HHMM}.md" },
-        { "type": "state_change", "description": "progress.cso[] entry added" }
+        {
+          "type": "file",
+          "description": "Sigma/logs/CSO-{ROLE}-{YYYYMMDD}-{HHMM}.md"
+        },
+        {
+          "type": "state_change",
+          "description": "progress.cso[] entry added"
+        }
       ],
       "constraints": [],
       "gating": {
@@ -769,9 +1025,18 @@
       "description": "Install Sigma globally. Creates ~/.sigma/ directory structure, copies templates and doctrine files, installs role shortcuts to agent platforms. Does NOT configure MCP memory — use sigma setup memory for that.",
       "inputs": [],
       "outputs": [
-        { "type": "folder", "description": "~/.sigma/ with templates/, and supporting files" },
-        { "type": "file", "description": "~/.sigma/projects.json (empty registry)" },
-        { "type": "file", "description": "Role shortcuts for agent platforms (CLAUDE.md, GEMINI.md, AGENTS.md templates)" }
+        {
+          "type": "folder",
+          "description": "~/.sigma/ with templates/, and supporting files"
+        },
+        {
+          "type": "file",
+          "description": "~/.sigma/projects.json (empty registry)"
+        },
+        {
+          "type": "file",
+          "description": "Role shortcuts for agent platforms (CLAUDE.md, GEMINI.md, AGENTS.md templates)"
+        }
       ],
       "constraints": [],
       "gating": {
@@ -789,10 +1054,17 @@
       "description": "Safe non-destructive global update. Syncs ~/.sigma/templates/, rule files, protocol templates, and bridge file templates from the installed package version. Does NOT touch any active project's Sigma/ folder. Use sigma project sync for project-level doctrine updates.",
       "inputs": [],
       "outputs": [
-        { "type": "file", "description": "~/.sigma/templates/* updated from installed package" }
+        {
+          "type": "file",
+          "description": "~/.sigma/templates/* updated from installed package"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "~/.sigma/ must exist (CLI installed)", "error_message": "~/.sigma/ not found. Run: sigma setup install" }
+        {
+          "type": "existence",
+          "condition": "~/.sigma/ must exist (CLI installed)",
+          "error_message": "~/.sigma/ not found. Run: sigma setup install"
+        }
       ],
       "gating": {
         "pre_condition": "~/.sigma/ exists",
@@ -811,8 +1083,14 @@
       "description": "Configure Sigma MCP memory node store. Creates ~/.sigma/memory_sigma.jsonl for the Sigma memory graph. Outputs MCP configuration instructions for the user to apply.",
       "inputs": [],
       "outputs": [
-        { "type": "file", "description": "~/.sigma/memory_sigma.jsonl (empty MCP memory store)" },
-        { "type": "display", "description": "MCP configuration instructions for Claude/Gemini/Agents" }
+        {
+          "type": "file",
+          "description": "~/.sigma/memory_sigma.jsonl (empty MCP memory store)"
+        },
+        {
+          "type": "display",
+          "description": "MCP configuration instructions for Claude/Gemini/Agents"
+        }
       ],
       "constraints": [],
       "gating": {
@@ -830,7 +1108,10 @@
       "description": "Output .gitignore entries appropriate for Sigma projects. Prints to stdout only — does NOT write to any file. Director copies the output manually.",
       "inputs": [],
       "outputs": [
-        { "type": "stdout", "description": ".gitignore entries printed to stdout for manual copy by Director" }
+        {
+          "type": "stdout",
+          "description": ".gitignore entries printed to stdout for manual copy by Director"
+        }
       ],
       "constraints": [],
       "gating": {
@@ -848,12 +1129,26 @@
       "description": "Create a new ROADMAP draft from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/build/ and registers the new version in progress.json with state DRAFT.",
       "inputs": [],
       "outputs": [
-        { "type": "file", "description": "Sigma/build/ROADMAP-v{N}.md (from template)" },
-        { "type": "state_change", "description": "progress.json: roadmap version added with state DRAFT" }
+        {
+          "type": "file",
+          "description": "Sigma/build/ROADMAP-v{N}.md (from template)"
+        },
+        {
+          "type": "state_change",
+          "description": "progress.json: roadmap version added with state DRAFT"
+        }
       ],
       "constraints": [
-        { "type": "gate", "condition": "progress.intent.active_state == 'LOCKED'", "error_message": "ROADMAP requires a locked DIR-INTENT. Run: sigma intent lock" },
-        { "type": "gate", "condition": "no ROADMAP version in state DRAFT", "error_message": "A ROADMAP DRAFT already exists. Lock it before creating a new version. Run: sigma roadmap lock" }
+        {
+          "type": "gate",
+          "condition": "progress.intent.active_state == 'LOCKED'",
+          "error_message": "ROADMAP requires a locked DIR-INTENT. Run: sigma intent lock"
+        },
+        {
+          "type": "gate",
+          "condition": "no ROADMAP version in state DRAFT",
+          "error_message": "A ROADMAP DRAFT already exists. Lock it before creating a new version. Run: sigma roadmap lock"
+        }
       ],
       "gating": {
         "pre_condition": "progress.intent.active_state == 'LOCKED'; no ROADMAP version currently in DRAFT state",
@@ -865,29 +1160,6 @@
       }
     },
     {
-      "operation_id": "roadmap_lock",
-      "domain": "roadmap",
-      "action": "lock",
-      "level": "semantic",
-      "role": "director",
-      "description": "Lock the active ROADMAP DRAFT. Auto-supersedes any previously LOCKED ROADMAP version. Only one ROADMAP may be LOCKED at a time.",
-      "inputs": [],
-      "outputs": [
-        { "type": "state_change", "description": "progress.json: active ROADMAP DRAFT state → LOCKED" },
-        { "type": "state_change", "description": "progress.json: previous LOCKED ROADMAP → SUPERSEDED (auto, if exists)" }
-      ],
-      "constraints": [
-        { "type": "existence", "condition": "At least one ROADMAP version must be in DRAFT state", "error_message": "No ROADMAP DRAFT found to lock. Run: sigma roadmap new" }
-      ],
-      "gating": {
-        "pre_condition": "At least one ROADMAP version in state DRAFT",
-        "post_condition": "Active ROADMAP state == LOCKED; previous LOCKED ROADMAP (if any) state == SUPERSEDED"
-      },
-      "error_messages": {
-        "no_draft": "No ROADMAP DRAFT found. Run: sigma roadmap new"
-      }
-    },
-    {
       "operation_id": "roadmap_list",
       "domain": "roadmap",
       "action": "list",
@@ -896,10 +1168,17 @@
       "description": "List all ROADMAP versions with their current states (DRAFT, LOCKED, SUPERSEDED).",
       "inputs": [],
       "outputs": [
-        { "type": "display", "description": "Table of ROADMAP versions: version, state, file path" }
+        {
+          "type": "display",
+          "description": "Table of ROADMAP versions: version, state, file path"
+        }
       ],
       "constraints": [
-        { "type": "existence", "condition": "Sigma/progress.json must exist", "error_message": "No Sigma project found. Run: sigma project start" }
+        {
+          "type": "existence",
+          "condition": "Sigma/progress.json must exist",
+          "error_message": "No Sigma project found. Run: sigma project start"
+        }
       ],
       "gating": {
         "pre_condition": "Sigma/progress.json exists",
@@ -908,6 +1187,442 @@
       "error_messages": {
         "not_found": "No Sigma project found. Run: sigma project start"
       }
+    },
+    {
+      "operation_id": "config_set_language",
+      "domain": "config",
+      "action": "set language",
+      "level": "semantic",
+      "role": "any",
+      "description": "Set the Director interaction language (e.g., \"en\", \"id\"). Artifact content (FMN-PLAN, DEV-EXEC, ROADMAP) is always written in English regardless of this setting.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "config_show",
+      "domain": "config",
+      "action": "show",
+      "level": "read_only",
+      "role": "any",
+      "description": "Show current project configuration",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "inbox",
+      "domain": "inbox",
+      "action": "inbox",
+      "level": "semantic",
+      "role": "any",
+      "description": "Manage role message inbox",
+      "inputs": [
+        {
+          "name": "--role",
+          "type": "string",
+          "required": true,
+          "description": "--role <role>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "inbox_read",
+      "domain": "inbox",
+      "action": "read",
+      "level": "semantic",
+      "role": "any",
+      "description": "Read a message and mark it as READ",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "inbox_archive",
+      "domain": "inbox",
+      "action": "archive",
+      "level": "semantic",
+      "role": "any",
+      "description": "Archive a message (hides from default listing)",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "inbox_check",
+      "domain": "inbox",
+      "action": "check",
+      "level": "read_only",
+      "role": "any",
+      "description": "Run integrity check: validate index entries vs disk files, attachments, field values",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "override",
+      "domain": "override",
+      "action": "override",
+      "level": "semantic",
+      "role": "any",
+      "description": "Bypass the current lifecycle gate under Director authority (recorded in Sigma/memory/overrides.jsonl)",
+      "inputs": [
+        {
+          "name": "--reason",
+          "type": "string",
+          "required": true,
+          "description": "--reason <reason>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "plan_activate",
+      "domain": "plan",
+      "action": "activate",
+      "level": "semantic",
+      "role": "any",
+      "description": "Set an existing DRAFT FMN-PLAN version as the active plan (for display/status only; lock order remains FIFO)",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "--v <version>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "plan_promote",
+      "domain": "plan",
+      "action": "promote",
+      "level": "semantic",
+      "role": "any",
+      "description": "Promote a pending plan into the official draft queue with an assigned version",
+      "inputs": [
+        {
+          "name": "--id",
+          "type": "string",
+          "required": true,
+          "description": "--id <id>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "plan_queue",
+      "domain": "plan",
+      "action": "queue",
+      "level": "semantic",
+      "role": "any",
+      "description": "Show the FIFO draft lock queue and pending plans (read-only diagnostic)",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "roadmap_activate",
+      "domain": "roadmap",
+      "action": "activate",
+      "level": "semantic",
+      "role": "any",
+      "description": "Activate a DRAFT ROADMAP (demotes current ACTIVE to INACTIVE if one exists)",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "--v <version>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "roadmap_render",
+      "domain": "roadmap",
+      "action": "render",
+      "level": "semantic",
+      "role": "any",
+      "description": "Regenerate derived sections (Stage Overview, Phase Dependencies, PLAN Breakdown) in the ACTIVE ROADMAP",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "roadmap_reconcile",
+      "domain": "roadmap",
+      "action": "reconcile",
+      "level": "semantic",
+      "role": "any",
+      "description": "Check consistency between progress.json plan entries and ROADMAP H2 stage sections",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "send",
+      "domain": "send",
+      "action": "send",
+      "level": "semantic",
+      "role": "any",
+      "description": "Send a message from one role to another.\n  Policy: a sender must have no unread messages in their own inbox before sending.\n  Clear unread messages with: sigma inbox read <id>\n  Valid messaging roles: arc, fmn, dev, aud (director communicates directly)",
+      "inputs": [
+        {
+          "name": "--from",
+          "type": "string",
+          "required": true,
+          "description": "--from <role>"
+        },
+        {
+          "name": "--to",
+          "type": "string",
+          "required": true,
+          "description": "--to <role>"
+        },
+        {
+          "name": "--type",
+          "type": "string",
+          "required": true,
+          "description": "--type <type>"
+        },
+        {
+          "name": "--subject",
+          "type": "string",
+          "required": true,
+          "description": "--subject <subject>"
+        },
+        {
+          "name": "--message",
+          "type": "string",
+          "required": true,
+          "description": "--message <body>"
+        },
+        {
+          "name": "--message-file",
+          "type": "string",
+          "required": true,
+          "description": "--message-file <path>"
+        },
+        {
+          "name": "--attach",
+          "type": "string",
+          "required": true,
+          "description": "--attach <file>"
+        },
+        {
+          "name": "--reply-to",
+          "type": "string",
+          "required": true,
+          "description": "--reply-to <id>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "sync_progress",
+      "domain": "sync",
+      "action": "progress",
+      "level": "semantic",
+      "role": "any",
+      "description": "Bring progress.json up to current schema:\n  - Coerce exec BUILDING/TESTING/COMPLETED → DRAFT (P2)\n  - Strip legacy cso array (P17)\n  - Add plan.pending if missing",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "sync_roadmap",
+      "domain": "sync",
+      "action": "roadmap",
+      "level": "semantic",
+      "role": "any",
+      "description": "Migrate existing ROADMAP file to CLI-managed format:\n  - Extracts stage titles from FMN-PLAN files\n  - Generates new ROADMAP with H2 headings + delimiter comments\n  - Renames old ROADMAP to ROADMAP-vX-legacy.md\n  - Runs sigma roadmap render to populate derived sections",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
     }
   ]
 }

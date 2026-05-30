@@ -83,8 +83,6 @@ Check that the following files exist in `~/.reasonix/skills/`:
 | /fmn | `~/.reasonix/skills/fmn.md` |
 | /dev | `~/.reasonix/skills/dev.md` |
 | /aud | `~/.reasonix/skills/aud.md` |
-| /checkpoint | `~/.reasonix/skills/checkpoint.md` |
-| /cso | `~/.reasonix/skills/cso.md` |
 | /report | `~/.reasonix/skills/report.md` |
 | /sigma-test | `~/.reasonix/skills/sigma-test.md` |
 
@@ -115,7 +113,6 @@ Check that the following paths exist relative to the project root:
 - `Sigma/close/`
 - `Sigma/rules/`
 - `Sigma/logs/`
-- `Sigma/memory/decisions.jsonl`
 
 - PASS if present
 - WARN if missing and lifecycle_state is START (expected for brand-new project)
@@ -148,8 +145,6 @@ Platform: Reasonix
 | Skills | `/fmn` | PASS/FAIL | |
 | Skills | `/dev` | PASS/FAIL | |
 | Skills | `/aud` | PASS/FAIL | |
-| Skills | `/checkpoint` | PASS/FAIL | |
-| Skills | `/cso` | PASS/FAIL | |
 | Skills | `/report` | PASS/FAIL | |
 | Skills | `/sigma-test` | PASS/FAIL | |
 | Global | `~/.sigma/` | PASS/FAIL | |
@@ -161,7 +156,6 @@ Platform: Reasonix
 | Project | `Sigma/build/` | PASS/WARN/N/A | |
 | Project | `Sigma/rules/` | PASS/WARN/N/A | |
 | Project | `Sigma/logs/` | PASS/WARN/N/A | |
-| Project | `decisions.jsonl` | PASS/WARN/N/A | |
 
 **Verdict:** PASS / WARN / FAIL
 

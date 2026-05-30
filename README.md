@@ -70,7 +70,7 @@ Artifacts preserve evidence.
           │ Director approves / locks
           ▼
 ┌────────────────────┐
-│ Optional ROADMAP   │
+│ ROADMAP            │
 │ FMN splits large   │
 │ work into stages   │
 └─────────┬──────────┘
@@ -510,42 +510,54 @@ AI roles normally execute operational commands after reading project state, role
 
 Lock, supersede, reset, stale-intent acknowledgment, and risk-related commands require explicit Director authorization.
 
-| Domain  | Command                         | Description                                                     |
-|:------- |:------------------------------- |:--------------------------------------------------------------- |
-| project | `sigma project start`           | Initialize a Sigma project in the current directory             |
-| project | `sigma project status`          | Show lifecycle phase, gate status, and active artifact versions |
-| project | `sigma project list`            | List registered Sigma projects                                  |
-| project | `sigma project sync --confirm`  | Sync doctrine files from global templates into this project     |
-| project | `sigma project reset --confirm` | Reset `progress.json` to initial state                          |
-| session | `sigma session bootstrap`       | Load project state at session start                             |
-| intent  | `sigma intent new`              | Create a `DIR-INTENT` draft                                     |
-| intent  | `sigma intent lock`             | Lock the active `DIR-INTENT` with Director approval             |
-| intent  | `sigma intent status`           | Show active intent version and state                            |
-| intent  | `sigma intent list`             | List intent versions                                            |
-| roadmap | `sigma roadmap new`             | Create a `ROADMAP` draft                                        |
-| roadmap | `sigma roadmap lock`            | Lock the active `ROADMAP` with Director approval                |
-| roadmap | `sigma roadmap list`            | List roadmap versions                                           |
-| plan    | `sigma plan new`                | Create an `FMN-PLAN` draft                                      |
-| plan    | `sigma plan lock`               | Lock the active `FMN-PLAN` with Director approval               |
-| plan    | `sigma plan audit`              | Run advisory audit of the active `FMN-PLAN`                     |
-| plan    | `sigma plan status`             | Show active plan version and state                              |
-| plan    | `sigma plan supersede`          | Supersede a locked plan version                                 |
-| exec    | `sigma exec new`                | Create a `DEV-EXEC` draft                                       |
-| exec    | `sigma exec advance building`   | Advance execution from DRAFT to BUILDING                        |
-| exec    | `sigma exec advance testing`    | Advance execution from BUILDING to TESTING                      |
-| exec    | `sigma exec advance complete`   | Advance execution from TESTING to COMPLETED                     |
-| exec    | `sigma exec lock`               | Lock the active `DEV-EXEC` with Director approval               |
-| exec    | `sigma exec audit`              | Run advisory audit of the active `DEV-EXEC`                     |
-| exec    | `sigma exec status`             | Show active execution version and state                         |
-| close   | `sigma close new`               | Create a `DIR-CLOSE` draft                                      |
-| close   | `sigma close lock`              | Lock the active `DIR-CLOSE` with Director approval              |
-| close   | `sigma close audit`             | Run advisory audit of the active `DIR-CLOSE`                    |
-| close   | `sigma close status`            | Show closure state                                              |
-| cso     | `sigma cso new`                 | Create a CSO handoff artifact in `Sigma/logs/`                  |
-| git     | `sigma git evidence`            | Show read-only Git state summary                                |
-| setup   | `sigma setup install`           | Install Sigma globally to `~/.sigma/`                           |
-| setup   | `sigma setup update`            | Update global Sigma templates and governance files              |
-| setup   | `sigma setup memory`            | Configure sequential-thinking and sigma-memory MCP integration  |
+| Domain   | Command                            | Description                                                                    |
+|:-------- |:---------------------------------- |:------------------------------------------------------------------------------ |
+| project  | `sigma project start`              | Initialize a Sigma project in the current directory                            |
+| project  | `sigma project status`             | Show lifecycle phase, gate status, and active artifact versions                |
+| project  | `sigma project sync --confirm`     | Sync doctrine files from global templates into this project                    |
+| project  | `sigma project reset --confirm`    | Reset `progress.json` to initial state                                         |
+| session  | `sigma session bootstrap`          | Load project state at session start                                            |
+| intent   | `sigma intent new`                 | Create a `DIR-INTENT` draft                                                    |
+| intent   | `sigma intent lock`                | Lock the active `DIR-INTENT` with Director approval                            |
+| intent   | `sigma intent status`              | Show active intent version and state                                           |
+| intent   | `sigma intent list`                | List intent versions                                                           |
+| roadmap  | `sigma roadmap new`                | Create a `ROADMAP` draft (auto-activates if no ACTIVE exists)                  |
+| roadmap  | `sigma roadmap activate`           | Activate a DRAFT `ROADMAP` (demotes current ACTIVE to INACTIVE)                |
+| roadmap  | `sigma roadmap render`             | Regenerate derived sections in the active `ROADMAP`                            |
+| roadmap  | `sigma roadmap reconcile`          | Check or fix `ROADMAP` stage stub alignment (`--check` / `--fix`)              |
+| roadmap  | `sigma roadmap list`               | List roadmap versions                                                          |
+| plan     | `sigma plan new`                   | Create an `FMN-PLAN` draft (requires locked INTENT + ACTIVE ROADMAP)           |
+| plan     | `sigma plan new --pending`         | Stage a future plan without entering the version queue                         |
+| plan     | `sigma plan promote`               | Promote a pending plan into the official FIFO draft queue                      |
+| plan     | `sigma plan activate`              | Set an existing DRAFT version as the active plan (FIFO lock order unchanged)   |
+| plan     | `sigma plan queue`                 | Show the FIFO draft lock queue and pending plans (read-only)                   |
+| plan     | `sigma plan lock`                  | Lock the oldest DRAFT `FMN-PLAN` in FIFO order (opens Gate 2)                  |
+| plan     | `sigma plan audit`                 | Run advisory audit of the active `FMN-PLAN`                                    |
+| plan     | `sigma plan status`                | Show active plan version and state                                             |
+| plan     | `sigma plan supersede`             | Supersede a locked plan version                                                |
+| exec     | `sigma exec new`                   | Create a `DEV-EXEC` draft                                                      |
+| exec     | `sigma exec lock`                  | Lock the active `DEV-EXEC` with Director approval                              |
+| exec     | `sigma exec audit`                 | Run advisory audit of the active `DEV-EXEC`                                    |
+| exec     | `sigma exec status`                | Show active execution version and state                                        |
+| close    | `sigma close new`                  | Create a `DIR-CLOSE` draft                                                     |
+| close    | `sigma close lock`                 | Lock the active `DIR-CLOSE` with Director approval                             |
+| close    | `sigma close audit`                | Run advisory audit of the active `DIR-CLOSE`                                   |
+| close    | `sigma close status`               | Show closure state                                                             |
+| config   | `sigma config show`                | Show current project language preferences                                      |
+| config   | `sigma config set language <lang>` | Set interaction or document language (e.g. `en`, `id`)                         |
+| sync     | `sigma sync progress`              | Coerce and clean up `Sigma/progress.json` to current schema                    |
+| sync     | `sigma sync roadmap`               | Sync `ROADMAP` documents with progress state                                   |
+| send     | `sigma send`                       | Send a message from one role to another (`--from`, `--to`, `--message`)        |
+| inbox    | `sigma inbox --role <role>`        | List unread messages for a role                                                |
+| inbox    | `sigma inbox read <id>`            | Read a message and mark it as READ                                             |
+| inbox    | `sigma inbox archive <id>`         | Archive a message                                                              |
+| inbox    | `sigma inbox check`                | Run inbox integrity check (index vs disk files, attachments, field values)     |
+| cso      | `sigma cso new`                    | Create a CSO handoff artifact in `Sigma/logs/`                                 |
+| git      | `sigma git evidence`               | Show read-only Git state summary                                               |
+| override | `sigma override`                   | Bypass current lifecycle gate under Director authority (recorded in audit log) |
+| setup    | `sigma setup install`              | Install Sigma globally to `~/.sigma/`                                          |
+| setup    | `sigma setup update`               | Update global Sigma templates and governance files                             |
+| setup    | `sigma setup memory`               | Configure sequential-thinking and sigma-memory MCP integration                 |
 
 ---
 
@@ -618,11 +630,7 @@ Memory file:
 ~/.sigma/memory_sigma.jsonl
 ```
 
-Project decision log:
 
-```text
-Sigma/memory/decisions.jsonl
-```
 
 ---
 
@@ -641,6 +649,46 @@ sigma project start
 ```
 
 The protocol covers lifecycle phases, artifact types, gates, role rules, CLI operator model, Director authorization language, memory architecture, and distribution behavior.
+
+---
+
+## Dev Tools (sigma-ecosystem contributors only)
+
+These tools are for maintaining the sigma-ecosystem source repository.
+They are not part of the user-facing CLI and are not distributed to end-user projects.
+
+### `scripts/refresh-registries.js`
+
+Keeps `Sigma/SIGMA-OPERATION-REGISTRY.json` and `Sigma/SIGMA-REGISTRY.json` in sync with the
+actual CLI implementation after new commands are added.
+
+How it works:
+
+1. Loads the compiled CLI from `dist/commands/` (requires `npm run build` first)
+2. Walks the Commander.js command tree to discover all executable operations
+3. Diffs the discovered operations against the registry
+4. Injects stubs (marked `NEEDS_REVIEW: true`) for operations not yet in the registry
+5. Flags registry entries that no longer exist in the CLI
+6. Adds known new document types to `SIGMA-REGISTRY.json`
+
+Guard: aborts if run outside the `sigma-ecosystem` root (checks `package.json` name).
+
+```bash
+# Preview — no writes
+npm run refresh-registries:dry
+
+# Apply
+npm run refresh-registries
+```
+
+After running, manually fill in the `gating`, `constraints`, and `outputs` fields
+for any entries marked `NEEDS_REVIEW: true` in `SIGMA-OPERATION-REGISTRY.json`.
+
+When to run:
+
+- after adding a new `sigma <command>` subcommand
+- after removing or renaming a command
+- after adding a new document type to the `Sigma/` folder structure
 
 ---
 

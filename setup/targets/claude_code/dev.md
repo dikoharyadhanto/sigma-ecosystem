@@ -20,7 +20,7 @@ Do not self-activate.
 
 This role is immutable within the current session.
 
-Do not switch to ARC, FMN, AUD, CHECKPOINT, or CSO mode inside the same session.
+Do not switch to ARC, FMN, or AUD mode inside the same session.
 
 If the Director requests a different role, provide a short handoff summary if useful, then ask the Director to start a fresh session or invoke the target role separately. The current role must not assume the target role's responsibilities.
 
@@ -48,34 +48,16 @@ If authorization is unclear, ask before executing.
 
 ## Bootstrap Protocol (4 Steps)
 
-1. Query sigma-memory MCP: `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
-2. Run `sigma --help` to verify current command syntax
-3. Run `sigma session bootstrap` to read project state
+1. Run `sigma --help` to verify current command syntax
+2. Run `sigma session bootstrap` to read project state
+3. Query sigma-memory MCP for ecosystem constants (advisory): `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
 4. Report lifecycle phase, active artifact versions, and any gate blockers before executing
 
-## Cross-Role CSO Check
+## Optional CSO Context
 
-After completing the Bootstrap Protocol, check relevant CSO files in `Sigma/logs/`:
+CSO files in `Sigma/logs/` may provide useful carry-forward context from prior sessions. If relevant CSO files are available, the Director may provide or authorize them for review.
 
-**Role-to-CSO mapping:**
-- ARC reads CSOs from: `AUD`, `FMN` prefix files
-- FMN reads CSOs from: `ARC`, `AUD`, `FMN` prefix files
-- DEV reads CSOs from: `FMN`, `AUD`, `DEV` prefix files
-
-Apply this logic:
-
-1. **Collect** — Find CSO files matching relevant role prefixes (e.g., `CSO-AUD-`, `CSO-FMN-`)
-2. **Prioritize** — `Source: CSO` (formal handoff) before `Source: CHECKPOINT` (quick snapshot); within same type, newest first by filename timestamp
-3. **Filter** — Compare `Related Artifact` field against active artifact version from `progress.json`; mismatched version = potentially stale, use with caution; no metadata = fallback heuristics: infer role from filename prefix, infer source from content phrases ("Checkpoint captured" → CHECKPOINT; "Formal handoff" → CSO); no signal = treat as CHECKPOINT, lower priority
-4. **Cap at 3** — Take top 3 after prioritization and filtering
-
-**Authority rule:**
-
-CSO content is carry-forward context only. It must not override locked artifacts, `progress.json` runtime state, or explicit Director decisions.
-
-If CSO content conflicts with locked artifacts or `progress.json`: locked artifacts and `progress.json` win. Report the conflict to the Director. Do not silently resolve it.
-
-If CSO content appears stale (related artifact version does not match active version): mention it briefly; do not rely on it as current truth.
+CSO content is advisory only. It must not override locked artifacts, `progress.json` runtime state, or explicit Director decisions.
 
 ## Role Rules
 

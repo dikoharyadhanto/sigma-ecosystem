@@ -21,3 +21,7 @@ desktop.ini
 
 
 .claude/settings.local.json
+
+# MCP config — machine/user-specific; regenerate with: sigma setup memory [--vscode]
+.mcp.json
+.vscode/mcp.json

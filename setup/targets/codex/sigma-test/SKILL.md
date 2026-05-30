@@ -77,8 +77,6 @@ Check that the following skill directories exist in `~/.codex/skills/`:
 | #fmn | `~/.codex/skills/fmn/` |
 | #dev | `~/.codex/skills/dev/` |
 | #aud | `~/.codex/skills/aud/` |
-| #checkpoint | `~/.codex/skills/checkpoint/` |
-| #cso | `~/.codex/skills/cso/` |
 | #report | `~/.codex/skills/report/` |
 | #sigma-test | `~/.codex/skills/sigma-test/` |
 
@@ -111,7 +109,6 @@ Check that the following paths exist relative to the project root:
 - `Sigma/close/`
 - `Sigma/rules/`
 - `Sigma/logs/`
-- `Sigma/memory/decisions.jsonl`
 
 - PASS if present
 - WARN if missing and lifecycle_state is START (expected for brand-new project)
@@ -143,8 +140,6 @@ Platform: Codex CLI
 | Skills | `#fmn` | PASS/FAIL | |
 | Skills | `#dev` | PASS/FAIL | |
 | Skills | `#aud` | PASS/FAIL | |
-| Skills | `#checkpoint` | PASS/FAIL | |
-| Skills | `#cso` | PASS/FAIL | |
 | Skills | `#report` | PASS/FAIL | |
 | Skills | `#sigma-test` | PASS/FAIL | |
 | Global | `~/.sigma/` | PASS/FAIL | |
@@ -156,7 +151,6 @@ Platform: Codex CLI
 | Project | `Sigma/build/` | PASS/WARN/N/A | |
 | Project | `Sigma/rules/` | PASS/WARN/N/A | |
 | Project | `Sigma/logs/` | PASS/WARN/N/A | |
-| Project | `decisions.jsonl` | PASS/WARN/N/A | |
 
 **Verdict:** PASS / WARN / FAIL
 

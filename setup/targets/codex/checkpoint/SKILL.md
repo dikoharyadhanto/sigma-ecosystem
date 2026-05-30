@@ -1,6 +1,6 @@
 ---
 name: checkpoint
-description: Sigma CHECKPOINT — capture mid-work state as a CSO artifact before handoff or break
+description: "Sigma CHECKPOINT — capture mid-work state as a CSO artifact before handoff or break"
 ---
 
 # Sigma CHECKPOINT
@@ -60,9 +60,9 @@ Director authorization as defined in the active role.
 
 ## Bootstrap Protocol (4 Steps)
 
-1. Query sigma-memory MCP: `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
-2. Run `sigma --help` to verify current command syntax
-3. Run `sigma session bootstrap` to read project state
+1. Run `sigma --help` to verify current command syntax
+2. Run `sigma session bootstrap` to read project state
+3. Query sigma-memory MCP for ecosystem constants (advisory): `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
 4. Report lifecycle phase, active artifact versions, and any gate blockers before executing
 
 ## Role Rules

@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-05-16T00:00:00Z",
+  "generated_at": "2026-05-29T23:56:24.406Z",
   "description": "Sigma Document Registry — permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE) are tracked in progress.json, not here.",
-  "total_documents": 11,
+  "total_documents": 12,
   "authority_model": {
     "description": "Two separate, non-conflatable authority axes.",
     "semantic_authority": {
@@ -54,18 +54,54 @@
       ],
       "description": "Sigma operational doctrine. Defines lifecycle, roles, artifacts, state machines, gate rules, naming conventions, folder structure, audit doctrine. Written incrementally per phase; Phase 0A establishes foundational sections.",
       "section_triggers": [
-        { "section": "lifecycle", "trigger": "lifecycle_query" },
-        { "section": "role_definitions", "trigger": "role_boundary_violation" },
-        { "section": "artifact_definitions", "trigger": "document_navigation" },
-        { "section": "state_machine", "trigger": "lifecycle_query" },
-        { "section": "gate_rules", "trigger": "governance_conflict" },
-        { "section": "auto_supersede_policy", "trigger": "governance_conflict" },
-        { "section": "stale_intent", "trigger": "stale_intent_query" },
-        { "section": "audit_doctrine", "trigger": "role_boundary_violation" },
-        { "section": "aud_activation_policy", "trigger": "role_boundary_violation" },
-        { "section": "folder_structure", "trigger": "document_navigation" },
-        { "section": "naming_convention", "trigger": "document_navigation" },
-        { "section": "cli_command_surface", "trigger": "session_bootstrap" }
+        {
+          "section": "lifecycle",
+          "trigger": "lifecycle_query"
+        },
+        {
+          "section": "role_definitions",
+          "trigger": "role_boundary_violation"
+        },
+        {
+          "section": "artifact_definitions",
+          "trigger": "document_navigation"
+        },
+        {
+          "section": "state_machine",
+          "trigger": "lifecycle_query"
+        },
+        {
+          "section": "gate_rules",
+          "trigger": "governance_conflict"
+        },
+        {
+          "section": "auto_supersede_policy",
+          "trigger": "governance_conflict"
+        },
+        {
+          "section": "stale_intent",
+          "trigger": "stale_intent_query"
+        },
+        {
+          "section": "audit_doctrine",
+          "trigger": "role_boundary_violation"
+        },
+        {
+          "section": "aud_activation_policy",
+          "trigger": "role_boundary_violation"
+        },
+        {
+          "section": "folder_structure",
+          "trigger": "document_navigation"
+        },
+        {
+          "section": "naming_convention",
+          "trigger": "document_navigation"
+        },
+        {
+          "section": "cli_command_surface",
+          "trigger": "session_bootstrap"
+        }
       ],
       "tolerate_missing": false
     },
@@ -202,6 +238,20 @@
       "description": "Canonical Markdown templates for all Sigma artifacts and CSO. Five files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, CSO-TEMPLATE.md. Phase 3 CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma cso new.",
       "tolerate_missing": true,
       "missing_behavior": "Warn on artifact creation commands; CLI may fall back to inline templates if folder is missing."
+    },
+    {
+      "document_id": "project_config",
+      "file": "project.config.json",
+      "location": "Sigma/",
+      "authority_tier": "agent_config",
+      "owner": "Director",
+      "lifecycle": "runtime — created on first sigma config set; absent = defaults apply",
+      "mandatory_when": [
+        "session_bootstrap"
+      ],
+      "description": "Director-scoped project configuration. Stores interaction_language and document_language preferences. Absent until first sigma config set; CLI defaults to English (en/en) when file is missing. Written by: sigma config set. Read by: sigma session bootstrap, sigma config show.",
+      "tolerate_missing": true,
+      "missing_behavior": "Default to English for both document and interaction language."
     }
   ]
 }

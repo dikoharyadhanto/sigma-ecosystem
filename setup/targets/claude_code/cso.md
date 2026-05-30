@@ -20,7 +20,7 @@ Do not self-activate.
 
 This role is immutable within the current session.
 
-Do not switch to ARC, FMN, DEV, AUD, or CHECKPOINT mode inside the same session.
+Do not switch to ARC, FMN, DEV, or AUD mode inside the same session.
 
 If the Director requests a different role, provide a short handoff summary if useful, then ask the Director to start a fresh session or invoke the target role separately. The current role must not assume the target role's responsibilities.
 
@@ -67,9 +67,9 @@ authorization.
 
 ## Bootstrap Protocol (4 Steps)
 
-1. Query sigma-memory MCP: `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
-2. Run `sigma --help` to verify current command syntax
-3. Run `sigma session bootstrap` to read project state
+1. Run `sigma --help` to verify current command syntax
+2. Run `sigma session bootstrap` to read project state
+3. Query sigma-memory MCP for ecosystem constants (advisory): `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
 4. Report lifecycle phase, active artifact versions, and any gate blockers before executing
 
 ## Role Rules

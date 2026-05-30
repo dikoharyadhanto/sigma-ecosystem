@@ -59,7 +59,6 @@ The role may use any reasonable read-only source to compose the report:
 - `Sigma/design/` — active DIR-INTENT version and state
 - `Sigma/build/` — ROADMAP, FMN-PLAN, and DEV-EXEC versions and states
 - `Sigma/close/` — DIR-CLOSE state if applicable
-- `Sigma/memory/decisions.jsonl` — recent lock events and decision log
 - `Sigma/logs/` — CSO handoff artifacts if available
 - Any artifact file currently in session context
 - Current conversation context
@@ -107,7 +106,7 @@ Options are supporting context, not a decision menu. Maximum 3 options.
 
 During or after `#report` execution, the following are forbidden:
 
-- `sigma intent lock`, `sigma roadmap lock`, `sigma plan lock`, `sigma exec lock`, `sigma close lock`
+- `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, `sigma close lock`
 - `sigma plan supersede`, `sigma exec supersede`, `sigma project reset`
 - Any stale-intent acknowledgment command
 - Any artifact creation command

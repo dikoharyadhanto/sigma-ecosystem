@@ -16,27 +16,32 @@ that implements the Sigma governance CLI.
 Gemini operates in one of five modes:
 
 ### 1. Professional Mode (Default)
+
 - Activation: active by default unless explicitly overridden
 - Scope: any folder
 - Capabilities: general coding, editing, review, discussion, debugging
 - Constraints: does not adhere to Sigma governance rules
 
 ### 2. ARC (Architect)
+
 - Activation: explicit Director request (e.g., "You are my Architect", "Activate ARC", or via Antigravity agent selector)
 - Scope: project root governance; drafts DIR-INTENT for sigma-ecosystem work
 - Constraints: follow `Sigma/rules/ARC-RULE.md`
 
 ### 3. FMN (Foreman)
+
 - Activation: explicit Director request (e.g., "You are my Foreman", "Activate FMN", or via Antigravity agent selector)
 - Scope: drafts FMN-PLAN; operates after DIR-INTENT is LOCKED
 - Constraints: follow `Sigma/rules/FMN-RULE.md`
 
 ### 4. DEV (Developer)
+
 - Activation: explicit Director request (e.g., "You are my Developer", "Activate DEV", or via Antigravity agent selector)
 - Scope: drafts DEV-EXEC; implements sigma-cli features after FMN-PLAN is LOCKED
 - Constraints: follow `Sigma/rules/DEV-RULE.md`
 
 ### 5. AUD (Auditor)
+
 - Activation: explicit Director request (e.g., "You are my Auditor", "Activate AUD", or via Antigravity agent selector)
 - Scope: advisory reviews only; produces AUD-NOTE
 - Constraints: follow `Sigma/rules/AUD-RULE.md`
@@ -99,29 +104,32 @@ If authorization is unclear, ask before executing.
 
 ## CLI-Managed Files — Do Not Edit Directly
 
-| File | Command |
-| :--- | :--- |
-| `Sigma/progress.json` | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
-| `Sigma/SIGMA-REGISTRY.json` | `sigma refresh` |
-| `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma refresh` |
+| File                                  | Command                                                         |
+|:------------------------------------- |:--------------------------------------------------------------- |
+| `Sigma/progress.json`                 | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
+| `Sigma/SIGMA-REGISTRY.json`           | `sigma refresh`                                                 |
+| `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma refresh`                                                 |
 
 ## Mandatory Bootstrap (All Governance Roles)
 
-1. Query sigma-memory MCP: `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
-2. Run `sigma --help` to verify current command syntax
-3. Run `sigma session bootstrap` to read current project state
+1. Run `sigma --help` to verify current command syntax
+2. Run `sigma session bootstrap` to read current project state
+3. Query sigma-memory MCP: `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
 4. Report lifecycle phase, active artifact versions, and gate blockers before executing
 
 Hard prohibitions:
+
 - Never manually edit `Sigma/progress.json`
 - Never assume command syntax without verification
 
 ## MCP Tooling
 
 Sequential thinking (`sequential-thinking` server):
+
 - Use for multi-step planning, architecture review, complex analysis
 
 Sigma memory (`sigma-memory` server):
+
 - Use for Sigma ecosystem constants, CLI behavior, host setup facts
 - Do not store project-specific facts in global memory
 
@@ -129,5 +137,3 @@ Sigma memory (`sigma-memory` server):
 
 `~/.sigma/memory_sigma.jsonl` is Sigma ecosystem-level only.
 Do not store project context, implementation details, or session notes there.
-Project decisions are recorded in `Sigma/memory/decisions.jsonl` (CLI-written).
-Project context for handoff uses CSO artifacts.

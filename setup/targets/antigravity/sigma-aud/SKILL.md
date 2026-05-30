@@ -20,7 +20,7 @@ Do not self-activate.
 
 This role is immutable within the current session.
 
-Do not switch to ARC, FMN, DEV, CHECKPOINT, or CSO mode inside the same session.
+Do not switch to ARC, FMN, or DEV mode inside the same session.
 
 If the Director requests a different role, provide a short handoff summary if useful, then ask the Director to start a fresh session or invoke the target role separately. The current role must not assume the target role's responsibilities.
 

@@ -83,8 +83,6 @@ Check that the following skill directories exist in `~/.gemini/config/plugins/`:
 | /fmn | `~/.gemini/config/plugins/sigma-fmn/` |
 | /dev | `~/.gemini/config/plugins/sigma-dev/` |
 | /aud | `~/.gemini/config/plugins/sigma-aud/` |
-| /checkpoint | `~/.gemini/config/plugins/sigma-checkpoint/` |
-| /cso | `~/.gemini/config/plugins/sigma-cso/` |
 | /report | `~/.gemini/config/plugins/sigma-report/` |
 | /sigma-test | `~/.gemini/config/plugins/sigma-test/` |
 
@@ -117,7 +115,6 @@ Check that the following paths exist relative to the project root:
 - `Sigma/close/`
 - `Sigma/rules/`
 - `Sigma/logs/`
-- `Sigma/memory/decisions.jsonl`
 
 - PASS if present
 - WARN if missing and lifecycle_state is START (expected for brand-new project)
@@ -150,8 +147,6 @@ Platform: Antigravity (Gemini)
 | Skills | `/fmn` | PASS/FAIL | |
 | Skills | `/dev` | PASS/FAIL | |
 | Skills | `/aud` | PASS/FAIL | |
-| Skills | `/checkpoint` | PASS/FAIL | |
-| Skills | `/cso` | PASS/FAIL | |
 | Skills | `/report` | PASS/FAIL | |
 | Skills | `/sigma-test` | PASS/FAIL | |
 | Global | `~/.sigma/` | PASS/FAIL | |
@@ -163,7 +158,6 @@ Platform: Antigravity (Gemini)
 | Project | `Sigma/build/` | PASS/WARN/N/A | |
 | Project | `Sigma/rules/` | PASS/WARN/N/A | |
 | Project | `Sigma/logs/` | PASS/WARN/N/A | |
-| Project | `decisions.jsonl` | PASS/WARN/N/A | |
 
 **Verdict:** PASS / WARN / FAIL
 
