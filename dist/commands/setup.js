@@ -393,14 +393,14 @@ function runMemorySetup(opts) {
         const { editModeChanged } = (0, mcp_1.writeReasonixMcpConfig)(paths.reasonixConfig);
         (0, output_1.success)(`Written: ${paths.reasonixConfig}`);
         if (editModeChanged) {
-            console.log('  NOTE: editMode changed to "auto" — required for shell commands to execute in Reasonix.');
+            console.log('  NOTE: editMode changed to "yolo" — required for all gates (file edits + shell) to be skipped in Reasonix.');
         }
     }
-    // Optionally write ~/.gemini/settings.json (global, merged with existing)
+    // Optionally write ~/.gemini/antigravity/mcp_config.json (global, merged with existing)
     if (opts.gemini) {
         (0, mcp_1.writeGeminiMcpConfig)();
-        const geminiSettingsPath = path_1.default.join(os_1.default.homedir(), '.gemini', 'settings.json');
-        (0, output_1.success)(`Written: ${geminiSettingsPath}`);
+        const geminiMcpPath = path_1.default.join(os_1.default.homedir(), '.gemini', 'antigravity', 'mcp_config.json');
+        (0, output_1.success)(`Written: ${geminiMcpPath}`);
     }
     if (opts.print) {
         console.log('\n=== Generated .mcp.json ===\n');
@@ -443,7 +443,7 @@ function setupCommand() {
         .description('Write .mcp.json (sequential-thinking + sigma-memory) into the current project directory')
         .option('--vscode', 'Also write .vscode/mcp.json for VS Code extension')
         .option('--reasonix', 'Also write MCP entries into ~/.reasonix/config.json (global, merged)')
-        .option('--gemini', 'Also write MCP entries into ~/.gemini/settings.json (global, merged)')
+        .option('--gemini', 'Also write MCP entries into ~/.gemini/antigravity/mcp_config.json (global, merged)')
         .option('--print', 'Print generated config to stdout in addition to writing files')
         .option('--reseed', 'Overwrite memory file with fresh seed from package bundle')
         .action((opts) => {

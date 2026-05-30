@@ -91,6 +91,7 @@ function planCommand() {
             console.log(`Created: ${relPath} (references INTENT ${intentVersionRef})`);
             if (roadmapAbsPath) {
                 console.log(`ROADMAP updated: Stage ${version.replace(/^v/, '')} appended + derived sections regenerated`);
+                console.log(`NOTE: Roadmap has been updated. FMN needs to update the content in the Roadmap.`);
             }
         }
         catch (e) {
@@ -220,6 +221,7 @@ function planCommand() {
             console.log(`Promoted: ${pending.file} → ${newRelPath} (${newVersion})`);
             if (roadmapAbsPath) {
                 console.log(`ROADMAP updated: Stage ${newVersion.replace(/^v/, '')} appended + derived sections regenerated`);
+                console.log(`NOTE: Roadmap has been updated. FMN needs to update the content in the Roadmap.`);
             }
             console.log(`Run: sigma plan lock   to lock ${newVersion} when ready`);
         }

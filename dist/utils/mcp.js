@@ -119,8 +119,32 @@ const child = spawn(cmd, args, {
 child.on('exit', (code) => process.exit(code ?? 0));
 `;
 // Commands required in shellAllowed for a Sigma project to function in Reasonix.
-// sigma — Sigma CLI itself; npm/git/ls — standard project tooling used by Foreman/Dev roles.
-const SIGMA_SHELL_ALLOWED = ['sigma', 'npm', 'git', 'ls'];
+// Reasonix uses exact-prefix matching: "sigma" alone does not cover "sigma plan new".
+// Each sigma subcommand domain must be listed explicitly as a prefix.
+const SIGMA_SHELL_ALLOWED = [
+    // Sigma CLI — each subcommand domain as an explicit prefix
+    'sigma session',
+    'sigma intent',
+    'sigma roadmap',
+    'sigma plan',
+    'sigma exec',
+    'sigma close',
+    'sigma project',
+    'sigma setup',
+    'sigma send',
+    'sigma inbox',
+    'sigma cso',
+    'sigma git',
+    'sigma override',
+    'sigma sync',
+    'sigma config',
+    'sigma refresh',
+    'sigma --help',
+    // Standard project tooling used by FMN/DEV roles
+    'npm',
+    'git',
+    'ls',
+];
 function writeReasonixMcpConfig(filePath, options = {}) {
     let existing = {};
     if (fs_extra_1.default.existsSync(filePath)) {
@@ -143,9 +167,10 @@ function writeReasonixMcpConfig(filePath, options = {}) {
     const sigmaMcpEntries = [
         'sequential-thinking=npx -y @modelcontextprotocol/server-sequential-thinking',
         `sigma-memory=node ${wrapperPathForward}`,
+        'shell=npx -y mcp-shell',
     ];
     // Strip existing entries for the names sigma manages (bare or inline format).
-    const sigmaManagedNames = new Set(['sequential-thinking', 'sigma-memory', 'memory']);
+    const sigmaManagedNames = new Set(['sequential-thinking', 'sigma-memory', 'memory', 'shell']);
     const existingMcp = Array.isArray(existing.mcp)
         ? existing.mcp.filter((e) => {
             if (typeof e !== 'string')
@@ -154,17 +179,18 @@ function writeReasonixMcpConfig(filePath, options = {}) {
             return !sigmaManagedNames.has(entryName);
         })
         : [];
-    // mcpServers kept for Claude Desktop / VS Code compatibility — Reasonix ignores it.
+    // mcpServers kept for Claude Desktop / VS Code compatibility — Reasonix also reads this.
     const sigmaServers = {
         'sequential-thinking': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-sequential-thinking'] },
         'sigma-memory': { command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'], env: { MEMORY_FILE_PATH: memoryFilePath } },
+        'shell': { command: 'npx', args: ['-y', 'mcp-shell'] },
     };
     const existingServers = (existing.mcpServers ?? {});
-    // editMode must be "auto" for shell commands to execute. "review" queues them for manual
-    // approval, making the Sigma CLI non-functional inside Reasonix.
+    // editMode "yolo" skips all gates (file edits + shell). "auto" still gates shell commands,
+    // making sigma CLI non-functional without interactive approval even with shellAllowed set.
     const previousEditMode = existing.editMode;
-    const editModeChanged = previousEditMode !== undefined && previousEditMode !== 'auto';
-    const editMode = 'auto';
+    const editModeChanged = previousEditMode !== undefined && previousEditMode !== 'yolo';
+    const editMode = 'yolo';
     // Merge shellAllowed for the current project: add sigma + standard tooling if not present.
     const projectRoot = options.projectRoot ?? process.cwd();
     const existingProjects = (existing.projects ?? {});

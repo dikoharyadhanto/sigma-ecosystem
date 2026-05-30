@@ -237,26 +237,51 @@ function roadmapCommand() {
     });
     // ── roadmap list ─────────────────────────────────────────────────────────────
     cmd.command('list')
-        .description('List all ROADMAP versions')
+        .description('List all stages in the ACTIVE ROADMAP with title, focus, and plan status')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
-            console.log('\n=== ROADMAP Versions ===\n');
-            if (data.roadmap.versions.length === 0) {
-                console.log('None. Run: sigma roadmap new');
+            const active = getActiveRoadmapEntry(data);
+            if (!active) {
+                console.log('\nNo ACTIVE ROADMAP found. Run: sigma roadmap new\n');
+                return;
             }
-            else {
-                console.log('Version    State        Intent Ref   Created                    Locked');
-                console.log('-'.repeat(85));
-                for (const v of data.roadmap.versions) {
-                    const ver = v.version.padEnd(10);
-                    const st = v.state.padEnd(12);
-                    const iref = (v.intent_version_ref ?? '—').padEnd(12);
-                    const cr = v.created_at.padEnd(26);
-                    const lo = v.locked_at ?? '—';
-                    console.log(`${ver} ${st} ${iref} ${cr} ${lo}`);
-                }
+            const roadmapPath = getRoadmapFilePath(data, projectRoot, active.version);
+            if (!fs_extra_1.default.existsSync(roadmapPath)) {
+                throw new Error(`ROADMAP file not found: ${roadmapPath}`);
+            }
+            const content = fs_extra_1.default.readFileSync(roadmapPath, 'utf8');
+            const stages = (0, roadmap_1.parseStages)(content);
+            console.log(`\n=== ROADMAP ${active.version} — Stage List ===\n`);
+            if (stages.length === 0) {
+                console.log('No stages found in ROADMAP. Add stage sections or run: sigma plan new');
+                console.log('');
+                return;
+            }
+            const COL_STAGE = 7;
+            const COL_STATUS = 10;
+            const COL_TITLE = 38;
+            const COL_FOCUS = 42;
+            console.log('Stage'.padEnd(COL_STAGE) +
+                'Status'.padEnd(COL_STATUS) +
+                'Title'.padEnd(COL_TITLE) +
+                'Focus');
+            console.log('-'.repeat(COL_STAGE + COL_STATUS + COL_TITLE + COL_FOCUS));
+            for (const s of stages) {
+                const planEntry = data.plan.versions.find(v => v.version === `v${s.version}`);
+                const status = planEntry?.state ?? 'PENDING';
+                const title = planEntry?.title ?? s.title;
+                const focus = planEntry?.focus ?? s.focus;
+                const stageCol = s.version.padEnd(COL_STAGE);
+                const statusCol = status.padEnd(COL_STATUS);
+                const titleCol = title.length > COL_TITLE - 2
+                    ? title.substring(0, COL_TITLE - 4) + '... '
+                    : title.padEnd(COL_TITLE);
+                const focusCol = focus.length > COL_FOCUS - 2
+                    ? focus.substring(0, COL_FOCUS - 4) + '...'
+                    : focus;
+                console.log(`${stageCol}${statusCol}${titleCol}${focusCol}`);
             }
             console.log('');
         }
