@@ -17,4 +17,4 @@ args = [
 command = "cmd"
 
 [mcp_servers.sigma-memory.env]
-MEMORY_FILE_PATH = 'C:\Users\dikoh\.sigma\memory_sigma.jsonl'
+MEMORY_FILE_PATH = '/home/dikoharyadhanto/.sigma/memory_sigma.jsonl'

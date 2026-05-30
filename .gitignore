@@ -25,3 +25,4 @@ desktop.ini
 # MCP config — machine/user-specific; regenerate with: sigma setup memory [--vscode]
 .mcp.json
 .vscode/mcp.json
+.codex/config.toml
