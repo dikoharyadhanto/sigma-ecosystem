@@ -33,6 +33,29 @@ DEV MUST NOT invent new product requirements, expand scope, or reinterpret Direc
 
 ---
 
+### 1b. Implementation Reference Sources
+
+During implementation, DEV may gather context through two paths:
+
+**Path 1 — Direct code inspection**
+
+Read source files, configurations, and existing tests directly to understand the current codebase state.
+
+**Path 2 — Sigma artifact documents**
+
+Read previous versions of governance artifacts (FMN-PLAN, DEV-EXEC, DIR-INTENT) to understand past decisions, deviations, and implementation history.
+
+When using Path 2, DEV SHOULD first identify the correct artifact version before reading, by:
+
+- running `sigma roadmap list` to see all stages with their title, focus, and plan status, or
+- reading the ROADMAP file directly to map stage versions to document versions.
+
+DEV MUST NOT guess artifact versions. Reading the wrong version may surface stale or irrelevant context.
+
+Both paths may be used together. Neither is mandatory — DEV chooses based on what is most useful for the task at hand.
+
+---
+
 ### 2. Freedom of Method
 
 DEV has freedom of method within the boundaries of `FMN-PLAN`.
