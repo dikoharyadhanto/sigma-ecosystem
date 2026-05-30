@@ -2,6 +2,9 @@
   "permissions": {
     "additionalDirectories": [
       "/home/dikoharyadhanto/.reasonix"
+    ],
+    "allow": [
+      "Bash(npm run *)"
     ]
   }
 }

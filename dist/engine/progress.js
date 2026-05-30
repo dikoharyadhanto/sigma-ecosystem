@@ -395,19 +395,24 @@ function registerPendingPlan(data, id, filePath) {
     const now = new Date().toISOString();
     data.plan.pending.push({ id, file: filePath, created_at: now });
 }
-function promotePendingPlan(data, id, version, newFilePath, intentVersionRef) {
+function promotePendingPlan(data, id, version, newFilePath, intentVersionRef, title, focus) {
     const idx = data.plan.pending.findIndex(p => p.id === id);
     if (idx === -1)
         throw new Error(`Pending plan ID "${id}" not found`);
     const pending = data.plan.pending[idx];
     data.plan.pending.splice(idx, 1);
     const now = new Date().toISOString();
-    data.plan.versions.push({
+    const entry = {
         version, state: 'DRAFT', file: newFilePath,
         created_at: pending.created_at,
         updated_at: now,
         intent_version_ref: intentVersionRef,
-    });
+    };
+    if (title)
+        entry.title = title;
+    if (focus)
+        entry.focus = focus;
+    data.plan.versions.push(entry);
     data.plan.active_version = version;
     data.plan.active_state = 'DRAFT';
 }

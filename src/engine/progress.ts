@@ -536,7 +536,9 @@ export function promotePendingPlan(
   id: string,
   version: string,
   newFilePath: string,
-  intentVersionRef: string
+  intentVersionRef: string,
+  title?: string,
+  focus?: string,
 ): void {
   const idx = data.plan.pending.findIndex(p => p.id === id);
   if (idx === -1) throw new Error(`Pending plan ID "${id}" not found`);
@@ -545,12 +547,15 @@ export function promotePendingPlan(
   data.plan.pending.splice(idx, 1);
 
   const now = new Date().toISOString();
-  data.plan.versions.push({
+  const entry: ArtifactVersion = {
     version, state: 'DRAFT', file: newFilePath,
     created_at: pending.created_at,
     updated_at: now,
     intent_version_ref: intentVersionRef,
-  });
+  };
+  if (title) entry.title = title;
+  if (focus) entry.focus = focus;
+  data.plan.versions.push(entry);
   data.plan.active_version = version;
   data.plan.active_state = 'DRAFT';
 }

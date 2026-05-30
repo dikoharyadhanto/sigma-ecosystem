@@ -190,7 +190,9 @@ export function planCommand(): Command {
   cmd.command('promote')
     .description('Promote a pending plan into the official draft queue with an assigned version')
     .requiredOption('--id <id>', 'Pending plan ID to promote (e.g. a3b9)')
-    .action((opts: { id: string }) => {
+    .option('--title <title>', 'Stage title written into the ROADMAP stage heading and stage overview table')
+    .option('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table')
+    .action((opts: { id: string; title?: string; focus?: string }) => {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
@@ -229,11 +231,11 @@ export function planCommand(): Command {
         fs.moveSync(oldAbsPath, newAbsPath);
         const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
         if (roadmapAbsPath) {
-          appendRoadmapSectionStub(roadmapAbsPath, newVersion);
+          appendRoadmapSectionStub(roadmapAbsPath, newVersion, opts.title, opts.focus);
         }
 
         // Write progress last
-        promotePendingPlan(data, opts.id, newVersion, newRelPath, lockedIntent.version);
+        promotePendingPlan(data, opts.id, newVersion, newRelPath, lockedIntent.version, opts.title, opts.focus);
         writeProgress(projectRoot, data);
 
         // Render after state is written (idempotent)
