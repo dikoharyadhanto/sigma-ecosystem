@@ -18,6 +18,7 @@ exports.nextExecVersion = nextExecVersion;
 exports.registerIntentDraft = registerIntentDraft;
 exports.lockActiveIntent = lockActiveIntent;
 exports.registerPlanDraft = registerPlanDraft;
+exports.updatePlanMetadata = updatePlanMetadata;
 exports.lockOldestPlanDraft = lockOldestPlanDraft;
 exports.registerPendingPlan = registerPendingPlan;
 exports.promotePendingPlan = promotePendingPlan;
@@ -342,7 +343,7 @@ function lockActiveIntent(data) {
     propagateStaleIntent(data, activeVersion);
 }
 // ── PLAN Mutations ────────────────────────────────────────────────────────────
-function registerPlanDraft(data, version, filePath, intentVersionRef) {
+function registerPlanDraft(data, version, filePath, intentVersionRef, title, focus) {
     const planMajor = parseMajorVersion(version);
     const expectedPlanMajor = parseMajorVersion(intentVersionRef) - 1;
     if (planMajor !== expectedPlanMajor) {
@@ -351,13 +352,28 @@ function registerPlanDraft(data, version, filePath, intentVersionRef) {
             `Valid PLAN versions: v${expectedPlanMajor}.1, v${expectedPlanMajor}.2, ...`);
     }
     const now = new Date().toISOString();
-    data.plan.versions.push({
+    const entry = {
         version, state: 'DRAFT', file: filePath,
         created_at: now, updated_at: now,
         intent_version_ref: intentVersionRef,
-    });
+    };
+    if (title)
+        entry.title = title;
+    if (focus)
+        entry.focus = focus;
+    data.plan.versions.push(entry);
     data.plan.active_version = version;
     data.plan.active_state = 'DRAFT';
+}
+function updatePlanMetadata(data, version, title, focus) {
+    const entry = data.plan.versions.find(v => v.version === version);
+    if (!entry)
+        throw new Error(`FMN-PLAN ${version} not found. Run: sigma plan list`);
+    if (title !== undefined)
+        entry.title = title;
+    if (focus !== undefined)
+        entry.focus = focus;
+    entry.updated_at = new Date().toISOString();
 }
 function lockOldestPlanDraft(data) {
     const drafts = data.plan.versions

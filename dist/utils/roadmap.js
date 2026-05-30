@@ -49,7 +49,9 @@ function generateStageOverview(stages, data) {
     }
     const rows = stages.map(s => {
         const status = planStateForStage(s.version, data);
-        return `| ${s.version} | ${s.title} | ${s.focus} | ${status} |`;
+        const planEntry = data.plan.versions.find(v => v.version === `v${s.version}`);
+        const focus = planEntry?.focus ?? s.focus;
+        return `| ${s.version} | ${s.title} | ${focus} | ${status} |`;
     });
     return [
         '## 3. Stage Overview',

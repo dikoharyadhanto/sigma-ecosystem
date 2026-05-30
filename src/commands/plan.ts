@@ -11,6 +11,7 @@ import {
   activatePlanDraft,
   registerPendingPlan,
   promotePendingPlan,
+  updatePlanMetadata,
   assertProgressCanMutate,
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
@@ -95,7 +96,7 @@ export function planCommand(): Command {
         if (roadmapAbsPath) {
           appendRoadmapSectionStub(roadmapAbsPath, version, opts.title, opts.focus);
         }
-        registerPlanDraft(data, version, relPath, intentVersionRef);
+        registerPlanDraft(data, version, relPath, intentVersionRef, opts.title, opts.focus);
         writeProgress(projectRoot, data);
 
         // Render after state is written (idempotent re-sync)
@@ -365,6 +366,9 @@ export function planCommand(): Command {
         if (!roadmapAbsPath) {
           throw new Error('No ACTIVE ROADMAP found. Run: sigma roadmap new');
         }
+
+        updatePlanMetadata(data, opts.v, opts.title, opts.focus);
+        writeProgress(projectRoot, data);
 
         const stageVersion = opts.v.replace(/^v/, '');
         updateStageMetadata(roadmapAbsPath, stageVersion, opts.title, opts.focus);

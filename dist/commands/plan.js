@@ -82,7 +82,7 @@ function planCommand() {
             if (roadmapAbsPath) {
                 (0, roadmap_1.appendRoadmapSectionStub)(roadmapAbsPath, version, opts.title, opts.focus);
             }
-            (0, progress_1.registerPlanDraft)(data, version, relPath, intentVersionRef);
+            (0, progress_1.registerPlanDraft)(data, version, relPath, intentVersionRef, opts.title, opts.focus);
             (0, progress_1.writeProgress)(projectRoot, data);
             // Render after state is written (idempotent re-sync)
             if (roadmapAbsPath) {
@@ -337,6 +337,8 @@ function planCommand() {
             if (!roadmapAbsPath) {
                 throw new Error('No ACTIVE ROADMAP found. Run: sigma roadmap new');
             }
+            (0, progress_1.updatePlanMetadata)(data, opts.v, opts.title, opts.focus);
+            (0, progress_1.writeProgress)(projectRoot, data);
             const stageVersion = opts.v.replace(/^v/, '');
             (0, roadmap_1.updateStageMetadata)(roadmapAbsPath, stageVersion, opts.title, opts.focus);
             (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, data);

@@ -23,6 +23,8 @@ export interface ArtifactVersion {
   stale_intent?: boolean;
   intent_version_ref?: string;
   plan_version_ref?: string;
+  title?: string;
+  focus?: string;
 }
 
 export interface ArtifactTracker {
@@ -466,7 +468,9 @@ export function registerPlanDraft(
   data: ProgressJson,
   version: string,
   filePath: string,
-  intentVersionRef: string
+  intentVersionRef: string,
+  title?: string,
+  focus?: string,
 ): void {
   const planMajor = parseMajorVersion(version);
   const expectedPlanMajor = parseMajorVersion(intentVersionRef) - 1;
@@ -478,13 +482,29 @@ export function registerPlanDraft(
     );
   }
   const now = new Date().toISOString();
-  data.plan.versions.push({
+  const entry: ArtifactVersion = {
     version, state: 'DRAFT', file: filePath,
     created_at: now, updated_at: now,
     intent_version_ref: intentVersionRef,
-  });
+  };
+  if (title) entry.title = title;
+  if (focus) entry.focus = focus;
+  data.plan.versions.push(entry);
   data.plan.active_version = version;
   data.plan.active_state = 'DRAFT';
+}
+
+export function updatePlanMetadata(
+  data: ProgressJson,
+  version: string,
+  title?: string,
+  focus?: string,
+): void {
+  const entry = data.plan.versions.find(v => v.version === version);
+  if (!entry) throw new Error(`FMN-PLAN ${version} not found. Run: sigma plan list`);
+  if (title !== undefined) entry.title = title;
+  if (focus !== undefined) entry.focus = focus;
+  entry.updated_at = new Date().toISOString();
 }
 
 export function lockOldestPlanDraft(data: ProgressJson): string {

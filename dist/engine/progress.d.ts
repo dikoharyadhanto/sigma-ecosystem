@@ -16,6 +16,8 @@ export interface ArtifactVersion {
     stale_intent?: boolean;
     intent_version_ref?: string;
     plan_version_ref?: string;
+    title?: string;
+    focus?: string;
 }
 export interface ArtifactTracker {
     active_version: string | null;
@@ -72,7 +74,8 @@ export declare function nextPlanVersion(data: ProgressJson, intentVersionRef: st
 export declare function nextExecVersion(data: ProgressJson, planVersionRef: string): string;
 export declare function registerIntentDraft(data: ProgressJson, version: string, filePath: string): void;
 export declare function lockActiveIntent(data: ProgressJson): void;
-export declare function registerPlanDraft(data: ProgressJson, version: string, filePath: string, intentVersionRef: string): void;
+export declare function registerPlanDraft(data: ProgressJson, version: string, filePath: string, intentVersionRef: string, title?: string, focus?: string): void;
+export declare function updatePlanMetadata(data: ProgressJson, version: string, title?: string, focus?: string): void;
 export declare function lockOldestPlanDraft(data: ProgressJson): string;
 export declare function registerPendingPlan(data: ProgressJson, id: string, filePath: string): void;
 export declare function promotePendingPlan(data: ProgressJson, id: string, version: string, newFilePath: string, intentVersionRef: string): void;
