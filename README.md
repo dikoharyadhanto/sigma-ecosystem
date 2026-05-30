@@ -53,6 +53,81 @@ Artifacts preserve evidence.
 
 ---
 
+## Actors and Terminology
+
+Understanding who does what in Sigma is essential before reading the workflow.
+
+### Director
+
+The Director is the **human** who owns the project.
+
+The Director gives intent, approves or rejects proposals, accepts or rejects risk, and decides closure. The Director does not run CLI operations — AI roles do.
+
+Authority decisions belong exclusively to the Director:
+
+- approving or rejecting a plan,
+- locking an artifact,
+- accepting an identified risk,
+- superseding a locked version,
+- deciding closure.
+
+### AI Roles
+
+AI roles are the **operational layer**. They read project state, draft governance artifacts, run CLI commands, and surface risks — all under Director authority.
+
+Each role has a fixed scope:
+
+| Role | Shortcut | Scope |
+|:--- |:--- |:--- |
+| ARC — Architect | `/arc` | Clarifies Director intent; drafts `DIR-INTENT` |
+| FMN — Foreman | `/fmn` | Plans the work; drafts `ROADMAP` and `FMN-PLAN` |
+| DEV — Developer | `/dev` | Implements the locked plan; records evidence in `DEV-EXEC` |
+| AUD — Auditor | `/aud` | Passive external reviewer; advisory only; never locks or blocks |
+
+A role is immutable within a session. If FMN is active, it does not become DEV in the same session.
+
+### Sigma CLI
+
+The CLI is the **enforcement layer**. It validates gates, updates runtime state, and records decisions.
+
+A valid CLI command is not automatically an authorized command. Lock, supersede, and risk commands require explicit Director authorization.
+
+### Artifacts
+
+Artifacts are **governance documents** that preserve decisions, evidence, and audit trail across sessions and AI vendors.
+
+| Artifact | Human label | Purpose |
+|:--- |:--- |:--- |
+| `DIR-INTENT` | Intent Doc | Objective, scope, constraints — Director-approved |
+| `ROADMAP` | Roadmap Doc | Optional staging map for large work |
+| `FMN-PLAN` | Plan Doc | Build contract and test contract — Director-approved |
+| `DEV-EXEC` | Execution Evidence | Implementation report and proof |
+| `DIR-CLOSE` | Closure Doc | Final closure decision |
+| `CSO` | Context Handoff | Session continuity between AI sessions |
+
+Artifact versions (e.g. `FMN-PLAN-v0.2`) are governance identifiers, not product release versions.
+
+### Gates
+
+A **gate** is a prerequisite condition the CLI enforces before allowing a state-advancing command.
+
+Gates prevent downstream work from starting before upstream decisions are stable:
+
+| Gate | Condition required |
+|:--- |:--- |
+| Gate 1 | `DIR-INTENT` must be LOCKED before creating a ROADMAP |
+| Gate 1.5 | An ACTIVE ROADMAP must exist before creating a non-pending `FMN-PLAN` |
+| Gate 2 | `FMN-PLAN` must be LOCKED before creating `DEV-EXEC` |
+| Gate 3 | `DEV-EXEC` must be LOCKED before creating `DIR-CLOSE` |
+
+### Lock
+
+A **lock** is a Director authorization that advances an artifact from DRAFT to LOCKED state, opening the next gate.
+
+Locking is irreversible without a supersede. A locked artifact is never edited in place.
+
+---
+
 ## End-to-End Workflow
 
 ```text
@@ -325,14 +400,7 @@ The Director controls authority decisions: approval, rejection, lock, accepted r
 
 ---
 
-## Operating Model
-
-| Actor     | Responsibility                                                               |
-|:--------- |:---------------------------------------------------------------------------- |
-| Director  | Gives intent, approves locks, accepts or rejects risk, decides closure       |
-| AI Roles  | Read artifacts, run operational CLI commands, draft documents, surface risks |
-| Sigma CLI | Enforces gates, updates runtime state, records decisions                     |
-| Artifacts | Preserve meaning, evidence, decisions, and audit trail                       |
+## Director Authorization Language
 
 A valid CLI command is not automatically an authorized command.
 
@@ -363,7 +431,7 @@ If approval is unclear, the AI role must ask before acting.
 
 ---
 
-## Roles
+## Sigma Skills
 
 | Role            | Shortcut      | Responsibility                                                                |
 |:--------------- |:------------- |:----------------------------------------------------------------------------- |
@@ -387,16 +455,6 @@ Supported targets include Claude Code, Codex CLI, Reasonix, and Antigravity when
 
 ## Important Role Boundaries
 
-### Role immutability
-
-A Sigma governance role does not switch roles inside the same session.
-
-If a session is active as FMN, it should not become DEV or AUD in the same session.
-
-Use a fresh session or invoke the new role separately.
-
-`/checkpoint` and `/report` are utility skills. They do not switch the active role.
-
 ### AUD is passive by default
 
 AUD is an external auditor role.
@@ -406,25 +464,6 @@ AUD reviews submitted evidence or files explicitly provided or authorized by the
 AUD does not roam the repository, scan unrelated files, inspect local state, or run Sigma CLI unless the Director explicitly authorizes a specific audit scope.
 
 AUD recommends. Director decides.
-
----
-
-## Human Labels and Formal Artifacts
-
-| What you see       | Formal artifact | Purpose                          |
-|:------------------ |:--------------- |:-------------------------------- |
-| Intent Doc         | `DIR-INTENT`    | Objective, scope, constraints    |
-| Plan Doc           | `FMN-PLAN`      | Build contract and test contract |
-| Execution Evidence | `DEV-EXEC`      | Implementation report and proof  |
-| Closure Doc        | `DIR-CLOSE`     | Final closure decision           |
-| Roadmap Doc        | `ROADMAP`       | Optional staging map             |
-| Context Handoff    | `CSO`           | Session continuity               |
-
-Sigma artifact versions are governance identifiers.
-
-They are not product release versions.
-
-For example, `FMN-PLAN-v0.2` does not mean the product is version `0.2.0`.
 
 ---
 
@@ -561,6 +600,75 @@ Lock, supersede, reset, stale-intent acknowledgment, and risk-related commands r
 
 ---
 
+## Updating Sigma — Backward Compatibility for Registered Projects
+
+When `sigma-cli` is updated, existing projects registered in the Sigma system may need to be migrated to stay compatible with the new schema and doctrine files.
+
+### When to run migration
+
+Run migration after:
+
+- `npm update -g sigma-cli` installs a new version
+- `sigma session bootstrap` reports a schema mismatch or unknown field warning
+- A governance role reports an unexpected gate error on an existing project
+
+### Migration sequence
+
+Run these in order for each registered project:
+
+```bash
+# 1. Update global templates and governance files
+sigma setup update
+
+# 2. Navigate to your project
+cd your-project
+
+# 3. Coerce progress.json to the current schema
+sigma sync progress
+
+# 4. Sync doctrine files from updated global templates into the project
+sigma project sync --confirm
+
+# 5. If the project uses a ROADMAP, sync document alignment
+sigma sync roadmap
+
+# 6. Verify project state is consistent
+sigma session bootstrap
+```
+
+### What each command does
+
+| Command                        | What it updates                                                                            |
+|:------------------------------ |:------------------------------------------------------------------------------------------ |
+| `sigma setup update`           | Updates global `~/.sigma/` templates and governance files                                  |
+| `sigma sync progress`          | Coerces and cleans up `Sigma/progress.json` to the current schema                          |
+| `sigma project sync --confirm` | Syncs doctrine files (role rules, protocol) from updated global templates into the project |
+| `sigma sync roadmap`           | Syncs `ROADMAP` documents with current progress state                                      |
+| `sigma session bootstrap`      | Verifies project state after migration                                                     |
+
+### Memory reseed (optional)
+
+If ecosystem memory seems stale or incomplete after an update:
+
+```bash
+sigma setup memory --reseed
+```
+
+This refreshes ecosystem-level memory seed entries. It does not overwrite project decisions or locked artifacts.
+
+### What is preserved
+
+The following are never modified by migration commands:
+
+- Locked artifacts (`DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, `DIR-CLOSE`)
+- `Sigma/progress.json` gate and lock decisions
+- `Sigma/logs/` — CSO handoff files
+- All content inside `Sigma/build/`, `Sigma/design/`, `Sigma/close/`
+
+Migration commands only update schema wrappers, doctrine files, and template structure — not Director decisions or locked evidence.
+
+---
+
 ## Memory & MCP
 
 Sigma may use MCP servers for reasoning and reusable ecosystem memory.
@@ -575,7 +683,7 @@ Sigma governance truth remains in:
 ```text
 Sigma/progress.json
 Sigma artifacts
-Sigma/memory/decisions.jsonl
+Sigma/memory/overrides.jsonl
 ```
 
 ### State integrity
@@ -629,8 +737,6 @@ Memory file:
 ```text
 ~/.sigma/memory_sigma.jsonl
 ```
-
-
 
 ---
 
