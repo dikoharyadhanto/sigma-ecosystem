@@ -15,7 +15,7 @@ import {
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
 import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
-import { renderRoadmapFile, appendRoadmapSectionStub } from '../utils/roadmap';
+import { renderRoadmapFile, appendRoadmapSectionStub, updateStageMetadata } from '../utils/roadmap';
 
 function generatePendingId(): string {
   return Math.random().toString(36).slice(2, 6).toLowerCase();
@@ -44,7 +44,9 @@ export function planCommand(): Command {
   cmd.command('new')
     .description('Create a new FMN-PLAN draft (requires locked DIR-INTENT + ACTIVE ROADMAP). Use --pending to stage a future plan without entering the version queue.')
     .option('--pending', 'Stage as a pending plan (no version assigned; not in lock queue)')
-    .action((opts: { pending?: boolean }) => {
+    .option('--title <title>', 'Stage title written into the ROADMAP stage heading and stage overview table')
+    .option('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table')
+    .action((opts: { pending?: boolean; title?: string; focus?: string }) => {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
@@ -91,7 +93,7 @@ export function planCommand(): Command {
         copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);
         const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
         if (roadmapAbsPath) {
-          appendRoadmapSectionStub(roadmapAbsPath, version);
+          appendRoadmapSectionStub(roadmapAbsPath, version, opts.title, opts.focus);
         }
         registerPlanDraft(data, version, relPath, intentVersionRef);
         writeProgress(projectRoot, data);
@@ -333,6 +335,46 @@ export function planCommand(): Command {
         }
         console.log(`\nGate 2:           ${data.gates.gate_2_open ? 'OPEN' : 'BLOCKED'}`);
         console.log('');
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  cmd.command('update')
+    .description('Update title and/or focus for an existing FMN-PLAN stage in the active ROADMAP')
+    .requiredOption('--v <version>', 'Plan version to update (e.g. v1.15)')
+    .option('--title <title>', 'New stage title')
+    .option('--focus <focus>', 'New stage focus summary')
+    .action((opts: { v: string; title?: string; focus?: string }) => {
+      try {
+        if (!opts.title && !opts.focus) {
+          throw new Error('Provide at least one of --title or --focus');
+        }
+
+        const projectRoot = findProjectRoot();
+        const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
+
+        const planEntry = data.plan.versions.find(v => v.version === opts.v);
+        if (!planEntry) {
+          throw new Error(`FMN-PLAN ${opts.v} not found. Run: sigma plan list`);
+        }
+
+        const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
+        if (!roadmapAbsPath) {
+          throw new Error('No ACTIVE ROADMAP found. Run: sigma roadmap new');
+        }
+
+        const stageVersion = opts.v.replace(/^v/, '');
+        updateStageMetadata(roadmapAbsPath, stageVersion, opts.title, opts.focus);
+        renderRoadmapFile(roadmapAbsPath, data);
+
+        const parts: string[] = [];
+        if (opts.title) parts.push(`title → "${opts.title}"`);
+        if (opts.focus) parts.push(`focus → "${opts.focus}"`);
+        console.log(`FMN-PLAN ${opts.v}: ${parts.join(', ')}`);
+        console.log(`ROADMAP updated: Stage ${stageVersion} metadata updated + derived sections regenerated`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
