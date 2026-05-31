@@ -1,4 +1,4 @@
-import { SigmaRole, MessageType } from '../config';
+import { SigmaRole, MessageType, ActionRequired } from '../config';
 export interface MessageEntry {
     id: string;
     from: SigmaRole;
@@ -10,6 +10,8 @@ export interface MessageEntry {
     created_at: string;
     attachments: string[];
     reply_to?: string;
+    related_artifact?: string;
+    action?: ActionRequired;
 }
 export interface MessageIndex {
     messages: MessageEntry[];

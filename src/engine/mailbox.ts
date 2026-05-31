@@ -5,6 +5,8 @@ import {
   MESSAGES_INDEX_FILE,
   SigmaRole,
   MessageType,
+  ActionRequired,
+  VALID_ACTIONS,
 } from '../config';
 
 export interface MessageEntry {
@@ -18,6 +20,8 @@ export interface MessageEntry {
   created_at: string;
   attachments: string[];
   reply_to?: string;
+  related_artifact?: string;
+  action?: ActionRequired;
 }
 
 export interface MessageIndex {
@@ -127,23 +131,36 @@ export function buildMessageMarkdown(entry: MessageEntry, body: string): string 
   const attachmentCell = entry.attachments.length > 0
     ? entry.attachments.join(', ')
     : '—';
-  const replyToRow = entry.reply_to ? `| Reply To | ${entry.reply_to} |\n` : '';
+  const replyToRow = entry.reply_to ? `| Reply To       | ${entry.reply_to} |\n` : '';
+  const relatedArtifact = entry.related_artifact || 'N/A';
+  const selectedAction: ActionRequired = entry.action || 'FYI';
+  const actionChecklist = (VALID_ACTIONS as ReadonlyArray<ActionRequired>)
+    .map(a => `- [${a === selectedAction ? 'x' : ' '}] ${a}`)
+    .join('\n');
 
-  return `# Sigma Role Message
+  return `# MSG-${entry.id}
 
 ## Metadata
 
-| Field | Value |
-| :--- | :--- |
-| Message ID | ${entry.id} |
-| Type | ${entry.type} |
-| From Role | ${entry.from} |
-| To Role | ${entry.to} |
-| Subject | ${entry.subject} |
-| Status | ${entry.status} |
-| Created At | ${entry.created_at} |
-${replyToRow}| Authority Level | Context Only |
-| Attachments | ${attachmentCell} |
+| Field          | Value |
+| :---           | :---  |
+| Message ID     | ${entry.id} |
+| Type           | ${entry.type} |
+| From           | ${entry.from} |
+| To             | ${entry.to} |
+| Subject        | ${entry.subject} |
+| Status         | ${entry.status} |
+| Created At     | ${entry.created_at} |
+${replyToRow}| Related Artifact | ${relatedArtifact} |
+| Attachments    | ${attachmentCell} |
+
+---
+
+## Action Required
+
+> Pick one. Do not edit or add options. If none fit, tick OTHER and describe in the message body.
+
+${actionChecklist}
 
 ---
 

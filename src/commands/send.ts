@@ -4,9 +4,11 @@ import path from 'path';
 import {
   MESSAGING_ROLES,
   VALID_MESSAGE_TYPES,
+  VALID_ACTIONS,
   MESSAGES_ATTACHMENTS_DIR,
   MessagingRole,
   MessageType,
+  ActionRequired,
 } from '../config';
 import {
   readIndex,
@@ -43,6 +45,16 @@ function validateType(value: string): MessageType {
   return upper;
 }
 
+function validateAction(value: string): ActionRequired {
+  const upper = value.toUpperCase() as ActionRequired;
+  if (!(VALID_ACTIONS as readonly string[]).includes(upper)) {
+    throw new Error(
+      `Invalid --action "${value}". Valid actions: ${VALID_ACTIONS.map(a => a.toLowerCase()).join(', ')}`
+    );
+  }
+  return upper;
+}
+
 function runSend(opts: {
   from: string;
   to: string;
@@ -52,6 +64,8 @@ function runSend(opts: {
   messageFile?: string;
   attach?: string;
   replyTo?: string;
+  action?: string;
+  relatedArtifact?: string;
 }): void {
   if (!opts.from) throw new Error('--from is required. Use: sigma send --from <role> --to <role> --message "..."');
   if (!opts.to) throw new Error('--to is required. Use: sigma send --from <role> --to <role> --message "..."');
@@ -76,6 +90,8 @@ function runSend(opts: {
   const toRole = validateRole(opts.to, '--to');
   const msgType: MessageType = opts.type ? validateType(opts.type) : 'NOTE';
   const subject = opts.subject?.trim() || '(no subject)';
+  const action: ActionRequired = opts.action ? validateAction(opts.action) : 'FYI';
+  const relatedArtifact = opts.relatedArtifact?.trim() || 'N/A';
 
   const projectRoot = findProjectRoot();
 
@@ -136,6 +152,8 @@ function runSend(opts: {
     status: 'UNREAD',
     created_at: ts,
     attachments: attachmentPaths,
+    action,
+    related_artifact: relatedArtifact,
     ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
   };
 
@@ -150,16 +168,18 @@ function runSend(opts: {
   writeIndex(projectRoot, index);
 
   console.log('\nMessage sent.');
-  console.log(`  ID      : ${msgId}`);
-  console.log(`  From    : ${fromRole} → ${toRole}`);
-  console.log(`  Type    : ${msgType}`);
-  console.log(`  Subject : ${subject}`);
-  console.log(`  File    : ${relFilePath}`);
+  console.log(`  ID       : ${msgId}`);
+  console.log(`  From     : ${fromRole} → ${toRole}`);
+  console.log(`  Type     : ${msgType}`);
+  console.log(`  Subject  : ${subject}`);
+  console.log(`  Action   : ${action}`);
+  console.log(`  Artifact : ${relatedArtifact}`);
+  console.log(`  File     : ${relFilePath}`);
   if (opts.replyTo) {
-    console.log(`  Reply-To: ${opts.replyTo}`);
+    console.log(`  Reply-To : ${opts.replyTo}`);
   }
   if (attachmentPaths.length > 0) {
-    console.log(`  Attach  : ${attachmentPaths[0]}`);
+    console.log(`  Attach   : ${attachmentPaths[0]}`);
   }
   console.log('');
 }
@@ -168,8 +188,10 @@ export function sendCommand(): Command {
   const cmd = new Command('send');
   cmd.description(
     'Send a message from one role to another.\n' +
-    '  Policy: a sender must have no unread messages in their own inbox before sending.\n' +
-    '  Clear unread messages with: sigma inbox read <id>\n' +
+    '  Each message requires an action (--action) and artifact reference (--related-artifact).\n' +
+    '  Message files are CLI-generated — never create or rename them manually.\n' +
+    '  Policy: sender must have no unread messages in their own inbox before sending.\n' +
+    '  Clear unread with: sigma inbox read <id>\n' +
     '  Valid messaging roles: arc, fmn, dev, aud (director communicates directly)'
   );
 
@@ -182,9 +204,12 @@ export function sendCommand(): Command {
     .option('--message-file <path>', 'Path to a file whose contents become the message body (preserves newlines)')
     .option('--attach <file>', 'File to attach (copied into Sigma/messages/attachments/)')
     .option('--reply-to <id>', 'Message ID this message is responding to (soft-check; does not block if not found)')
+    .option('--action <action>', `Action required from recipient (${VALID_ACTIONS.map(a => a.toLowerCase()).join('|')})`, 'fyi')
+    .option('--related-artifact <artifact>', 'Artifact this message relates to (e.g. FMN-PLAN-v2, DEV-EXEC-v1, N/A)', 'N/A')
     .action((opts: {
       from: string; to: string; type?: string; subject?: string;
       message?: string; messageFile?: string; attach?: string; replyTo?: string;
+      action?: string; relatedArtifact?: string;
     }) => {
       try {
         runSend(opts);

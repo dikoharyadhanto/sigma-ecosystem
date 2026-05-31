@@ -1,10 +1,10 @@
 # DEV-EXEC
 
 > Implementation approach, execution report, verification evidence, and developer walkthrough.
-> FMN review and Director observations are recorded in Sections 13–16.
+> FMN reviews are recorded in Sections 6 and 15. Director observations and minor requests are recorded in Section 16.
 >
 > **Lock State**: Managed by Sigma CLI via `progress.json`. Do not edit lock state here.
-> **Section Ownership**: Sections 1–12 are DEV-authored. Sections 13–14 are FMN-authored. Sections 15–16 are Director-authored.
+> **Section Ownership**: Sections 1–5 are DEV pre-build. Section 6 is FMN pre-build. Sections 7–14 are DEV post-build. Section 15 is FMN post-build. Section 16 is DEV-authored — transcribed from Director's direct chat report.
 
 ---
 
@@ -22,7 +22,7 @@ Summarize how this execution follows the locked FMN-PLAN.
 
 ---
 
-## 1b. DEV Pre-Build Assessment
+## 2. DEV Pre-Build Assessment
 
 > **Filled by DEV — Before Build** (after studying FMN-PLAN and prior session artifacts)
 
@@ -44,13 +44,17 @@ If none, write: No concerns — plan is clear and sufficient to proceed.]
 
 ### DEV Readiness Status
 
-CLEAR / NEED_CLARIFICATION
+> Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
 
-[If NEED_CLARIFICATION: list specific unresolved items that require FMN or Director response before DEV proceeds to Section 2]
+- [ ] CLEAR
+- [ ] NEED_CLARIFICATION
+- [ ] OTHER: [describe]
+
+[If NEED_CLARIFICATION: list specific unresolved items that require FMN or Director response before DEV proceeds to Section 3]
 
 ---
 
-## 2. Implementation Approach
+## 3. Implementation Approach
 
 > **Filled by DEV — Before Build**
 
@@ -76,7 +80,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ---
 
-## 3. Files / Components To Change
+## 4. Files / Components To Change
 
 > **Filled by DEV — Before Build**
 
@@ -87,7 +91,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ---
 
-## 4. Key Technical Decisions
+## 5. Key Technical Decisions
 
 > **Filled by DEV — Before Build**
 
@@ -97,7 +101,38 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ---
 
-## 5. Implementation Walkthrough
+## 6. FMN Pre-Build Review
+
+> **Filled by FMN — After DEV Pre-Build Planning (Sections 1–5). DEV must not write in this section.**
+
+### Pre-Build Clarification
+
+> *(Populate only if DEV Section 2 status was NEED_CLARIFICATION)*
+
+[FMN answers to DEV's open items from Section 2]
+
+### Plan Review
+
+| Item | FMN Assessment | Status |
+| :--- | :--- | :--- |
+| [AC or constraint from FMN-PLAN] | [FMN's assessment of DEV's plan] | Approved / Concern / Rejected |
+
+### Pre-Build Verdict
+
+> Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
+
+- [ ] CLEARED_TO_BUILD
+- [ ] NEEDS_DEV_REVISION
+- [ ] BLOCKED
+- [ ] OTHER: [describe]
+
+### FMN Pre-Build Notes
+
+[...]
+
+---
+
+## 7. Implementation Walkthrough
 
 > **Filled by DEV — After Build**
 
@@ -121,7 +156,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ---
 
-## 6. Deviations From FMN-PLAN
+## 8. Deviations From FMN-PLAN
 
 > **Filled by DEV — After Build**
 > Record any deviation from the locked FMN-PLAN. Do not hide deviations.
@@ -135,16 +170,16 @@ If no deviation exists, write:
 > No material deviation from FMN-PLAN.
 
 > **Deviation Update Checklist** — when any deviation is added above, verify:
-> - [ ] Section 2 — implementation approach still accurate?
-> - [ ] Section 5 — walkthrough reflects actual implementation?
-> - [ ] Section 8 — test counts and results still current?
-> - [ ] Section 9 — git evidence reflects latest commits?
-> - [ ] Section 10 — issue recorded if deviation came from a bug?
-> - [ ] Section 12 — completion summary consistent with all changes?
+> - [ ] Section 3 — implementation approach still accurate?
+> - [ ] Section 7 — walkthrough reflects actual implementation?
+> - [ ] Section 10 — test counts and results still current?
+> - [ ] Section 11 — git evidence reflects latest commits?
+> - [ ] Section 12 — issue recorded if deviation came from a bug?
+> - [ ] Section 14 — completion summary consistent with all changes?
 
 ---
 
-## 7. Dependency / Environment Changes
+## 9. Dependency / Environment Changes
 
 > **Filled by DEV — After Build**
 
@@ -158,7 +193,7 @@ If none, write:
 
 ---
 
-## 8. Developer Verification
+## 10. Developer Verification
 
 > **Filled by DEV — After Build**
 
@@ -173,7 +208,7 @@ DEV records checks performed before handing back to FMN.
 
 ---
 
-## 9. Git / Change Evidence
+## 11. Git / Change Evidence
 
 > **Filled by DEV — After Build**
 
@@ -189,7 +224,7 @@ Minimal physical trace. Mark N/A only if no material file changes exist.
 
 ---
 
-## 10. Issues Encountered
+## 12. Issues Encountered
 
 > **Filled by DEV — After Build**
 
@@ -203,7 +238,7 @@ If none, write:
 
 ---
 
-## 11. Known Limitations / Technical Debt
+## 13. Known Limitations / Technical Debt
 
 > **Filled by DEV — After Build**
 
@@ -217,7 +252,7 @@ If none, write:
 
 ---
 
-## 12. DEV Completion Statement
+## 14. DEV Completion Statement
 
 > **Filled by DEV — After Build**
 
@@ -227,7 +262,13 @@ If none, write:
 
 ### DEV Advisory Status
 
-IMPLEMENTED / PARTIALLY_IMPLEMENTED / BLOCKED / NEEDS_FMN_REVIEW
+> Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
+
+- [ ] IMPLEMENTED
+- [ ] PARTIALLY_IMPLEMENTED
+- [ ] BLOCKED
+- [ ] NEEDS_FMN_REVIEW
+- [ ] OTHER: [describe]
 
 ### Notes for FMN
 
@@ -235,15 +276,9 @@ IMPLEMENTED / PARTIALLY_IMPLEMENTED / BLOCKED / NEEDS_FMN_REVIEW
 
 ---
 
-## 13. FMN Review
+## 15. FMN Post-Build Review
 
 > **Filled by FMN — After DEV completes. DEV must not write in this section.**
-
-### Pre-Build Clarification
-
-> *(Populate only if DEV Section 1b status was NEED_CLARIFICATION)*
-
-[FMN answers to DEV's open items from Section 1b]
 
 ### AC Verification
 
@@ -259,7 +294,13 @@ IMPLEMENTED / PARTIALLY_IMPLEMENTED / BLOCKED / NEEDS_FMN_REVIEW
 
 ### Advisory Verdict
 
-READY_FOR_LOCK / NEEDS_DEV_UPDATE / REVISION_REQUIRED / COMPLETE_WITH_RISK
+> Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
+
+- [ ] READY_FOR_LOCK
+- [ ] NEEDS_DEV_UPDATE
+- [ ] REVISION_REQUIRED
+- [ ] COMPLETE_WITH_RISK
+- [ ] OTHER: [describe]
 
 ### FMN Notes
 
@@ -267,62 +308,46 @@ READY_FOR_LOCK / NEEDS_DEV_UPDATE / REVISION_REQUIRED / COMPLETE_WITH_RISK
 
 ---
 
-## 14. AUD Findings
+## 16. Director Observation Report & Minor Requests
 
-> **Filled by AUD — Advisory only. AUD findings do not approve, reject, or block runtime state.**
-> DEV and FMN must not write in this section.
+> **Filled by DEV — transcribed from Director's direct chat report. Append-only.**
 
-[...]
+### Observation Report
 
----
+> Unexpected friction found during Director manual testing — errors, bugs, or behavior that does not match the plan or intent.
+> DEV transcribes Director's verbal/chat findings into this table.
 
-## 15. Director Observation Testing Report
-
-> **Filled by Director — Post-FMN review. Append-only.**
-> Director observations are raw manual testing signals. FMN interprets them into fix/retest recommendations.
-
-- [ ] **OBS-001** — [Issue or observation]
-  - Location:
-  - Severity: Low / Medium / High / Critical
-  - Follow-up: Need Fix / Need Recheck / Need Explanation / Accept Limitation / Open New Version
-  - Category: Critical Error / Hidden Bug / Mismatch With Intent / Question / Positive Feedback
-  - Status: Open / Resolved / Explained / Accepted / Carried To Next Version
-
-- [ ] **OBS-002** — [...]
-  - Location:
-  - Severity:
-  - Follow-up:
-  - Category:
-  - Status:
-
----
-
-## 16. Director Follow-Up Decision Notes
-
-> **Filled by Director — Always writable.**
-> Runtime approval and lock state are managed by Sigma CLI — not by this section.
-
-Decision:
-
-OPEN_NEW_PLAN / UPDATE_CURRENT_EXEC / CONSIDER_CLOSE / ACCEPT_AS_LIMITATION / NEED_EXPLANATION
-
-Notes:
-
-[...]
-
----
-
-## 17. Out-of-Scope Director Requests
-
-> **Filled by DEV — As needed.**
-> For minor changes executed at Director request that fall outside the FMN-PLAN scope.
-> Use this section when a change is too small to warrant a new plan cycle but must still be traceable.
-> If the scope is significant enough to affect plan ACs or architecture, open a new plan version instead.
-
-| # | Director Request | What Was Changed | Files Affected | Why No New Plan |
-| :--- | :--- | :--- | :--- | :--- |
-| 1 | [...] | [...] | [...] | [Minor — no AC impact / cosmetic / config only / etc.] |
+| OBS ID | Observation | Location | Severity |
+| :--- | :--- | :--- | :--- |
+| OBS-001 | [...] | [...] | Low / Medium / High / Critical |
 
 If none, write:
 
-> No out-of-scope Director requests in this execution.
+> No observations from Director manual testing.
+
+### Minor Requests
+
+> Small additions or adjustments Director raised during manual testing — not in the plan, too minor to open a new plan cycle.
+> DEV transcribes Director's request only.
+
+| REQ ID | Director Request |
+| :--- | :--- |
+| REQ-001 | [...] |
+
+If none, write:
+
+> No minor requests in this execution.
+
+### DEV Implementation Follow-up
+
+> **Filled by DEV — after acting on Observation Report and Minor Requests above.**
+> Reference the ID (OBS-xxx or REQ-xxx) from the tables above. One row per item acted on.
+
+| ID | Type | What Was Done | Files Affected | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| OBS-001 | Observation | [...] | [...] | Fixed / Explained / Accepted / Deferred |
+| REQ-001 | Minor Request | [...] | [...] | Done / Deferred |
+
+If none, write:
+
+> No follow-up actions taken.

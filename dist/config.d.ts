@@ -24,4 +24,6 @@ export declare const MESSAGING_ROLES: readonly ["ARC", "FMN", "DEV", "AUD"];
 export type MessagingRole = typeof MESSAGING_ROLES[number];
 export declare const VALID_MESSAGE_TYPES: readonly ["NOTE", "CHECK", "RESPONSE", "HANDOFF", "QUESTION", "RISK"];
 export type MessageType = typeof VALID_MESSAGE_TYPES[number];
+export declare const VALID_ACTIONS: readonly ["FYI", "RESPOND", "REVIEW", "UNBLOCK", "OTHER"];
+export type ActionRequired = typeof VALID_ACTIONS[number];
 //# sourceMappingURL=config.d.ts.map

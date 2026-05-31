@@ -274,7 +274,16 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 
 ### 10.2 AUD Advisory Verdict
 
-**Verdict**: PASS / PASS_WITH_RISK / REVISE / REJECT_RECOMMENDED / PROMOTE_TO_HEAVIER_PROCESS
+**Verdict**:
+
+> Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
+
+- [ ] PASS
+- [ ] PASS_WITH_RISK
+- [ ] REVISE
+- [ ] REJECT_RECOMMENDED
+- [ ] PROMOTE_TO_HEAVIER_PROCESS
+- [ ] OTHER: [describe]
 
 **Major Findings**:
 

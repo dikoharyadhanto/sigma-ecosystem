@@ -1,9 +1,10 @@
 # FMN-PLAN
 
 > Build contract and test contract for DEV implementation.
+> AUD findings on the plan are recorded in Section 7.
 >
 > **Lock State**: Managed by Sigma CLI via `progress.json`. Do not edit lock state here.
-> **Post-Lock Rule**: All sections are immutable after lock. FMN does not touch this document after locking.
+> **Post-Lock Rule**: Sections 1–6 are immutable after lock. Section 7 (AUD Findings) may be appended post-lock.
 
 ---
 
@@ -91,3 +92,13 @@ DEV should report in DEV-EXEC:
 - Changed files / components
 - Known issues
 - Evidence summary
+
+---
+
+## 7. AUD Findings
+
+> **Filled by AUD — Advisory only. AUD findings do not approve, reject, or block lock state.**
+> FMN and DEV must not write in this section.
+> This section may be appended after the plan is locked.
+
+[...]

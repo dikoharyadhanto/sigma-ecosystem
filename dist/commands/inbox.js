@@ -20,13 +20,15 @@ function validateRole(value) {
 }
 function printMessageSummary(entry, index) {
     console.log(`\n${index}. [${entry.from} → ${entry.to}] ${entry.type}: ${entry.subject}`);
-    console.log(`   ID   : ${entry.id}`);
-    console.log(`   File : ${entry.file}`);
+    console.log(`   ID       : ${entry.id}`);
+    console.log(`   Action   : ${entry.action || 'FYI'}`);
+    console.log(`   Artifact : ${entry.related_artifact || 'N/A'}`);
+    console.log(`   File     : ${entry.file}`);
     if (entry.reply_to) {
-        console.log(`   Reply-To: ${entry.reply_to}`);
+        console.log(`   Reply-To : ${entry.reply_to}`);
     }
     if (entry.attachments.length > 0) {
-        console.log(`   Attach: ${entry.attachments.join(', ')}`);
+        console.log(`   Attach   : ${entry.attachments.join(', ')}`);
     }
 }
 function runList(role, includeAll) {
@@ -180,7 +182,12 @@ function runCheck() {
 }
 function inboxCommand() {
     const cmd = new commander_1.Command('inbox');
-    cmd.description('Manage role message inbox');
+    cmd.description('Manage role message inbox. Messages are stored in Sigma/messages/{ROLE}/.\n' +
+        '  List unread  : sigma inbox --role <role>\n' +
+        '  List all     : sigma inbox --role <role> --all\n' +
+        '  Read message : sigma inbox read <id>   (marks as READ)\n' +
+        '  Archive      : sigma inbox archive <id>\n' +
+        '  Check        : sigma inbox check       (validates index vs disk files)');
     cmd
         .option('--role <role>', `Role inbox to view (${config_1.MESSAGING_ROLES.map(r => r.toLowerCase()).join('|')})`)
         .option('--all', 'Include READ and ARCHIVED messages (default: unread only)')

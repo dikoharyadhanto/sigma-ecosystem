@@ -150,7 +150,14 @@ If none, write:
 
 Closure Decision:
 
-CLOSE_ACCEPTED / CLOSE_ACCEPTED_WITH_LIMITATIONS / DO_NOT_CLOSE / OPEN_NEW_PLAN / UPDATE_CURRENT_EXEC
+> Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
+
+- [ ] CLOSE_ACCEPTED
+- [ ] CLOSE_ACCEPTED_WITH_LIMITATIONS
+- [ ] DO_NOT_CLOSE
+- [ ] OPEN_NEW_PLAN
+- [ ] UPDATE_CURRENT_EXEC
+- [ ] OTHER: [describe]
 
 Reason:
 

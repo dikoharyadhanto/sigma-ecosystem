@@ -25,6 +25,13 @@ function validateType(value) {
     }
     return upper;
 }
+function validateAction(value) {
+    const upper = value.toUpperCase();
+    if (!config_1.VALID_ACTIONS.includes(upper)) {
+        throw new Error(`Invalid --action "${value}". Valid actions: ${config_1.VALID_ACTIONS.map(a => a.toLowerCase()).join(', ')}`);
+    }
+    return upper;
+}
 function runSend(opts) {
     if (!opts.from)
         throw new Error('--from is required. Use: sigma send --from <role> --to <role> --message "..."');
@@ -52,6 +59,8 @@ function runSend(opts) {
     const toRole = validateRole(opts.to, '--to');
     const msgType = opts.type ? validateType(opts.type) : 'NOTE';
     const subject = opts.subject?.trim() || '(no subject)';
+    const action = opts.action ? validateAction(opts.action) : 'FYI';
+    const relatedArtifact = opts.relatedArtifact?.trim() || 'N/A';
     const projectRoot = (0, fs_1.findProjectRoot)();
     // Gate: sender must have an empty unread queue before sending new messages.
     const existingIndex = (0, mailbox_1.readIndex)(projectRoot);
@@ -103,6 +112,8 @@ function runSend(opts) {
         status: 'UNREAD',
         created_at: ts,
         attachments: attachmentPaths,
+        action,
+        related_artifact: relatedArtifact,
         ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
     };
     // Write message markdown
@@ -114,24 +125,28 @@ function runSend(opts) {
     index.messages.push(entry);
     (0, mailbox_1.writeIndex)(projectRoot, index);
     console.log('\nMessage sent.');
-    console.log(`  ID      : ${msgId}`);
-    console.log(`  From    : ${fromRole} → ${toRole}`);
-    console.log(`  Type    : ${msgType}`);
-    console.log(`  Subject : ${subject}`);
-    console.log(`  File    : ${relFilePath}`);
+    console.log(`  ID       : ${msgId}`);
+    console.log(`  From     : ${fromRole} → ${toRole}`);
+    console.log(`  Type     : ${msgType}`);
+    console.log(`  Subject  : ${subject}`);
+    console.log(`  Action   : ${action}`);
+    console.log(`  Artifact : ${relatedArtifact}`);
+    console.log(`  File     : ${relFilePath}`);
     if (opts.replyTo) {
-        console.log(`  Reply-To: ${opts.replyTo}`);
+        console.log(`  Reply-To : ${opts.replyTo}`);
     }
     if (attachmentPaths.length > 0) {
-        console.log(`  Attach  : ${attachmentPaths[0]}`);
+        console.log(`  Attach   : ${attachmentPaths[0]}`);
     }
     console.log('');
 }
 function sendCommand() {
     const cmd = new commander_1.Command('send');
     cmd.description('Send a message from one role to another.\n' +
-        '  Policy: a sender must have no unread messages in their own inbox before sending.\n' +
-        '  Clear unread messages with: sigma inbox read <id>\n' +
+        '  Each message requires an action (--action) and artifact reference (--related-artifact).\n' +
+        '  Message files are CLI-generated — never create or rename them manually.\n' +
+        '  Policy: sender must have no unread messages in their own inbox before sending.\n' +
+        '  Clear unread with: sigma inbox read <id>\n' +
         '  Valid messaging roles: arc, fmn, dev, aud (director communicates directly)');
     cmd
         .requiredOption('--from <role>', `Sender role (${config_1.MESSAGING_ROLES.map(r => r.toLowerCase()).join('|')})`)
@@ -142,6 +157,8 @@ function sendCommand() {
         .option('--message-file <path>', 'Path to a file whose contents become the message body (preserves newlines)')
         .option('--attach <file>', 'File to attach (copied into Sigma/messages/attachments/)')
         .option('--reply-to <id>', 'Message ID this message is responding to (soft-check; does not block if not found)')
+        .option('--action <action>', `Action required from recipient (${config_1.VALID_ACTIONS.map(a => a.toLowerCase()).join('|')})`, 'fyi')
+        .option('--related-artifact <artifact>', 'Artifact this message relates to (e.g. FMN-PLAN-v2, DEV-EXEC-v1, N/A)', 'N/A')
         .action((opts) => {
         try {
             runSend(opts);

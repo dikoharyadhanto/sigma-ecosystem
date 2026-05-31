@@ -35,3 +35,6 @@ export type MessagingRole = typeof MESSAGING_ROLES[number];
 
 export const VALID_MESSAGE_TYPES = ['NOTE', 'CHECK', 'RESPONSE', 'HANDOFF', 'QUESTION', 'RISK'] as const;
 export type MessageType = typeof VALID_MESSAGE_TYPES[number];
+
+export const VALID_ACTIONS = ['FYI', 'RESPOND', 'REVIEW', 'UNBLOCK', 'OTHER'] as const;
+export type ActionRequired = typeof VALID_ACTIONS[number];

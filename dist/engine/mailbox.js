@@ -107,22 +107,35 @@ function buildMessageMarkdown(entry, body) {
     const attachmentCell = entry.attachments.length > 0
         ? entry.attachments.join(', ')
         : '—';
-    const replyToRow = entry.reply_to ? `| Reply To | ${entry.reply_to} |\n` : '';
-    return `# Sigma Role Message
+    const replyToRow = entry.reply_to ? `| Reply To       | ${entry.reply_to} |\n` : '';
+    const relatedArtifact = entry.related_artifact || 'N/A';
+    const selectedAction = entry.action || 'FYI';
+    const actionChecklist = config_1.VALID_ACTIONS
+        .map(a => `- [${a === selectedAction ? 'x' : ' '}] ${a}`)
+        .join('\n');
+    return `# MSG-${entry.id}
 
 ## Metadata
 
-| Field | Value |
-| :--- | :--- |
-| Message ID | ${entry.id} |
-| Type | ${entry.type} |
-| From Role | ${entry.from} |
-| To Role | ${entry.to} |
-| Subject | ${entry.subject} |
-| Status | ${entry.status} |
-| Created At | ${entry.created_at} |
-${replyToRow}| Authority Level | Context Only |
-| Attachments | ${attachmentCell} |
+| Field          | Value |
+| :---           | :---  |
+| Message ID     | ${entry.id} |
+| Type           | ${entry.type} |
+| From           | ${entry.from} |
+| To             | ${entry.to} |
+| Subject        | ${entry.subject} |
+| Status         | ${entry.status} |
+| Created At     | ${entry.created_at} |
+${replyToRow}| Related Artifact | ${relatedArtifact} |
+| Attachments    | ${attachmentCell} |
+
+---
+
+## Action Required
+
+> Pick one. Do not edit or add options. If none fit, tick OTHER and describe in the message body.
+
+${actionChecklist}
 
 ---
 
