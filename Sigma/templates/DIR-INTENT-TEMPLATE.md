@@ -1,9 +1,9 @@
 # DIR-INTENT
 
 > **Purpose**: Captures Director intent, strategic constraints, execution direction, auditable assumptions, and minimum evidence requirements for a Sigma project.
->
+> 
 > **Authority Rule**: Director owns the destination. ARC, AUD, FMN, and DEV may advise, challenge, and interpret — but only the Director approves runtime state changes.
->
+> 
 > **Lock State**: Managed by Sigma CLI via `progress.json`. Do not edit lock state here.
 
 ---
@@ -118,12 +118,12 @@ We will NOT do the following:
 > **Audit Status**: CHALLENGEABLE
 > Director may state preferences here, but AUD may challenge feasibility, risk, cost, mismatch, or hidden trade-offs.
 
-| ID      | Type             | Statement | Binding Level   | Notes |
-| :---    | :---             | :---      | :---            | :---  |
-| CON-001 | Hard Constraint  | [...]     | Non-negotiable  | [...] |
-| CON-002 | Preference       | [...]     | Challengeable   | [...] |
-| CON-003 | Timeline         | [...]     | Conditional     | [...] |
-| CON-004 | Technical        | [...]     | Challengeable   | [...] |
+| ID      | Type            | Statement | Binding Level  | Notes |
+|:------- |:--------------- |:--------- |:-------------- |:----- |
+| CON-001 | Hard Constraint | [...]     | Non-negotiable | [...] |
+| CON-002 | Preference      | [...]     | Challengeable  | [...] |
+| CON-003 | Timeline        | [...]     | Conditional    | [...] |
+| CON-004 | Technical       | [...]     | Challengeable  | [...] |
 
 ### Binding Level Definitions
 
@@ -142,7 +142,7 @@ We will NOT do the following:
 ### 6.1 Preferred Tech Stack
 
 | Layer   | Technology | Reason | Risk / Trade-Off |
-| :---    | :---       | :---   | :---             |
+|:------- |:---------- |:------ |:---------------- |
 | [Layer] | [...]      | [...]  | [...]            |
 
 ### 6.2 Architecture Direction
@@ -152,13 +152,13 @@ We will NOT do the following:
 ### 6.3 Solution Assumptions
 
 | Assumption ID | Assumption | Confidence          | What if wrong? |
-| :---          | :---       | :---                | :---           |
+|:------------- |:---------- |:------------------- |:-------------- |
 | ASM-001       | [...]      | Low / Medium / High | [...]          |
 
 ### 6.4 Explicitly Rejected Approaches
 
 | Rejected Option | Reason Rejected | Trade-Off Accepted |
-| :---            | :---            | :---               |
+|:--------------- |:--------------- |:------------------ |
 | [...]           | [...]           | [...]              |
 
 ---
@@ -200,11 +200,11 @@ As a [role], I want to [action], so that [benefit].
 
 ### 8.1 Risk Appetite
 
-| Risk Type            | Tolerance             |
-| :---                 | :---                  |
-| Fatal Risk           | Zero / Conditional    |
-| Degraded Capability  | Low / Medium / High   |
-| Unknowns             | Low / Medium / High   |
+| Risk Type           | Tolerance           |
+|:------------------- |:------------------- |
+| Fatal Risk          | Zero / Conditional  |
+| Degraded Capability | Low / Medium / High |
+| Unknowns            | Low / Medium / High |
 
 ### 8.2 Primary Failure Concern
 
@@ -220,7 +220,7 @@ As a [role], I want to [action], so that [benefit].
 ### 8.3 Risk Register
 
 | Risk ID | Classification            | Description | Impact | Mitigation | Accepted?              |
-| :---    | :---                      | :---        | :---   | :---       | :---                   |
+|:------- |:------------------------- |:----------- |:------ |:---------- |:---------------------- |
 | RR-001  | Fatal / Degrading / Noise | [...]       | [...]  | [...]      | Yes / No / Conditional |
 
 ### 8.4 Failure Definition
@@ -239,7 +239,7 @@ As a [role], I want to [action], so that [benefit].
 ### 9.1 Execution Focus
 
 | Focus Area | Why It Matters | Watch-Out |
-| :---       | :---           | :---      |
+|:---------- |:-------------- |:--------- |
 | [...]      | [...]          | [...]     |
 
 ### 9.2 FMN Must Produce
