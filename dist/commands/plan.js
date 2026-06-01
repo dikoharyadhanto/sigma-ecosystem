@@ -156,7 +156,7 @@ function planCommand() {
         }
     });
     cmd.command('supersede')
-        .description('Supersede a locked FMN-PLAN version')
+        .description('Supersede a locked FMN-PLAN version (auto-supersedes all linked DEV-EXEC versions)')
         .requiredOption('--v <version>', 'Version to supersede (e.g. v1)')
         .requiredOption('--reason <reason>', 'Reason for superseding')
         .action((opts) => {
@@ -164,9 +164,23 @@ function planCommand() {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
             (0, progress_1.assertProgressCanMutate)(data);
+            const cascadedExecs = data.exec.versions
+                .filter(v => v.plan_version_ref === opts.v && v.state !== 'SUPERSEDED')
+                .map(v => v.version);
             (0, progress_1.supersedePlanVersion)(data, opts.v, opts.reason);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`FMN-PLAN ${opts.v} superseded. Reason: ${opts.reason}`);
+            if (cascadedExecs.length > 0) {
+                console.log(`Auto-superseded DEV-EXEC: ${cascadedExecs.join(', ')}`);
+            }
+            const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
+            if (activeRoadmap) {
+                const roadmapPath = path_1.default.join(projectRoot, activeRoadmap.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${activeRoadmap.version}.md`));
+                if (fs_extra_1.default.existsSync(roadmapPath)) {
+                    (0, roadmap_1.renderRoadmapFile)(roadmapPath, data);
+                    console.log(`ROADMAP ${activeRoadmap.version} re-rendered with SUPERSEDED status.`);
+                }
+            }
         }
         catch (e) {
             console.error(e.message);

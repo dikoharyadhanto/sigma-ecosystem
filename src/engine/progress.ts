@@ -568,6 +568,22 @@ export function supersedePlanVersion(data: ProgressJson, version: string, reason
   target.state = 'SUPERSEDED';
   target.supersede_reason = reason;
   target.updated_at = now;
+
+  if (data.plan.active_version === version) {
+    data.plan.active_state = 'SUPERSEDED';
+  }
+
+  const cascadeReason = `Cascade: FMN-PLAN ${version} superseded — ${reason}`;
+  for (const exec of data.exec.versions) {
+    if (exec.plan_version_ref === version && exec.state !== 'SUPERSEDED') {
+      exec.state = 'SUPERSEDED';
+      exec.supersede_reason = cascadeReason;
+      exec.updated_at = now;
+      if (data.exec.active_version === exec.version) {
+        data.exec.active_state = 'SUPERSEDED';
+      }
+    }
+  }
 }
 
 export function activatePlanDraft(data: ProgressJson, version: string): void {

@@ -45,19 +45,20 @@ function planStateForStage(stageVersion, data) {
 }
 function generateStageOverview(stages, data) {
     if (stages.length === 0) {
-        return '## 3. Stage Overview\n\n| Stage | Title | Focus | Status |\n| :--- | :--- | :--- | :--- |';
+        return '## 3. Stage Overview\n\n| Stage | Title | Focus | Status | Reason |\n| :--- | :--- | :--- | :--- | :--- |';
     }
     const rows = stages.map(s => {
-        const status = planStateForStage(s.version, data);
         const planEntry = data.plan.versions.find(v => v.version === `v${s.version}`);
+        const status = planEntry?.state ?? 'PENDING';
         const focus = planEntry?.focus ?? s.focus;
-        return `| ${s.version} | ${s.title} | ${focus} | ${status} |`;
+        const reason = planEntry?.state === 'SUPERSEDED' ? (planEntry.supersede_reason ?? '—') : '—';
+        return `| ${s.version} | ${s.title} | ${focus} | ${status} | ${reason} |`;
     });
     return [
         '## 3. Stage Overview',
         '',
-        '| Stage | Title | Focus | Status |',
-        '| :--- | :--- | :--- | :--- |',
+        '| Stage | Title | Focus | Status | Reason |',
+        '| :--- | :--- | :--- | :--- | :--- |',
         ...rows,
     ].join('\n');
 }
@@ -82,24 +83,25 @@ function generatePhaseDependencies(stages) {
 }
 function generatePlanBreakdown(stages, data) {
     if (stages.length === 0) {
-        return '## 6. PLAN Breakdown\n\n| PLAN | Covers Stage | Status |\n| :--- | :--- | :--- |';
+        return '## 6. PLAN Breakdown\n\n| PLAN | Covers Stage | Status | Reason |\n| :--- | :--- | :--- | :--- |';
     }
     const rows = [];
     for (const s of stages) {
         const planVersion = `v${s.version}`;
         const plan = data.plan.versions.find(v => v.version === planVersion);
         if (plan) {
-            rows.push(`| FMN-PLAN ${planVersion} | Stage ${s.version} | ${plan.state} |`);
+            const reason = plan.state === 'SUPERSEDED' ? (plan.supersede_reason ?? '—') : '—';
+            rows.push(`| FMN-PLAN ${planVersion} | Stage ${s.version} | ${plan.state} | ${reason} |`);
         }
         else {
-            rows.push(`| — | Stage ${s.version} | PENDING |`);
+            rows.push(`| — | Stage ${s.version} | PENDING | — |`);
         }
     }
     return [
         '## 6. PLAN Breakdown',
         '',
-        '| PLAN | Covers Stage | Status |',
-        '| :--- | :--- | :--- |',
+        '| PLAN | Covers Stage | Status | Reason |',
+        '| :--- | :--- | :--- | :--- |',
         ...rows,
     ].join('\n');
 }
