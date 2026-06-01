@@ -1,12 +1,9 @@
 import { Command } from 'commander';
-import fs from 'fs-extra';
-import path from 'path';
 import {
   readProgress,
   getGateStatus,
   isStaleIntentPresent,
   getNextValidOperations,
-  ProgressJson,
 } from '../engine/progress';
 import {
   loadDocumentRegistry,
@@ -18,27 +15,6 @@ import { findProjectRoot } from '../utils/fs';
 import { readIndex, getUnreadForRole, MessageEntry } from '../engine/mailbox';
 import { MESSAGING_ROLES, SigmaRole } from '../config';
 import { readProjectConfig, langLabel } from '../engine/projectConfig';
-
-// ── CSO log reader ────────────────────────────────────────────────────────────
-
-function recentCsoFiles(_data: ProgressJson, sigmaDir: string): string[] {
-  // Scan Sigma/logs/ for CSO-*.md files by mtime (CSO tracking removed from progress.json)
-  const logsDir = path.join(sigmaDir, 'logs');
-  if (!fs.existsSync(logsDir)) return [];
-
-  try {
-    const files = fs.readdirSync(logsDir)
-      .filter(f => f.startsWith('CSO-') && f.endsWith('.md'))
-      .map(f => ({ name: f, mtime: fs.statSync(path.join(logsDir, f)).mtimeMs }))
-      .sort((a, b) => b.mtime - a.mtime)
-      .slice(0, 3)
-      .map(f => f.name);
-
-    return files;
-  } catch {
-    return [];
-  }
-}
 
 // ── Format helpers ────────────────────────────────────────────────────────────
 
@@ -58,13 +34,10 @@ function fmtGate(open: boolean, satisfiedLabel = 'OPEN'): string {
 
 function runBootstrap(opts: { role?: string }): void {
   const projectRoot = findProjectRoot();
-  const sigmaDir = path.join(projectRoot, 'Sigma');
-
   const data = readProgress(projectRoot);
   const gates = getGateStatus(data);
   const stale = isStaleIntentPresent(data);
   const nextOps = getNextValidOperations(data);
-  const csoFiles = recentCsoFiles(data, sigmaDir);
 
   // Document registry (tolerate missing)
   let docEntries: DocumentEntry[] = [];
@@ -122,15 +95,6 @@ function runBootstrap(opts: { role?: string }): void {
   if (stale.length > 0) {
     for (const w of stale) {
       console.log(`  [STALE] ${w.domain} ${w.version}`);
-    }
-  } else {
-    console.log('  none');
-  }
-
-  console.log('\n--- Recent CSO Files ---');
-  if (csoFiles.length > 0) {
-    for (const f of csoFiles) {
-      console.log(`  ${f}`);
     }
   } else {
     console.log('  none');

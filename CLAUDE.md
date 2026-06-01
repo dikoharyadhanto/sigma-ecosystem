@@ -138,11 +138,6 @@ Sequential thinking (`sequential-thinking` server):
 - Use for multi-step planning, architecture review, complex analysis
 - Initialize with conservative thought count; adjust dynamically
 
-Sigma memory (`sigma-memory` server):
-
-- Use for Sigma ecosystem constants, CLI behavior, host setup facts
-- Do not store project-specific facts in global memory
-
 ## Memory Isolation
 
 `~/.sigma/memory_sigma.jsonl` is Sigma ecosystem-level only.

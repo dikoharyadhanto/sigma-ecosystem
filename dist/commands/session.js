@@ -1,37 +1,13 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sessionCommand = sessionCommand;
 const commander_1 = require("commander");
-const fs_extra_1 = __importDefault(require("fs-extra"));
-const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const registry_1 = require("../engine/registry");
 const fs_1 = require("../utils/fs");
 const mailbox_1 = require("../engine/mailbox");
 const config_1 = require("../config");
 const projectConfig_1 = require("../engine/projectConfig");
-// ── CSO log reader ────────────────────────────────────────────────────────────
-function recentCsoFiles(_data, sigmaDir) {
-    // Scan Sigma/logs/ for CSO-*.md files by mtime (CSO tracking removed from progress.json)
-    const logsDir = path_1.default.join(sigmaDir, 'logs');
-    if (!fs_extra_1.default.existsSync(logsDir))
-        return [];
-    try {
-        const files = fs_extra_1.default.readdirSync(logsDir)
-            .filter(f => f.startsWith('CSO-') && f.endsWith('.md'))
-            .map(f => ({ name: f, mtime: fs_extra_1.default.statSync(path_1.default.join(logsDir, f)).mtimeMs }))
-            .sort((a, b) => b.mtime - a.mtime)
-            .slice(0, 3)
-            .map(f => f.name);
-        return files;
-    }
-    catch {
-        return [];
-    }
-}
 // ── Format helpers ────────────────────────────────────────────────────────────
 function fmtVersion(v) {
     return v ?? 'none';
@@ -45,12 +21,10 @@ function fmtGate(open, satisfiedLabel = 'OPEN') {
 // ── sigma session bootstrap ───────────────────────────────────────────────────
 function runBootstrap(opts) {
     const projectRoot = (0, fs_1.findProjectRoot)();
-    const sigmaDir = path_1.default.join(projectRoot, 'Sigma');
     const data = (0, progress_1.readProgress)(projectRoot);
     const gates = (0, progress_1.getGateStatus)(data);
     const stale = (0, progress_1.isStaleIntentPresent)(data);
     const nextOps = (0, progress_1.getNextValidOperations)(data);
-    const csoFiles = recentCsoFiles(data, sigmaDir);
     // Document registry (tolerate missing)
     let docEntries = [];
     try {
@@ -100,15 +74,6 @@ function runBootstrap(opts) {
     if (stale.length > 0) {
         for (const w of stale) {
             console.log(`  [STALE] ${w.domain} ${w.version}`);
-        }
-    }
-    else {
-        console.log('  none');
-    }
-    console.log('\n--- Recent CSO Files ---');
-    if (csoFiles.length > 0) {
-        for (const f of csoFiles) {
-            console.log(`  ${f}`);
         }
     }
     else {

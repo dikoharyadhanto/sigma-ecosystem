@@ -289,6 +289,12 @@ Stage 3 removes activation-time context sources that are now redundant or active
 - No canonical role activation path treats sigma-memory as mandatory startup context.
 - Role activation guidance points to role memory and role rules instead of global memory lookup.
 
+#### Implementation note
+
+- Local project `.mcp.json` may be cleaned manually during transition so active workspaces stop surfacing `sigma-memory` immediately.
+- That manual cleanup does **not** complete the system change by itself, because current setup/generator paths can still write `sigma-memory` back into project MCP config.
+- Stage 4 must align CLI/setup behavior with the doctrine change before `sigma-memory` can be considered removed from the normal project configuration path.
+
 ---
 
 ### TASK-04 — Remove automatic CSO surfacing from `session bootstrap`
@@ -321,6 +327,8 @@ Stage 3 removes activation-time context sources that are now redundant or active
 ## Stage 4 — CLI Command and Bootstrap Output
 
 Stage 4 implements the CLI support after rules, skills, and activation-context cleanup agree on the intended behavior.
+
+This stage also absorbs the remaining MCP config cleanup needed so local manual `.mcp.json` edits do not get reverted by Sigma CLI setup flows.
 
 ### TASK-05 — Add role memory JSON files
 
