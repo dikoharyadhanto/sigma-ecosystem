@@ -618,6 +618,281 @@ Stop point:
 - Store final role memory files in `Sigma/role-memory/`.
 - Do not add `sigma progress check` in P24; keep `sigma project status` as the runtime state command.
 - Remove `Documents to Read` from default bootstrap output; keep `--show-docs` only as an explicit reference/debug option.
+
+---
+
+## Stage 5 — Post-Stage-4 Findings Review
+
+Stage 5 is a review-and-decision stage only. It captures residual findings discovered after Stage 4 so the Director can decide whether they belong in a follow-up implementation stage, a separate stabilization track, or a test-update track.
+
+### Finding Group A — Missing `src/engine/memory.ts`
+
+**Observed during verification**:
+
+- `test/memory-harvest.test.ts` imports `../src/engine/memory`
+- the source file does not exist in the current tree
+- the suite fails before assertions run
+
+#### Why this matters
+
+- This is not a role-memory regression, but it blocks full green verification.
+- It suggests either:
+  - the harvesting engine was removed without removing/updating the tests; or
+  - the file is missing from the source tree but still conceptually required.
+
+#### Decision needed
+
+Choose one of these directions:
+
+1. Restore `src/engine/memory.ts` and keep plan-lock harvesting behavior.
+2. Retire the harvesting feature and remove/update the associated tests and references.
+
+#### Recommended direction
+
+Treat this as a separate stabilization task unless the Director explicitly wants plan-lock harvesting preserved as an active feature.
+
+---
+
+### Finding Group B — `sigma plan new` gate ordering vs test expectations
+
+**Observed during verification**:
+
+- `test/plan-activate.test.ts` expects `plan new` to fail with `DRAFT CONFLICT` when a draft plan already exists
+- current CLI behavior fails earlier with `Gate 1.5 blocked: An ACTIVE ROADMAP must exist...`
+
+#### Why this matters
+
+- This is a behavioral-ordering question:
+  - should `plan new` first report draft conflict; or
+  - should it first report missing ACTIVE ROADMAP gate?
+- Both are defensible, but the doctrine and tests need to agree.
+
+#### Decision needed
+
+Choose one of these directions:
+
+1. **Keep current gate-first behavior**
+   - update tests to expect Gate 1.5 first
+   - better reflects lifecycle gate ordering
+
+2. **Restore conflict-first behavior**
+   - change `plan new` validation ordering so draft conflict is surfaced before Gate 1.5
+   - preserves earlier UX/test expectation
+
+#### Recommended direction
+
+Keep gate-first behavior unless there is a strong UX reason to prioritize draft conflict before lifecycle gate validation.
+
+---
+
+### Finding Group C — Progress hardening expectation drift
+
+**Observed during verification**:
+
+- `test/progress-hardening.test.ts` expects:
+  - `intent lock` to surface an `active_state`-specific semantic recovery error
+  - `cso new --role DEV` to reject impossible `gate_3_satisfied` state
+- current behavior instead:
+  - returns the narrower operational lock error for `intent lock`
+  - allows `cso new` despite impossible Gate 3 state
+
+#### Why this matters
+
+- These are not role-memory issues, but they reveal unclear boundaries in runtime hardening:
+  - should semantic consistency checks always fire before command-specific operational checks?
+  - should `cso new` validate impossible progress states even though CSO is optional and non-gating?
+
+#### Decision needed
+
+1. **Strict hardening with official recovery**
+   - validate semantic consistency before command-specific checks
+   - do not normalize impossible states silently
+   - introduce a formal recovery path so Director/AI do not edit `progress.json` manually
+
+2. **Keep current runtime tolerance**
+   - treat these tests as too strict and update them
+   - document that some commands tolerate inconsistent state more than lock commands
+
+#### Director direction recorded
+
+- Prefer **strict hardening**, but without forcing manual `progress.json` edits.
+- Add a future `sigma doctor` recovery path.
+- Impossible or contradictory runtime conditions should be marked `INVALID`.
+- When `sigma doctor` is run again and the underlying conditions are satisfied, the affected invalid state should recover automatically.
+
+#### Clarified model
+
+The desired recovery model is:
+
+- if a state exists in `progress.json` that should not be valid under Sigma rules, mark it as `INVALID`;
+- do not pretend the state is normal;
+- do not require manual `progress.json` repair as the standard path;
+- let `sigma doctor` reconcile and restore validity when the real conditions are later satisfied.
+
+This applies especially to:
+
+- impossible gate claims;
+- contradictory active tracker fields;
+- runtime combinations that violate artifact-chain requirements.
+
+---
+
+### Finding Group D — Remaining global `sigma-memory` adapters
+
+**Observed during verification**:
+
+- local project `.mcp.json` and local `.vscode/mcp.json` were cleaned
+- Stage 4 intentionally did **not** remove global `sigma-memory` adapter paths for:
+  - `Reasonix`
+  - `Gemini/Antigravity`
+  - global setup memory seed/reseed flows
+
+#### Why this matters
+
+- Local activation is now aligned with role memory.
+- Global Sigma memory still exists as an optional ecosystem-level integration path.
+- This is now a product decision, not just cleanup:
+  - deprecate Sigma memory completely; or
+  - keep it as optional non-activation infrastructure.
+
+#### Decision needed
+
+1. **Full deprecation**
+   - remove `sigma-memory` from global setup flows, wrappers, docs, sigma-test expectations, and MCP helper code
+
+2. **Optional infrastructure**
+   - keep global Sigma memory for ecosystem facts only
+   - keep it out of all role activation doctrine and local project defaults
+
+#### Director minimum direction recorded
+
+- No global AI setup target should require checking MCP for `sigma-memory`.
+- No global AI setup target should detect `sigma-memory` as a Sigma requirement.
+- No instruction should tell AI to check Sigma memory during activation or normal startup.
+
+This means that even if some legacy/global Sigma memory infrastructure remains temporarily in code, it must be invisible to normal AI activation doctrine and must not be treated as required setup knowledge.
+
+---
+
+### Suggested Next Planning Split
+
+If the Director wants to continue after P24 Stage 4, the cleanest split is:
+
+1. **Stabilization Track**
+   - resolve missing `src/engine/memory.ts`
+   - resolve progress-hardening expectation drift
+
+2. **Behavior Doctrine Track**
+   - decide gate-first vs conflict-first for `plan new`
+
+3. **Global MCP Deprecation Track**
+   - decide whether `sigma-memory` remains optional infrastructure or is fully removed
+
+---
+
+## Candidate Stage 6 — Runtime Doctor and CSO Simplification
+
+Stage 6 is the proposed next implementation stage based on the post-Stage-4 review.
+
+### TASK-11 — Add `sigma doctor`
+
+**Primary areas**:
+
+- `src/cli.ts`
+- new command module under `src/commands/`
+- runtime validation helpers under `src/engine/`
+
+#### Required behavior
+
+- `sigma doctor` runs a read-first reconciliation pass over runtime state.
+- It checks:
+  - active tracker consistency;
+  - artifact chain validity;
+  - impossible gate claims;
+  - stale-intent propagation consistency;
+  - other contradictory runtime combinations worth formalizing.
+- It reports findings clearly as diagnostic output.
+
+#### Recovery behavior
+
+- When `sigma doctor` finds a runtime condition that should not be valid but currently exists, it marks the affected state as `INVALID`.
+- `INVALID` means:
+  - the state exists in data;
+  - Sigma acknowledges it happened;
+  - Sigma does not treat it as valid for governance/runtime purposes.
+- When `sigma doctor` is run again and the underlying conditions are now satisfied, it automatically restores the affected state from `INVALID` back to normal valid status.
+
+#### Design note
+
+The exact representation of invalidity still needs implementation design review:
+
+1. explicit `INVALID` artifact/gate status values; or
+2. a separate runtime-validity layer that marks affected trackers/gates invalid.
+
+The Director intent is clear even if the storage model is still open:
+
+- impossible runtime states must not appear normal;
+- recovery must come through `sigma doctor`, not manual `progress.json` edits.
+
+---
+
+### TASK-12 — Tighten command hardening around invalid state
+
+**Primary areas**:
+
+- mutating governance commands
+
+#### Required behavior
+
+- Governance-mutating commands should refuse to proceed when affected runtime state is `INVALID`.
+- Error messages should direct the operator to run `sigma doctor`.
+- The system should prefer official reconciliation over ad hoc manual edits.
+
+#### Recovery messaging
+
+Errors should bias toward:
+
+```text
+Runtime state is invalid for this operation.
+Run: sigma doctor
+```
+
+instead of implicitly encouraging manual `progress.json` repair.
+
+---
+
+### TASK-13 — Simplify CSO to standalone mode
+
+**Primary areas**:
+
+- `src/commands/cso.ts`
+- `Sigma/SIGMA_PROTOCOL.md`
+- related rules, skills, templates, and registries
+
+#### Required behavior
+
+- simplify command surface to:
+
+```bash
+sigma cso new
+```
+
+- remove `--role` requirement;
+- remove assumptions that CSO is tied to a specific Sigma role;
+- remove assumptions that CSO is tied to a specific governance artifact;
+- keep CSO as a standalone optional handoff document only.
+
+#### Doctrine direction
+
+- CSO is mainly useful for passive/non-agent chat environments.
+- CSO is not part of the normal activation path for local agent-based Sigma work.
+- CSO should be hard to misuse and should not look like a governance requirement.
+
+#### Hardening direction
+
+- Because CSO is standalone and non-governance, it should not be treated like a normal gate artifact.
+- If the runtime state model is inconsistent, the Director may still want CSO as a debugging or handoff note.
+- Therefore CSO simplification should be designed together with `sigma doctor`, not by forcing CSO into the same strict command category as artifact locks.
 - Do not add `rule_content_hash` in P24.
 
 ## Remaining Review Questions

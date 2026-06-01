@@ -4,10 +4,12 @@ import {
   getGateStatus,
   isStaleIntentPresent,
   getNextValidOperations,
+  getGateStatusLabel,
+  getInvalidWarningLines,
+  hasInvalidRuntime,
 } from '../engine/progress';
 import {
   loadDocumentRegistry,
-  loadOperationRegistry,
   getDocumentsForRole,
   DocumentEntry,
 } from '../engine/registry';
@@ -15,6 +17,12 @@ import { findProjectRoot } from '../utils/fs';
 import { readIndex, getUnreadForRole, MessageEntry } from '../engine/mailbox';
 import { MESSAGING_ROLES, SigmaRole } from '../config';
 import { readProjectConfig, langLabel } from '../engine/projectConfig';
+
+interface RoleBootstrapGuidance {
+  routine: string[];
+  approval: string[];
+  stopPoint: string;
+}
 
 // ── Format helpers ────────────────────────────────────────────────────────────
 
@@ -30,29 +38,104 @@ function fmtGate(open: boolean, satisfiedLabel = 'OPEN'): string {
   return open ? satisfiedLabel : 'BLOCKED';
 }
 
+function getRoleGuidance(role: SigmaRole | undefined, gate2Open: boolean): RoleBootstrapGuidance | null {
+  switch (role) {
+    case 'ARC':
+      return {
+        routine: [
+          'Clarify whether this is discussion-only or intent-documentation work.',
+          'If the Director opens intent work, begin intent clarification before any broader inspection.',
+        ],
+        approval: [
+          'Opening a new DIR-INTENT workflow.',
+          'Any lock, supersession, risk acceptance, or closure action.',
+        ],
+        stopPoint: 'Stop after clarifying whether to open DIR-INTENT; do not inspect broader artifacts unless the Director explicitly asks.',
+      };
+    case 'FMN':
+      return {
+        routine: [
+          'Orient to runtime state and the ACTIVE ROADMAP if planning direction needs confirmation.',
+          'Brief the Director on pending plans, roadmap direction, latest progress, and planning options.',
+        ],
+        approval: [
+          'Creating, promoting, or locking an FMN-PLAN.',
+          'Any supersession, risk acceptance, or closure action.',
+        ],
+        stopPoint: 'Stop after briefing planning options and wait for the Director to select the next planning direction.',
+      };
+    case 'DEV':
+      return {
+        routine: [
+          gate2Open
+            ? 'Gate 2 is open: identify the runtime-selected locked plan and prepare DEV-EXEC pre-implementation planning.'
+            : 'Gate 2 is blocked: report the blocker and wait for a locked FMN-PLAN before execution work.',
+          'Stay within the locked FMN-PLAN scope and queue FMN review before material implementation.',
+        ],
+        approval: [
+          'Material implementation after pre-build review.',
+          'Any lock, supersession, risk acceptance, closure, git commit, or git push.',
+        ],
+        stopPoint: 'Stop after pre-implementation planning and FMN review request, then stop again after post-build evidence is complete.',
+      };
+    case 'AUD':
+      return {
+        routine: [
+          'Confirm the exact artifact, evidence package, or question the Director wants audited.',
+          'Review only the files or evidence explicitly provided or authorized.',
+        ],
+        approval: [
+          'Any Sigma CLI command or local inspection beyond the exact authorized scope.',
+          'Any attempt to mutate runtime state, approve, reject, or lock artifacts.',
+        ],
+        stopPoint: 'Stop until the Director provides or authorizes the exact audit evidence scope.',
+      };
+    default:
+      return null;
+  }
+}
+
+function printReferenceDocuments(opts: { role?: string }, docEntries: DocumentEntry[]): void {
+  console.log('\n--- Reference Documents ---');
+  const roleLabel = opts.role ? ` (role: ${opts.role.toUpperCase()})` : '';
+  console.log(`  Reference list${roleLabel}:`);
+
+  if (docEntries.length > 0) {
+    for (const doc of docEntries) {
+      const loc = doc.location === 'project root' ? '' : `${doc.location}`;
+      const filePath = loc ? `${loc}${doc.file}` : doc.file;
+      console.log(`  - ${filePath}`);
+    }
+    return;
+  }
+
+  if (opts.role) {
+    console.log(`  - Sigma/role-memory/${opts.role.toLowerCase()}-memory.json`);
+    console.log(`  - Sigma/rules/${opts.role.toUpperCase()}-RULE.md`);
+  } else {
+    console.log('  none');
+  }
+}
+
 // ── sigma session bootstrap ───────────────────────────────────────────────────
 
-function runBootstrap(opts: { role?: string }): void {
+function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
   const projectRoot = findProjectRoot();
   const data = readProgress(projectRoot);
   const gates = getGateStatus(data);
   const stale = isStaleIntentPresent(data);
   const nextOps = getNextValidOperations(data);
+  const role = opts.role?.toUpperCase() as SigmaRole | undefined;
+  const roleGuidance = getRoleGuidance(role, gates.gate_2_open);
 
-  // Document registry (tolerate missing)
   let docEntries: DocumentEntry[] = [];
-  try {
-    const docRegistry = loadDocumentRegistry(projectRoot);
-    docEntries = getDocumentsForRole(docRegistry, opts.role ?? null);
-  } catch {
-    // registry missing — continue without it
-  }
-
-  // Operation registry (tolerate missing — used for display only in Phase 3)
-  try {
-    loadOperationRegistry(projectRoot);
-  } catch {
-    // tolerate missing in Phase 3
+  if (opts.showDocs) {
+    try {
+      const docRegistry = loadDocumentRegistry(projectRoot);
+      docEntries = getDocumentsForRole(docRegistry, opts.role ?? null);
+    } catch {
+      // registry missing — continue with fallback references
+    }
   }
 
   // ── Output ─────────────────────────────────────────────────────────────────
@@ -87,9 +170,16 @@ function runBootstrap(opts: { role?: string }): void {
   console.log(artifactLine('Roadmap Doc',        'ROADMAP',    fmtVersion(data.roadmap.active_version),  data.roadmap.active_state));
 
   console.log('\n--- Gate Status ---');
-  console.log(`Gate 1 (Design Complete):   ${fmtGate(gates.gate_1_open)}`);
-  console.log(`Gate 2 (Plan Locked):       ${fmtGate(gates.gate_2_open)}`);
-  console.log(`Gate 3 (Build Evidence):    ${fmtGate(gates.gate_3_satisfied, 'SATISFIED')}`);
+  console.log(`Gate 1 (Design Complete):   ${getGateStatusLabel(data, 'gate_1_open')}`);
+  console.log(`Gate 2 (Plan Locked):       ${getGateStatusLabel(data, 'gate_2_open')}`);
+  console.log(`Gate 3 (Build Evidence):    ${getGateStatusLabel(data, 'gate_3_satisfied')}`);
+
+  if (hasInvalidRuntime(data)) {
+    console.log('\n--- INVALID Runtime Warnings ---');
+    for (const line of getInvalidWarningLines(data)) {
+      console.log(`  [INVALID] ${line}`);
+    }
+  }
 
   console.log('\n--- STALE_INTENT Warnings ---');
   if (stale.length > 0) {
@@ -100,7 +190,7 @@ function runBootstrap(opts: { role?: string }): void {
     console.log('  none');
   }
 
-  console.log('\n--- Next Valid Operations ---');
+  console.log('\n--- CLI-Valid Runtime Operations ---');
   if (nextOps.length > 0) {
     for (const op of nextOps) {
       console.log(`  sigma ${op}`);
@@ -109,24 +199,26 @@ function runBootstrap(opts: { role?: string }): void {
     console.log('  none');
   }
 
-  console.log('\n--- Documents to Read ---');
-  const roleLabel = opts.role ? ` (role: ${opts.role.toUpperCase()})` : '';
-  console.log(`  Reading list${roleLabel}:`);
+  if (roleGuidance) {
+    console.log('\n--- Role-Permitted Routine Actions ---');
+    for (const item of roleGuidance.routine) {
+      console.log(`  - ${item}`);
+    }
 
-  if (docEntries.length > 0) {
-    for (const doc of docEntries) {
-      const loc = doc.location === 'project root' ? '' : `${doc.location}`;
-      const filePath = loc ? `${loc}${doc.file}` : doc.file;
-      console.log(`  - ${filePath}`);
+    console.log('\n--- Requires Director Approval ---');
+    for (const item of roleGuidance.approval) {
+      console.log(`  - ${item}`);
     }
+
+    console.log('\n--- Current Stop Point ---');
+    console.log(`  ${roleGuidance.stopPoint}`);
   } else {
-    // Fallback when registry is unavailable
-    console.log('  - Sigma/SIGMA_CONSTITUTION.md');
-    console.log('  - Sigma/SIGMA_PROTOCOL.md');
-    console.log('  - Sigma/progress.json');
-    if (opts.role) {
-      console.log(`  - Sigma/rules/${opts.role.toUpperCase()}-RULE.md`);
-    }
+    console.log('\n--- Current Stop Point ---');
+    console.log('  Use the active role rule and Director instruction to decide whether any CLI-valid runtime operation should be used now.');
+  }
+
+  if (opts.showDocs) {
+    printReferenceDocuments(opts, docEntries);
   }
 
   // ── Role Mailbox ───────────────────────────────────────────────────────────
@@ -199,8 +291,9 @@ export function sessionCommand(): Command {
   cmd
     .command('bootstrap')
     .description('Display current project state for session start')
-    .option('--role <role>', `Filter document list to role-specific reads (${BOOTSTRAP_VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)
-    .action((opts: { role?: string }) => {
+    .option('--role <role>', `Show role-aware guidance (${BOOTSTRAP_VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)
+    .option('--show-docs', 'Also display registry-based reference documents')
+    .action((opts: { role?: string; showDocs?: boolean }) => {
       try {
         if (opts.role) {
           const upper = opts.role.toUpperCase();

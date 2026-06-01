@@ -49,6 +49,31 @@ export interface Gates {
   gate_3_satisfied: boolean;
 }
 
+export type InvalidGateKey = 'gate_1_open' | 'gate_2_open' | 'gate_3_satisfied';
+export type InvalidMarkerDomain = ArtifactDomain | 'gates';
+
+export interface InvalidChainRef {
+  intent_version: string | null;
+  plan_version: string | null;
+  exec_version: string | null;
+}
+
+export interface InvalidMarker {
+  id: string;
+  domain: InvalidMarkerDomain;
+  status: 'INVALID';
+  reason: string;
+  gate?: InvalidGateKey;
+  chain: InvalidChainRef;
+  first_detected_at: string;
+  last_detected_at: string;
+}
+
+export interface RuntimeInvalidState {
+  markers: InvalidMarker[];
+  last_doctor_run_at: string | null;
+}
+
 export interface ProgressJson {
   schema_version: string;
   project_id: string;
@@ -62,6 +87,7 @@ export interface ProgressJson {
   close: ArtifactTracker;
   roadmap: ArtifactTracker;
   gates: Gates;
+  runtime_invalid?: RuntimeInvalidState;
 }
 
 export interface GateStatus {
@@ -132,6 +158,13 @@ function recoveryHint(field: string): string {
 
 function semanticError(field: string, message: string): Error {
   return new Error(`Invalid progress.json state at ${field}: ${message}. ${recoveryHint(field)}`);
+}
+
+function ensureRuntimeInvalid(data: ProgressJson): RuntimeInvalidState {
+  if (!data.runtime_invalid || !Array.isArray(data.runtime_invalid.markers)) {
+    data.runtime_invalid = { markers: [], last_doctor_run_at: null };
+  }
+  return data.runtime_invalid;
 }
 
 function schemaVersionParts(version: string): number[] | null {
@@ -232,6 +265,204 @@ function hasCleanGate3Chain(data: ProgressJson): boolean {
   );
 }
 
+function markerChain(
+  intentVersion: string | null = null,
+  planVersion: string | null = null,
+  execVersion: string | null = null,
+): InvalidChainRef {
+  return { intent_version: intentVersion, plan_version: planVersion, exec_version: execVersion };
+}
+
+function hasNonSupersededVersion(tracker: ArtifactTracker): boolean {
+  return tracker.versions.some(v => v.state !== 'SUPERSEDED');
+}
+
+export function hasInvalidRuntime(data: ProgressJson): boolean {
+  return ensureRuntimeInvalid(data).markers.length > 0;
+}
+
+export function getInvalidMarkers(data: ProgressJson): InvalidMarker[] {
+  return ensureRuntimeInvalid(data).markers;
+}
+
+export function isGateInvalid(data: ProgressJson, gate: InvalidGateKey): boolean {
+  const markers = getInvalidMarkers(data);
+  if (markers.some(marker => marker.gate === gate)) return true;
+
+  const impactedDomains: Record<InvalidGateKey, InvalidMarkerDomain[]> = {
+    gate_1_open: ['intent', 'gates'],
+    gate_2_open: ['intent', 'plan', 'gates'],
+    gate_3_satisfied: ['intent', 'plan', 'exec', 'gates'],
+  };
+
+  return markers.some(marker => impactedDomains[gate].includes(marker.domain));
+}
+
+export function getGateStatusLabel(data: ProgressJson, gate: InvalidGateKey): 'OPEN' | 'BLOCKED' | 'SATISFIED' | 'INVALID' {
+  if (isGateInvalid(data, gate)) return 'INVALID';
+  if (gate === 'gate_3_satisfied') return data.gates.gate_3_satisfied ? 'SATISFIED' : 'BLOCKED';
+  return data.gates[gate] ? 'OPEN' : 'BLOCKED';
+}
+
+export function getOperationalGate(data: ProgressJson, gate: InvalidGateKey): boolean {
+  return data.gates[gate] || isGateInvalid(data, gate);
+}
+
+export function getInvalidWarningLines(data: ProgressJson): string[] {
+  return getInvalidMarkers(data).map(marker => {
+    const scope = [
+      marker.chain.intent_version ? `INTENT ${marker.chain.intent_version}` : null,
+      marker.chain.plan_version ? `PLAN ${marker.chain.plan_version}` : null,
+      marker.chain.exec_version ? `EXEC ${marker.chain.exec_version}` : null,
+    ].filter(Boolean).join(' -> ');
+
+    const scopeLabel = scope.length > 0 ? ` (${scope})` : '';
+    return `${marker.domain.toUpperCase()}${scopeLabel}: ${marker.reason}`;
+  });
+}
+
+export interface DoctorReport {
+  repaired: string[];
+  invalidMarked: InvalidMarker[];
+  invalidCleared: InvalidMarker[];
+  remainingInvalid: InvalidMarker[];
+}
+
+function buildMarker(
+  existing: Map<string, InvalidMarker>,
+  now: string,
+  partial: Omit<InvalidMarker, 'first_detected_at' | 'last_detected_at' | 'status'>,
+): InvalidMarker {
+  const prev = existing.get(partial.id);
+  return {
+    ...partial,
+    status: 'INVALID',
+    first_detected_at: prev?.first_detected_at ?? now,
+    last_detected_at: now,
+  };
+}
+
+export function runDoctorReconciliation(data: ProgressJson): DoctorReport {
+  const runtimeInvalid = ensureRuntimeInvalid(data);
+  const previous = new Map(runtimeInvalid.markers.map(marker => [marker.id, marker]));
+  const nextMarkers: InvalidMarker[] = [];
+  const repaired: string[] = [];
+  const now = new Date().toISOString();
+
+  // Auto-repair tracker active_state mismatches when a single active entry exists.
+  for (const domain of ['intent', 'plan', 'exec', 'close', 'roadmap'] as const) {
+    const tracker = data[domain] as ArtifactTracker;
+    if (!tracker.active_version) continue;
+    const matches = tracker.versions.filter(v => v.version === tracker.active_version);
+    if (matches.length === 1 && matches[0].state !== tracker.active_state) {
+      repaired.push(`${domain}.active_state repaired from "${tracker.active_state}" to "${matches[0].state}"`);
+      tracker.active_state = matches[0].state;
+    }
+  }
+
+  // Auto-repair gate booleans to match actual runtime conditions.
+  const expectedGate1 = hasActiveLockedIntent(data);
+  if (data.gates.gate_1_open !== expectedGate1) {
+    repaired.push(`gates.gate_1_open repaired from "${data.gates.gate_1_open}" to "${expectedGate1}"`);
+    data.gates.gate_1_open = expectedGate1;
+  }
+
+  const expectedGate2 = hasActiveLockedPlan(data);
+  if (data.gates.gate_2_open !== expectedGate2) {
+    repaired.push(`gates.gate_2_open repaired from "${data.gates.gate_2_open}" to "${expectedGate2}"`);
+    data.gates.gate_2_open = expectedGate2;
+  }
+
+  const expectedGate3 = hasCleanGate3Chain(data);
+  if (data.gates.gate_3_satisfied !== expectedGate3) {
+    repaired.push(`gates.gate_3_satisfied repaired from "${data.gates.gate_3_satisfied}" to "${expectedGate3}"`);
+    data.gates.gate_3_satisfied = expectedGate3;
+  }
+
+  for (const domain of ['intent', 'plan', 'exec', 'close', 'roadmap'] as const) {
+    const tracker = data[domain] as ArtifactTracker;
+
+    if ((tracker.active_version === null) !== (tracker.active_state === null)) {
+      nextMarkers.push(buildMarker(previous, now, {
+        id: `${domain}:active-pair`,
+        domain,
+        reason: 'active_version and active_state are not paired consistently',
+        gate: domain === 'intent' ? 'gate_1_open' : domain === 'plan' ? 'gate_2_open' : domain === 'exec' ? 'gate_3_satisfied' : undefined,
+        chain: markerChain(
+          domain === 'intent' ? tracker.active_version : null,
+          domain === 'plan' ? tracker.active_version : null,
+          domain === 'exec' ? tracker.active_version : null,
+        ),
+      }));
+    }
+
+    if (tracker.active_version) {
+      const matches = tracker.versions.filter(v => v.version === tracker.active_version);
+      if (matches.length !== 1) {
+        nextMarkers.push(buildMarker(previous, now, {
+          id: `${domain}:active-version:${tracker.active_version}`,
+          domain,
+          reason: `active version "${tracker.active_version}" is not present exactly once`,
+          gate: domain === 'intent' ? 'gate_1_open' : domain === 'plan' ? 'gate_2_open' : domain === 'exec' ? 'gate_3_satisfied' : undefined,
+          chain: markerChain(
+            domain === 'intent' ? tracker.active_version : null,
+            domain === 'plan' ? tracker.active_version : null,
+            domain === 'exec' ? tracker.active_version : null,
+          ),
+        }));
+      }
+    } else if (hasNonSupersededVersion(tracker)) {
+      nextMarkers.push(buildMarker(previous, now, {
+        id: `${domain}:inactive-live-versions`,
+        domain,
+        reason: 'tracker has no active version while non-superseded versions still exist',
+        gate: domain === 'intent' ? 'gate_1_open' : domain === 'plan' ? 'gate_2_open' : domain === 'exec' ? 'gate_3_satisfied' : undefined,
+        chain: markerChain(),
+      }));
+    }
+  }
+
+  const intentVersions = new Set(data.intent.versions.map(v => v.version));
+  for (const version of data.plan.versions) {
+    if (version.intent_version_ref && !intentVersions.has(version.intent_version_ref)) {
+      nextMarkers.push(buildMarker(previous, now, {
+        id: `plan-ref:${version.version}:${version.intent_version_ref}`,
+        domain: 'plan',
+        reason: `PLAN ${version.version} references missing INTENT ${version.intent_version_ref}`,
+        gate: 'gate_2_open',
+        chain: markerChain(version.intent_version_ref, version.version, null),
+      }));
+    }
+  }
+
+  const planVersions = new Set(data.plan.versions.map(v => v.version));
+  for (const version of data.exec.versions) {
+    if (version.plan_version_ref && !planVersions.has(version.plan_version_ref)) {
+      nextMarkers.push(buildMarker(previous, now, {
+        id: `exec-ref:${version.version}:${version.plan_version_ref}`,
+        domain: 'exec',
+        reason: `EXEC ${version.version} references missing PLAN ${version.plan_version_ref}`,
+        gate: 'gate_3_satisfied',
+        chain: markerChain(null, version.plan_version_ref, version.version),
+      }));
+    }
+  }
+
+  runtimeInvalid.markers = nextMarkers;
+  runtimeInvalid.last_doctor_run_at = now;
+
+  const nextIds = new Set(nextMarkers.map(marker => marker.id));
+  const invalidMarked = nextMarkers.filter(marker => !previous.has(marker.id));
+  const invalidCleared = [...previous.values()].filter(marker => !nextIds.has(marker.id));
+
+  return {
+    repaired,
+    invalidMarked,
+    invalidCleared,
+    remainingInvalid: nextMarkers,
+  };
+}
+
 export function validateProgressSemantics(data: ProgressJson): void {
   if (data.schema_version !== SCHEMA_VERSION && isNewerSchema(data.schema_version, SCHEMA_VERSION)) {
     throw semanticError(
@@ -270,6 +501,13 @@ export function validateProgressSemantics(data: ProgressJson): void {
 }
 
 export function assertProgressCanMutate(data: ProgressJson): void {
+  if (hasInvalidRuntime(data)) {
+    process.stderr.write(
+      'WARNING: Sigma runtime is in INVALID recovery mode for one or more chains. ' +
+      'Normal gate enforcement is temporarily relaxed for affected chains. Run `sigma doctor` to re-check recovery.\n'
+    );
+    return;
+  }
   validateProgressSemantics(data);
 }
 
@@ -295,18 +533,7 @@ export function readProgress(projectRoot: string): ProgressJson {
   if (!Array.isArray((data.plan as PlanTracker).pending)) {
     (data.plan as PlanTracker).pending = [];
   }
-  // Self-heal: if active_state doesn't match the actual entry state, correct it.
-  // This repairs partial writes left by older CLI versions that updated entries
-  // but did not update the tracker-level active_state field.
-  for (const domain of ['intent', 'plan', 'exec', 'close', 'roadmap'] as const) {
-    const tracker = data[domain] as ArtifactTracker;
-    if (tracker.active_version) {
-      const entry = tracker.versions.find(v => v.version === tracker.active_version);
-      if (entry && entry.state !== tracker.active_state) {
-        tracker.active_state = entry.state;
-      }
-    }
-  }
+  ensureRuntimeInvalid(data);
   return data;
 }
 
@@ -357,6 +584,10 @@ export function createInitialProgress(projectId: string, projectName: string): P
       gate_1_open: false,
       gate_2_open: false,
       gate_3_satisfied: false,
+    },
+    runtime_invalid: {
+      markers: [],
+      last_doctor_run_at: null,
     },
   };
 }

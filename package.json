@@ -13,6 +13,7 @@
     "setup/",
     "Sigma/templates/",
     "Sigma/rules/",
+    "Sigma/role-memory/",
     "Sigma/SIGMA_CONSTITUTION.md",
     "Sigma/SIGMA_PROTOCOL.md",
     "Sigma/SIGMA-OPERATION-REGISTRY.json",

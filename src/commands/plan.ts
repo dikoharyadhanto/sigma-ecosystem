@@ -13,6 +13,8 @@ import {
   promotePendingPlan,
   updatePlanMetadata,
   assertProgressCanMutate,
+  getOperationalGate,
+  isGateInvalid,
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
 import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
@@ -67,7 +69,7 @@ export function planCommand(): Command {
           return;
         }
 
-        if (!data.gates.gate_1_open) {
+        if (!getOperationalGate(data, 'gate_1_open')) {
           throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
         }
         const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
@@ -228,7 +230,7 @@ export function planCommand(): Command {
           );
         }
 
-        if (!data.gates.gate_1_open) {
+        if (!getOperationalGate(data, 'gate_1_open')) {
           throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
         }
         const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');

@@ -37,6 +37,27 @@ export interface Gates {
     gate_2_open: boolean;
     gate_3_satisfied: boolean;
 }
+export type InvalidGateKey = 'gate_1_open' | 'gate_2_open' | 'gate_3_satisfied';
+export type InvalidMarkerDomain = ArtifactDomain | 'gates';
+export interface InvalidChainRef {
+    intent_version: string | null;
+    plan_version: string | null;
+    exec_version: string | null;
+}
+export interface InvalidMarker {
+    id: string;
+    domain: InvalidMarkerDomain;
+    status: 'INVALID';
+    reason: string;
+    gate?: InvalidGateKey;
+    chain: InvalidChainRef;
+    first_detected_at: string;
+    last_detected_at: string;
+}
+export interface RuntimeInvalidState {
+    markers: InvalidMarker[];
+    last_doctor_run_at: string | null;
+}
 export interface ProgressJson {
     schema_version: string;
     project_id: string;
@@ -50,6 +71,7 @@ export interface ProgressJson {
     close: ArtifactTracker;
     roadmap: ArtifactTracker;
     gates: Gates;
+    runtime_invalid?: RuntimeInvalidState;
 }
 export interface GateStatus {
     gate_1_open: boolean;
@@ -60,7 +82,21 @@ export interface StaleIntentWarning {
     domain: string;
     version: string;
 }
+type ArtifactDomain = 'intent' | 'plan' | 'exec' | 'close' | 'roadmap';
 export declare function validateProgress(data: unknown): ProgressJson;
+export declare function hasInvalidRuntime(data: ProgressJson): boolean;
+export declare function getInvalidMarkers(data: ProgressJson): InvalidMarker[];
+export declare function isGateInvalid(data: ProgressJson, gate: InvalidGateKey): boolean;
+export declare function getGateStatusLabel(data: ProgressJson, gate: InvalidGateKey): 'OPEN' | 'BLOCKED' | 'SATISFIED' | 'INVALID';
+export declare function getOperationalGate(data: ProgressJson, gate: InvalidGateKey): boolean;
+export declare function getInvalidWarningLines(data: ProgressJson): string[];
+export interface DoctorReport {
+    repaired: string[];
+    invalidMarked: InvalidMarker[];
+    invalidCleared: InvalidMarker[];
+    remainingInvalid: InvalidMarker[];
+}
+export declare function runDoctorReconciliation(data: ProgressJson): DoctorReport;
 export declare function validateProgressSemantics(data: ProgressJson): void;
 export declare function assertProgressCanMutate(data: ProgressJson): void;
 export declare function readProgress(projectRoot: string): ProgressJson;
@@ -90,4 +126,5 @@ export declare function registerRoadmapDraft(data: ProgressJson, version: string
 export declare function activateRoadmap(data: ProgressJson, version: string): void;
 export declare function lockActiveRoadmap(data: ProgressJson): void;
 export declare function getNextValidOperations(data: ProgressJson): string[];
+export {};
 //# sourceMappingURL=progress.d.ts.map

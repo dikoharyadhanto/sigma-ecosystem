@@ -408,21 +408,25 @@ function runMemorySetup(opts: { vscode?: boolean; print?: boolean; reseed?: bool
     error('Sigma is not installed. Run: sigma setup install');
   }
 
-  // Ensure memory file exists; seed if empty or --reseed requested
-  if (!fileExists(GLOBAL_MEMORY_FILE)) {
-    fs.ensureFileSync(GLOBAL_MEMORY_FILE);
-    seedMemoryFile();
-    success(`Memory file created and seeded: ${GLOBAL_MEMORY_FILE}`);
-  } else if (opts.reseed) {
-    seedMemoryFile();
-    success(`Memory file reseeded: ${GLOBAL_MEMORY_FILE}`);
-  } else {
-    const existing = fs.readFileSync(GLOBAL_MEMORY_FILE, 'utf-8').trim();
-    if (existing.length === 0) {
+  const needsSigmaMemory = Boolean(opts.reseed || opts.reasonix || opts.gemini);
+
+  if (needsSigmaMemory) {
+    // Ensure memory file exists when a global sigma-memory adapter is requested.
+    if (!fileExists(GLOBAL_MEMORY_FILE)) {
+      fs.ensureFileSync(GLOBAL_MEMORY_FILE);
       seedMemoryFile();
-      success(`Memory file seeded: ${GLOBAL_MEMORY_FILE}`);
+      success(`Memory file created and seeded: ${GLOBAL_MEMORY_FILE}`);
+    } else if (opts.reseed) {
+      seedMemoryFile();
+      success(`Memory file reseeded: ${GLOBAL_MEMORY_FILE}`);
     } else {
-      info(`Memory file: ${GLOBAL_MEMORY_FILE}`);
+      const existing = fs.readFileSync(GLOBAL_MEMORY_FILE, 'utf-8').trim();
+      if (existing.length === 0) {
+        seedMemoryFile();
+        success(`Memory file seeded: ${GLOBAL_MEMORY_FILE}`);
+      } else {
+        info(`Memory file: ${GLOBAL_MEMORY_FILE}`);
+      }
     }
   }
 
@@ -463,12 +467,14 @@ function runMemorySetup(opts: { vscode?: boolean; print?: boolean; reseed?: bool
     console.log('');
   }
 
-  console.log('\n  MCP servers configured:');
+  console.log('\n  Local MCP servers configured:');
   console.log('    sequential-thinking  — structured multi-step reasoning');
-  console.log('    sigma-memory         — persistent knowledge graph');
-  console.log('\n  Agents query memory using MCP tools: search_nodes, read_graph');
-  console.log('  Project decision log: Sigma/memory/decisions.jsonl (per-project, CLI-written)\n');
-  console.log('  Bootstrap protocol: at session start, query memory graph before running sigma session bootstrap.\n');
+  if (opts.reasonix || opts.gemini) {
+    console.log('\n  Optional global Sigma memory adapters configured for selected tools.');
+    console.log('  Sigma memory remains ecosystem-level only; role activation uses role memory first.');
+  }
+  console.log('\n  Project decision log: Sigma/memory/decisions.jsonl (per-project, CLI-written)');
+  console.log('  Role activation memory: Sigma/role-memory/*.json (project-local or bundled)\n');
 }
 
 // ── Command builder ──────────────────────────────────────────────────────────
@@ -501,7 +507,7 @@ export function setupCommand(): Command {
 
   cmd
     .command('memory')
-    .description('Write .mcp.json (sequential-thinking + sigma-memory) into the current project directory')
+    .description('Write project MCP config (sequential-thinking by default) and optional global adapters')
     .option('--vscode', 'Also write .vscode/mcp.json for VS Code extension')
     .option('--reasonix', 'Also write MCP entries into ~/.reasonix/config.json (global, merged)')
     .option('--gemini', 'Also write MCP entries into ~/.gemini/antigravity/mcp_config.json (global, merged)')

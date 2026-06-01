@@ -21,7 +21,7 @@ function execCommand() {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
             (0, progress_1.assertProgressCanMutate)(data);
-            if (!data.gates.gate_2_open) {
+            if (!(0, progress_1.getOperationalGate)(data, 'gate_2_open')) {
                 throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
             }
             // Guard: block if any exec is in a non-final state (not LOCKED or SUPERSEDED)

@@ -6,16 +6,6 @@
         "-y",
         "@modelcontextprotocol/server-sequential-thinking"
       ]
-    },
-    "sigma-memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ],
-      "env": {
-        "MEMORY_FILE_PATH": "/home/dikoharyadhanto/.sigma/memory_sigma.jsonl"
-      }
     }
   }
 }

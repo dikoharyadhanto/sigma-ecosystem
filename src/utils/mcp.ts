@@ -16,12 +16,6 @@ interface VscodeMcpConfig {
   servers: Record<string, McpServer>;
 }
 
-
-function resolveMemoryFilePath(platform: NodeJS.Platform = process.platform, homeDir = os.homedir()): string {
-  const pathApi = platform === 'win32' ? path.win32 : path.posix;
-  return pathApi.join(homeDir, '.sigma', 'memory_sigma.jsonl');
-}
-
 function npxCommand(packageName: string, platform: NodeJS.Platform = process.platform): { command: string; args: string[] } {
   if (platform === 'win32') {
     return { command: 'cmd', args: ['/c', 'npx', '-y', packageName] };
@@ -31,15 +25,11 @@ function npxCommand(packageName: string, platform: NodeJS.Platform = process.pla
 
 export function createMcpConfig(options: { platform?: NodeJS.Platform; homeDir?: string } = {}): McpJsonConfig {
   const platform = options.platform ?? process.platform;
-  const homeDir = options.homeDir ?? os.homedir();
+  void options.homeDir;
 
   return {
     mcpServers: {
       'sequential-thinking': npxCommand('@modelcontextprotocol/server-sequential-thinking', platform),
-      'sigma-memory': {
-        ...npxCommand('@modelcontextprotocol/server-memory', platform),
-        env: { MEMORY_FILE_PATH: resolveMemoryFilePath(platform, homeDir) },
-      },
     },
   };
 }

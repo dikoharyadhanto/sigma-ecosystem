@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-05-29T23:56:24.400Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 51,
+  "total_operations": 52,
   "domains": [
     "close",
     "config",
@@ -12,6 +12,7 @@
     "gitignore",
     "inbox",
     "intent",
+    "memory",
     "override",
     "plan",
     "project",
@@ -78,7 +79,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Read progress.json and display current lifecycle phase, active artifact versions and states, gate status (gate_1, gate_2, gate_3), STALE_INTENT warnings, and pending actions.",
+      "description": "Read progress.json and display current lifecycle phase, active artifact versions and states, gate status (gate_1, gate_2, gate_3), STALE_INTENT warnings, and CLI-valid runtime operations.",
       "inputs": [],
       "outputs": [
         {
@@ -238,12 +239,12 @@
       "action": "bootstrap",
       "level": "read_only",
       "role": "any",
-      "description": "Load runtime state for session start: lifecycle phase, active artifact versions and states, pending gates, STALE_INTENT flags, and list of documents to read for this session. Required at the start of every agent session. Returns a structured context summary — does not write any state.",
+      "description": "Load runtime state for session start: lifecycle phase, active artifact versions and states, pending gates, STALE_INTENT flags, CLI-valid runtime operations, and optional role-aware activation guidance. Read-only command; reference documents appear only when explicitly requested.",
       "inputs": [],
       "outputs": [
         {
           "type": "display",
-          "description": "Session context: lifecycle state, active artifacts, gate status, STALE_INTENT flags, documents to read"
+          "description": "Session context: lifecycle state, active artifacts, gate status, STALE_INTENT flags, CLI-valid runtime operations, and optional role guidance"
         }
       ],
       "constraints": [
@@ -259,6 +260,42 @@
       },
       "error_messages": {
         "not_found": "No Sigma project found. Run: sigma project start"
+      }
+    },
+    {
+      "operation_id": "memory_show",
+      "domain": "memory",
+      "action": "show",
+      "level": "read_only",
+      "role": "any",
+      "description": "Display the short role activation memory for ARC, FMN, DEV, or AUD. Reads Sigma/role-memory/{role}-memory.json from the project when available, otherwise falls back to the bundled package copy. Does not read progress.json or mutate filesystem state.",
+      "inputs": [
+        {
+          "name": "--arc|--fmn|--dev|--aud",
+          "type": "flag",
+          "required": true,
+          "description": "Exactly one role flag must be provided."
+        }
+      ],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Authority note, general reminders, and role-specific reminders for the selected role"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "exactly one role flag must be present",
+          "error_message": "Exactly one role flag is required: --arc, --fmn, --dev, or --aud."
+        }
+      ],
+      "gating": {
+        "pre_condition": "selected role memory file exists locally or in the bundled package",
+        "post_condition": "none (read-only)"
+      },
+      "error_messages": {
+        "missing_role_flag": "Exactly one role flag is required: --arc, --fmn, --dev, or --aud."
       }
     },
     {

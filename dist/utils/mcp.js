@@ -12,10 +12,6 @@ exports.writeReasonixMcpConfig = writeReasonixMcpConfig;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const os_1 = __importDefault(require("os"));
 const path_1 = __importDefault(require("path"));
-function resolveMemoryFilePath(platform = process.platform, homeDir = os_1.default.homedir()) {
-    const pathApi = platform === 'win32' ? path_1.default.win32 : path_1.default.posix;
-    return pathApi.join(homeDir, '.sigma', 'memory_sigma.jsonl');
-}
 function npxCommand(packageName, platform = process.platform) {
     if (platform === 'win32') {
         return { command: 'cmd', args: ['/c', 'npx', '-y', packageName] };
@@ -24,14 +20,10 @@ function npxCommand(packageName, platform = process.platform) {
 }
 function createMcpConfig(options = {}) {
     const platform = options.platform ?? process.platform;
-    const homeDir = options.homeDir ?? os_1.default.homedir();
+    void options.homeDir;
     return {
         mcpServers: {
             'sequential-thinking': npxCommand('@modelcontextprotocol/server-sequential-thinking', platform),
-            'sigma-memory': {
-                ...npxCommand('@modelcontextprotocol/server-memory', platform),
-                env: { MEMORY_FILE_PATH: resolveMemoryFilePath(platform, homeDir) },
-            },
         },
     };
 }

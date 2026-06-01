@@ -51,29 +51,30 @@ function makeProgressWithSingleDraftPlan() {
   });
 }
 
-describe('sigma plan new — draft conflict guard', () => {
+describe('sigma plan new — gate ordering follows current CLI', () => {
   let env: TestEnv;
 
   afterEach(() => env?.cleanup());
 
-  it('fails when a DRAFT plan already exists', () => {
+  it('reports Gate 1.5 before any draft-queue concern when no ACTIVE ROADMAP exists', () => {
     env = setupTestEnv();
     fs.writeJsonSync(env.progressPath, makeProgressWithSingleDraftPlan());
 
     const result = runCli('plan new', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/DRAFT CONFLICT/i);
-    expect(result.stderr).toMatch(/v1\.1/);
+    expect(result.stderr).toMatch(/Gate 1\.5 blocked/i);
+    expect(result.stderr).toMatch(/ACTIVE ROADMAP/i);
   });
 
-  it('error message includes activate hint', () => {
+  it('gate-first error points to roadmap activation flow', () => {
     env = setupTestEnv();
     fs.writeJsonSync(env.progressPath, makeProgressWithSingleDraftPlan());
 
     const result = runCli('plan new', env.projectDir, env.homeDir);
 
-    expect(result.stderr).toMatch(/sigma plan activate/i);
+    expect(result.stderr).toMatch(/sigma roadmap new/i);
+    expect(result.stderr).toMatch(/sigma roadmap activate/i);
   });
 });
 

@@ -57,7 +57,7 @@ function planCommand() {
                 console.log(`Run: sigma plan promote --id ${id}   to assign a version and enter the draft queue`);
                 return;
             }
-            if (!data.gates.gate_1_open) {
+            if (!(0, progress_1.getOperationalGate)(data, 'gate_1_open')) {
                 throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
             }
             const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
@@ -202,7 +202,7 @@ function planCommand() {
                 throw new Error(`Pending plan ID "${opts.id}" not found.\n` +
                     `Run: sigma plan queue   to list pending plans`);
             }
-            if (!data.gates.gate_1_open) {
+            if (!(0, progress_1.getOperationalGate)(data, 'gate_1_open')) {
                 throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
             }
             const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');

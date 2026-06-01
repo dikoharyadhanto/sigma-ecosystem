@@ -18,6 +18,8 @@ const send_1 = require("./commands/send");
 const inbox_1 = require("./commands/inbox");
 const config_2 = require("./commands/config");
 const sync_1 = require("./commands/sync");
+const memory_1 = require("./commands/memory");
+const doctor_1 = require("./commands/doctor");
 const program = new commander_1.Command();
 program
     .name('sigma')
@@ -39,6 +41,8 @@ program.addCommand((0, send_1.sendCommand)());
 program.addCommand((0, inbox_1.inboxCommand)());
 program.addCommand((0, config_2.configCommand)());
 program.addCommand((0, sync_1.syncCommand)());
+program.addCommand((0, memory_1.memoryCommand)());
+program.addCommand((0, doctor_1.doctorCommand)());
 program.on('command:*', (operands) => {
     console.error(`Unknown command: sigma ${operands.join(' ')}`);
     console.error('Run `sigma --help` for available commands.');

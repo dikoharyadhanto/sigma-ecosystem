@@ -7,7 +7,6 @@ import {
   GLOBAL_RULES_DIR,
   GLOBAL_GOVERNANCE_DIR,
   GLOBAL_PROJECTS_FILE,
-  GLOBAL_MEMORY_FILE,
   PROJECT_SIGMA_DIR,
   SUBFOLDERS,
   MESSAGES_DIR,
@@ -15,6 +14,7 @@ import {
   MESSAGE_SUBFOLDERS,
 } from '../config';
 import { writeMcpJson, writeVscodeMcpJson } from '../utils/mcp';
+import { getBundledRoleMemoryDir } from '../engine/roleMemory';
 import {
   readProgress,
   writeProgress,
@@ -22,6 +22,9 @@ import {
   getGateStatus,
   isStaleIntentPresent,
   getNextValidOperations,
+  getGateStatusLabel,
+  getInvalidWarningLines,
+  hasInvalidRuntime,
 } from '../engine/progress';
 import { createDefaultProjectConfig, writeProjectConfig, langLabel } from '../engine/projectConfig';
 import { success, info, warn, error } from '../utils/output';
@@ -32,7 +35,7 @@ import { ensureDir, fileExists, findProjectRoot, backupFile } from '../utils/fs'
 const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
 const BUNDLE_OP_REGISTRY = path.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-OPERATION-REGISTRY.json');
 const BUNDLE_DOC_REGISTRY = path.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-REGISTRY.json');
-const BUNDLE_MEMORY_SEED = path.join(PACKAGE_ROOT, 'setup', 'sigma-memory-seed.jsonl');
+const BUNDLE_ROLE_MEMORY_DIR = getBundledRoleMemoryDir();
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
@@ -90,23 +93,6 @@ function registerProjectEntry(projectId: string, projectName: string, projectPat
   }
 
   fs.writeJsonSync(GLOBAL_PROJECTS_FILE, data, { spaces: 2 });
-}
-
-// ── Memory seed helper ────────────────────────────────────────────────────────
-
-function ensureMemoryFileSeeded(): void {
-  const hasSeed = fileExists(BUNDLE_MEMORY_SEED);
-  if (!fileExists(GLOBAL_MEMORY_FILE)) {
-    fs.ensureFileSync(GLOBAL_MEMORY_FILE);
-    if (hasSeed) {
-      fs.writeFileSync(GLOBAL_MEMORY_FILE, fs.readFileSync(BUNDLE_MEMORY_SEED, 'utf-8'), 'utf-8');
-    }
-  } else {
-    const existing = fs.readFileSync(GLOBAL_MEMORY_FILE, 'utf-8').trim();
-    if (existing.length === 0 && hasSeed) {
-      fs.writeFileSync(GLOBAL_MEMORY_FILE, fs.readFileSync(BUNDLE_MEMORY_SEED, 'utf-8'), 'utf-8');
-    }
-  }
 }
 
 // ── sigma project start ───────────────────────────────────────────────────────
@@ -236,6 +222,18 @@ async function runStart(opts: {
   fs.writeJsonSync(indexPath, { messages: [] }, { spaces: 2 });
   console.log('  Mailbox: Sigma/messages/ initialized.');
 
+  const decisionsPath = path.join(sigmaDir, 'memory', 'decisions.jsonl');
+  fs.ensureFileSync(decisionsPath);
+  fs.writeFileSync(decisionsPath, '', 'utf8');
+  console.log('  Memory: Sigma/memory/decisions.jsonl initialized.');
+
+  if (fileExists(BUNDLE_ROLE_MEMORY_DIR)) {
+    fs.copySync(BUNDLE_ROLE_MEMORY_DIR, path.join(sigmaDir, 'role-memory'), { overwrite: true });
+    console.log('  Role memory: Sigma/role-memory/ copied from bundle.');
+  } else {
+    warn('Sigma/role-memory bundle not found — skipping');
+  }
+
   // Create bridge file stubs
   for (const bridgeFile of ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md']) {
     const bridgePath = path.join(projectRoot, bridgeFile);
@@ -250,21 +248,19 @@ async function runStart(opts: {
   // Register in global projects.json
   registerProjectEntry(projectId, projectName, projectRoot);
 
-  // Write .mcp.json so AI agents can reach sigma-memory and sequential-thinking
+  // Write .mcp.json so AI agents can reach project-local MCP defaults
   const mcpJsonPath = path.join(projectRoot, '.mcp.json');
   writeMcpJson(mcpJsonPath);
-  ensureMemoryFileSeeded();
-  console.log(`  MCP: ${mcpJsonPath} written (sigma-memory + sequential-thinking).`);
+  console.log(`  MCP: ${mcpJsonPath} written (sequential-thinking).`);
 
   // Write .vscode/mcp.json for VS Code/Antigravity integration
   const vscodeMcpPath = path.join(projectRoot, '.vscode', 'mcp.json');
   writeVscodeMcpJson(vscodeMcpPath);
   console.log(`  VS Code MCP: ${vscodeMcpPath} written.`);
-  console.log(`  Memory file: ${GLOBAL_MEMORY_FILE}`);
 
   success(`Sigma project initialized: ${projectName} (${projectId})`);
   console.log(`  Location: ${sigmaDir}`);
-  console.log('  Next: Run `sigma session bootstrap` to confirm state.');
+  console.log('  Next: Run `sigma session bootstrap` or `sigma project status` to confirm state.');
 }
 
 // ── sigma project status ──────────────────────────────────────────────────────
@@ -301,9 +297,16 @@ function runStatus(): void {
   }
 
   console.log('\n--- Gate Status ---');
-  console.log(`Gate 1 (Design Complete):   ${gates.gate_1_open ? 'OPEN' : 'BLOCKED'}`);
-  console.log(`Gate 2 (Plan Locked):       ${gates.gate_2_open ? 'OPEN' : 'BLOCKED'}`);
-  console.log(`Gate 3 (Build Evidence):    ${gates.gate_3_satisfied ? 'SATISFIED' : 'BLOCKED'}`);
+  console.log(`Gate 1 (Design Complete):   ${getGateStatusLabel(data, 'gate_1_open')}`);
+  console.log(`Gate 2 (Plan Locked):       ${getGateStatusLabel(data, 'gate_2_open')}`);
+  console.log(`Gate 3 (Build Evidence):    ${getGateStatusLabel(data, 'gate_3_satisfied')}`);
+
+  if (hasInvalidRuntime(data)) {
+    console.log('\n--- INVALID Runtime Warnings ---');
+    for (const line of getInvalidWarningLines(data)) {
+      console.log(`  [INVALID] ${line}`);
+    }
+  }
 
   if (stale.length > 0) {
     console.log('\n--- STALE_INTENT Warnings ---');
@@ -313,7 +316,7 @@ function runStatus(): void {
   }
 
   const nextOps = getNextValidOperations(data);
-  console.log('\n--- Next Valid Operations ---');
+  console.log('\n--- CLI-Valid Runtime Operations ---');
   if (nextOps.length > 0) {
     for (const op of nextOps) {
       console.log(`  sigma ${op}`);
@@ -350,6 +353,9 @@ function runSync(opts: { confirm?: boolean }): void {
     }
     if (fileExists(BUNDLE_DOC_REGISTRY)) {
       console.log(`  SIGMA-REGISTRY.json (from bundle)`);
+    }
+    if (fileExists(BUNDLE_ROLE_MEMORY_DIR)) {
+      console.log('  role-memory/ (from bundle)');
     }
     warn('Pass --confirm to apply.');
     return;
@@ -392,6 +398,15 @@ function runSync(opts: { confirm?: boolean }): void {
     if (fileExists(dest)) fs.copySync(dest, path.join(backupDir, 'SIGMA-REGISTRY.json'));
     fs.copySync(BUNDLE_DOC_REGISTRY, dest, { overwrite: true });
     updated.push('SIGMA-REGISTRY.json');
+  }
+
+  if (fileExists(BUNDLE_ROLE_MEMORY_DIR)) {
+    const dest = path.join(sigmaDir, 'role-memory');
+    if (fileExists(dest)) {
+      fs.copySync(dest, path.join(backupDir, 'role-memory'));
+    }
+    fs.copySync(BUNDLE_ROLE_MEMORY_DIR, dest, { overwrite: true });
+    updated.push('role-memory/');
   }
 
   success('Project synced successfully.');

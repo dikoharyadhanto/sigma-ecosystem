@@ -9,6 +9,7 @@ import {
   lockActiveExec,
   supersedeExecVersion,
   assertProgressCanMutate,
+  getOperationalGate,
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
 import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
@@ -26,7 +27,7 @@ export function execCommand(): Command {
         const data = readProgress(projectRoot);
         assertProgressCanMutate(data);
 
-        if (!data.gates.gate_2_open) {
+        if (!getOperationalGate(data, 'gate_2_open')) {
           throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
         }
 

@@ -9,7 +9,6 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
-const CSO_VALID_ROLES = ['ARC', 'FMN', 'DEV', 'AUD'];
 function buildTimestamp() {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -24,23 +23,14 @@ function csoCommand() {
     cmd.description('Manage CSO (Close-out Session Output) artifacts');
     cmd.command('new')
         .description('Create a new CSO file in Sigma/logs/')
-        .option('--role <role>', `Role label for filename (${CSO_VALID_ROLES.map(r => r.toLowerCase()).join('|')})`)
+        .option('--role <role>', 'Optional legacy role label for filename (deprecated)')
         .option('--from <file>', 'Seed content from an existing draft file')
         .action((opts) => {
         try {
-            if (!opts.role) {
-                console.error('--role is required. Use: sigma cso new --role <role>');
-                console.error(`Valid roles: ${CSO_VALID_ROLES.map(r => r.toLowerCase()).join(', ')}`);
-                process.exit(1);
-            }
-            const role = opts.role.toUpperCase();
-            if (!CSO_VALID_ROLES.includes(role)) {
-                console.error(`Invalid role "${opts.role}". Valid roles: ${CSO_VALID_ROLES.map(r => r.toLowerCase()).join(', ')}`);
-                process.exit(1);
-            }
             const projectRoot = (0, fs_1.findProjectRoot)();
             const ts = buildTimestamp();
-            const baseName = `CSO-${role}-${ts}`;
+            const roleSegment = opts.role ? `${opts.role.toUpperCase()}-` : '';
+            const baseName = `CSO-${roleSegment}${ts}`;
             const fileName = `${baseName}.md`;
             const relPath = path_1.default.join('Sigma', 'logs', fileName);
             const absPath = path_1.default.join(projectRoot, relPath);
