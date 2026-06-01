@@ -1,10 +1,11 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx vitest *)"
+    ],
     "additionalDirectories": [
       "/home/dikoharyadhanto/.reasonix"
-    ],
-    "allow": [
-      "Bash(npm run *)"
     ]
   }
 }

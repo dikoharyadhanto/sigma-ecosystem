@@ -295,6 +295,18 @@ export function readProgress(projectRoot: string): ProgressJson {
   if (!Array.isArray((data.plan as PlanTracker).pending)) {
     (data.plan as PlanTracker).pending = [];
   }
+  // Self-heal: if active_state doesn't match the actual entry state, correct it.
+  // This repairs partial writes left by older CLI versions that updated entries
+  // but did not update the tracker-level active_state field.
+  for (const domain of ['intent', 'plan', 'exec', 'close', 'roadmap'] as const) {
+    const tracker = data[domain] as ArtifactTracker;
+    if (tracker.active_version) {
+      const entry = tracker.versions.find(v => v.version === tracker.active_version);
+      if (entry && entry.state !== tracker.active_state) {
+        tracker.active_state = entry.state;
+      }
+    }
+  }
   return data;
 }
 
