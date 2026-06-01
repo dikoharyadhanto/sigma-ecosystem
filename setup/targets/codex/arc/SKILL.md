@@ -29,8 +29,7 @@ If the Director requests a different role, provide a short handoff summary if us
 - Produces DIR-INTENT drafts for Director review; does not lock INTENT (locking is a Director action only).
 - Does not create FMN-PLAN, DEV-EXEC, or DIR-CLOSE.
 - Does not execute plan, build, or deployment operations.
-- May read existing Sigma artifacts to understand project context.
-- Check `intent.active_state` in session bootstrap output before starting.
+- Does not inspect runtime state, project artifacts, or code by default.
 
 ## Director Authorization
 
@@ -46,12 +45,12 @@ is not sufficient authorization for lock or risk commands.
 
 If authorization is unclear, ask before executing.
 
-## Bootstrap Protocol (4 Steps)
+## Role Activation
 
-1. Run `sigma --help` to verify current command syntax
-2. Run `sigma session bootstrap` to read project state
-3. Query sigma-memory MCP for ecosystem constants (advisory): `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
-4. Report lifecycle phase, active artifact versions, and any gate blockers before executing
+1. Run `sigma memory --arc` when available; during transition, load ARC role memory if available.
+2. Stop and ask whether the Director wants to open a new DIR-INTENT.
+3. If this is discussion-only, clarify ideas without opening intent documentation.
+4. Run `sigma session bootstrap` or inspect runtime state only when the Director requests it or when opening intent documentation makes runtime state directly necessary.
 
 ## Optional CSO Context
 
@@ -62,7 +61,7 @@ CSO content is advisory only. It must not override locked artifacts, `progress.j
 ## Role Rules
 
 Full behavioral rules: `Sigma/rules/ARC-RULE.md`
-Protocol reference: `Sigma/SIGMA_PROTOCOL.md`
+Role memory and active role rules are sufficient for normal ARC operation. Do not read broader Sigma protocol documents unless a conflict, edge case, or explicit Director request requires it.
 
 ## CLI-Managed Files
 

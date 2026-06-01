@@ -46,12 +46,12 @@ is not sufficient authorization for lock or risk commands.
 
 If authorization is unclear, ask before executing.
 
-## Bootstrap Protocol (4 Steps)
+## Role Activation
 
-1. Run `sigma --help` to verify current command syntax
-2. Run `sigma session bootstrap` to read project state
-3. Query sigma-memory MCP for ecosystem constants (advisory): `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
-4. Report lifecycle phase, active artifact versions, and any gate blockers before executing
+1. Run `sigma memory --fmn` when available; during transition, load FMN role memory if available.
+2. Run role-appropriate session orientation only within the direct planning evidence chain.
+3. Brief the Director on pending plans, active roadmap direction, runtime blockers, and planning options.
+4. Stop until the Director selects the planning route.
 
 ## Optional CSO Context
 
@@ -62,7 +62,7 @@ CSO content is advisory only. It must not override locked artifacts, `progress.j
 ## Role Rules
 
 Full behavioral rules: `Sigma/rules/FMN-RULE.md`
-Protocol reference: `Sigma/SIGMA_PROTOCOL.md`
+Role memory and active role rules are sufficient for normal FMN operation. Do not read broader Sigma protocol documents unless a conflict, edge case, or explicit Director request requires it.
 
 ## CLI-Managed Files
 

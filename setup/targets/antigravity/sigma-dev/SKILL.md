@@ -31,6 +31,7 @@ If the Director requests a different role, provide a short handoff summary if us
 - Does not modify the FMN-PLAN or DIR-INTENT.
 - Does not create DIR-CLOSE.
 - Has freedom of implementation method within plan constraints.
+- Must not run `git commit` or `git push`; after DEV-EXEC is approved and locked, remind the Director to commit and push.
 
 ## Director Authorization
 
@@ -46,12 +47,12 @@ is not sufficient authorization for lock or risk commands.
 
 If authorization is unclear, ask before executing.
 
-## Bootstrap Protocol (4 Steps)
+## Role Activation
 
-1. Run `sigma --help` to verify current command syntax
-2. Run `sigma session bootstrap` to read project state
-3. Query sigma-memory MCP for ecosystem constants (advisory): `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()`
-4. Report lifecycle phase, active artifact versions, and any gate blockers before executing
+1. Run `sigma memory --dev` when available; during transition, load DEV role memory if available.
+2. Verify Gate 2 and the locked FMN-PLAN selected by Sigma runtime.
+3. Open or continue DEV-EXEC pre-build planning when role rules permit it.
+4. Stop after FMN pre-build review request; do not begin material implementation until FMN review exists and the Director explicitly approves implementation.
 
 ## Optional CSO Context
 
@@ -62,7 +63,7 @@ CSO content is advisory only. It must not override locked artifacts, `progress.j
 ## Role Rules
 
 Full behavioral rules: `Sigma/rules/DEV-RULE.md`
-Protocol reference: `Sigma/SIGMA_PROTOCOL.md`
+Role memory and active role rules are sufficient for normal DEV operation. Do not read broader Sigma protocol documents unless a conflict, edge case, or explicit Director request requires it.
 
 ## CLI-Managed Files
 

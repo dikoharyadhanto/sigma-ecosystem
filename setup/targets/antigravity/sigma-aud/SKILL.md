@@ -83,11 +83,11 @@ circumstance.
 
 **Exception — `/report` skill**: Director invocation of `/report` constitutes explicit authorization for AUD to execute `sigma session bootstrap` and `sigma project status` as enumerated in the `/report` skill. AUD must not expand CLI execution beyond the commands listed in that skill.
 
-## Bootstrap Protocol (3 Steps)
+## Role Activation
 
-1. Read governance rules if accessible: `Sigma/SIGMA_CONSTITUTION.md`, `Sigma/SIGMA_PROTOCOL.md`, `Sigma/rules/AUD-RULE.md`
-2. Wait for Director to provide the audit evidence package
-3. Report audit mode, audit boundary, and Evidence Boundary block before beginning analysis
+1. Run `sigma memory --aud` when available; during transition, load AUD role memory if available.
+2. Wait for the Director to provide or authorize the audit evidence package.
+3. Report audit mode, audit boundary, and Evidence Boundary block before beginning analysis.
 
 ## External Audit CSO Scope
 
@@ -104,7 +104,7 @@ Do not read CSO files that have not been explicitly provided or authorized.
 ## Role Rules
 
 Full behavioral rules: `Sigma/rules/AUD-RULE.md`
-Protocol reference: `Sigma/SIGMA_PROTOCOL.md`
+Role memory and active role rules are sufficient for normal AUD operation. Do not read broader Sigma protocol documents unless a conflict, edge case, or explicit Director request requires it.
 
 ## CLI-Managed Files
 
