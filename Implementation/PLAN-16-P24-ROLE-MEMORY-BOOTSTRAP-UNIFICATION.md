@@ -257,11 +257,72 @@ Stage 2 updates role skill files after the canonical rules are consistent. The g
 
 ---
 
-## Stage 3 — CLI Command and Bootstrap Output
+## Stage 3 — Activation Context Simplification
 
-Stage 3 implements the CLI support after rules and skills agree on the intended behavior.
+Stage 3 removes activation-time context sources that are now redundant or actively harmful. The goal is to reduce accidental context expansion from global memory lookups and stale CSO discovery.
 
-### TASK-03 — Add role memory JSON files
+### TASK-03 — Remove `sigma-memory` MCP from activation doctrine
+
+**Primary areas**:
+
+- root bridge files
+- `setup/targets/bridge/`
+- role skill files under `setup/targets/codex/`, `setup/targets/claude_code/`, `setup/targets/antigravity/`, and `setup/targets/reasonix/`
+- any remaining role activation docs that tell ARC/FMN/DEV/AUD to query sigma-memory during startup
+
+#### Required changes
+
+- Remove sigma-memory MCP as a normal activation step for governance roles.
+- Remove wording that suggests AI should query ecosystem constants before normal role work begins.
+- Reposition role memory as the primary short operational cue for role activation.
+- Keep room for explicit Director-requested memory lookup only if a later edge case truly requires it.
+
+#### Rationale
+
+- The old sigma-memory activation step is no longer necessary once role memory exists.
+- sigma-memory is ecosystem-level and too broad for focused project-role activation.
+- The practical value of sigma-memory during normal activation is lower than the cost of extra context and extra ceremony.
+
+#### Acceptance criteria
+
+- ARC/FMN/DEV/AUD activation instructions no longer require sigma-memory MCP lookup.
+- No canonical role activation path treats sigma-memory as mandatory startup context.
+- Role activation guidance points to role memory and role rules instead of global memory lookup.
+
+---
+
+### TASK-04 — Remove automatic CSO surfacing from `session bootstrap`
+
+**Primary areas**:
+
+- `src/commands/session.ts`
+- related docs/spec text in planning artifacts if needed
+
+#### Required changes
+
+- Remove the `Recent CSO Files` section from default `sigma session bootstrap` output.
+- Do not encourage automatic CSO discovery during role activation.
+- Treat CSO as Director-provided or explicitly authorized context, not auto-surfaced startup context.
+
+#### Rationale
+
+- CSO files are often outdated relative to locked artifacts and runtime state.
+- Automatic CSO surfacing tempts AI roles to read stale context that was not explicitly selected by the Director.
+- CSO is safer when manually referenced by the Director or explicitly requested for a narrow purpose.
+
+#### Acceptance criteria
+
+- `sigma session bootstrap` no longer lists recent CSO files by default.
+- Role activation guidance does not imply that reading recent CSO files is a normal bootstrap step.
+- CSO remains available as explicit/manual context when the Director chooses to reference it.
+
+---
+
+## Stage 4 — CLI Command and Bootstrap Output
+
+Stage 4 implements the CLI support after rules, skills, and activation-context cleanup agree on the intended behavior.
+
+### TASK-05 — Add role memory JSON files
 
 **Primary area**:
 
@@ -316,7 +377,7 @@ Hash-based drift control is out of scope for P24. If rule-memory drift becomes a
 
 ---
 
-### TASK-04 — Implement role memory CLI output
+### TASK-06 — Implement role memory CLI output
 
 **Primary areas**:
 
@@ -353,7 +414,7 @@ Hash-based drift control is out of scope for P24. If rule-memory drift becomes a
 
 ---
 
-### TASK-05 — Revise `sigma session bootstrap`
+### TASK-07 — Revise `sigma session bootstrap`
 
 **Primary area**:
 
@@ -386,7 +447,7 @@ Hash-based drift control is out of scope for P24. If rule-memory drift becomes a
 
 ---
 
-### TASK-06 — Keep runtime status on `sigma project status`
+### TASK-08 — Keep runtime status on `sigma project status`
 
 **Primary areas**:
 
@@ -408,7 +469,7 @@ If needed, lightly adjust the output terminology so it is clear that listed oper
 
 ---
 
-### TASK-07 — Update registries and package inclusion
+### TASK-09 — Update registries and package inclusion
 
 **Primary areas**:
 
@@ -430,7 +491,7 @@ If needed, lightly adjust the output terminology so it is clear that listed oper
 
 ---
 
-### TASK-08 — Add regression tests
+### TASK-10 — Add regression tests
 
 **Primary area**:
 
