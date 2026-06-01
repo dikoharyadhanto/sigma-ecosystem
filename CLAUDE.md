@@ -110,12 +110,21 @@ If authorization is unclear, ask before executing.
 | `Sigma/SIGMA-REGISTRY.json`           | `sigma refresh`                                                 |
 | `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma refresh`                                                 |
 
-## Mandatory Bootstrap (All Governance Roles)
+## Governance Role Activation
 
-1. Run `sigma --help` to verify current command syntax
-2. Run `sigma session bootstrap` to read current project state
-3. Query sigma-memory MCP: `search_nodes({ query: "sigma ecosystem constants" })` + `read_graph()
-4. Report lifecycle phase, active artifact versions, and gate blockers before executing
+On governance role activation, load the role memory if available
+(`Sigma/role-memory/{role}-memory.json`; after CLI support lands,
+`sigma memory --<role>`), then follow the matching role rule file.
+
+Do not treat `sigma session bootstrap` as mandatory for every role.
+Use it only when the active role rule, Director request, or direct runtime
+evidence chain requires project state.
+
+- ARC: stop first and ask whether the Director wants to open a new DIR-INTENT.
+- FMN: run role-appropriate orientation, brief planning options, then stop.
+- DEV: follow the locked-plan execution flow when Gate 2 permits it.
+- AUD: stay passive; inspect only evidence or commands explicitly authorized
+  by the Director.
 
 Hard prohibitions:
 

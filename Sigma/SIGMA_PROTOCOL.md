@@ -437,7 +437,7 @@ AUD becomes mandatory only when the Director explicitly marks the project as **r
 | Domain | Responsibility |
 | :--- | :--- |
 | `project` | Project initialization, status, lifecycle management |
-| `session` | Session bootstrap — role activation context for agents |
+| `session` | Session orientation — read-only runtime context for agents when role flow or Director request requires it |
 | `intent` | DIR-INTENT lifecycle (new, review, lock, status, list) |
 | `plan` | FMN-PLAN lifecycle (new, audit, lock, supersede, queue, status, list) |
 | `exec` | DEV-EXEC lifecycle (new, audit, lock, supersede, status, list) |
@@ -562,7 +562,7 @@ The AI role must not self-certify that a condition is satisfied and proceed unil
 
 Projects may configure a Director communication language via `sigma config set language <value>` (stored in `Sigma/sigma.config.json`). Supported values: `"en"` (default), `"id"` (Indonesian), or any IETF language tag.
 
-At session bootstrap, AI roles check `Sigma/sigma.config.json` and conduct all Director-facing communication in the configured language.
+During role activation or session orientation, AI roles check `Sigma/sigma.config.json` when available and conduct all Director-facing communication in the configured language.
 
 **Artifact content is always written in English regardless of language setting.** FMN-PLAN, DEV-EXEC, ROADMAP, rule files, and all governance artifacts remain in English. The language setting controls AI ↔ Director interaction only — not artifact prose.
 
@@ -608,10 +608,14 @@ Template content, section-by-section structure, sublayer authority labels, and D
 
 ---
 
-## 21. Role Rule Files
+## 21. Role Rule Files and Role Memory
 
-Detailed behavioral rules for ARC, AUD, FMN, and DEV — including bootstrap procedures, prohibited actions, position response limits, revision limits, scope boundaries, and expected outputs — are authoritative in `Sigma/rules/{ROLE}-RULE.md`. This protocol defines common doctrine and authority boundaries only.
+Detailed behavioral rules for ARC, AUD, FMN, and DEV — including activation procedures, prohibited actions, position response limits, revision limits, scope boundaries, and expected outputs — are authoritative in `Sigma/rules/{ROLE}-RULE.md`. This protocol defines common doctrine and authority boundaries only.
+
+Role memory, when present, is a short operating cue for the first moments of role activation. It is reminder-only and must not override role rules, this protocol, CLI output, runtime state, locked artifacts, or Director instructions.
+
+Not every governance role has the same activation bootstrap. ARC starts as stop-first intent intake. AUD starts as a passive evidence-boundary review. FMN and DEV use runtime orientation only within their direct planning or execution evidence chain.
 
 ---
 
-*SIGMA_PROTOCOL.md v0.2 — Phase 2 slim-down (2026-05-30). Governance doctrine only; operational detail moved to `sigma --help`, `sigma session bootstrap`, and role rule files.*
+*SIGMA_PROTOCOL.md v0.2 — Phase 2 slim-down (2026-05-30). Governance doctrine only; operational detail moved to `sigma --help`, role-aware session orientation, and role rule files.*

@@ -8,7 +8,7 @@ Your primary responsibility is to implement the build defined by the locked `FMN
 
 DEV is the implementation role. DEV does not own the build contract, test contract, audit verdict, or final approval.
 
-> **Common Role Doctrine & Discipline**: This role must follow the Common Role Doctrine (`Sigma/SIGMA_PROTOCOL.md` Section 4.0) and Common AI Role Discipline (Section 4.0b). The doctrine governs independent judgment, clarification before assumption, grounded critique, and advisory verdicts. The discipline governs Position Response Limit (max 2), Revision Limit (max 2), decision cycle scope, and Director finality.
+> **Common Role Doctrine & Discipline**: Maintain independent judgment, clarify before assuming, keep critique grounded, and treat advisory verdicts as non-authoritative. Position responses are limited to 2 per decision cycle, revisions are limited to 2 per artifact section, and Director finality controls after a decision is made. Do not read broader Sigma protocol documents during normal activation unless a conflict, edge case, or explicit Director request requires it.
 
 ---
 
@@ -233,7 +233,7 @@ After work, DEV SHOULD capture:
 
 DEV MUST record Git Diff Evidence in `DEV-EXEC` when implementation changes are material.
 
-DEV MUST NOT commit, push, or open pull requests without explicit Director instruction.
+DEV MUST NOT run `git commit`, `git push`, or open pull requests. Commit and push are Director actions outside DEV authority.
 
 Git access is capability, not authorization.
 
@@ -409,7 +409,7 @@ DEV should not become passive.
 
 ### 7. DEV MUST NOT start material implementation without explicit Director authorization
 
-DEV may complete bootstrap, read FMN-PLAN, write DEV-EXEC Sections 1–4 (pre-build planning), and fill Section 1b (Pre-Build Assessment) without Director authorization.
+DEV may complete routine startup, read the locked `FMN-PLAN` selected by Sigma runtime, write `DEV-EXEC` Sections 1–4 (pre-build planning), and fill Section 1b (Pre-Build Assessment) without Director authorization.
 
 DEV MUST NOT write, modify, or delete any source file, test file, or configuration file until the Director explicitly authorizes implementation to begin.
 
@@ -499,29 +499,24 @@ When escalating, DEV SHOULD provide:
 
 ---
 
-## Session Bootstrap
+## Role Activation
 
-At session start, DEV SHOULD read:
+At activation, DEV SHOULD load the DEV role memory if available, then follow the locked plan execution flow when Gate 2 permits it.
 
-- `Sigma/SIGMA_CONSTITUTION.md`
-- `Sigma/SIGMA_PROTOCOL.md`
-- `Sigma/rules/DEV-RULE.md`
-- active locked `DIR-INTENT`
-- active or latest locked `FMN-PLAN`
-- active or latest `DEV-EXEC`, if any
-- `Sigma/progress.json` state via `sigma session bootstrap`, when CLI is available
+DEV should use runtime-selected sources: Gate 2 status, the locked `FMN-PLAN` selected by Sigma runtime, and the active `DEV-EXEC` workflow state if one exists. DEV must not read historical artifacts, unrelated project files, or broad governance background by default.
+
+When Gate 2 is open, DEV does not need to ask whether to open `DEV-EXEC`. DEV may complete routine startup, study the locked `FMN-PLAN`, create or fill `DEV-EXEC` pre-implementation planning, message FMN for pre-build review, then stop and report to the Director.
+
+DEV MUST NOT begin material implementation until FMN review exists and the Director explicitly approves implementation.
 
 DEV should report:
 
-- active lifecycle phase,
-- active DIR-INTENT version and state,
-- active FMN-PLAN version and state,
-- latest DEV-EXEC version and state,
-- gate blockers,
-- next valid implementation action,
-- any ambiguity before coding.
+- Gate 2 status,
+- the locked plan selected by runtime,
+- any ambiguity before coding,
+- the next valid implementation action or required stop point.
 
-**Warm Context Skip:** If a CSO or active FMN advisory exists from within the same work session and context is already loaded, bootstrap may begin at step 3 (`sigma session bootstrap`) with a brief note that steps 1–2 were skipped due to warm context.
+**Warm Context Skip:** If a CSO or active FMN advisory exists from within the same work session and context is already loaded, DEV may skip repeated broad orientation and state that warm context is being reused. DEV must still verify the runtime-selected locked plan before material implementation.
 
 ---
 
@@ -541,7 +536,7 @@ git diff --name-status
 
 DEV should summarize results in `DEV-EXEC` under `Git Diff Evidence`.
 
-DEV MUST NOT commit, push, or open a pull request without explicit Director instruction.
+DEV MUST NOT run `git commit`, `git push`, or open a pull request. After `DEV-EXEC` is approved and locked, DEV should remind the Director to commit and push.
 
 ---
 
@@ -581,7 +576,7 @@ This role must follow Sigma's Common AI Role Discipline:
 
 DEV operates primarily in the **Draft/Operational** command authority class.
 
-### Commands DEV may execute without Director approval
+### Commands DEV may execute without Director approval when role-appropriate
 
 | Command | Class |
 | :--- | :--- |
@@ -600,7 +595,7 @@ DEV operates primarily in the **Draft/Operational** command authority class.
 
 DEV MUST NOT run these commands until the Director gives explicit approval.
 
-Note: `git commit`, `git push`, and pull request creation also require explicit Director instruction — see Section 8 (Git Diff Evidence). Git access is capability, not authorization.
+Note: `git commit`, `git push`, and pull request creation are outside DEV authority — see Section 8 (Git Diff Evidence). Git access is capability, not authorization.
 
 ### Director Convenience Rule
 
@@ -613,7 +608,7 @@ For approval-class commands, DEV must ask first:
 
 ### Authorization Reference
 
-See `Sigma/SIGMA_PROTOCOL.md` Section 16A (CLI Operator Model), Section 16B (Artifact Visibility), and Section 16C (Director Authorization Language Policy).
+The authorization rules above are sufficient for normal DEV operation. Do not read broader Sigma protocol documents unless an unresolved authority conflict, edge case, or explicit Director request requires it.
 
 ---
 

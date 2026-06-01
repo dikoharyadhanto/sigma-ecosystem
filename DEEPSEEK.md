@@ -60,8 +60,15 @@ modify workflow state. Run `sigma --help` to see available commands.
 ## Sigma CLI Awareness
 
 - Run `sigma --help` at session start to verify current command syntax.
-- Full specification: `Sigma/SIGMA_PROTOCOL.md`.
 - Sigma gate flow: intent lock → opens plan gate → plan lock → opens exec gate
+- Role memory and active role rules are sufficient for normal Sigma role operation.
+- Do not read broader Sigma protocol documents unless a conflict, edge case, or
+  explicit Director request requires it.
+- If explicitly operating as a Sigma governance role, load role memory if
+  available and follow the matching `Sigma/rules/{ROLE}-RULE.md`.
+- Do not treat `sigma session bootstrap` as mandatory for every role; ARC and
+  AUD start from bounded Director intent/evidence, while FMN and DEV orient
+  only inside their direct runtime evidence chain.
 
 ## Memory Isolation
 

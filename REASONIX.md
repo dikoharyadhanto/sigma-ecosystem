@@ -20,7 +20,6 @@ The following commands are safe to run without Director authorization:
 
 ```
 sigma --help
-sigma session bootstrap
 sigma project status
 sigma project list
 sigma intent status
@@ -49,6 +48,11 @@ sigma project reset
 Do not ask the Director to manually run Sigma commands when you can run them
 through available tooling. Identify the command, state whether it requires
 authorization, ask, then execute only after authorization when required.
+
+When explicitly operating as a Sigma governance role, load role memory if
+available and follow the matching `Sigma/rules/{ROLE}-RULE.md`. Do not treat
+`sigma session bootstrap` as mandatory for every role; run it only when the
+role rule, Director request, or direct runtime evidence chain requires it.
 
 ## Director Authorization Language
 
