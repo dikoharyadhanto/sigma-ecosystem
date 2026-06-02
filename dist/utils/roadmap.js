@@ -46,7 +46,7 @@ function planStateForStage(stageVersion, data) {
 }
 function generateStageOverview(stages, data) {
     if (stages.length === 0) {
-        return '## 3. Stage Overview\n\n| Stage | Title | Focus | Status | Reason |\n| :--- | :--- | :--- | :--- | :--- |';
+        return '<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->\n## 3. Stage Overview\n\n| Stage | Title | Focus | Status | Reason |\n| :--- | :--- | :--- | :--- | :--- |';
     }
     const rows = stages.map(s => {
         const planEntry = data.plan.versions.find(v => v.version === `v${s.version}`);
@@ -56,6 +56,7 @@ function generateStageOverview(stages, data) {
         return `| ${s.version} | ${s.title} | ${focus} | ${status} | ${reason} |`;
     });
     return [
+        '<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->',
         '## 3. Stage Overview',
         '',
         '| Stage | Title | Focus | Status | Reason |',
@@ -65,7 +66,7 @@ function generateStageOverview(stages, data) {
 }
 function generatePlanBreakdown(stages, data) {
     if (stages.length === 0) {
-        return '## 6. PLAN Breakdown\n\n| PLAN | Covers Stage | Title | Focus | Status | Reason |\n| :--- | :--- | :--- | :--- | :--- | :--- |';
+        return '<!-- SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN -->\n## 6. PLAN Breakdown\n\n| PLAN | Covers Stage | Title | Focus | Status | Reason |\n| :--- | :--- | :--- | :--- | :--- | :--- |';
     }
     const rows = [];
     for (const s of stages) {
@@ -82,6 +83,7 @@ function generatePlanBreakdown(stages, data) {
         }
     }
     return [
+        '<!-- SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN -->',
         '## 6. PLAN Breakdown',
         '',
         '| PLAN | Covers Stage | Title | Focus | Status | Reason |',
