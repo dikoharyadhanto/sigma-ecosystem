@@ -1,12 +1,13 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-05-29T23:56:24.400Z",
+  "generated_at": "2026-06-02T16:05:54.932Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 52,
+  "total_operations": 61,
   "domains": [
     "close",
     "config",
     "cso",
+    "doctor",
     "exec",
     "git",
     "gitignore",
@@ -1163,7 +1164,7 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create a new ROADMAP draft from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/build/ and registers the new version in progress.json with state DRAFT.",
+      "description": "Create a new ROADMAP from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/build/ and registers the new version in progress.json; it is ACTIVE when no ACTIVE ROADMAP exists, otherwise DRAFT.",
       "inputs": [],
       "outputs": [
         {
@@ -1172,7 +1173,7 @@
         },
         {
           "type": "state_change",
-          "description": "progress.json: roadmap version added with state DRAFT"
+          "description": "progress.json: roadmap version added with state ACTIVE or DRAFT"
         }
       ],
       "constraints": [
@@ -1183,17 +1184,17 @@
         },
         {
           "type": "gate",
-          "condition": "no ROADMAP version in state DRAFT",
-          "error_message": "A ROADMAP DRAFT already exists. Lock it before creating a new version. Run: sigma roadmap lock"
+          "condition": "no ROADMAP version exists for the locked INTENT major",
+          "error_message": "ROADMAP for this INTENT major already exists. Run: sigma roadmap list"
         }
       ],
       "gating": {
-        "pre_condition": "progress.intent.active_state == 'LOCKED'; no ROADMAP version currently in DRAFT state",
-        "post_condition": "ROADMAP-v{N}.md exists in Sigma/build/; progress.json records new roadmap version with state DRAFT"
+        "pre_condition": "progress.intent.active_state == 'LOCKED'; no ROADMAP version already exists for the locked INTENT major",
+        "post_condition": "ROADMAP-v{N}.md exists in Sigma/build/; progress.json records new roadmap version with state ACTIVE or DRAFT"
       },
       "error_messages": {
         "no_locked_intent": "No locked DIR-INTENT found. ROADMAP requires a locked intent. Run: sigma intent lock",
-        "draft_exists": "A ROADMAP DRAFT already exists. Lock it before creating a new version. Run: sigma roadmap lock"
+        "roadmap_exists": "ROADMAP for this INTENT major already exists. Run: sigma roadmap list"
       }
     },
     {
@@ -1202,7 +1203,7 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List all ROADMAP versions with their current states (DRAFT, LOCKED, SUPERSEDED).",
+      "description": "List stages in the ACTIVE ROADMAP with title, focus, and plan status.",
       "inputs": [],
       "outputs": [
         {
@@ -1508,7 +1509,7 @@
       "action": "render",
       "level": "semantic",
       "role": "any",
-      "description": "Regenerate derived sections (Stage Overview, PLAN Breakdown) in the ACTIVE ROADMAP",
+      "description": "Regenerate the derived Stage Overview table in the ACTIVE ROADMAP",
       "inputs": [],
       "outputs": [
         {
@@ -1645,8 +1646,267 @@
       "action": "roadmap",
       "level": "semantic",
       "role": "any",
-      "description": "Migrate existing ROADMAP file to CLI-managed format:\n  - Extracts stage titles from FMN-PLAN files\n  - Generates new ROADMAP with H2 headings + delimiter comments\n  - Renames old ROADMAP to ROADMAP-vX-legacy.md\n  - Runs sigma roadmap render to populate derived sections",
+      "description": "Migrate existing ROADMAP file to CLI-managed format:\n  - Extracts stage titles from FMN-PLAN files\n  - Generates new ROADMAP with H2 headings + delimiter comments\n  - Renames old ROADMAP to ROADMAP-vX-legacy.md\n  - Runs sigma roadmap render to populate Stage Overview",
       "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "close_check",
+      "domain": "close",
+      "action": "check",
+      "level": "read_only",
+      "role": "any",
+      "description": "Validate the active DIR-CLOSE structure and markers",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "--v <version>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "doctor",
+      "domain": "doctor",
+      "action": "doctor",
+      "level": "semantic",
+      "role": "any",
+      "description": "Diagnose and reconcile Sigma runtime state",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "exec_check",
+      "domain": "exec",
+      "action": "check",
+      "level": "read_only",
+      "role": "any",
+      "description": "Validate the active DEV-EXEC structure and markers",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "--v <version>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "intent_check",
+      "domain": "intent",
+      "action": "check",
+      "level": "read_only",
+      "role": "any",
+      "description": "Validate the active DIR-INTENT structure and markers",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "--v <version>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "memory",
+      "domain": "memory",
+      "action": "memory",
+      "level": "semantic",
+      "role": "any",
+      "description": "Show Sigma role memory reminders (read-only)",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "plan_check",
+      "domain": "plan",
+      "action": "check",
+      "level": "read_only",
+      "role": "any",
+      "description": "Validate an FMN-PLAN structure and markers",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "--v <version>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "plan_update",
+      "domain": "plan",
+      "action": "update",
+      "level": "semantic",
+      "role": "any",
+      "description": "Update title and/or focus for an existing FMN-PLAN stage in the active ROADMAP",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "--v <version>"
+        },
+        {
+          "name": "--title",
+          "type": "string",
+          "required": true,
+          "description": "--title <title>"
+        },
+        {
+          "name": "--focus",
+          "type": "string",
+          "required": true,
+          "description": "--focus <focus>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "roadmap_check",
+      "domain": "roadmap",
+      "action": "check",
+      "level": "read_only",
+      "role": "any",
+      "description": "Validate the active ROADMAP structure and markers",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "--v <version>"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "NEEDS_REVIEW",
+          "description": "Fill in: outputs for this operation"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "NEEDS_REVIEW",
+        "post_condition": "NEEDS_REVIEW"
+      },
+      "error_messages": {},
+      "NEEDS_REVIEW": true
+    },
+    {
+      "operation_id": "roadmap_migrate-core-flow",
+      "domain": "roadmap",
+      "action": "migrate-core-flow",
+      "level": "semantic",
+      "role": "any",
+      "description": "Migrate legacy Phase Dependencies section into manual Core Process Flow",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "--v <version>"
+        }
+      ],
       "outputs": [
         {
           "type": "NEEDS_REVIEW",

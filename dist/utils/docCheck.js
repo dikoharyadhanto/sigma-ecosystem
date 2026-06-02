@@ -38,7 +38,6 @@ const DOC_SPECS = {
             'STAGE_OVERVIEW',
             'CORE_PROCESS_FLOW',
             'STAGE_DETAILS',
-            'PLAN_BREAKDOWN',
             'FMN_ROADMAP_NOTES',
         ],
     },

@@ -116,7 +116,7 @@ function planCommand() {
             if (!report.ok)
                 process.exit(1);
             if (roadmapAbsPath) {
-                console.log(`ROADMAP updated: Stage ${version.replace(/^v/, '')} appended + derived sections regenerated`);
+                console.log(`ROADMAP updated: Stage ${version.replace(/^v/, '')} appended + Stage Overview regenerated`);
                 console.log(`NOTE: Roadmap has been updated. FMN needs to update the content in the Roadmap.`);
             }
         }
@@ -274,7 +274,7 @@ function planCommand() {
             if (!report.ok)
                 process.exit(1);
             if (roadmapAbsPath) {
-                console.log(`ROADMAP updated: Stage ${newVersion.replace(/^v/, '')} appended + derived sections regenerated`);
+                console.log(`ROADMAP updated: Stage ${newVersion.replace(/^v/, '')} appended + Stage Overview regenerated`);
                 console.log(`NOTE: Roadmap has been updated. FMN needs to update the content in the Roadmap.`);
             }
             console.log(`Run: sigma plan lock   to lock ${newVersion} when ready`);
@@ -425,7 +425,7 @@ function planCommand() {
             if (opts.focus)
                 parts.push(`focus → "${opts.focus}"`);
             console.log(`FMN-PLAN ${opts.v}: ${parts.join(', ')}`);
-            console.log(`ROADMAP updated: Stage ${stageVersion} metadata updated + derived sections regenerated`);
+            console.log(`ROADMAP updated: Stage ${stageVersion} metadata updated + Stage Overview regenerated`);
         }
         catch (e) {
             console.error(e.message);

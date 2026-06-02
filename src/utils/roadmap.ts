@@ -59,33 +59,6 @@ export function generateStageOverview(stages: StageEntry[], data: ProgressJson):
   ].join('\n');
 }
 
-export function generatePlanBreakdown(stages: StageEntry[], data: ProgressJson): string {
-  if (stages.length === 0) {
-    return '<!-- SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN -->\n## 6. PLAN Breakdown\n\n| PLAN | Covers Stage | Title | Focus | Status | Reason |\n| :--- | :--- | :--- | :--- | :--- | :--- |';
-  }
-  const rows: string[] = [];
-  for (const s of stages) {
-    const planVersion = `v${s.version}`;
-    const plan = data.plan.versions.find(v => v.version === planVersion);
-    if (plan) {
-      const reason = plan.state === 'SUPERSEDED' ? (plan.supersede_reason ?? '—') : '—';
-      const title = plan.title ?? s.title;
-      const focus = plan.focus ?? s.focus;
-      rows.push(`| FMN-PLAN ${planVersion} | Stage ${s.version} | ${title} | ${focus} | ${plan.state} | ${reason} |`);
-    } else {
-      rows.push(`| — | Stage ${s.version} | ${s.title} | ${s.focus} | PENDING | — |`);
-    }
-  }
-  return [
-    '<!-- SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN -->',
-    '## 6. PLAN Breakdown',
-    '',
-    '| PLAN | Covers Stage | Title | Focus | Status | Reason |',
-    '| :--- | :--- | :--- | :--- | :--- | :--- |',
-    ...rows,
-  ].join('\n');
-}
-
 export function replaceSection(content: string, name: string, replacement: string): string {
   const startDelim = `<!-- SIGMA:RENDER:START:${name} -->`;
   const endDelim = `<!-- SIGMA:RENDER:END:${name} -->`;
@@ -99,6 +72,21 @@ export function replaceSection(content: string, name: string, replacement: strin
   return `${before}\n${replacement}\n${after}`;
 }
 
+export function removeSectionIfPresent(content: string, name: string): string {
+  const startDelim = `<!-- SIGMA:RENDER:START:${name} -->`;
+  const endDelim = `<!-- SIGMA:RENDER:END:${name} -->`;
+  const startIdx = content.indexOf(startDelim);
+  const endIdx = content.indexOf(endDelim);
+  if (startIdx === -1 || endIdx === -1) return content;
+  if (endIdx < startIdx) {
+    throw new Error(`Section delimiters are out of order for "${name}" in ROADMAP file.`);
+  }
+
+  const before = content.substring(0, startIdx).replace(/[ \t]*\n?$/, '');
+  const after = content.substring(endIdx + endDelim.length).replace(/^\s*\n?/, '\n');
+  return `${before}${after}`;
+}
+
 export function renderRoadmapFile(roadmapPath: string, data: ProgressJson): void {
   if (!fs.existsSync(roadmapPath)) {
     throw new Error(`ROADMAP file not found: ${roadmapPath}`);
@@ -107,7 +95,7 @@ export function renderRoadmapFile(roadmapPath: string, data: ProgressJson): void
   const stages = parseStages(content);
 
   content = replaceSection(content, 'stage-overview', generateStageOverview(stages, data));
-  content = replaceSection(content, 'plan-breakdown', generatePlanBreakdown(stages, data));
+  content = removeSectionIfPresent(content, 'plan-breakdown');
 
   fs.writeFileSync(roadmapPath, content, 'utf8');
 }
@@ -213,11 +201,6 @@ export function migrateRoadmapCoreProcessFlowContent(content: string): CoreProce
     migrated,
     '<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->',
     '## 3. Stage Overview',
-  );
-  migrated = ensureMarkerBeforeHeading(
-    migrated,
-    '<!-- SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN -->',
-    '## 6. PLAN Breakdown',
   );
 
   return {

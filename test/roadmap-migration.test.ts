@@ -43,7 +43,6 @@ describe('ROADMAP core process migration helpers', () => {
     expect(result.changed).toBe(true);
     expect(result.content).toMatch(/SIGMA:ROADMAP:SECTION:CORE_PROCESS_FLOW/);
     expect(result.content).toMatch(/SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW/);
-    expect(result.content).toMatch(/SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN/);
     expect(result.content).toMatch(/## 4\. Core Process Flow/);
     expect(result.content).toMatch(/A\[Login\] --> B\[Dashboard\]/);
     expect(result.content).not.toMatch(/SIGMA:RENDER:START:phase-dependencies/);
@@ -61,6 +60,7 @@ describe('ROADMAP core process migration helpers', () => {
       '## 2. Source Intent Alignment',
       '',
       '<!-- SIGMA:RENDER:START:stage-overview -->',
+      '<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->',
       '## 3. Stage Overview',
       '',
       '| Stage | Title | Focus | Status | Reason |',
@@ -76,15 +76,8 @@ describe('ROADMAP core process migration helpers', () => {
       '<!-- SIGMA:ROADMAP:SECTION:STAGE_DETAILS -->',
       '## 5. Stage Details',
       '',
-      '<!-- SIGMA:RENDER:START:plan-breakdown -->',
-      '## 6. PLAN Breakdown',
-      '',
-      '| PLAN | Covers Stage | Status | Reason |',
-      '| :--- | :--- | :--- | :--- |',
-      '<!-- SIGMA:RENDER:END:plan-breakdown -->',
-      '',
       '<!-- SIGMA:ROADMAP:SECTION:FMN_ROADMAP_NOTES -->',
-      '## 7. FMN Roadmap Notes',
+      '## 6. FMN Roadmap Notes',
     ].join('\n');
 
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sigma-roadmap-'));
@@ -98,7 +91,7 @@ describe('ROADMAP core process migration helpers', () => {
     expect(report.errors).toHaveLength(0);
   });
 
-  it('render keeps derived section markers for stage overview and plan breakdown', () => {
+  it('render keeps stage overview marker and removes legacy plan breakdown block', () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sigma-roadmap-render-'));
     tempPaths.push(tempDir);
     const filePath = path.join(tempDir, 'ROADMAP-v1.md');
@@ -141,7 +134,7 @@ describe('ROADMAP core process migration helpers', () => {
       '<!-- SIGMA:RENDER:END:plan-breakdown -->',
       '',
       '<!-- SIGMA:ROADMAP:SECTION:FMN_ROADMAP_NOTES -->',
-      '## 7. FMN Roadmap Notes',
+      '## 6. FMN Roadmap Notes',
     ].join('\n');
 
     fs.writeFileSync(filePath, roadmap);
@@ -175,6 +168,7 @@ describe('ROADMAP core process migration helpers', () => {
 
     const rendered = fs.readFileSync(filePath, 'utf8');
     expect(rendered).toMatch(/SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW/);
-    expect(rendered).toMatch(/SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN/);
+    expect(rendered).not.toMatch(/SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN/);
+    expect(rendered).not.toMatch(/SIGMA:RENDER:START:plan-breakdown/);
   });
 });

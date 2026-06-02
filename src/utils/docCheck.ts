@@ -64,7 +64,6 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
       'STAGE_OVERVIEW',
       'CORE_PROCESS_FLOW',
       'STAGE_DETAILS',
-      'PLAN_BREAKDOWN',
       'FMN_ROADMAP_NOTES',
     ],
   },

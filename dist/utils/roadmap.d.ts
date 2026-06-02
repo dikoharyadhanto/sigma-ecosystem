@@ -7,8 +7,8 @@ export interface StageEntry {
 export declare function parseStages(content: string): StageEntry[];
 export declare function planStateForStage(stageVersion: string, data: ProgressJson): string;
 export declare function generateStageOverview(stages: StageEntry[], data: ProgressJson): string;
-export declare function generatePlanBreakdown(stages: StageEntry[], data: ProgressJson): string;
 export declare function replaceSection(content: string, name: string, replacement: string): string;
+export declare function removeSectionIfPresent(content: string, name: string): string;
 export declare function renderRoadmapFile(roadmapPath: string, data: ProgressJson): void;
 interface CoreProcessMigrationResult {
     changed: boolean;

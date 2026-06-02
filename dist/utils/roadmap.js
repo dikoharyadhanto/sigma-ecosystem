@@ -7,8 +7,8 @@ exports.STAGE_STUB_TEMPLATE = void 0;
 exports.parseStages = parseStages;
 exports.planStateForStage = planStateForStage;
 exports.generateStageOverview = generateStageOverview;
-exports.generatePlanBreakdown = generatePlanBreakdown;
 exports.replaceSection = replaceSection;
+exports.removeSectionIfPresent = removeSectionIfPresent;
 exports.renderRoadmapFile = renderRoadmapFile;
 exports.migrateRoadmapCoreProcessFlowContent = migrateRoadmapCoreProcessFlowContent;
 exports.migrateRoadmapCoreProcessFlowFile = migrateRoadmapCoreProcessFlowFile;
@@ -64,33 +64,6 @@ function generateStageOverview(stages, data) {
         ...rows,
     ].join('\n');
 }
-function generatePlanBreakdown(stages, data) {
-    if (stages.length === 0) {
-        return '<!-- SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN -->\n## 6. PLAN Breakdown\n\n| PLAN | Covers Stage | Title | Focus | Status | Reason |\n| :--- | :--- | :--- | :--- | :--- | :--- |';
-    }
-    const rows = [];
-    for (const s of stages) {
-        const planVersion = `v${s.version}`;
-        const plan = data.plan.versions.find(v => v.version === planVersion);
-        if (plan) {
-            const reason = plan.state === 'SUPERSEDED' ? (plan.supersede_reason ?? '—') : '—';
-            const title = plan.title ?? s.title;
-            const focus = plan.focus ?? s.focus;
-            rows.push(`| FMN-PLAN ${planVersion} | Stage ${s.version} | ${title} | ${focus} | ${plan.state} | ${reason} |`);
-        }
-        else {
-            rows.push(`| — | Stage ${s.version} | ${s.title} | ${s.focus} | PENDING | — |`);
-        }
-    }
-    return [
-        '<!-- SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN -->',
-        '## 6. PLAN Breakdown',
-        '',
-        '| PLAN | Covers Stage | Title | Focus | Status | Reason |',
-        '| :--- | :--- | :--- | :--- | :--- | :--- |',
-        ...rows,
-    ].join('\n');
-}
 function replaceSection(content, name, replacement) {
     const startDelim = `<!-- SIGMA:RENDER:START:${name} -->`;
     const endDelim = `<!-- SIGMA:RENDER:END:${name} -->`;
@@ -103,6 +76,20 @@ function replaceSection(content, name, replacement) {
     const after = content.substring(endIdx);
     return `${before}\n${replacement}\n${after}`;
 }
+function removeSectionIfPresent(content, name) {
+    const startDelim = `<!-- SIGMA:RENDER:START:${name} -->`;
+    const endDelim = `<!-- SIGMA:RENDER:END:${name} -->`;
+    const startIdx = content.indexOf(startDelim);
+    const endIdx = content.indexOf(endDelim);
+    if (startIdx === -1 || endIdx === -1)
+        return content;
+    if (endIdx < startIdx) {
+        throw new Error(`Section delimiters are out of order for "${name}" in ROADMAP file.`);
+    }
+    const before = content.substring(0, startIdx).replace(/[ \t]*\n?$/, '');
+    const after = content.substring(endIdx + endDelim.length).replace(/^\s*\n?/, '\n');
+    return `${before}${after}`;
+}
 function renderRoadmapFile(roadmapPath, data) {
     if (!fs_extra_1.default.existsSync(roadmapPath)) {
         throw new Error(`ROADMAP file not found: ${roadmapPath}`);
@@ -110,7 +97,7 @@ function renderRoadmapFile(roadmapPath, data) {
     let content = fs_extra_1.default.readFileSync(roadmapPath, 'utf8');
     const stages = parseStages(content);
     content = replaceSection(content, 'stage-overview', generateStageOverview(stages, data));
-    content = replaceSection(content, 'plan-breakdown', generatePlanBreakdown(stages, data));
+    content = removeSectionIfPresent(content, 'plan-breakdown');
     fs_extra_1.default.writeFileSync(roadmapPath, content, 'utf8');
 }
 function extractLegacyPhaseDependenciesBody(content) {
@@ -196,7 +183,6 @@ function migrateRoadmapCoreProcessFlowContent(content) {
     const after = content.substring(endIdx + oldEndDelim.length).replace(/^\s*/, '');
     let migrated = `${before}\n\n${replacement}\n\n${after}`;
     migrated = ensureMarkerBeforeHeading(migrated, '<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->', '## 3. Stage Overview');
-    migrated = ensureMarkerBeforeHeading(migrated, '<!-- SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN -->', '## 6. PLAN Breakdown');
     return {
         changed: true,
         content: migrated,

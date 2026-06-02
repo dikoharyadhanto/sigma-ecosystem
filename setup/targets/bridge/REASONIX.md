@@ -31,7 +31,7 @@ The following commands require explicit Director authorization before running:
 
 ```
 sigma intent lock
-sigma roadmap lock
+sigma roadmap activate
 sigma plan lock
 sigma exec lock
 sigma close lock

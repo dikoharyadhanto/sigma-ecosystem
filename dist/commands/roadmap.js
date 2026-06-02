@@ -172,7 +172,7 @@ function roadmapCommand() {
     });
     // ── roadmap render ───────────────────────────────────────────────────────────
     cmd.command('render')
-        .description('Regenerate derived sections (Stage Overview, PLAN Breakdown) in the ACTIVE ROADMAP')
+        .description('Regenerate the derived Stage Overview table in the ACTIVE ROADMAP')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -183,7 +183,7 @@ function roadmapCommand() {
             }
             const roadmapPath = getRoadmapFilePath(data, projectRoot, active.version);
             (0, roadmap_1.renderRoadmapFile)(roadmapPath, data);
-            console.log(`ROADMAP ${active.version} derived sections regenerated: ${active.file ?? roadmapPath}`);
+            console.log(`ROADMAP ${active.version} Stage Overview regenerated: ${active.file ?? roadmapPath}`);
         }
         catch (e) {
             console.error(e.message);
@@ -261,7 +261,7 @@ function roadmapCommand() {
                     console.log(`  Appended: Stage ${planVer.replace(/^v/, '')} stub`);
                 }
                 (0, roadmap_1.renderRoadmapFile)(roadmapPath, data);
-                console.log('ROADMAP derived sections regenerated.');
+                console.log('ROADMAP Stage Overview regenerated.');
                 console.log('');
                 // Re-check to confirm fix succeeded
                 const fixedContent = fs_extra_1.default.readFileSync(roadmapPath, 'utf8');

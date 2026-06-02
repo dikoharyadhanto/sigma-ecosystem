@@ -1,1 +1,1 @@
-{"version":3,"file":"sync.d.ts","sourceRoot":"","sources":["../../src/commands/sync.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AA8RpC,wBAAgB,WAAW,IAAI,OAAO,CAyCrC"}
+{"version":3,"file":"sync.d.ts","sourceRoot":"","sources":["../../src/commands/sync.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AA0RpC,wBAAgB,WAAW,IAAI,OAAO,CAyCrC"}
