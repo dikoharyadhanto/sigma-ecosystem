@@ -17,7 +17,13 @@ import {
   renderRoadmapFile,
   appendRoadmapSectionStub,
   STAGE_STUB_TEMPLATE,
+  migrateRoadmapCoreProcessFlowFile,
 } from '../utils/roadmap';
+import {
+  printSigmaDocReport,
+  resolveSigmaDocPath,
+  validateSigmaDocFile,
+} from '../utils/docCheck';
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -82,10 +88,55 @@ export function roadmapCommand(): Command {
 
         if (hasActive) {
           console.log(`Created: ${relPath} (DRAFT — existing ACTIVE roadmap still in effect)`);
+          console.log('Running automatic validation...\n');
+          const report = validateSigmaDocFile(absPath, 'roadmap');
+          printSigmaDocReport(report, projectRoot);
+          if (!report.ok) process.exit(1);
           console.log(`Run: sigma roadmap activate --v ${version}  to activate and demote current ACTIVE to INACTIVE`);
         } else {
           console.log(`Created: ${relPath} (ACTIVE — plan new is now unblocked)`);
+          console.log('Running automatic validation...\n');
+          const report = validateSigmaDocFile(absPath, 'roadmap');
+          printSigmaDocReport(report, projectRoot);
+          if (!report.ok) process.exit(1);
         }
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  cmd.command('check')
+    .description('Validate the active ROADMAP structure and markers')
+    .option('--v <version>', 'Check a specific ROADMAP version instead of the active one')
+    .action((opts: { v?: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const data = readProgress(projectRoot);
+        const absPath = resolveSigmaDocPath(projectRoot, data, 'roadmap', opts.v);
+        const report = validateSigmaDocFile(absPath, 'roadmap');
+        printSigmaDocReport(report, projectRoot);
+        if (!report.ok) process.exit(1);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  cmd.command('migrate-core-flow')
+    .description('Migrate legacy Phase Dependencies section into manual Core Process Flow')
+    .option('--v <version>', 'Migrate a specific ROADMAP version instead of the active one')
+    .action((opts: { v?: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const data = readProgress(projectRoot);
+        const roadmapPath = resolveSigmaDocPath(projectRoot, data, 'roadmap', opts.v);
+        const message = migrateRoadmapCoreProcessFlowFile(roadmapPath);
+        console.log(message);
+        console.log('Running roadmap validation...\n');
+        const report = validateSigmaDocFile(roadmapPath, 'roadmap');
+        printSigmaDocReport(report, projectRoot);
+        if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
@@ -148,7 +199,7 @@ export function roadmapCommand(): Command {
   // ── roadmap render ───────────────────────────────────────────────────────────
 
   cmd.command('render')
-    .description('Regenerate derived sections (Stage Overview, Phase Dependencies, PLAN Breakdown) in the ACTIVE ROADMAP')
+    .description('Regenerate derived sections (Stage Overview, PLAN Breakdown) in the ACTIVE ROADMAP')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();

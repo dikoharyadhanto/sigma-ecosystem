@@ -11,6 +11,7 @@ const readline_1 = __importDefault(require("readline"));
 const progress_1 = require("../engine/progress");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
+const docCheck_1 = require("../utils/docCheck");
 function promptApprove(message) {
     return new Promise(resolve => {
         const rl = readline_1.default.createInterface({ input: process.stdin, output: process.stdout });
@@ -63,6 +64,11 @@ function closeCommand() {
             (0, progress_1.registerCloseDraft)(data, version, relPath, !!opts.ackStaleIntent);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`Created: ${relPath}`);
+            console.log('Running automatic validation...\n');
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'close');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
         }
         catch (e) {
             console.error(e.message);
@@ -105,6 +111,10 @@ function closeCommand() {
             }
             const closeVersion = data.close.active_version;
             const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
+            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'close');
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'close');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            (0, docCheck_1.ensureSigmaDocEligible)(report, 'close');
             console.log('\nClose Lock Preflight\n');
             console.log(`Artifact to lock:  DIR-CLOSE ${closeVersion}`);
             if (activeRoadmap) {
@@ -137,6 +147,24 @@ function closeCommand() {
                 console.log(`ROADMAP ${activeRoadmap.version} LOCKED.`);
             }
             console.log(`DIR-CLOSE ${closeVersion} LOCKED. Lifecycle → CLOSED. Project is complete.`);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
+    cmd.command('check')
+        .description('Validate the active DIR-CLOSE structure and markers')
+        .option('--v <version>', 'Check a specific DIR-CLOSE version instead of the active one')
+        .action((opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const data = (0, progress_1.readProgress)(projectRoot);
+            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'close', opts.v);
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'close');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
         }
         catch (e) {
             console.error(e.message);

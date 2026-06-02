@@ -13,6 +13,12 @@ import {
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
 import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
+import {
+  ensureSigmaDocEligible,
+  printSigmaDocReport,
+  resolveSigmaDocPath,
+  validateSigmaDocFile,
+} from '../utils/docCheck';
 
 export function execCommand(): Command {
   const cmd = new Command('exec');
@@ -85,6 +91,10 @@ export function execCommand(): Command {
         registerExecDraft(data, version, relPath, planVersionRef);
         writeProgress(projectRoot, data);
         console.log(`Created: ${relPath} (references PLAN ${planVersionRef})`);
+        console.log('Running automatic validation...\n');
+        const report = validateSigmaDocFile(absPath, 'exec');
+        printSigmaDocReport(report, projectRoot);
+        if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
@@ -123,6 +133,10 @@ export function execCommand(): Command {
         if (data.exec.active_state !== 'DRAFT') {
           throw new Error('Active DEV-EXEC is not in DRAFT state. Cannot lock.');
         }
+        const absPath = resolveSigmaDocPath(projectRoot, data, 'exec');
+        const report = validateSigmaDocFile(absPath, 'exec');
+        printSigmaDocReport(report, projectRoot);
+        ensureSigmaDocEligible(report, 'exec');
         const version = data.exec.active_version!;
         lockActiveExec(data);
         writeProgress(projectRoot, data);
@@ -130,6 +144,23 @@ export function execCommand(): Command {
           ? 'SATISFIED'
           : 'not satisfied — stale chain or incomplete chain';
         console.log(`DEV-EXEC ${version} LOCKED. Gate 3: ${gate3}`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  cmd.command('check')
+    .description('Validate the active DEV-EXEC structure and markers')
+    .option('--v <version>', 'Check a specific DEV-EXEC version instead of the active one')
+    .action((opts: { v?: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const data = readProgress(projectRoot);
+        const absPath = resolveSigmaDocPath(projectRoot, data, 'exec', opts.v);
+        const report = validateSigmaDocFile(absPath, 'exec');
+        printSigmaDocReport(report, projectRoot);
+        if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

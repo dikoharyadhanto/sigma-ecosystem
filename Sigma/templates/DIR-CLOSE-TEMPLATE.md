@@ -1,3 +1,4 @@
+<!-- SIGMA:DOC type=DIR_CLOSE schema=1 -->
 # DIR-CLOSE
 
 > Final closure summary, evidence reference, accepted limitations, and publish-ready documentation notes.
@@ -7,6 +8,7 @@
 
 ---
 
+<!-- SIGMA:DIR_CLOSE:SECTION:CLOSURE_SUMMARY -->
 ## 1. Closure Summary
 
 ### What Was Delivered
@@ -23,6 +25,7 @@
 
 ---
 
+<!-- SIGMA:DIR_CLOSE:SECTION:INTENT_SATISFACTION -->
 ## 2. Intent Satisfaction
 
 Summarize how the delivered output satisfies the locked Director Intent.
@@ -35,6 +38,7 @@ Summarize how the delivered output satisfies the locked Director Intent.
 
 ---
 
+<!-- SIGMA:DIR_CLOSE:SECTION:EVIDENCE_REFERENCES -->
 ## 3. Evidence References
 
 > DIR-CLOSE must reference the evidence that supports closure. At minimum, one locked DEV-EXEC is required.
@@ -49,6 +53,7 @@ Summarize how the delivered output satisfies the locked Director Intent.
 
 ---
 
+<!-- SIGMA:DIR_CLOSE:SECTION:FINAL_SCOPE_CONFIRMATION -->
 ## 4. Final Scope Confirmation
 
 ### Delivered
@@ -67,6 +72,7 @@ Summarize how the delivered output satisfies the locked Director Intent.
 
 ---
 
+<!-- SIGMA:DIR_CLOSE:SECTION:PRODUCT_BEHAVIOR_NOTES -->
 ## 5. Product Behavior Notes
 
 ### Core Flow
@@ -83,6 +89,7 @@ Summarize how the delivered output satisfies the locked Director Intent.
 
 ---
 
+<!-- SIGMA:DIR_CLOSE:SECTION:KNOWN_LIMITATIONS -->
 ## 6. Known Limitations
 
 | Limitation | User Impact | Workaround / Follow-Up | Accepted?              |
@@ -91,6 +98,7 @@ Summarize how the delivered output satisfies the locked Director Intent.
 
 ---
 
+<!-- SIGMA:DIR_CLOSE:SECTION:DEVIATIONS_FROM_INTENT_PLAN -->
 ## 7. Deviations From Intent / Plan
 
 | Deviation | Source                             | Impact | Resolution                           |
@@ -103,6 +111,7 @@ If none, write:
 
 ---
 
+<!-- SIGMA:DIR_CLOSE:SECTION:OPERATIONAL_HANDOFF_NOTES -->
 ## 8. Operational / Handoff Notes
 
 ### How to Run / Use
@@ -120,6 +129,7 @@ If none, write:
 
 ---
 
+<!-- SIGMA:DIR_CLOSE:SECTION:PUBLISH_READY_DOCUMENTATION_NOTES -->
 ## 9. Publish-Ready Documentation Notes
 
 > Notes reusable for README, release note, product page, GitHub documentation, or user handoff.
@@ -144,6 +154,7 @@ If none, write:
 
 ---
 
+<!-- SIGMA:DIR_CLOSE:SECTION:DIRECTOR_CLOSURE_DECISION_NOTES -->
 ## 10. Director Closure Decision Notes
 
 > Director-only closure notes. Runtime lock state is managed by Sigma CLI — not by this section.

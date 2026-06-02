@@ -12,6 +12,7 @@ const progress_1 = require("../engine/progress");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const roadmap_1 = require("../utils/roadmap");
+const docCheck_1 = require("../utils/docCheck");
 // ── Internal helpers ──────────────────────────────────────────────────────────
 function parseMajorFromVersion(version) {
     const match = version.match(/^v(\d+)/);
@@ -63,11 +64,60 @@ function roadmapCommand() {
             (0, progress_1.writeProgress)(projectRoot, data);
             if (hasActive) {
                 console.log(`Created: ${relPath} (DRAFT — existing ACTIVE roadmap still in effect)`);
+                console.log('Running automatic validation...\n');
+                const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'roadmap');
+                (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+                if (!report.ok)
+                    process.exit(1);
                 console.log(`Run: sigma roadmap activate --v ${version}  to activate and demote current ACTIVE to INACTIVE`);
             }
             else {
                 console.log(`Created: ${relPath} (ACTIVE — plan new is now unblocked)`);
+                console.log('Running automatic validation...\n');
+                const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'roadmap');
+                (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+                if (!report.ok)
+                    process.exit(1);
             }
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
+    cmd.command('check')
+        .description('Validate the active ROADMAP structure and markers')
+        .option('--v <version>', 'Check a specific ROADMAP version instead of the active one')
+        .action((opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const data = (0, progress_1.readProgress)(projectRoot);
+            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'roadmap', opts.v);
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'roadmap');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
+    cmd.command('migrate-core-flow')
+        .description('Migrate legacy Phase Dependencies section into manual Core Process Flow')
+        .option('--v <version>', 'Migrate a specific ROADMAP version instead of the active one')
+        .action((opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const data = (0, progress_1.readProgress)(projectRoot);
+            const roadmapPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'roadmap', opts.v);
+            const message = (0, roadmap_1.migrateRoadmapCoreProcessFlowFile)(roadmapPath);
+            console.log(message);
+            console.log('Running roadmap validation...\n');
+            const report = (0, docCheck_1.validateSigmaDocFile)(roadmapPath, 'roadmap');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
         }
         catch (e) {
             console.error(e.message);
@@ -122,7 +172,7 @@ function roadmapCommand() {
     });
     // ── roadmap render ───────────────────────────────────────────────────────────
     cmd.command('render')
-        .description('Regenerate derived sections (Stage Overview, Phase Dependencies, PLAN Breakdown) in the ACTIVE ROADMAP')
+        .description('Regenerate derived sections (Stage Overview, PLAN Breakdown) in the ACTIVE ROADMAP')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();

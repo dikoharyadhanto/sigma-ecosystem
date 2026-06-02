@@ -11,6 +11,12 @@ import {
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
 import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
+import {
+  ensureSigmaDocEligible,
+  printSigmaDocReport,
+  resolveSigmaDocPath,
+  validateSigmaDocFile,
+} from '../utils/docCheck';
 
 export function intentCommand(): Command {
   const cmd = new Command('intent');
@@ -30,6 +36,10 @@ export function intentCommand(): Command {
         registerIntentDraft(data, version, relPath);
         writeProgress(projectRoot, data);
         console.log(`Created: ${relPath} — open this file and fill in the intent.`);
+        console.log('Running automatic validation...\n');
+        const report = validateSigmaDocFile(absPath, 'intent');
+        printSigmaDocReport(report, projectRoot);
+        if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
@@ -68,10 +78,31 @@ export function intentCommand(): Command {
         if (data.intent.active_state !== 'DRAFT') {
           throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot lock.');
         }
+        const absPath = resolveSigmaDocPath(projectRoot, data, 'intent');
+        const report = validateSigmaDocFile(absPath, 'intent');
+        printSigmaDocReport(report, projectRoot);
+        ensureSigmaDocEligible(report, 'intent');
         const version = data.intent.active_version!;
         lockActiveIntent(data);
         writeProgress(projectRoot, data);
         console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma plan new`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  cmd.command('check')
+    .description('Validate the active DIR-INTENT structure and markers')
+    .option('--v <version>', 'Check a specific DIR-INTENT version instead of the active one')
+    .action((opts: { v?: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const data = readProgress(projectRoot);
+        const absPath = resolveSigmaDocPath(projectRoot, data, 'intent', opts.v);
+        const report = validateSigmaDocFile(absPath, 'intent');
+        printSigmaDocReport(report, projectRoot);
+        if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

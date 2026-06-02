@@ -11,6 +11,7 @@ const progress_1 = require("../engine/progress");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const roadmap_1 = require("../utils/roadmap");
+const docCheck_1 = require("../utils/docCheck");
 function generatePendingId() {
     return Math.random().toString(36).slice(2, 6).toLowerCase();
 }
@@ -30,6 +31,12 @@ function getActiveRoadmapPath(projectRoot, data) {
     if (!active)
         return null;
     return path_1.default.join(projectRoot, active.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${active.version}.md`));
+}
+function getOldestDraftPlanVersion(data) {
+    const drafts = data.plan.versions
+        .filter(v => v.state === 'DRAFT')
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    return drafts[0]?.version ?? null;
 }
 function planCommand() {
     const cmd = new commander_1.Command('plan');
@@ -54,6 +61,11 @@ function planCommand() {
                 (0, progress_1.registerPendingPlan)(data, id, relPath);
                 (0, progress_1.writeProgress)(projectRoot, data);
                 console.log(`Created: ${relPath} (pending — ID: ${id})`);
+                console.log('Running automatic validation...\n');
+                const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
+                (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+                if (!report.ok)
+                    process.exit(1);
                 console.log(`Run: sigma plan promote --id ${id}   to assign a version and enter the draft queue`);
                 return;
             }
@@ -89,6 +101,11 @@ function planCommand() {
                 (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, data);
             }
             console.log(`Created: ${relPath} (references INTENT ${intentVersionRef})`);
+            console.log('Running automatic validation...\n');
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
             if (roadmapAbsPath) {
                 console.log(`ROADMAP updated: Stage ${version.replace(/^v/, '')} appended + derived sections regenerated`);
                 console.log(`NOTE: Roadmap has been updated. FMN needs to update the content in the Roadmap.`);
@@ -129,6 +146,14 @@ function planCommand() {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
             (0, progress_1.assertProgressCanMutate)(data);
+            const lockTargetVersion = getOldestDraftPlanVersion(data);
+            if (!lockTargetVersion) {
+                throw new Error('No DRAFT FMN-PLAN to lock. Run: sigma plan new');
+            }
+            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'plan', lockTargetVersion);
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            (0, docCheck_1.ensureSigmaDocEligible)(report, 'plan');
             const version = (0, progress_1.lockOldestPlanDraft)(data);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`FMN-PLAN ${version} LOCKED. Gate 2 open. Next: sigma exec new`);
@@ -233,11 +258,34 @@ function planCommand() {
                 (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, data);
             }
             console.log(`Promoted: ${pending.file} → ${newRelPath} (${newVersion})`);
+            console.log('Running automatic validation...\n');
+            const report = (0, docCheck_1.validateSigmaDocFile)(newAbsPath, 'plan');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
             if (roadmapAbsPath) {
                 console.log(`ROADMAP updated: Stage ${newVersion.replace(/^v/, '')} appended + derived sections regenerated`);
                 console.log(`NOTE: Roadmap has been updated. FMN needs to update the content in the Roadmap.`);
             }
             console.log(`Run: sigma plan lock   to lock ${newVersion} when ready`);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
+    cmd.command('check')
+        .description('Validate an FMN-PLAN structure and markers')
+        .option('--v <version>', 'Check a specific FMN-PLAN version instead of the active one')
+        .action((opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const data = (0, progress_1.readProgress)(projectRoot);
+            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'plan', opts.v);
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
         }
         catch (e) {
             console.error(e.message);

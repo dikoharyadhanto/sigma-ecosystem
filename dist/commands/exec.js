@@ -10,6 +10,7 @@ const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
+const docCheck_1 = require("../utils/docCheck");
 function execCommand() {
     const cmd = new commander_1.Command('exec');
     cmd.description('Manage DEV-EXEC artifact');
@@ -66,6 +67,11 @@ function execCommand() {
             (0, progress_1.registerExecDraft)(data, version, relPath, planVersionRef);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`Created: ${relPath} (references PLAN ${planVersionRef})`);
+            console.log('Running automatic validation...\n');
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'exec');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
         }
         catch (e) {
             console.error(e.message);
@@ -105,6 +111,10 @@ function execCommand() {
             if (data.exec.active_state !== 'DRAFT') {
                 throw new Error('Active DEV-EXEC is not in DRAFT state. Cannot lock.');
             }
+            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'exec');
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'exec');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            (0, docCheck_1.ensureSigmaDocEligible)(report, 'exec');
             const version = data.exec.active_version;
             (0, progress_1.lockActiveExec)(data);
             (0, progress_1.writeProgress)(projectRoot, data);
@@ -112,6 +122,24 @@ function execCommand() {
                 ? 'SATISFIED'
                 : 'not satisfied — stale chain or incomplete chain';
             console.log(`DEV-EXEC ${version} LOCKED. Gate 3: ${gate3}`);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
+    cmd.command('check')
+        .description('Validate the active DEV-EXEC structure and markers')
+        .option('--v <version>', 'Check a specific DEV-EXEC version instead of the active one')
+        .action((opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const data = (0, progress_1.readProgress)(projectRoot);
+            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'exec', opts.v);
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'exec');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
         }
         catch (e) {
             console.error(e.message);

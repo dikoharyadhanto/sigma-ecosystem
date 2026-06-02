@@ -1508,7 +1508,7 @@
       "action": "render",
       "level": "semantic",
       "role": "any",
-      "description": "Regenerate derived sections (Stage Overview, Phase Dependencies, PLAN Breakdown) in the ACTIVE ROADMAP",
+      "description": "Regenerate derived sections (Stage Overview, PLAN Breakdown) in the ACTIVE ROADMAP",
       "inputs": [],
       "outputs": [
         {

@@ -14,6 +14,12 @@ import {
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
 import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
+import {
+  ensureSigmaDocEligible,
+  printSigmaDocReport,
+  resolveSigmaDocPath,
+  validateSigmaDocFile,
+} from '../utils/docCheck';
 
 function promptApprove(message: string): Promise<boolean> {
   return new Promise(resolve => {
@@ -87,6 +93,10 @@ export function closeCommand(): Command {
         registerCloseDraft(data, version, relPath, !!opts.ackStaleIntent);
         writeProgress(projectRoot, data);
         console.log(`Created: ${relPath}`);
+        console.log('Running automatic validation...\n');
+        const report = validateSigmaDocFile(absPath, 'close');
+        printSigmaDocReport(report, projectRoot);
+        if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
@@ -128,6 +138,10 @@ export function closeCommand(): Command {
         }
         const closeVersion = data.close.active_version!;
         const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
+        const absPath = resolveSigmaDocPath(projectRoot, data, 'close');
+        const report = validateSigmaDocFile(absPath, 'close');
+        printSigmaDocReport(report, projectRoot);
+        ensureSigmaDocEligible(report, 'close');
 
         console.log('\nClose Lock Preflight\n');
         console.log(`Artifact to lock:  DIR-CLOSE ${closeVersion}`);
@@ -163,6 +177,23 @@ export function closeCommand(): Command {
           console.log(`ROADMAP ${activeRoadmap.version} LOCKED.`);
         }
         console.log(`DIR-CLOSE ${closeVersion} LOCKED. Lifecycle → CLOSED. Project is complete.`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  cmd.command('check')
+    .description('Validate the active DIR-CLOSE structure and markers')
+    .option('--v <version>', 'Check a specific DIR-CLOSE version instead of the active one')
+    .action((opts: { v?: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const data = readProgress(projectRoot);
+        const absPath = resolveSigmaDocPath(projectRoot, data, 'close', opts.v);
+        const report = validateSigmaDocFile(absPath, 'close');
+        printSigmaDocReport(report, projectRoot);
+        if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

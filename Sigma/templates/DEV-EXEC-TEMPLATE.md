@@ -1,13 +1,15 @@
+<!-- SIGMA:DOC type=DEV_EXEC schema=1 -->
 # DEV-EXEC
 
 > Implementation approach, execution report, verification evidence, and developer walkthrough.
-> FMN reviews are recorded in Sections 6 and 15. Director observations and minor requests are recorded in Section 16.
+> FMN reviews are recorded in FMN Pre-Build Review and FMN Post-Build Review. Director observations and minor requests are recorded in Director Observation Report & Minor Requests.
 >
 > **Lock State**: Managed by Sigma CLI via `progress.json`. Do not edit lock state here.
-> **Section Ownership**: Sections 1–5 are DEV pre-build. Section 6 is FMN pre-build. Sections 7–14 are DEV post-build. Section 15 is FMN post-build. Section 16 is DEV-authored — transcribed from Director's direct chat report.
+> **Section Ownership**: Source Plan Alignment through Key Technical Decisions are DEV pre-build. FMN Pre-Build Review is FMN pre-build. Implementation Walkthrough through DEV Completion Statement are DEV post-build. FMN Post-Build Review is FMN post-build. Director Observation Report & Minor Requests is DEV-authored — transcribed from Director's direct chat report.
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:SOURCE_PLAN_ALIGNMENT -->
 ## 1. Source Plan Alignment
 
 > **Filled by DEV — Before Build**
@@ -22,6 +24,7 @@ Summarize how this execution follows the locked FMN-PLAN.
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:DEV_PRE_BUILD_ASSESSMENT -->
 ## 2. DEV Pre-Build Assessment
 
 > **Filled by DEV — Before Build** (after studying FMN-PLAN and prior session artifacts)
@@ -50,10 +53,11 @@ If none, write: No concerns — plan is clear and sufficient to proceed.]
 - [ ] NEED_CLARIFICATION
 - [ ] OTHER: [describe]
 
-[If NEED_CLARIFICATION: list specific unresolved items that require FMN or Director response before DEV proceeds to Section 3]
+[If NEED_CLARIFICATION: list specific unresolved items that require FMN or Director response before DEV proceeds to Implementation Approach]
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:IMPLEMENTATION_APPROACH -->
 ## 3. Implementation Approach
 
 > **Filled by DEV — Before Build**
@@ -80,6 +84,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:FILES_COMPONENTS_TO_CHANGE -->
 ## 4. Files / Components To Change
 
 > **Filled by DEV — Before Build**
@@ -91,6 +96,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:KEY_TECHNICAL_DECISIONS -->
 ## 5. Key Technical Decisions
 
 > **Filled by DEV — Before Build**
@@ -101,15 +107,16 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:FMN_PRE_BUILD_REVIEW -->
 ## 6. FMN Pre-Build Review
 
 > **Filled by FMN — After DEV Pre-Build Planning (Sections 1–5). DEV must not write in this section.**
 
 ### Pre-Build Clarification
 
-> *(Populate only if DEV Section 2 status was NEED_CLARIFICATION)*
+> *(Populate only if DEV Pre-Build Assessment status was NEED_CLARIFICATION)*
 
-[FMN answers to DEV's open items from Section 2]
+[FMN answers to DEV's open items from DEV Pre-Build Assessment]
 
 ### Plan Review
 
@@ -132,6 +139,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:IMPLEMENTATION_WALKTHROUGH -->
 ## 7. Implementation Walkthrough
 
 > **Filled by DEV — After Build**
@@ -156,6 +164,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:DEVIATIONS_FROM_FMN_PLAN -->
 ## 8. Deviations From FMN-PLAN
 
 > **Filled by DEV — After Build**
@@ -170,15 +179,16 @@ If no deviation exists, write:
 > No material deviation from FMN-PLAN.
 
 > **Deviation Update Checklist** — when any deviation is added above, verify:
-> - [ ] Section 3 — implementation approach still accurate?
-> - [ ] Section 7 — walkthrough reflects actual implementation?
-> - [ ] Section 10 — test counts and results still current?
-> - [ ] Section 11 — git evidence reflects latest commits?
-> - [ ] Section 12 — issue recorded if deviation came from a bug?
-> - [ ] Section 14 — completion summary consistent with all changes?
+> - [ ] Implementation Approach still accurate?
+> - [ ] Implementation Walkthrough reflects actual implementation?
+> - [ ] Developer Verification counts and results still current?
+> - [ ] Git / Change Evidence reflects latest commits?
+> - [ ] Issues Encountered records deviation-related bugs if any?
+> - [ ] DEV Completion Statement is consistent with all changes?
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:DEPENDENCY_ENVIRONMENT_CHANGES -->
 ## 9. Dependency / Environment Changes
 
 > **Filled by DEV — After Build**
@@ -193,6 +203,7 @@ If none, write:
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:DEVELOPER_VERIFICATION -->
 ## 10. Developer Verification
 
 > **Filled by DEV — After Build**
@@ -208,6 +219,7 @@ DEV records checks performed before handing back to FMN.
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:GIT_CHANGE_EVIDENCE -->
 ## 11. Git / Change Evidence
 
 > **Filled by DEV — After Build**
@@ -224,6 +236,7 @@ Minimal physical trace. Mark N/A only if no material file changes exist.
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:ISSUES_ENCOUNTERED -->
 ## 12. Issues Encountered
 
 > **Filled by DEV — After Build**
@@ -238,6 +251,7 @@ If none, write:
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:KNOWN_LIMITATIONS_TECH_DEBT -->
 ## 13. Known Limitations / Technical Debt
 
 > **Filled by DEV — After Build**
@@ -252,6 +266,7 @@ If none, write:
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:DEV_COMPLETION_STATEMENT -->
 ## 14. DEV Completion Statement
 
 > **Filled by DEV — After Build**
@@ -276,6 +291,7 @@ If none, write:
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:FMN_POST_BUILD_REVIEW -->
 ## 15. FMN Post-Build Review
 
 > **Filled by FMN — After DEV completes. DEV must not write in this section.**
@@ -308,6 +324,7 @@ If none, write:
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS -->
 ## 16. Director Observation Report & Minor Requests
 
 > **Filled by DEV — transcribed from Director's direct chat report. Append-only.**

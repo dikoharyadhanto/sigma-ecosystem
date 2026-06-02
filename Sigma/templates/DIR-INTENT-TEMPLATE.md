@@ -1,3 +1,4 @@
+<!-- SIGMA:DOC type=DIR_INTENT schema=1 -->
 # DIR-INTENT
 
 > **Purpose**: Captures Director intent, strategic constraints, execution direction, auditable assumptions, and minimum evidence requirements for a Sigma project.
@@ -8,6 +9,7 @@
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:INTENT_CORE -->
 ## 1. Intent Core — Sovereign Layer
 
 > **Audit Status**: CLARITY_ONLY
@@ -36,6 +38,7 @@
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:SUCCESS_DEFINITION -->
 ## 2. Success Definition
 
 > **Audit Status**: FULL_AUDIT
@@ -65,6 +68,7 @@ Before this project can close, Sigma must have:
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:STRATEGIC_TRADE_OFFS -->
 ## 3. Strategic Trade-Offs
 
 > **Audit Status**: FULL_AUDIT
@@ -85,6 +89,7 @@ We prioritize **[X]** over **[Y]**.
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:SCOPE_BOUNDARY -->
 ## 4. Scope Boundary
 
 > **Audit Status**: FULL_AUDIT
@@ -113,6 +118,7 @@ We will NOT do the following:
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:CONSTRAINTS_AND_PREFERENCES -->
 ## 5. Constraints & Preferences — Challengeable Means Layer
 
 > **Audit Status**: CHALLENGEABLE
@@ -134,6 +140,7 @@ We will NOT do the following:
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:TECHNICAL_AND_ARCHITECTURE_DIRECTION -->
 ## 6. Technical & Architecture Direction
 
 > **Audit Status**: FULL_AUDIT
@@ -163,6 +170,7 @@ We will NOT do the following:
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:FUNCTIONAL_REQUIREMENTS -->
 ## 7. Functional Requirements
 
 > **Audit Status**: FULL_AUDIT
@@ -193,6 +201,7 @@ As a [role], I want to [action], so that [benefit].
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:RISK_AND_FAILURE_DEFINITION -->
 ## 8. Risk & Failure Definition
 
 > **Audit Status**: FULL_AUDIT
@@ -231,6 +240,7 @@ As a [role], I want to [action], so that [benefit].
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:EXECUTION_DIRECTION_FOR_FMN -->
 ## 9. Execution Direction for FMN
 
 > **Audit Status**: FULL_AUDIT
@@ -261,6 +271,7 @@ The first `FMN-PLAN` must include:
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:AUD_FINDINGS_ADVISORY_ONLY -->
 ## 10. AUD Findings — Advisory Only
 
 > **Audit Status**: ADVISORY
@@ -297,6 +308,7 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:FINAL_VALIDATION_CHECKLIST -->
 ## 11. Final Validation Checklist
 
 > Complete this checklist before running `sigma intent lock`.
@@ -306,7 +318,7 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 - [ ] Success criteria are observable or measurable.
 - [ ] Constraints and preferences are separated.
 - [ ] Technical choices are marked as auditable means, not sovereign intent.
-- [ ] At least one execution direction exists for FMN (Section 9).
+- [ ] At least one execution direction exists for FMN (Execution Direction for FMN).
 - [ ] Risk appetite is stated.
 - [ ] Primary failure concern is stated.
 - [ ] Evidence requirement is stated.

@@ -10,6 +10,7 @@ const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
+const docCheck_1 = require("../utils/docCheck");
 function intentCommand() {
     const cmd = new commander_1.Command('intent');
     cmd.description('Manage DIR-INTENT artifact');
@@ -27,6 +28,11 @@ function intentCommand() {
             (0, progress_1.registerIntentDraft)(data, version, relPath);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`Created: ${relPath} — open this file and fill in the intent.`);
+            console.log('Running automatic validation...\n');
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'intent');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
         }
         catch (e) {
             console.error(e.message);
@@ -66,10 +72,32 @@ function intentCommand() {
             if (data.intent.active_state !== 'DRAFT') {
                 throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot lock.');
             }
+            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'intent');
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'intent');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            (0, docCheck_1.ensureSigmaDocEligible)(report, 'intent');
             const version = data.intent.active_version;
             (0, progress_1.lockActiveIntent)(data);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma plan new`);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
+    cmd.command('check')
+        .description('Validate the active DIR-INTENT structure and markers')
+        .option('--v <version>', 'Check a specific DIR-INTENT version instead of the active one')
+        .action((opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const data = (0, progress_1.readProgress)(projectRoot);
+            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'intent', opts.v);
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'intent');
+            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            if (!report.ok)
+                process.exit(1);
         }
         catch (e) {
             console.error(e.message);

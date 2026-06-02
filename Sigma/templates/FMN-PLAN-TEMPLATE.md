@@ -1,13 +1,15 @@
+<!-- SIGMA:DOC type=FMN_PLAN schema=1 -->
 # FMN-PLAN
 
 > Build contract and test contract for DEV implementation.
-> AUD findings on the plan are recorded in Section 7.
+> AUD findings on the plan are recorded in AUD Findings.
 >
 > **Lock State**: Managed by Sigma CLI via `progress.json`. Do not edit lock state here.
-> **Post-Lock Rule**: Sections 1–6 are immutable after lock. Section 7 (AUD Findings) may be appended post-lock.
+> **Post-Lock Rule**: Source Alignment through DEV Handoff Instructions are immutable after lock. AUD Findings may be appended post-lock.
 
 ---
 
+<!-- SIGMA:FMN_PLAN:SECTION:SOURCE_ALIGNMENT -->
 ## 1. Source Alignment
 
 > Filled by FMN — Before lock.
@@ -22,6 +24,7 @@ Summarize how this plan serves the locked Director Intent.
 
 ---
 
+<!-- SIGMA:FMN_PLAN:SECTION:WORK_ORDER_TASK_PLAN -->
 ## 2. Work Order / Task Plan
 
 > Filled by FMN — Before lock.
@@ -39,6 +42,7 @@ Summarize how this plan serves the locked Director Intent.
 
 ---
 
+<!-- SIGMA:FMN_PLAN:SECTION:ACCEPTANCE_CRITERIA -->
 ## 3. Acceptance Criteria
 
 > Filled by FMN — Before lock.
@@ -50,6 +54,7 @@ Summarize how this plan serves the locked Director Intent.
 
 ---
 
+<!-- SIGMA:FMN_PLAN:SECTION:IMPLEMENTATION_CONSTRAINTS -->
 ## 4. Implementation Constraints
 
 > Filled by FMN — Before lock.
@@ -60,6 +65,7 @@ Summarize how this plan serves the locked Director Intent.
 
 ---
 
+<!-- SIGMA:FMN_PLAN:SECTION:PRE_BUILD_TEST_CONTRACT -->
 ## 5. Pre-Build Test Contract
 
 > Filled by FMN — Before lock. Must be defined before DEV starts implementation.
@@ -71,6 +77,7 @@ Summarize how this plan serves the locked Director Intent.
 
 ---
 
+<!-- SIGMA:FMN_PLAN:SECTION:DEV_HANDOFF_INSTRUCTIONS -->
 ## 6. DEV Handoff Instructions
 
 > Filled by FMN — Before lock.
@@ -95,6 +102,7 @@ DEV should report in DEV-EXEC:
 
 ---
 
+<!-- SIGMA:FMN_PLAN:SECTION:AUD_FINDINGS -->
 ## 7. AUD Findings
 
 > **Filled by AUD — Advisory only. AUD findings do not approve, reject, or block lock state.**
