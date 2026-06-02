@@ -569,9 +569,14 @@ function lockOldestPlanDraft(data) {
     data.gates.gate_2_open = true;
     return oldest.version;
 }
-function registerPendingPlan(data, id, filePath) {
+function registerPendingPlan(data, id, filePath, title, focus) {
     const now = new Date().toISOString();
-    data.plan.pending.push({ id, file: filePath, created_at: now });
+    const entry = { id, file: filePath, created_at: now };
+    if (title)
+        entry.title = title;
+    if (focus)
+        entry.focus = focus;
+    data.plan.pending.push(entry);
 }
 function promotePendingPlan(data, id, version, newFilePath, intentVersionRef, title, focus) {
     const idx = data.plan.pending.findIndex(p => p.id === id);
@@ -586,10 +591,8 @@ function promotePendingPlan(data, id, version, newFilePath, intentVersionRef, ti
         updated_at: now,
         intent_version_ref: intentVersionRef,
     };
-    if (title)
-        entry.title = title;
-    if (focus)
-        entry.focus = focus;
+    entry.title = title ?? pending.title;
+    entry.focus = focus ?? pending.focus;
     data.plan.versions.push(entry);
     data.plan.active_version = version;
     data.plan.active_state = 'DRAFT';

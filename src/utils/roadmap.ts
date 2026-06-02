@@ -60,7 +60,7 @@ export function generateStageOverview(stages: StageEntry[], data: ProgressJson):
 
 export function generatePlanBreakdown(stages: StageEntry[], data: ProgressJson): string {
   if (stages.length === 0) {
-    return '## 6. PLAN Breakdown\n\n| PLAN | Covers Stage | Status | Reason |\n| :--- | :--- | :--- | :--- |';
+    return '## 6. PLAN Breakdown\n\n| PLAN | Covers Stage | Title | Focus | Status | Reason |\n| :--- | :--- | :--- | :--- | :--- | :--- |';
   }
   const rows: string[] = [];
   for (const s of stages) {
@@ -68,16 +68,18 @@ export function generatePlanBreakdown(stages: StageEntry[], data: ProgressJson):
     const plan = data.plan.versions.find(v => v.version === planVersion);
     if (plan) {
       const reason = plan.state === 'SUPERSEDED' ? (plan.supersede_reason ?? '—') : '—';
-      rows.push(`| FMN-PLAN ${planVersion} | Stage ${s.version} | ${plan.state} | ${reason} |`);
+      const title = plan.title ?? s.title;
+      const focus = plan.focus ?? s.focus;
+      rows.push(`| FMN-PLAN ${planVersion} | Stage ${s.version} | ${title} | ${focus} | ${plan.state} | ${reason} |`);
     } else {
-      rows.push(`| — | Stage ${s.version} | PENDING | — |`);
+      rows.push(`| — | Stage ${s.version} | ${s.title} | ${s.focus} | PENDING | — |`);
     }
   }
   return [
     '## 6. PLAN Breakdown',
     '',
-    '| PLAN | Covers Stage | Status | Reason |',
-    '| :--- | :--- | :--- | :--- |',
+    '| PLAN | Covers Stage | Title | Focus | Status | Reason |',
+    '| :--- | :--- | :--- | :--- | :--- | :--- |',
     ...rows,
   ].join('\n');
 }

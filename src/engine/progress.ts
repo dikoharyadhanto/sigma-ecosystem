@@ -37,6 +37,8 @@ export interface PendingPlanEntry {
   id: string;
   file: string;
   created_at: string;
+  title?: string;
+  focus?: string;
 }
 
 export interface PlanTracker extends ArtifactTracker {
@@ -769,9 +771,18 @@ export function lockOldestPlanDraft(data: ProgressJson): string {
   return oldest.version;
 }
 
-export function registerPendingPlan(data: ProgressJson, id: string, filePath: string): void {
+export function registerPendingPlan(
+  data: ProgressJson,
+  id: string,
+  filePath: string,
+  title?: string,
+  focus?: string,
+): void {
   const now = new Date().toISOString();
-  data.plan.pending.push({ id, file: filePath, created_at: now });
+  const entry: PendingPlanEntry = { id, file: filePath, created_at: now };
+  if (title) entry.title = title;
+  if (focus) entry.focus = focus;
+  data.plan.pending.push(entry);
 }
 
 export function promotePendingPlan(
@@ -796,8 +807,8 @@ export function promotePendingPlan(
     updated_at: now,
     intent_version_ref: intentVersionRef,
   };
-  if (title) entry.title = title;
-  if (focus) entry.focus = focus;
+  entry.title = title ?? pending.title;
+  entry.focus = focus ?? pending.focus;
   data.plan.versions.push(entry);
   data.plan.active_version = version;
   data.plan.active_state = 'DRAFT';

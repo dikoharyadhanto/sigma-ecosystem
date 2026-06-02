@@ -26,6 +26,14 @@ function readPendingTitle(absPath) {
         return absPath;
     }
 }
+function assertRequiredStageMetadata(title, focus, command) {
+    if (!title?.trim()) {
+        throw new Error(`sigma plan ${command} requires --title <title>`);
+    }
+    if (!focus?.trim()) {
+        throw new Error(`sigma plan ${command} requires --focus <focus>`);
+    }
+}
 function getActiveRoadmapPath(projectRoot, data) {
     const active = data.roadmap.versions.find(v => v.state === 'ACTIVE');
     if (!active)
@@ -44,13 +52,14 @@ function planCommand() {
     cmd.command('new')
         .description('Create a new FMN-PLAN draft (requires locked DIR-INTENT + ACTIVE ROADMAP). Use --pending to stage a future plan without entering the version queue.')
         .option('--pending', 'Stage as a pending plan (no version assigned; not in lock queue)')
-        .option('--title <title>', 'Stage title written into the ROADMAP stage heading and stage overview table')
-        .option('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table')
+        .requiredOption('--title <title>', 'Stage title written into the ROADMAP stage heading, stage overview table, and plan breakdown')
+        .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table and plan breakdown')
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
             (0, progress_1.assertProgressCanMutate)(data);
+            assertRequiredStageMetadata(opts.title, opts.focus, 'new');
             if (opts.pending) {
                 // Pending plan: no gate requirement, no version
                 const id = generatePendingId();
@@ -58,7 +67,7 @@ function planCommand() {
                 const absPath = path_1.default.join(projectRoot, relPath);
                 fs_extra_1.default.ensureDirSync(path_1.default.dirname(absPath));
                 (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath);
-                (0, progress_1.registerPendingPlan)(data, id, relPath);
+                (0, progress_1.registerPendingPlan)(data, id, relPath, opts.title, opts.focus);
                 (0, progress_1.writeProgress)(projectRoot, data);
                 console.log(`Created: ${relPath} (pending — ID: ${id})`);
                 console.log('Running automatic validation...\n');
@@ -215,13 +224,14 @@ function planCommand() {
     cmd.command('promote')
         .description('Promote a pending plan into the official draft queue with an assigned version')
         .requiredOption('--id <id>', 'Pending plan ID to promote (e.g. a3b9)')
-        .option('--title <title>', 'Stage title written into the ROADMAP stage heading and stage overview table')
-        .option('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table')
+        .requiredOption('--title <title>', 'Stage title written into the ROADMAP stage heading, stage overview table, and plan breakdown')
+        .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table and plan breakdown')
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
             (0, progress_1.assertProgressCanMutate)(data);
+            assertRequiredStageMetadata(opts.title, opts.focus, 'promote');
             const pending = data.plan.pending.find(p => p.id === opts.id);
             if (!pending) {
                 throw new Error(`Pending plan ID "${opts.id}" not found.\n` +
@@ -322,9 +332,10 @@ function planCommand() {
                 console.log('Pending Plans (not in lock queue):');
                 for (const p of pending) {
                     const absPath = path_1.default.join(projectRoot, p.file);
-                    const title = readPendingTitle(absPath);
+                    const title = p.title ?? readPendingTitle(absPath);
+                    const focus = p.focus ?? '(no focus)';
                     const date = p.created_at.slice(0, 10);
-                    console.log(`  ${p.id} — ${title}  (created ${date})`);
+                    console.log(`  ${p.id} — ${title}  [${focus}]  (created ${date})`);
                 }
             }
             console.log('');

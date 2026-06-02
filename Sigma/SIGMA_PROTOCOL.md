@@ -277,7 +277,7 @@ Optional handoff artifact for preserving session context. `sigma cso new --role 
 
 **Mandatory governance artifact.** ROADMAP is required before FMN-PLAN can be created — `plan new` is blocked unless an ACTIVE ROADMAP exists (Gate 1.5).
 
-ROADMAP breaks a locked DIR-INTENT into large build stages. Each ROADMAP H2 stage section maps to an FMN-PLAN version. ROADMAP is partially CLI-managed — stage sections are written by `sigma plan new` and `sigma plan promote`; derived summary sections are rendered by `sigma roadmap render`; the Core Process Flow section remains manual.
+ROADMAP breaks a locked DIR-INTENT into large build stages. Each ROADMAP H2 stage section maps to an FMN-PLAN version. ROADMAP is partially CLI-managed — stage sections are written by `sigma plan new` and `sigma plan promote`; official stage creation/promotion requires both `--title` and `--focus`; derived summary sections are rendered by `sigma roadmap render`; the Core Process Flow section remains manual.
 
 **State machine**: `DRAFT → ACTIVE → INACTIVE → LOCKED`
 

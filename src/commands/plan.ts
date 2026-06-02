@@ -40,6 +40,15 @@ function readPendingTitle(absPath: string): string {
   }
 }
 
+function assertRequiredStageMetadata(title: string | undefined, focus: string | undefined, command: 'new' | 'promote'): void {
+  if (!title?.trim()) {
+    throw new Error(`sigma plan ${command} requires --title <title>`);
+  }
+  if (!focus?.trim()) {
+    throw new Error(`sigma plan ${command} requires --focus <focus>`);
+  }
+}
+
 function getActiveRoadmapPath(projectRoot: string, data: ReturnType<typeof readProgress>): string | null {
   const active = data.roadmap.versions.find(v => v.state === 'ACTIVE');
   if (!active) return null;
@@ -60,13 +69,14 @@ export function planCommand(): Command {
   cmd.command('new')
     .description('Create a new FMN-PLAN draft (requires locked DIR-INTENT + ACTIVE ROADMAP). Use --pending to stage a future plan without entering the version queue.')
     .option('--pending', 'Stage as a pending plan (no version assigned; not in lock queue)')
-    .option('--title <title>', 'Stage title written into the ROADMAP stage heading and stage overview table')
-    .option('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table')
+    .requiredOption('--title <title>', 'Stage title written into the ROADMAP stage heading, stage overview table, and plan breakdown')
+    .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table and plan breakdown')
     .action((opts: { pending?: boolean; title?: string; focus?: string }) => {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
         assertProgressCanMutate(data);
+        assertRequiredStageMetadata(opts.title, opts.focus, 'new');
 
         if (opts.pending) {
           // Pending plan: no gate requirement, no version
@@ -75,7 +85,7 @@ export function planCommand(): Command {
           const absPath = path.join(projectRoot, relPath);
           fs.ensureDirSync(path.dirname(absPath));
           copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);
-          registerPendingPlan(data, id, relPath);
+          registerPendingPlan(data, id, relPath, opts.title, opts.focus);
           writeProgress(projectRoot, data);
           console.log(`Created: ${relPath} (pending — ID: ${id})`);
           console.log('Running automatic validation...\n');
@@ -243,13 +253,14 @@ export function planCommand(): Command {
   cmd.command('promote')
     .description('Promote a pending plan into the official draft queue with an assigned version')
     .requiredOption('--id <id>', 'Pending plan ID to promote (e.g. a3b9)')
-    .option('--title <title>', 'Stage title written into the ROADMAP stage heading and stage overview table')
-    .option('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table')
+    .requiredOption('--title <title>', 'Stage title written into the ROADMAP stage heading, stage overview table, and plan breakdown')
+    .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table and plan breakdown')
     .action((opts: { id: string; title?: string; focus?: string }) => {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
         assertProgressCanMutate(data);
+        assertRequiredStageMetadata(opts.title, opts.focus, 'promote');
 
         const pending = data.plan.pending.find(p => p.id === opts.id);
         if (!pending) {
@@ -363,9 +374,10 @@ export function planCommand(): Command {
           console.log('Pending Plans (not in lock queue):');
           for (const p of pending) {
             const absPath = path.join(projectRoot, p.file);
-            const title = readPendingTitle(absPath);
+            const title = p.title ?? readPendingTitle(absPath);
+            const focus = p.focus ?? '(no focus)';
             const date = p.created_at.slice(0, 10);
-            console.log(`  ${p.id} — ${title}  (created ${date})`);
+            console.log(`  ${p.id} — ${title}  [${focus}]  (created ${date})`);
           }
         }
 

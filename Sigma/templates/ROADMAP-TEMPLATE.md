@@ -69,8 +69,8 @@ Summarize how this roadmap serves the locked DIR-INTENT.
 <!-- SIGMA:ROADMAP:SECTION:PLAN_BREAKDOWN -->
 ## 6. PLAN Breakdown
 
-| PLAN | Covers Stage | Status |
-| :--- | :--- | :--- |
+| PLAN | Covers Stage | Title | Focus | Status | Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- |
 
 <!-- SIGMA:RENDER:END:plan-breakdown -->
 

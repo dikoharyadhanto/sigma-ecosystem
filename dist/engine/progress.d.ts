@@ -28,6 +28,8 @@ export interface PendingPlanEntry {
     id: string;
     file: string;
     created_at: string;
+    title?: string;
+    focus?: string;
 }
 export interface PlanTracker extends ArtifactTracker {
     pending: PendingPlanEntry[];
@@ -113,7 +115,7 @@ export declare function lockActiveIntent(data: ProgressJson): void;
 export declare function registerPlanDraft(data: ProgressJson, version: string, filePath: string, intentVersionRef: string, title?: string, focus?: string): void;
 export declare function updatePlanMetadata(data: ProgressJson, version: string, title?: string, focus?: string): void;
 export declare function lockOldestPlanDraft(data: ProgressJson): string;
-export declare function registerPendingPlan(data: ProgressJson, id: string, filePath: string): void;
+export declare function registerPendingPlan(data: ProgressJson, id: string, filePath: string, title?: string, focus?: string): void;
 export declare function promotePendingPlan(data: ProgressJson, id: string, version: string, newFilePath: string, intentVersionRef: string, title?: string, focus?: string): void;
 export declare function supersedePlanVersion(data: ProgressJson, version: string, reason: string): void;
 export declare function activatePlanDraft(data: ProgressJson, version: string): void;
