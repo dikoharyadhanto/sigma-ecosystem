@@ -7,6 +7,7 @@ import {
   makeProgress,
   makeProgressWithLockedIntent,
   makeProgressWithLockedPlan,
+  makeProgressWithLockedExec,
   TestEnv,
 } from './helpers';
 
@@ -118,6 +119,33 @@ describe('Sigma doctor and INVALID recovery mode', () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Created: Sigma[\\/]build[\\/]DEV-EXEC-v1\.1\.md/);
+  });
+
+  it('doctor removes duplicate DRAFT exec when a LOCKED exec with the same version exists', () => {
+    env = setupTestEnv();
+    const now = new Date().toISOString();
+    const progress = makeProgressWithLockedExec() as Record<string, any>;
+    progress.exec.versions.push({
+      version: 'v0.1',
+      state: 'DRAFT',
+      file: 'Sigma/build/DEV-EXEC-v0.1.md',
+      created_at: now,
+      updated_at: now,
+      plan_version_ref: 'v1',
+    });
+    progress.exec.active_version = 'v0.1';
+    progress.exec.active_state = 'DRAFT';
+    fs.writeJsonSync(env.progressPath, progress);
+
+    const result = runCli('doctor', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/duplicate DRAFT/);
+    const updated = fs.readJsonSync(env.progressPath) as Record<string, any>;
+    expect(updated.exec.versions.filter((v: Record<string, unknown>) => v.version === 'v0.1')).toHaveLength(1);
+    expect(updated.exec.versions[0].state).toBe('LOCKED');
+    expect(updated.exec.active_state).toBe('LOCKED');
+    expect(updated.runtime_invalid.markers).toHaveLength(0);
   });
 
   it('cso new works without --role', () => {

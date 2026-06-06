@@ -351,6 +351,28 @@ export function runDoctorReconciliation(data: ProgressJson): DoctorReport {
   const repaired: string[] = [];
   const now = new Date().toISOString();
 
+  // Auto-repair the known exec-new corruption pattern:
+  // a LOCKED exec and a later DRAFT exec share the same version key.
+  const execVersionsByKey = new Map<string, ArtifactVersion[]>();
+  for (const version of data.exec.versions) {
+    const versions = execVersionsByKey.get(version.version) ?? [];
+    versions.push(version);
+    execVersionsByKey.set(version.version, versions);
+  }
+  for (const [version, versions] of execVersionsByKey) {
+    if (versions.some(v => v.state === 'LOCKED') && versions.some(v => v.state === 'DRAFT')) {
+      const before = data.exec.versions.length;
+      data.exec.versions = data.exec.versions.filter(v => !(v.version === version && v.state === 'DRAFT'));
+      const removed = before - data.exec.versions.length;
+      if (removed > 0) {
+        repaired.push(`exec.versions removed ${removed} duplicate DRAFT entr${removed === 1 ? 'y' : 'ies'} for "${version}" because a LOCKED entry exists`);
+        if (data.exec.active_version === version) {
+          data.exec.active_state = 'LOCKED';
+        }
+      }
+    }
+  }
+
   // Auto-repair tracker active_state mismatches when a single active entry exists.
   for (const domain of ['intent', 'plan', 'exec', 'close', 'roadmap'] as const) {
     const tracker = data[domain] as ArtifactTracker;
@@ -626,6 +648,12 @@ function parseMajorVersion(version: string): number {
   return parseInt(match[1], 10);
 }
 
+function parseMinorVersion(version: string): number {
+  const match = version.match(/^v\d+(?:\.(\d+))?/);
+  if (!match) throw new Error(`Cannot parse minor version from "${version}"`);
+  return match[1] ? parseInt(match[1], 10) : 0;
+}
+
 export function nextMajorVersion(versions: ArtifactVersion[]): string {
   return `v${versions.length + 1}`;
 }
@@ -642,10 +670,12 @@ export function nextPlanVersion(data: ProgressJson, intentVersionRef: string): s
 // EXEC major must equal PLAN major; minor starts at 1
 export function nextExecVersion(data: ProgressJson, planVersionRef: string): string {
   const execMajor = parseMajorVersion(planVersionRef);
-  const existingUnderMajor = data.exec.versions.filter(
-    v => parseMajorVersion(v.version) === execMajor
-  );
-  return `v${execMajor}.${existingUnderMajor.length + 1}`;
+  const highestExecMinor = data.exec.versions
+    .filter(v => parseMajorVersion(v.version) === execMajor)
+    .reduce((highest, v) => Math.max(highest, parseMinorVersion(v.version)), 0);
+  const planMinorFloor = parseMinorVersion(planVersionRef) - 1;
+  const nextMinor = Math.max(highestExecMinor, planMinorFloor, 0) + 1;
+  return `v${execMajor}.${nextMinor}`;
 }
 
 // ── INTENT Mutations ──────────────────────────────────────────────────────────
@@ -863,6 +893,9 @@ export function registerExecDraft(
 ): void {
   const execMajor = parseMajorVersion(version);
   const planMajor = parseMajorVersion(planVersionRef);
+  if (data.exec.versions.some(v => v.version === version)) {
+    throw new Error(`Duplicate DEV-EXEC version "${version}" already exists in progress.json`);
+  }
   if (execMajor !== planMajor) {
     throw new Error(
       `Version sync error: DEV-EXEC ${version} (major ${execMajor}) does not match FMN-PLAN ${planVersionRef} (major ${planMajor}). ` +

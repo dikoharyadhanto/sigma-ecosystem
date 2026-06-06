@@ -63,6 +63,12 @@ function execCommand() {
             const version = (0, progress_1.nextExecVersion)(data, planVersionRef);
             const relPath = path_1.default.join('Sigma', 'build', `DEV-EXEC-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
+            if (data.exec.versions.some(v => v.version === version)) {
+                throw new Error(`EXEC CONFLICT: DEV-EXEC ${version} already exists in progress.json`);
+            }
+            if (fs_extra_1.default.existsSync(absPath)) {
+                throw new Error(`EXEC FILE CONFLICT: ${relPath} already exists. Refusing to overwrite existing DEV-EXEC artifact.`);
+            }
             (0, artifacts_1.copyTemplateToArtifact)('DEV-EXEC-TEMPLATE.md', absPath);
             (0, progress_1.registerExecDraft)(data, version, relPath, planVersionRef);
             (0, progress_1.writeProgress)(projectRoot, data);
