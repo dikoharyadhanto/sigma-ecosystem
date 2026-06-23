@@ -1,4 +1,4 @@
-<!-- SIGMA:DOC type=DIR_INTENT schema=1 -->
+<!-- SIGMA:DOC type=DIR_INTENT schema=2 -->
 # DIR-INTENT
 
 > **Purpose**: Captures Director intent, strategic constraints, execution direction, auditable assumptions, and minimum evidence requirements for a Sigma project.
@@ -68,58 +68,83 @@ Before this project can close, Sigma must have:
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:QUALITY_BAR -->
+## 3. Quality Bar — Minimum Standard for This Intent
+
+> **Audit Status**: FULL_AUDIT
+> A feature is not successful merely because it works functionally. It must also satisfy the minimum quality standard selected for this Intent.
+>
+> State the minimum acceptable standard for each dimension according to the scope and ambition of this Intent. The expected standard may be lightweight, internal-only, pilot-grade, production-grade, or explicitly not applicable, but it must be stated.
+
+| Dimension | Minimum Standard For This Intent | Must Not Happen | Evidence Required |
+|:--------- |:-------------------------------- |:--------------- |:----------------- |
+| Security | [What must be true for this to be safe enough?] | [Credential leak, tenant leak, privilege bypass, unsafe public exposure, etc.] | [Security review, RBAC test, secret scan, network evidence, etc.] |
+| UX Trust | [What must be true for users to understand the product state correctly?] | [False success, hidden fallback, misleading loading, unclear failure, unsafe action, etc.] | [Browser walkthrough, screenshots, state tests, copy review, fallback evidence, etc.] |
+| UI / Product Packaging | [What must be true for the product to feel coherent and ready for its intended audience?] | [Broken layout, inconsistent copy, debug-like UX, inaccessible critical action, visual mismatch, etc.] | [UI screenshots, responsive check, i18n check, design review, Director walkthrough, etc.] |
+| Performance / Cost | [What must be true for speed, reliability, and cost to be acceptable?] | [Unbounded cost growth, unacceptable latency, no cache/lifecycle policy, hidden quota risk, etc.] | [Timing table, p50/p95, cost worksheet, scale estimate, cache/lifecycle evidence, etc.] |
+
+### 3.1 Quality Notes
+
+[Optional. Explain which quality dimensions matter most for this Intent and why.]
+
+### 3.2 Quality Trade-Offs
+
+[Optional. State explicit quality trade-offs, such as stronger security over faster implementation, simpler UI for internal tooling, slower first load if cached interaction is fast, or higher storage cost only if retention is bounded.]
+
+---
+
 <!-- SIGMA:DIR_INTENT:SECTION:STRATEGIC_TRADE_OFFS -->
-## 3. Strategic Trade-Offs
+## 4. Strategic Trade-Offs
 
 > **Audit Status**: FULL_AUDIT
 > AUD may challenge whether trade-offs are coherent, feasible, or risky.
 
-### 3.1 Primary Trade-Off
+### 4.1 Primary Trade-Off
 
 We prioritize **[X]** over **[Y]**.
 
-### 3.2 Secondary Trade-Offs
+### 4.2 Secondary Trade-Offs
 
 - We are willing to sacrifice **[X]** to gain **[Y]**.
 - We are willing to sacrifice **[X]** to gain **[Y]**.
 
-### 3.3 Why These Trade-Offs Matter
+### 4.3 Why These Trade-Offs Matter
 
 [How these choices affect scope, architecture, timeline, risk, and evidence.]
 
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:SCOPE_BOUNDARY -->
-## 4. Scope Boundary
+## 5. Scope Boundary
 
 > **Audit Status**: FULL_AUDIT
 > Scope must be explicit enough for FMN to produce execution work without inventing intent.
 
-### 4.1 In Scope
+### 5.1 In Scope
 
 - [Must deliver item 1]
 - [Must deliver item 2]
 
-### 4.2 Out of Scope
+### 5.2 Out of Scope
 
 - [Explicitly deferred item 1]
 - [Explicitly deferred item 2]
 
-### 4.3 Non-Goals
+### 5.3 Non-Goals
 
 We will NOT do the following:
 
 - [Non-goal 1]
 - [Non-goal 2]
 
-### 4.4 Why This Boundary Matters
+### 5.4 Why This Boundary Matters
 
 [What goes wrong if this scope expands?]
 
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:CONSTRAINTS_AND_PREFERENCES -->
-## 5. Constraints & Preferences — Challengeable Means Layer
+## 6. Constraints & Preferences — Challengeable Means Layer
 
 > **Audit Status**: CHALLENGEABLE
 > Director may state preferences here, but AUD may challenge feasibility, risk, cost, mismatch, or hidden trade-offs.
@@ -141,28 +166,28 @@ We will NOT do the following:
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:TECHNICAL_AND_ARCHITECTURE_DIRECTION -->
-## 6. Technical & Architecture Direction
+## 7. Technical & Architecture Direction
 
 > **Audit Status**: FULL_AUDIT
 > Tech stack, architecture, and solution assumptions are auditable means — not sovereign intent.
 
-### 6.1 Preferred Tech Stack
+### 7.1 Preferred Tech Stack
 
 | Layer   | Technology | Reason | Risk / Trade-Off |
 |:------- |:---------- |:------ |:---------------- |
 | [Layer] | [...]      | [...]  | [...]            |
 
-### 6.2 Architecture Direction
+### 7.2 Architecture Direction
 
 [High-level architecture or product structure.]
 
-### 6.3 Solution Assumptions
+### 7.3 Solution Assumptions
 
 | Assumption ID | Assumption | Confidence          | What if wrong? |
 |:------------- |:---------- |:------------------- |:-------------- |
 | ASM-001       | [...]      | Low / Medium / High | [...]          |
 
-### 6.4 Explicitly Rejected Approaches
+### 7.4 Explicitly Rejected Approaches
 
 | Rejected Option | Reason Rejected | Trade-Off Accepted |
 |:--------------- |:--------------- |:------------------ |
@@ -171,7 +196,7 @@ We will NOT do the following:
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:FUNCTIONAL_REQUIREMENTS -->
-## 7. Functional Requirements
+## 8. Functional Requirements
 
 > **Audit Status**: FULL_AUDIT
 > FMN uses this section to create the FMN-PLAN task plan and test contract.
@@ -202,12 +227,12 @@ As a [role], I want to [action], so that [benefit].
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:RISK_AND_FAILURE_DEFINITION -->
-## 8. Risk & Failure Definition
+## 9. Risk & Failure Definition
 
 > **Audit Status**: FULL_AUDIT
 > Risks should be practical, not decorative.
 
-### 8.1 Risk Appetite
+### 9.1 Risk Appetite
 
 | Risk Type           | Tolerance           |
 |:------------------- |:------------------- |
@@ -215,7 +240,7 @@ As a [role], I want to [action], so that [benefit].
 | Degraded Capability | Low / Medium / High |
 | Unknowns            | Low / Medium / High |
 
-### 8.2 Primary Failure Concern
+### 9.2 Primary Failure Concern
 
 **The Failure**:
 [Worst realistic outcome to avoid.]
@@ -226,13 +251,13 @@ As a [role], I want to [action], so that [benefit].
 **Guardrail / Mitigation**:
 [How we reduce the chance or impact.]
 
-### 8.3 Risk Register
+### 9.3 Risk Register
 
 | Risk ID | Classification            | Description | Impact | Mitigation | Accepted?              |
 |:------- |:------------------------- |:----------- |:------ |:---------- |:---------------------- |
 | RR-001  | Fatal / Degrading / Noise | [...]       | [...]  | [...]      | Yes / No / Conditional |
 
-### 8.4 Failure Definition
+### 9.4 Failure Definition
 
 - **Project Failure**: [...]
 - **Build Blocker**: [...]
@@ -241,29 +266,39 @@ As a [role], I want to [action], so that [benefit].
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:EXECUTION_DIRECTION_FOR_FMN -->
-## 9. Execution Direction for FMN
+## 10. Execution Direction for FMN
 
 > **Audit Status**: FULL_AUDIT
 > This section tells FMN how to convert intent into execution. Replaces ARC-PLAN — Sigma does not have a separate ARC artifact.
 
-### 9.1 Execution Focus
+### 10.1 Execution Focus
 
 | Focus Area | Why It Matters | Watch-Out |
 |:---------- |:-------------- |:--------- |
 | [...]      | [...]          | [...]     |
 
-### 9.2 FMN Must Produce
+### 10.2 FMN Must Produce
 
 The first `FMN-PLAN` must include:
 
 - [ ] Work Order / Task Plan
 - [ ] Pre-Build Test Contract
 - [ ] Implementation constraints
+- [ ] Quality Bar carry-forward for Security, UX Trust, UI / Product Packaging, and Performance / Cost
 - [ ] Post-Build Test Report section
 - [ ] Implementation Report section
 - [ ] Evidence Summary
 
-### 9.3 DEV Must Not
+### 10.3 FMN Must Preserve Quality Bar
+
+The first `FMN-PLAN` must explicitly carry forward:
+
+- [ ] Security minimum standard and evidence requirement
+- [ ] UX Trust minimum standard and evidence requirement
+- [ ] UI / Product Packaging minimum standard and evidence requirement
+- [ ] Performance / Cost minimum standard and evidence requirement
+
+### 10.4 DEV Must Not
 
 - [Forbidden implementation behavior]
 - [Out-of-scope expansion]
@@ -272,18 +307,18 @@ The first `FMN-PLAN` must include:
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:AUD_FINDINGS_ADVISORY_ONLY -->
-## 10. AUD Findings — Advisory Only
+## 11. AUD Findings — Advisory Only
 
 > **Audit Status**: ADVISORY
 > AUD findings support Director judgment. They do not approve, reject, lock, or block runtime state.
 
-### 10.1 AUD Review Scope
+### 11.1 AUD Review Scope
 
 AUD may review: intent clarity, scope consistency, technical feasibility, architecture assumptions, risk coverage, success criteria, evidence sufficiency, route vs destination alignment.
 
 AUD may not: replace Director intent, re-rank Director values, or treat advisory findings as runtime approval.
 
-### 10.2 AUD Advisory Verdict
+### 11.2 AUD Advisory Verdict
 
 **Verdict**:
 
@@ -309,13 +344,18 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:FINAL_VALIDATION_CHECKLIST -->
-## 11. Final Validation Checklist
+## 12. Final Validation Checklist
 
 > Complete this checklist before running `sigma intent lock`.
 
 - [ ] Intent Core is clear enough to guide execution.
 - [ ] Scope in/out is explicit.
 - [ ] Success criteria are observable or measurable.
+- [ ] Security minimum standard is stated or explicitly marked not applicable.
+- [ ] UX Trust minimum standard is stated or explicitly marked not applicable.
+- [ ] UI / Product Packaging minimum standard is stated or explicitly marked not applicable.
+- [ ] Performance / Cost minimum standard is stated or explicitly marked not applicable.
+- [ ] FMN is instructed to preserve the Quality Bar in every PLAN.
 - [ ] Constraints and preferences are separated.
 - [ ] Technical choices are marked as auditable means, not sovereign intent.
 - [ ] At least one execution direction exists for FMN (Execution Direction for FMN).
