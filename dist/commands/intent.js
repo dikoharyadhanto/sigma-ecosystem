@@ -7,20 +7,43 @@ exports.intentCommand = intentCommand;
 const commander_1 = require("commander");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
+const readline_1 = __importDefault(require("readline"));
 const progress_1 = require("../engine/progress");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const docCheck_1 = require("../utils/docCheck");
+function promptApprove(message) {
+    return new Promise(resolve => {
+        const rl = readline_1.default.createInterface({ input: process.stdin, output: process.stdout });
+        rl.question(`${message}\nType APPROVE to continue: `, answer => {
+            rl.close();
+            resolve(answer.trim().toUpperCase() === 'APPROVE');
+        });
+    });
+}
 function intentCommand() {
     const cmd = new commander_1.Command('intent');
     cmd.description('Manage DIR-INTENT artifact');
     cmd.command('new')
         .description('Create a new DIR-INTENT draft')
-        .action(() => {
+        .option('--yes', 'Skip interactive APPROVE prompt when reopening a CLOSED project')
+        .action(async (opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
             (0, progress_1.assertProgressCanMutate)(data);
+            if (data.lifecycle_state === 'CLOSED') {
+                console.log('\nReopen Preflight\n');
+                console.log('Project lifecycle is currently CLOSED. Running this command will automatically ' +
+                    'reopen the project and begin a new work cycle.\n');
+                if (!opts.yes) {
+                    const approved = await promptApprove('Do you wish to continue?');
+                    if (!approved) {
+                        console.log('Intent creation cancelled.');
+                        process.exit(0);
+                    }
+                }
+            }
             const version = (0, progress_1.nextMajorVersion)(data.intent.versions);
             const relPath = path_1.default.join('Sigma', 'design', `DIR-INTENT-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);

@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
+import readline from 'readline';
 import {
   readProgress,
   writeProgress,
@@ -18,17 +19,44 @@ import {
   validateSigmaDocFile,
 } from '../utils/docCheck';
 
+function promptApprove(message: string): Promise<boolean> {
+  return new Promise(resolve => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(`${message}\nType APPROVE to continue: `, answer => {
+      rl.close();
+      resolve(answer.trim().toUpperCase() === 'APPROVE');
+    });
+  });
+}
+
 export function intentCommand(): Command {
   const cmd = new Command('intent');
   cmd.description('Manage DIR-INTENT artifact');
 
   cmd.command('new')
     .description('Create a new DIR-INTENT draft')
-    .action(() => {
+    .option('--yes', 'Skip interactive APPROVE prompt when reopening a CLOSED project')
+    .action(async (opts: { yes?: boolean }) => {
       try {
         const projectRoot = findProjectRoot();
         const data = readProgress(projectRoot);
         assertProgressCanMutate(data);
+
+        if (data.lifecycle_state === 'CLOSED') {
+          console.log('\nReopen Preflight\n');
+          console.log(
+            'Project lifecycle is currently CLOSED. Running this command will automatically ' +
+            'reopen the project and begin a new work cycle.\n'
+          );
+          if (!opts.yes) {
+            const approved = await promptApprove('Do you wish to continue?');
+            if (!approved) {
+              console.log('Intent creation cancelled.');
+              process.exit(0);
+            }
+          }
+        }
+
         const version = nextMajorVersion(data.intent.versions);
         const relPath = path.join('Sigma', 'design', `DIR-INTENT-${version}.md`);
         const absPath = path.join(projectRoot, relPath);

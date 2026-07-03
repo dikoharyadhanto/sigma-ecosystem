@@ -12,12 +12,13 @@ export interface CliResult {
   exitCode: number;
 }
 
-export function runCli(args: string, cwd: string, homeDir: string): CliResult {
+export function runCli(args: string, cwd: string, homeDir: string, input?: string): CliResult {
   try {
     const stdout = execSync(`node "${CLI}" ${args}`, {
       cwd,
       env: { ...process.env, HOME: homeDir, USERPROFILE: homeDir },
       encoding: 'utf-8',
+      input: input ?? '',
     });
     return { stdout, stderr: '', exitCode: 0 };
   } catch (err: unknown) {
