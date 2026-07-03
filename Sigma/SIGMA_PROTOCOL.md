@@ -1,7 +1,7 @@
 # Sigma Protocol
 
 **Document**: SIGMA_PROTOCOL.md
-**Version**: v0.2 (Phase 2 — Governance Doctrine)
+**Version**: v0.3 (Phase 2 — Governance Doctrine)
 **Authority Tier**: Operational
 **Owner**: Director
 **Status**: Active
@@ -115,6 +115,8 @@ AI roles follow position response limits, revision limits, and decision cycle ru
 
 Interviews the Director to surface and structure intent. Drafts DIR-INTENT including intent core, constraints, technical direction, assumptions, risk, scope boundary, and evidence requirements. ARC's work ends when DIR-INTENT is LOCKED.
 
+When DIR-INTENT's Comprehensive Research status is NEEDED, ARC investigates using a bounded Research Mode and records sources in `Sigma/reference/reference-list.md` (see Section 5.7). Research must be reviewed by AUD and completed before `sigma intent lock`.
+
 Cannot lock any artifact. Cannot author FMN-PLAN, DEV-EXEC, or DIR-CLOSE. Cannot operate in BUILD or CLOSE phase.
 
 > Detailed role rules: `Sigma/rules/ARC-RULE.md`
@@ -185,7 +187,7 @@ Cannot lock any artifact. Cannot author FMN-PLAN or DIR-CLOSE.
 
 ## 5. Artifact Definitions
 
-Sigma uses six artifact types: five governance artifacts (DIR-INTENT, ROADMAP, FMN-PLAN, DEV-EXEC, DIR-CLOSE) and one optional handoff artifact (CSO).
+Sigma uses seven artifact types: five governance artifacts (DIR-INTENT, ROADMAP, FMN-PLAN, DEV-EXEC, DIR-CLOSE), one optional handoff artifact (CSO), and one project-wide supporting index (Reference List).
 
 ### 5.1 DIR-INTENT — Director's Intent
 
@@ -201,6 +203,8 @@ Sigma uses six artifact types: five governance artifacts (DIR-INTENT, ROADMAP, F
 Foundational intent document capturing Director's vision, constraints, technical preferences, scope boundary, risk assessment, and evidence requirements. Includes an optional AUD findings section.
 
 DIR-INTENT has two layers: **Intent Core** (sovereign — goals, vision, purpose; not AUD-challengeable) and **Challengeable sublayers** (route, assumptions, constraints, risk — all auditable).
+
+DIR-INTENT includes an optional **Comprehensive Research** section, marked NEEDED when existing knowledge is insufficient to responsibly formulate intent. Sources are recorded in the project-wide Reference List, not inline (see Section 5.7).
 
 ---
 
@@ -298,7 +302,29 @@ If ROADMAP conflicts with DIR-INTENT, DIR-INTENT wins.
 
 ---
 
-### 5.7 Director-Facing Labels
+### 5.7 Reference List — Comprehensive Research Source Index
+
+| Property | Value |
+| :--- | :--- |
+| Owner | Director |
+| Authored by | ARC (Local Artifact rows via `sigma reference update`; Website Link and Online Source Data rows manually) |
+| Phase | DESIGN (primary use); persists across all phases |
+| Storage | `Sigma/reference/reference-list.md` |
+| Versioning | None — project-wide, cumulative, not versioned per DIR-INTENT |
+
+Project-wide source index supporting DIR-INTENT's Comprehensive Research section (see Section 5.1). Not a formal bibliography — a path/link and a short note per row, enough for any role to revisit the source later. Three tables: Local Artifact (synced from `Sigma/reference/data/`), Website Link, and Online Source Data. Every row carries an ID (`LA`/`WL`/`OS` + sequential number); DIR-INTENT cites findings by ID only (e.g. "(LA02)"), never by inline link.
+
+**Scaffolding**: created once by `sigma project start`, not per DIR-INTENT version — a project only starts once, but intent gets drafted and revised repeatedly. `sigma reference update` self-heals a missing file on older projects.
+
+**Not tracked in `progress.json`** — no lifecycle state, no lock, no gate. Existence is guaranteed by construction at `project start`, with a self-healing fallback in `sigma reference update`.
+
+If Comprehensive Research status is NEEDED, AUD Verificator Mode must review source-tier compliance for cited IDs before `sigma intent lock` (see Section 14).
+
+> Template: `Sigma/templates/REFERENCE-LIST-TEMPLATE.md`
+
+---
+
+### 5.8 Director-Facing Labels
 
 | Human label | Artifact code | Purpose |
 | :--- | :--- | :--- |
@@ -308,6 +334,7 @@ If ROADMAP conflicts with DIR-INTENT, DIR-INTENT wins.
 | Closure Doc | `DIR-CLOSE` | Final cycle closure |
 | Roadmap Doc | `ROADMAP` | Mandatory staging map |
 | Context Handoff | `CSO` | Session continuity snapshot |
+| Reference List | `reference-list.md` | Comprehensive Research source index |
 
 **Presentation rule**: Show meaning first, artifact code second. Artifact codes remain the authority for filenames, `progress.json` field values, registry files, and CLI arguments.
 
@@ -373,6 +400,7 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 | `Sigma/close/` | CLOSE | `DIR-CLOSE-v{VER}.md` |
 | `Sigma/rules/` | All phases (reference) | `ARC-RULE.md`, `AUD-RULE.md`, `FMN-RULE.md`, `DEV-RULE.md` |
 | `Sigma/logs/` | Any phase | CSO files, progress backups, migration logs |
+| `Sigma/reference/` | Any phase (project-wide, cumulative) | `reference-list.md`, `data/` (local research artifacts) |
 
 ---
 
@@ -394,6 +422,7 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 | :--- | :--- |
 | Intent Core (goals, vision, purpose) | **Sovereign** — not auditable |
 | Director Constraints, Tech Stack, Timeline, Assumptions, Scope, Risk, Evidence requirements | Auditable |
+| DIR-INTENT — Comprehensive Research source-tier compliance (Reference List IDs) | Auditable |
 | FMN-PLAN — task plan adequacy, test contract scope | Auditable |
 | DEV-EXEC — implementation vs plan, deviations, known issues | Auditable |
 | DIR-CLOSE — evidence reference sufficiency, accepted limitations | Auditable |
@@ -443,12 +472,18 @@ AUD becomes mandatory only when the Director explicitly marks the project as **r
 | `exec` | DEV-EXEC lifecycle (new, audit, lock, supersede, status, list) |
 | `close` | DIR-CLOSE lifecycle (new, audit, lock, status) |
 | `roadmap` | ROADMAP lifecycle (new, activate, render, reconcile, list) |
+| `reference` | Sync and manage the project-wide Reference List (`update`) — Comprehensive Research source index |
 | `send` | Send messages between AI roles |
 | `inbox` | Read, manage, and check role inboxes |
 | `git` | Git evidence output (read-only) |
 | `cso` | CSO artifact creation |
 | `config` | Project configuration (language preference, etc.) |
 | `setup` | Installation, configuration, MCP memory setup |
+| `sync` | Backward-compatibility migration commands |
+| `memory` | Show Sigma role memory reminders (read-only) |
+| `doctor` | Diagnose and reconcile Sigma runtime state |
+| `override` | Bypass the current lifecycle gate under Director authority (recorded in `Sigma/memory/overrides.jsonl`) |
+| `gitignore` | Generate `.gitignore` content for Sigma projects |
 
 Run `sigma --help` or `sigma {domain} --help` for current command syntax. The CLI is authoritative — do not rely on this section for exact flag names.
 
@@ -475,7 +510,7 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 | Class | Commands | AI May Execute? | Requires Director Instruction? |
 | :--- | :--- | :---: | :---: |
 | Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap reconcile --check`, `inbox` | Yes | No |
-| Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `cso new`, `send` | Yes, within role boundary | Usually no |
+| Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `cso new`, `reference update`, `send` | Yes, within role boundary | Usually no |
 | Advisory | `intent review`, `plan audit`, `exec audit`, `close audit` | Yes, when requested | Usually yes — Director-triggered |
 | Approval | `intent lock`, `roadmap activate`, `plan lock`, `exec lock`, `close lock` | Only after Director approval | Yes |
 | Risk / Supersession | `close new --ack-stale-intent`, `plan supersede`, `exec supersede`, destructive/reset | Only after Director approval | Yes |
@@ -619,3 +654,5 @@ Not every governance role has the same activation bootstrap. ARC starts as stop-
 ---
 
 *SIGMA_PROTOCOL.md v0.2 — Phase 2 slim-down (2026-05-30). Governance doctrine only; operational detail moved to `sigma --help`, role-aware session orientation, and role rule files.*
+
+*v0.3 (2026-07-04): Added Reference List artifact (Section 5.7) and Comprehensive Research pointers (Sections 4.1, 5.1, 14); reconciled Folder-to-Phase Mapping (Section 13) and CLI Command Surface (Section 16) with the actual CLI, which had drifted (`gitignore`, `override`, `sync`, `memory`, `doctor` were missing before this pass, independent of the reference addition).*

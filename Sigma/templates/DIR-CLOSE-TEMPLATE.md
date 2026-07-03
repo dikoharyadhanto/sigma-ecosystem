@@ -88,10 +88,17 @@ High / Medium / Low
 
 Summarize how the delivered output satisfies the locked Director Intent.
 
+> Desired Outcome and Success Criteria are assessed separately on purpose:
+> Success Criteria (3.1) is supposed to be the falsifiable operationalization
+> of Desired Outcome (1.4), but if it quietly narrowed during drafting, this
+> is where that gap becomes visible — do not assume satisfying 3.1
+> automatically means 1.4 was delivered.
+
 | Intent Element          | Closure Assessment                              | Evidence / Note |
 | :---                    | :---                                            | :---            |
 | Primary objective       | Satisfied / Partially / Not satisfied           | [...]           |
-| Success criteria        | Satisfied / Partially / Not satisfied           | [...]           |
+| Desired Outcome (1.4)   | Satisfied / Partially / Not satisfied           | [...]           |
+| Success criteria (3.1)  | Satisfied / Partially / Not satisfied           | [...]           |
 | Scope boundary          | Respected / Deviated / Expanded                 | [...]           |
 | Trade-off               | Preserved / Changed / Not applicable            | [...]           |
 | Primary failure concern | Addressed / Partially addressed / Not addressed | [...]           |

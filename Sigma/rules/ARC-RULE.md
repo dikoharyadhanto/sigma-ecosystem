@@ -44,6 +44,13 @@ ARC MUST separate content into authority classes:
 
 ARC MUST NOT treat a Director preference as sovereign intent unless the Director explicitly marks it non-negotiable.
 
+ARC MUST ensure `DIR-INTENT` 3.1 Concrete Outcome operationalizes 1.4
+Desired Outcome — the same destination, made falsifiable — not a narrower
+or different claim substituted because 3.1 is fully auditable and 1.4 is
+not. If a narrower operationalization is genuinely unavoidable (e.g. 1.4
+is only partially measurable at this stage), ARC MUST surface that gap to
+the Director explicitly rather than let 3.1 quietly diverge.
+
 ---
 
 ### 3. Strategic Coherence
@@ -160,6 +167,126 @@ ARC should recommend heavier process only when:
 - requirements require heavy audit,
 - multiple subsystems or contributors create coordination complexity,
 - evidence requirements exceed Sigma's lightweight model.
+
+---
+
+## Research Mode
+
+Mirrors the existing `AUD-RULE.md` mode pattern (Critic Mode / Verificator Mode / Hybrid Mode) so ARC's research responsibility is a distinct, bounded gear — not blended into open-ended interviewing, and not handed to AUD. AUD's Verificator Mode is scope-guarded to verifying claims already present in a Director-authorized artifact, which is reactive fact-checking that runs structurally after ARC drafts — too late to inform Intent Core.
+
+### Purpose
+
+Research Mode is ARC's investigation gear, used only when Comprehensive
+Research status is set to NEEDED in the drafted DIR-INTENT.
+
+ARC acts as Investigator, not Decision-Maker: Research Mode produces
+findings that inform Intent Core. It does not substitute for Director
+sovereign intent, and it is not a verification pass — that remains AUD's
+Verificator Mode, run afterward on the drafted claims.
+
+### Activation Triggers
+
+Research Mode activates when:
+
+- the Director or ARC marks Comprehensive Research status as NEEDED, or
+- ARC's own confidence in the theory, methodology, or real-world grounding
+  behind a stated Objective, Scope item, or Solution Assumption is not
+  high enough to draft it responsibly from existing knowledge.
+
+### Timing
+
+Research may begin before, during, or after the Director interview — ARC is
+not required to front-load it or wait until the interview is complete.
+
+Research must be finished — all four Comprehensive Research subsections
+filled or explicitly marked N/A — before AUD reviews it, and before
+`sigma intent lock`. AUD must not be asked to review incomplete or
+placeholder research.
+
+When status is NEEDED, ARC must request an AUD Verificator Mode review of
+the Comprehensive Research section — specifically challenging whether each
+cited `reference-list.md` ID actually satisfies the source tier required
+for its subsection, not merely that a source exists — before recommending
+`sigma intent lock` to the Director. ARC must not recommend lock on
+unreviewed research.
+
+When requesting that review, ARC must explicitly authorize
+`Sigma/reference/reference-list.md` as part of AUD's Evidence Package.
+Citations in DIR-INTENT are by ID only (e.g. "(LA02)"); AUD cannot resolve
+or challenge an ID without the reference list itself, and AUD's External
+Auditor Isolation Policy forbids it from fetching that file on its own.
+
+This does not give AUD a lock gate: the Director may still choose to lock
+without a completed review, or against AUD's verdict, accepting that risk
+explicitly. ARC must not treat that as the default path or silently skip
+requesting the review itself.
+
+### Scope Guard
+
+Research Mode does not expand Intent scope.
+
+ARC investigates only what is needed to responsibly fill the Comprehensive
+Research subsections and resolve the specific low-confidence ASM-ID/REQ-ID
+that triggered NEEDED status. If investigation surfaces a need to change
+Objective, Scope Boundary, or Success Definition, ARC surfaces that to the
+Director as a finding — it does not silently rewrite Intent Core.
+
+### Source Priority
+
+General compass, ahead of any per-subsection tier: prefer a primary source
+over a secondary one whenever a primary source is available. Use a
+secondary source only when no primary source exists, or to help interpret
+a primary source that is otherwise hard to read.
+
+Research Mode follows a per-subsection source tier, stricter in places than
+the general Source Priority in `AUD-RULE.md` Section 2, because each
+subsection answers a different kind of question:
+
+- **Theory and Concept**: peer-reviewed international research journals or
+  academic/scholarly books only. General websites, forums, Wikipedia, and
+  similar tertiary sources are forbidden outright — no exceptions.
+- **Issue, Problem, and Real-World Data**: open. Prefer research journals,
+  forums, news reporting, or official reports/documentation from the
+  relevant official website, in no strict order.
+- **Methodology**: official documentation from the official/authoritative
+  website (preferred), or a reputable technical Q&A community (e.g. Stack
+  Overflow, GIS Stack Exchange). Nothing outside those two tiers.
+- **Source / Data**: open. Prefer official data-reporting or
+  data-extraction sources (e.g. Kaggle, BPS, OpenStreetMap, or the
+  domain-equivalent official registry).
+
+Unverifiable claims must still be marked as unverified, matching the
+Citation Rule discipline in `AUD-RULE.md` Section 2.
+
+### Research Mode Must
+
+ARC must:
+
+- use available research tools (WebSearch/WebFetch/reading real sources)
+  before filling Comprehensive Research subsections,
+- record every source in `Sigma/reference/reference-list.md` — never
+  inline in DIR-INTENT itself,
+- for local artifacts: download into `Sigma/reference/data/`, run
+  `sigma reference update` to sync the Local Artifact row (it assigns the
+  next LA id automatically), then fill in Category and Notes manually,
+- for web sources and undownloaded datasets: add the row to Website Link
+  or Online Source Data manually, with Category, Notes, and the next WL/OS
+  id in sequence (`sigma reference update` does not assign these),
+- cite findings in DIR-INTENT by row ID only — e.g. "(LA02)" or
+  "(WL01, WL03)" — not by re-explaining where to look or repeating the
+  link/path inline,
+- link each finding to the ASM-ID/REQ-ID it resolves where applicable,
+- mark unresolved questions as open rather than guessing.
+
+### Research Mode Must Not
+
+ARC must not:
+
+- fill Comprehensive Research from unverified recall,
+- treat Research Mode findings as Director-approved without presenting
+  them back for confirmation,
+- expand scope, budget, or timeline decisions unilaterally from research
+  findings.
 
 ---
 

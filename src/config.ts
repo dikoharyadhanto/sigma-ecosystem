@@ -19,12 +19,16 @@ export const OPERATION_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-OPERA
 export const DOCUMENT_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-REGISTRY.json');
 export const PROJECT_CONFIG_FILE = path.join(PROJECT_SIGMA_DIR, 'project.config.json');
 
-export const SUBFOLDERS = ['design', 'build', 'close', 'rules', 'logs', 'memory', 'role-memory'];
+export const SUBFOLDERS = ['design', 'build', 'close', 'rules', 'logs', 'memory', 'role-memory', 'reference'];
 
 export const MESSAGES_DIR = path.join(PROJECT_SIGMA_DIR, 'messages');
 export const MESSAGES_INDEX_FILE = path.join(MESSAGES_DIR, 'index.json');
 export const MESSAGES_ATTACHMENTS_DIR = path.join(MESSAGES_DIR, 'attachments');
 export const MESSAGE_SUBFOLDERS = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR', 'attachments'];
+
+export const REFERENCE_DIR = path.join(PROJECT_SIGMA_DIR, 'reference');
+export const REFERENCE_LIST_FILE = path.join(REFERENCE_DIR, 'reference-list.md');
+export const REFERENCE_DATA_DIR = path.join(REFERENCE_DIR, 'data');
 
 export const VALID_ROLES = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR'] as const;
 export type SigmaRole = typeof VALID_ROLES[number];

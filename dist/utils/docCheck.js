@@ -16,6 +16,7 @@ const DOC_SPECS = {
         fallbackPath: path_1.default.join('Sigma', 'design', 'DIR-INTENT.md'),
         requiredSections: [
             'INTENT_CORE',
+            'COMPREHENSIVE_RESEARCH',
             'SUCCESS_DEFINITION',
             'QUALITY_BAR',
             'STRATEGIC_TRADE_OFFS',

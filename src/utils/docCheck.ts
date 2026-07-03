@@ -42,6 +42,7 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
     fallbackPath: path.join('Sigma', 'design', 'DIR-INTENT.md'),
     requiredSections: [
       'INTENT_CORE',
+      'COMPREHENSIVE_RESEARCH',
       'SUCCESS_DEFINITION',
       'QUALITY_BAR',
       'STRATEGIC_TRADE_OFFS',

@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-05-29T23:56:24.406Z",
+  "generated_at": "2026-07-03T17:44:56.000Z",
   "description": "Sigma Document Registry — permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE) are tracked in progress.json, not here.",
-  "total_documents": 16,
+  "total_documents": 17,
   "authority_model": {
     "description": "Two separate, non-conflatable authority axes.",
     "semantic_authority": {
@@ -285,7 +285,7 @@
       "mandatory_when": [
         "artifact_creation"
       ],
-      "description": "Canonical Markdown templates for all Sigma artifacts and CSO. Five files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, CSO-TEMPLATE.md. Phase 3 CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma cso new.",
+      "description": "Canonical Markdown templates for all Sigma artifacts, CSO, MSG, and the Reference List. Eight files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, ROADMAP-TEMPLATE.md, CSO-TEMPLATE.md, MSG-TEMPLATE.md, REFERENCE-LIST-TEMPLATE.md. CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma roadmap new, sigma cso new, sigma send, and the one-time sigma project start / sigma reference update scaffolding of reference-list.md.",
       "tolerate_missing": true,
       "missing_behavior": "Warn on artifact creation commands; CLI may fall back to inline templates if folder is missing."
     },
@@ -302,6 +302,21 @@
       "description": "Director-scoped project configuration. Stores interaction_language and document_language preferences. Absent until first sigma config set; CLI defaults to English (en/en) when file is missing. Written by: sigma config set. Read by: sigma session bootstrap, sigma config show.",
       "tolerate_missing": true,
       "missing_behavior": "Default to English for both document and interaction language."
+    },
+    {
+      "document_id": "reference_list",
+      "file": "reference/reference-list.md",
+      "location": "Sigma/",
+      "authority_tier": "agent_config",
+      "owner": "Director",
+      "lifecycle": "project-wide, cumulative — created once by sigma project start; never versioned per DIR-INTENT",
+      "mandatory_when": [
+        "comprehensive_research_needed",
+        "artifact_creation"
+      ],
+      "description": "Project-wide source index for DIR-INTENT's Comprehensive Research section. Three tables (Local Artifact, Website Link, Online Source Data), each row carrying an ID (LA/WL/OS + sequential number) that DIR-INTENT cites by ID only. Local Artifact rows are synced from Sigma/reference/data/ via sigma reference update, which also auto-assigns the next LA id; Website Link and Online Source Data rows are always manual. Not tracked in progress.json — no lifecycle state, no lock, no gate.",
+      "tolerate_missing": true,
+      "missing_behavior": "sigma reference update self-heals a missing file by scaffolding it from REFERENCE-LIST-TEMPLATE.md before syncing."
     }
   ]
 }

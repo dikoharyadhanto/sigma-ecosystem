@@ -18,6 +18,7 @@ import { configCommand } from './commands/config';
 import { syncCommand } from './commands/sync';
 import { memoryCommand } from './commands/memory';
 import { doctorCommand } from './commands/doctor';
+import { referenceCommand } from './commands/reference';
 
 const program = new Command();
 
@@ -44,6 +45,7 @@ program.addCommand(configCommand());
 program.addCommand(syncCommand());
 program.addCommand(memoryCommand());
 program.addCommand(doctorCommand());
+program.addCommand(referenceCommand());
 
 program.on('command:*', (operands: string[]) => {
   console.error(`Unknown command: sigma ${operands.join(' ')}`);

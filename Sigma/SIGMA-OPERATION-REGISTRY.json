@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-06-02T16:05:54.932Z",
+  "generated_at": "2026-07-03T17:44:56.000Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 61,
+  "total_operations": 62,
   "domains": [
     "close",
     "config",
@@ -17,6 +17,7 @@
     "override",
     "plan",
     "project",
+    "reference",
     "roadmap",
     "send",
     "session",
@@ -232,6 +233,33 @@
       },
       "error_messages": {
         "not_found": "No Sigma project found. Run: sigma project start"
+      }
+    },
+    {
+      "operation_id": "reference_update",
+      "domain": "reference",
+      "action": "update",
+      "level": "semantic",
+      "role": "any",
+      "description": "Sync the Local Artifact table in Sigma/reference/reference-list.md from files found in Sigma/reference/data/. Top-level only — a folder in data/ is recorded as one row, not walked recursively. Auto-assigns the next sequential LA id. Never modifies existing rows (Category/Notes stay manual). Flags, but does not delete, rows whose file no longer exists on disk. Self-heals a missing reference-list.md by scaffolding it from REFERENCE-LIST-TEMPLATE.md first.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "file",
+          "description": "Sigma/reference/reference-list.md — new Local Artifact rows appended, or file scaffolded from template if missing"
+        }
+      ],
+      "constraints": [
+        "Only the Local Artifact table is synced; Website Link and Online Source Data rows are always manual",
+        "Category and Notes are never auto-filled — left as [...] placeholders on new rows",
+        "Not tracked in progress.json — no gate, no lock state"
+      ],
+      "gating": {
+        "pre_condition": "none",
+        "post_condition": "Local Artifact table rows added for any new top-level files/folders in Sigma/reference/data/; missing-file warnings printed for stale rows"
+      },
+      "error_messages": {
+        "malformed_table": "reference-list.md Local Artifact table is malformed (missing header/separator row)."
       }
     },
     {

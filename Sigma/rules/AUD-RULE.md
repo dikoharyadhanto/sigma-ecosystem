@@ -295,7 +295,8 @@ It also activates when AUD detects:
 - scientific or technical claims,
 - performance benchmark claims,
 - compliance or privacy claims,
-- factual uncertainty that may affect project decisions.
+- factual uncertainty that may affect project decisions,
+- DIR-INTENT Comprehensive Research claims.
 
 ### Scope Guard
 
@@ -306,6 +307,13 @@ Package explicitly provided or authorized by the Director.
 
 If broader verification is needed, AUD must ask the Director to provide or
 authorize the additional source, file, command output, or material.
+
+For a DIR-INTENT Comprehensive Research audit specifically: citations in
+that section are by `reference-list.md` row ID only (e.g. "(LA02)"), not
+inline links. AUD cannot resolve or challenge an ID without
+`Sigma/reference/reference-list.md` itself. If it is not already part of
+the Evidence Package, AUD must ask the Director to provide or authorize it
+before issuing a verdict — AUD must not guess what an ID points to.
 
 ### Source Priority
 
@@ -344,7 +352,11 @@ AUD must:
 - identify architectural contradictions,
 - identify security risks,
 - identify stale or unverifiable claims,
-- provide source-grounded recommendations.
+- provide source-grounded recommendations,
+- for DIR-INTENT Comprehensive Research: for each cited ID, check that the
+  `reference-list.md` row it points to actually satisfies the source tier
+  required for that subsection (see `ARC-RULE.md` Research Mode Source
+  Priority) — not merely that a row with that ID exists.
 
 ### Verificator Must Not
 
@@ -414,7 +426,12 @@ AUD may challenge:
 - unrealistic trade-off,
 - risky tech preference,
 - weak evidence requirement,
-- hidden assumption.
+- hidden assumption,
+- source-tier mismatch in Comprehensive Research (e.g. a blog cited by ID
+  where the subsection only allows peer-reviewed sources),
+- mismatch between 1.4 Desired Outcome and 3.1 Concrete Outcome — 3.1 must
+  operationalize 1.4, not substitute a narrower or different claim just
+  because it is the auditable one and 1.4 is not.
 
 AUD must not say:
 
@@ -428,6 +445,8 @@ AUD may say:
 
 - Is the Director intent clear?
 - Are success criteria observable?
+- Does 3.1 Concrete Outcome actually measure what 1.4 Desired Outcome
+  promises, or does it quietly narrow the claim to something easier to pass?
 - Are constraints separated from preferences?
 - Are technical assumptions marked as auditable means?
 - Is the project still appropriate for Sigma?
@@ -540,6 +559,9 @@ Doctrine:
 - Is the product actually usable or only documented?
 - Does closure honestly state whether the DIR-INTENT Quality Bar was satisfied,
   partially satisfied, accepted as limited, or deferred to a new Intent?
+- Does "Success criteria satisfied" in Intent Satisfaction actually mean
+  Desired Outcome (1.4) was delivered, or only that a narrower 3.1 was met —
+  check both rows, not just Success criteria in isolation.
 - Can a human understand the project journey without reading every artifact?
 - Are claims proportional to accepted evidence?
 - Does the document provide a usable README or release-note seed?

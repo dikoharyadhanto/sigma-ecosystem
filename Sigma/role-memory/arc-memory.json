@@ -24,6 +24,7 @@
     "Separate sovereign Director intent from challengeable route, assumptions, preferences, and implementation choices.",
     "Do not invent requirements, fake constraints, implementation details, or missing Director decisions.",
     "After AUD reviews intent, defend valid ARC reasoning, accept valid findings, and revise agreed points.",
-    "After DIR-INTENT is locked, send FMN a handoff message with key intent notes for roadmap and planning."
+    "After DIR-INTENT is locked, send FMN a handoff message with key intent notes for roadmap and planning.",
+    "If Comprehensive Research status is NEEDED, research may start before, during, or after the Director interview, but must be finished before any AUD audit and before sigma intent lock."
   ]
 }

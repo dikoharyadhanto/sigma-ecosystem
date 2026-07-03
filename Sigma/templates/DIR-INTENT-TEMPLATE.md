@@ -1,4 +1,4 @@
-<!-- SIGMA:DOC type=DIR_INTENT schema=2 -->
+<!-- SIGMA:DOC type=DIR_INTENT schema=3 -->
 # DIR-INTENT
 
 > **Purpose**: Captures Director intent, strategic constraints, execution direction, auditable assumptions, and minimum evidence requirements for a Sigma project.
@@ -32,31 +32,115 @@
 
 [What should be observably different when this project succeeds?]
 
+> Operationalized as a falsifiable claim in 3.1 Concrete Outcome. That
+> field must measure this outcome, not a narrower or different one.
+
 ### 1.5 Primary Value Delivered
 
 [The core value this project must deliver.]
 
 ---
 
+<!-- SIGMA:DIR_INTENT:SECTION:COMPREHENSIVE_RESEARCH -->
+## 2. Comprehensive Research
+
+> **Audit Status**: FULL_AUDIT
+> Optional. Mark NEEDED when the Director or ARC is not confident existing
+> knowledge is sufficient to responsibly formulate this Intent, or when
+> Intent must match real-world conditions verified at implementation time,
+> not assumed at design time.
+>
+> General source compass: prefer a primary source over a secondary one
+> whenever available; use a secondary source only when no primary source
+> exists, or to help interpret one.
+>
+> If status is NEEDED, AUD Verificator Mode must review source-tier
+> compliance for the IDs cited below before `sigma intent lock` — see
+> Section 13.
+
+### 2.1 Status
+
+- [ ] NEEDED
+- [ ] NOT_NEEDED
+
+If NOT_NEEDED, skip to Section 3. State briefly why existing knowledge is sufficient:
+
+[...]
+
+> Example: "Standard CRUD admin panel using patterns already proven elsewhere
+> in this codebase. No new theory, methodology, or unverified real-world
+> assumption is involved."
+
+### 2.2 Theory and Concept
+
+> Sources: peer-reviewed international research journals or academic/scholarly books only. No general websites, forums, Wikipedia, or similar.
+
+[The conceptual or theoretical grounding required before this Intent can be trusted. Reference ASM-ID/REQ-ID where applicable.]
+
+> Example: "The Rational Method (Kirpich, 1940) is the accepted standard for
+> peak runoff estimation in small urban catchments (<200 ha) (WL01). This
+> grounds ASM-002 (rainfall-runoff assumption)."
+>
+> Cite by reference-list.md row ID only (e.g. "(WL01)") — do not re-explain
+> where to look or repeat the link inline.
+
+### 2.3 Issue, Problem, and Real-World Data
+
+> Sources: open. Prefer research journals, forums, news reporting, or official reports/documentation from the relevant official website.
+
+[Real-world evidence of the problem — incidents, user reports, measured pain — not assumed pain.]
+
+> Example: "BPS flood-incident records show 14 events in the target
+> sub-district over the last 5 years, averaging Rp 2.1B in damage per event
+> (LA02). This substantiates the Problem Being Solved stated in Intent Core —
+> it is measured pain, not assumed pain."
+
+### 2.4 Methodology
+
+> Sources: official documentation from the official/authoritative website (preferred), or a reputable technical Q&A community (e.g. Stack Overflow, GIS Stack Exchange). Nothing outside those two tiers.
+
+[How this investigation was conducted, and how conclusions will be validated during implementation.]
+
+> Example: "Catchment delineation was cross-checked against the official
+> BMKG rainfall API docs (WL02) and GIS Stack Exchange watershed-tool
+> threads (WL03). Conclusions will be re-validated against live BMKG data
+> during DEV-EXEC, not assumed to still hold at implementation time."
+
+### 2.5 Source / Data
+
+> Sources: open. Prefer official data-reporting or data-extraction sources (e.g. Kaggle, BPS, OpenStreetMap, or the domain-equivalent official registry). Download into Sigma/reference/data/ when practical; record in the reference list regardless.
+
+[Brief description of what data was needed, if any. The full source list and any locally saved data live in `Sigma/reference/reference-list.md` — do not duplicate source content here.]
+
+> Example: "Historical rainfall (2019–2023) (LA02) and catchment boundary
+> data (OS01, too large to vendor) were needed for calibration."
+
+---
+
 <!-- SIGMA:DIR_INTENT:SECTION:SUCCESS_DEFINITION -->
-## 2. Success Definition
+## 3. Success Definition
 
 > **Audit Status**: FULL_AUDIT
 > Success criteria must be measurable, observable, or verifiable.
 
-### 2.1 Concrete Outcome
+### 3.1 Concrete Outcome
 
 [Specific observable result.]
 
-### 2.2 Success Threshold
+> Must operationalize 1.4 Desired Outcome — the same destination, made
+> falsifiable. Do not substitute an easier or narrower claim just because
+> this field is fully auditable and 1.4 is not. AUD must flag a mismatch
+> between 1.4 and 3.1 as a finding, not treat 3.1 in isolation.
+
+### 3.2 Success Threshold
 
 [Quantified or binary threshold.]
 
-### 2.3 Measurement Method
+### 3.3 Measurement Method
 
 [How will success be verified?]
 
-### 2.4 Minimum Viable Evidence
+### 3.4 Minimum Viable Evidence
 
 Before this project can close, Sigma must have:
 
@@ -69,7 +153,7 @@ Before this project can close, Sigma must have:
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:QUALITY_BAR -->
-## 3. Quality Bar — Minimum Standard for This Intent
+## 4. Quality Bar — Minimum Standard for This Intent
 
 > **Audit Status**: FULL_AUDIT
 > A feature is not successful merely because it works functionally. It must also satisfy the minimum quality standard selected for this Intent.
@@ -83,68 +167,68 @@ Before this project can close, Sigma must have:
 | UI / Product Packaging | [What must be true for the product to feel coherent and ready for its intended audience?] | [Broken layout, inconsistent copy, debug-like UX, inaccessible critical action, visual mismatch, etc.] | [UI screenshots, responsive check, i18n check, design review, Director walkthrough, etc.] |
 | Performance / Cost | [What must be true for speed, reliability, and cost to be acceptable?] | [Unbounded cost growth, unacceptable latency, no cache/lifecycle policy, hidden quota risk, etc.] | [Timing table, p50/p95, cost worksheet, scale estimate, cache/lifecycle evidence, etc.] |
 
-### 3.1 Quality Notes
+### 4.1 Quality Notes
 
 [Optional. Explain which quality dimensions matter most for this Intent and why.]
 
-### 3.2 Quality Trade-Offs
+### 4.2 Quality Trade-Offs
 
 [Optional. State explicit quality trade-offs, such as stronger security over faster implementation, simpler UI for internal tooling, slower first load if cached interaction is fast, or higher storage cost only if retention is bounded.]
 
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:STRATEGIC_TRADE_OFFS -->
-## 4. Strategic Trade-Offs
+## 5. Strategic Trade-Offs
 
 > **Audit Status**: FULL_AUDIT
 > AUD may challenge whether trade-offs are coherent, feasible, or risky.
 
-### 4.1 Primary Trade-Off
+### 5.1 Primary Trade-Off
 
 We prioritize **[X]** over **[Y]**.
 
-### 4.2 Secondary Trade-Offs
+### 5.2 Secondary Trade-Offs
 
 - We are willing to sacrifice **[X]** to gain **[Y]**.
 - We are willing to sacrifice **[X]** to gain **[Y]**.
 
-### 4.3 Why These Trade-Offs Matter
+### 5.3 Why These Trade-Offs Matter
 
 [How these choices affect scope, architecture, timeline, risk, and evidence.]
 
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:SCOPE_BOUNDARY -->
-## 5. Scope Boundary
+## 6. Scope Boundary
 
 > **Audit Status**: FULL_AUDIT
 > Scope must be explicit enough for FMN to produce execution work without inventing intent.
 
-### 5.1 In Scope
+### 6.1 In Scope
 
 - [Must deliver item 1]
 - [Must deliver item 2]
 
-### 5.2 Out of Scope
+### 6.2 Out of Scope
 
 - [Explicitly deferred item 1]
 - [Explicitly deferred item 2]
 
-### 5.3 Non-Goals
+### 6.3 Non-Goals
 
 We will NOT do the following:
 
 - [Non-goal 1]
 - [Non-goal 2]
 
-### 5.4 Why This Boundary Matters
+### 6.4 Why This Boundary Matters
 
 [What goes wrong if this scope expands?]
 
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:CONSTRAINTS_AND_PREFERENCES -->
-## 6. Constraints & Preferences — Challengeable Means Layer
+## 7. Constraints & Preferences — Challengeable Means Layer
 
 > **Audit Status**: CHALLENGEABLE
 > Director may state preferences here, but AUD may challenge feasibility, risk, cost, mismatch, or hidden trade-offs.
@@ -166,28 +250,28 @@ We will NOT do the following:
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:TECHNICAL_AND_ARCHITECTURE_DIRECTION -->
-## 7. Technical & Architecture Direction
+## 8. Technical & Architecture Direction
 
 > **Audit Status**: FULL_AUDIT
 > Tech stack, architecture, and solution assumptions are auditable means — not sovereign intent.
 
-### 7.1 Preferred Tech Stack
+### 8.1 Preferred Tech Stack
 
 | Layer   | Technology | Reason | Risk / Trade-Off |
 |:------- |:---------- |:------ |:---------------- |
 | [Layer] | [...]      | [...]  | [...]            |
 
-### 7.2 Architecture Direction
+### 8.2 Architecture Direction
 
 [High-level architecture or product structure.]
 
-### 7.3 Solution Assumptions
+### 8.3 Solution Assumptions
 
 | Assumption ID | Assumption | Confidence          | What if wrong? |
 |:------------- |:---------- |:------------------- |:-------------- |
 | ASM-001       | [...]      | Low / Medium / High | [...]          |
 
-### 7.4 Explicitly Rejected Approaches
+### 8.4 Explicitly Rejected Approaches
 
 | Rejected Option | Reason Rejected | Trade-Off Accepted |
 |:--------------- |:--------------- |:------------------ |
@@ -196,7 +280,7 @@ We will NOT do the following:
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:FUNCTIONAL_REQUIREMENTS -->
-## 8. Functional Requirements
+## 9. Functional Requirements
 
 > **Audit Status**: FULL_AUDIT
 > FMN uses this section to create the FMN-PLAN task plan and test contract.
@@ -227,12 +311,12 @@ As a [role], I want to [action], so that [benefit].
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:RISK_AND_FAILURE_DEFINITION -->
-## 9. Risk & Failure Definition
+## 10. Risk & Failure Definition
 
 > **Audit Status**: FULL_AUDIT
 > Risks should be practical, not decorative.
 
-### 9.1 Risk Appetite
+### 10.1 Risk Appetite
 
 | Risk Type           | Tolerance           |
 |:------------------- |:------------------- |
@@ -240,7 +324,7 @@ As a [role], I want to [action], so that [benefit].
 | Degraded Capability | Low / Medium / High |
 | Unknowns            | Low / Medium / High |
 
-### 9.2 Primary Failure Concern
+### 10.2 Primary Failure Concern
 
 **The Failure**:
 [Worst realistic outcome to avoid.]
@@ -251,13 +335,13 @@ As a [role], I want to [action], so that [benefit].
 **Guardrail / Mitigation**:
 [How we reduce the chance or impact.]
 
-### 9.3 Risk Register
+### 10.3 Risk Register
 
 | Risk ID | Classification            | Description | Impact | Mitigation | Accepted?              |
 |:------- |:------------------------- |:----------- |:------ |:---------- |:---------------------- |
 | RR-001  | Fatal / Degrading / Noise | [...]       | [...]  | [...]      | Yes / No / Conditional |
 
-### 9.4 Failure Definition
+### 10.4 Failure Definition
 
 - **Project Failure**: [...]
 - **Build Blocker**: [...]
@@ -266,18 +350,18 @@ As a [role], I want to [action], so that [benefit].
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:EXECUTION_DIRECTION_FOR_FMN -->
-## 10. Execution Direction for FMN
+## 11. Execution Direction for FMN
 
 > **Audit Status**: FULL_AUDIT
 > This section tells FMN how to convert intent into execution. Replaces ARC-PLAN — Sigma does not have a separate ARC artifact.
 
-### 10.1 Execution Focus
+### 11.1 Execution Focus
 
 | Focus Area | Why It Matters | Watch-Out |
 |:---------- |:-------------- |:--------- |
 | [...]      | [...]          | [...]     |
 
-### 10.2 FMN Must Produce
+### 11.2 FMN Must Produce
 
 The first `FMN-PLAN` must include:
 
@@ -289,7 +373,7 @@ The first `FMN-PLAN` must include:
 - [ ] Implementation Report section
 - [ ] Evidence Summary
 
-### 10.3 FMN Must Preserve Quality Bar
+### 11.3 FMN Must Preserve Quality Bar
 
 The first `FMN-PLAN` must explicitly carry forward:
 
@@ -298,7 +382,7 @@ The first `FMN-PLAN` must explicitly carry forward:
 - [ ] UI / Product Packaging minimum standard and evidence requirement
 - [ ] Performance / Cost minimum standard and evidence requirement
 
-### 10.4 DEV Must Not
+### 11.4 DEV Must Not
 
 - [Forbidden implementation behavior]
 - [Out-of-scope expansion]
@@ -307,18 +391,18 @@ The first `FMN-PLAN` must explicitly carry forward:
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:AUD_FINDINGS_ADVISORY_ONLY -->
-## 11. AUD Findings — Advisory Only
+## 12. AUD Findings — Advisory Only
 
 > **Audit Status**: ADVISORY
 > AUD findings support Director judgment. They do not approve, reject, lock, or block runtime state.
 
-### 11.1 AUD Review Scope
+### 12.1 AUD Review Scope
 
-AUD may review: intent clarity, scope consistency, technical feasibility, architecture assumptions, risk coverage, success criteria, evidence sufficiency, route vs destination alignment.
+AUD may review: intent clarity, scope consistency, technical feasibility, architecture assumptions, risk coverage, success criteria, evidence sufficiency, route vs destination alignment, and — when Comprehensive Research status is NEEDED — source-tier compliance for each cited `reference-list.md` ID (provide `Sigma/reference/reference-list.md` as part of AUD's Evidence Package for this check).
 
 AUD may not: replace Director intent, re-rank Director values, or treat advisory findings as runtime approval.
 
-### 11.2 AUD Advisory Verdict
+### 12.2 AUD Advisory Verdict
 
 **Verdict**:
 
@@ -344,11 +428,13 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:FINAL_VALIDATION_CHECKLIST -->
-## 12. Final Validation Checklist
+## 13. Final Validation Checklist
 
 > Complete this checklist before running `sigma intent lock`.
 
 - [ ] Intent Core is clear enough to guide execution.
+- [ ] If Comprehensive Research status = NEEDED, all four subsections are filled or explicitly marked N/A, and `reference-list.md` has real entries for this intent's research — not just leftover entries from earlier work.
+- [ ] If Comprehensive Research status = NEEDED, AUD Verificator Mode has reviewed source-tier compliance for the cited IDs and recorded a verdict in Section 12 — or the Director has explicitly accepted the risk of locking without that review.
 - [ ] Scope in/out is explicit.
 - [ ] Success criteria are observable or measurable.
 - [ ] Security minimum standard is stated or explicitly marked not applicable.

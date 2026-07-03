@@ -11,6 +11,7 @@ const inquirer_1 = __importDefault(require("inquirer"));
 const config_1 = require("../config");
 const mcp_1 = require("../utils/mcp");
 const roleMemory_1 = require("../engine/roleMemory");
+const artifacts_1 = require("../utils/artifacts");
 const progress_1 = require("../engine/progress");
 const projectConfig_1 = require("../engine/projectConfig");
 const output_1 = require("../utils/output");
@@ -122,6 +123,9 @@ async function runStart(opts) {
     for (const sub of config_1.SUBFOLDERS) {
         (0, fs_1.ensureDir)(path_1.default.join(sigmaDir, sub));
     }
+    // Scaffold the project-wide reference list (Comprehensive Research source index)
+    (0, artifacts_1.copyTemplateToArtifact)('REFERENCE-LIST-TEMPLATE.md', path_1.default.join(projectRoot, config_1.REFERENCE_LIST_FILE));
+    console.log('  Reference: Sigma/reference/reference-list.md initialized.');
     // Copy governance documents
     const constitution = path_1.default.join(config_1.GLOBAL_GOVERNANCE_DIR, 'SIGMA_CONSTITUTION.md');
     const protocol = path_1.default.join(config_1.GLOBAL_GOVERNANCE_DIR, 'SIGMA_PROTOCOL.md');

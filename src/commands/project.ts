@@ -12,9 +12,11 @@ import {
   MESSAGES_DIR,
   MESSAGES_INDEX_FILE,
   MESSAGE_SUBFOLDERS,
+  REFERENCE_LIST_FILE,
 } from '../config';
 import { writeMcpJson, writeVscodeMcpJson } from '../utils/mcp';
 import { getBundledRoleMemoryDir } from '../engine/roleMemory';
+import { copyTemplateToArtifact } from '../utils/artifacts';
 import {
   readProgress,
   writeProgress,
@@ -166,6 +168,10 @@ async function runStart(opts: {
   for (const sub of SUBFOLDERS) {
     ensureDir(path.join(sigmaDir, sub));
   }
+
+  // Scaffold the project-wide reference list (Comprehensive Research source index)
+  copyTemplateToArtifact('REFERENCE-LIST-TEMPLATE.md', path.join(projectRoot, REFERENCE_LIST_FILE));
+  console.log('  Reference: Sigma/reference/reference-list.md initialized.');
 
   // Copy governance documents
   const constitution = path.join(GLOBAL_GOVERNANCE_DIR, 'SIGMA_CONSTITUTION.md');
