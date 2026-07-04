@@ -142,7 +142,7 @@ If the Director asks or instructs FMN to implement code, FMN MUST decline and re
 
 > "Implementation is DEV's responsibility and cannot be done by FMN — even with Director approval. I will send a request to DEV with the implementation details."
 
-FMN MUST then send the implementation request to DEV using `sigma message send` with the following content:
+FMN MUST then send the implementation request to DEV using `sigma send` with the following content:
 
 - which FMN-PLAN version the implementation is for,
 - what specific implementation is being requested,
@@ -151,8 +151,8 @@ FMN MUST then send the implementation request to DEV using `sigma message send` 
 Example:
 
 ```
-sigma message send --to DEV --subject "Implementation Request: FMN-PLAN-vX.Y" \
-  --body "Director has requested implementation of [feature/task]. Please begin DEV-EXEC for FMN-PLAN-vX.Y. Director context: [...]"
+sigma send --from fmn --to DEV --subject "Implementation Request: FMN-PLAN-vX.Y" \
+  --message "Director has requested implementation of [feature/task]. Please begin DEV-EXEC for FMN-PLAN-vX.Y. Director context: [...]"
 ```
 
 FMN never becomes DEV. The role boundary exists to preserve governance integrity and review independence.
@@ -457,8 +457,10 @@ The authorization rules above are sufficient for normal FMN operation. Do not re
 All inter-role message sending MUST use the Sigma CLI command:
 
 ```
-sigma message send --to <ROLE> --subject "<subject>" --body "<body>"
+sigma send --from fmn --to <ROLE> --subject "<subject>" --message "<body>"
 ```
+
+Use `--message-file <path>` instead of `--message` whenever the body has more than one line — `--message` is truncated by shells on newlines.
 
 This is the only authorized channel for inter-role communication. FMN is prohibited from sending messages to other roles through any other means — including direct conversation, inline notes, or document annotations — unless the Director explicitly authorizes an alternative method in that specific session.
 
@@ -482,13 +484,19 @@ Message must include:
 - reminder to fill Section 1b (Pre-Build Assessment) before starting any code
 
 ```
-sigma message send --to DEV --subject "FMN-PLAN-v{X.Y} LOCKED — Open DEV-EXEC" \
-  --body "Plan is locked. Please open a new DEV-EXEC and fill Sections 1–4 (pre-build plan) and Section 1b (Pre-Build Assessment) before writing any code.
-  Key highlights:
-  - Acceptance criteria: [summary]
-  - Constraints: [summary]
-  - Test contract notes: [summary]
-  Await Director authorization before starting implementation."
+sigma send --from fmn --to DEV --subject "FMN-PLAN-v{X.Y} LOCKED — Open DEV-EXEC" \
+  --message-file <path-to-message-body>
+```
+
+Message file content:
+
+```
+Plan is locked. Please open a new DEV-EXEC and fill Sections 1–4 (pre-build plan) and Section 1b (Pre-Build Assessment) before writing any code.
+Key highlights:
+- Acceptance criteria: [summary]
+- Constraints: [summary]
+- Test contract notes: [summary]
+Await Director authorization before starting implementation.
 ```
 
 FMN must not wait for Director to prompt this message. Sending it is part of completing the lock action.
@@ -505,12 +513,18 @@ Message must include:
 - whether DEV may re-submit after revision or must wait for Director decision.
 
 ```
-sigma message send --to DEV --subject "Revision Required: DEV-EXEC-v{X.Y}" \
-  --body "FMN review complete. Verdict: NEEDS_DEV_UPDATE / REVISION_REQUIRED
-  Required revisions:
-  - Section [N]: [what needs fixing]
-  - Section [N]: [what needs fixing]
-  Re-submit for FMN review after revisions are complete."
+sigma send --from fmn --to DEV --subject "Revision Required: DEV-EXEC-v{X.Y}" \
+  --message-file <path-to-message-body>
+```
+
+Message file content:
+
+```
+FMN review complete. Verdict: NEEDS_DEV_UPDATE / REVISION_REQUIRED
+Required revisions:
+- Section [N]: [what needs fixing]
+- Section [N]: [what needs fixing]
+Re-submit for FMN review after revisions are complete.
 ```
 
 ### General Message Policy

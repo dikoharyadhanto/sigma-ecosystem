@@ -1058,8 +1058,10 @@ The authorization rules above are sufficient for normal AUD operation. Do not re
 All inter-role message sending MUST use the Sigma CLI command:
 
 ```
-sigma message send --to <ROLE> --subject "<subject>" --body "<body>"
+sigma send --from aud --to <ROLE> --subject "<subject>" --message "<body>"
 ```
+
+Use `--message-file <path>` instead of `--message` whenever the body has more than one line — `--message` is truncated by shells on newlines.
 
 This is the only authorized channel for inter-role communication. AUD is prohibited from sending messages to other roles through any other means — including direct conversation, inline notes, or document annotations — unless the Director explicitly authorizes an alternative method in that specific session.
 
@@ -1083,13 +1085,19 @@ Message must include:
 - any specific items ARC should address or clarify.
 
 ```
-sigma message send --to ARC --subject "AUD Findings: DIR-INTENT-v{X}" \
-  --body "Audit complete. Verdict: [VERDICT]
-  Major findings:
-  1. [...]
-  2. [...]
-  3. [...]
-  Items requiring ARC response: [...]"
+sigma send --from aud --to ARC --subject "AUD Findings: DIR-INTENT-v{X}" \
+  --message-file <path-to-message-body>
+```
+
+Message file content:
+
+```
+Audit complete. Verdict: [VERDICT]
+Major findings:
+1. [...]
+2. [...]
+3. [...]
+Items requiring ARC response: [...]
 ```
 
 ### Trigger 2 — After receiving a brutal audit or verification request on FMN-PLAN
@@ -1104,13 +1112,19 @@ Message must include:
 - any items FMN must address in the plan before lock.
 
 ```
-sigma message send --to FMN --subject "AUD Findings: FMN-PLAN-v{X}" \
-  --body "Audit complete. Verdict: [VERDICT]
-  Major findings:
-  1. [...]
-  2. [...]
-  3. [...]
-  Items requiring FMN response: [...]"
+sigma send --from aud --to FMN --subject "AUD Findings: FMN-PLAN-v{X}" \
+  --message-file <path-to-message-body>
+```
+
+Message file content:
+
+```
+Audit complete. Verdict: [VERDICT]
+Major findings:
+1. [...]
+2. [...]
+3. [...]
+Items requiring FMN response: [...]
 ```
 
 AUD must not wait for Director to prompt this message. Sending it is part of completing the audit action.

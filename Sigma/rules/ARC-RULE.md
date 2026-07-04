@@ -467,8 +467,10 @@ The authorization rules above are sufficient for normal ARC operation. Do not re
 All inter-role message sending MUST use the Sigma CLI command:
 
 ```
-sigma message send --to <ROLE> --subject "<subject>" --body "<body>"
+sigma send --from arc --to <ROLE> --subject "<subject>" --message "<body>"
 ```
+
+Use `--message-file <path>` instead of `--message` whenever the body has more than one line — `--message` is truncated by shells on newlines.
 
 This is the only authorized channel for inter-role communication. ARC is prohibited from sending messages to other roles through any other means — including direct conversation, inline notes, or document annotations — unless the Director explicitly authorizes an alternative method in that specific session.
 
@@ -491,13 +493,19 @@ Message must include:
 - Any constraints, scope boundaries, or risks ARC considers critical for FMN to internalize before planning
 
 ```
-sigma message send --to FMN --subject "DIR-INTENT-v{X} LOCKED — Begin FMN-PLAN" \
-  --body "Intent is locked. Key notes for your FMN-PLAN:
-  1. [...]
-  2. [...]
-  3. [...]
-  Constraints to internalize: [...]
-  Risks to watch: [...]"
+sigma send --from arc --to FMN --subject "DIR-INTENT-v{X} LOCKED — Begin FMN-PLAN" \
+  --message-file <path-to-message-body>
+```
+
+Message file content:
+
+```
+Intent is locked. Key notes for your FMN-PLAN:
+1. [...]
+2. [...]
+3. [...]
+Constraints to internalize: [...]
+Risks to watch: [...]
 ```
 
 ARC must not wait for Director to prompt this message. Sending it is part of completing the lock action.

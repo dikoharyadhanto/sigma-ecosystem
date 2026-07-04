@@ -617,8 +617,10 @@ The authorization rules above are sufficient for normal DEV operation. Do not re
 All inter-role message sending MUST use the Sigma CLI command:
 
 ```
-sigma message send --to <ROLE> --subject "<subject>" --body "<body>"
+sigma send --from dev --to <ROLE> --subject "<subject>" --message "<body>"
 ```
+
+Use `--message-file <path>` instead of `--message` whenever the body has more than one line — `--message` is truncated by shells on newlines.
 
 This is the only authorized channel for inter-role communication. DEV is prohibited from sending messages to other roles through any other means — including direct conversation, inline notes, or document annotations — unless the Director explicitly authorizes an alternative method in that specific session.
 
@@ -641,11 +643,17 @@ Message must include:
 - DEV's current understanding or tentative assumption for each item (so FMN can confirm or correct).
 
 ```
-sigma message send --to FMN --subject "Clarification Needed: DEV-EXEC-v{X.Y} Pre-Build Assessment" \
-  --body "Section 1b status: NEED_CLARIFICATION. Implementation plan (Sections 2–4) is drafted based on current understanding but awaiting your response before coding starts.
-  Open items:
-  1. [item] — DEV's current assumption: [...]
-  2. [item] — DEV's current assumption: [...]"
+sigma send --from dev --to FMN --subject "Clarification Needed: DEV-EXEC-v{X.Y} Pre-Build Assessment" \
+  --message-file <path-to-message-body>
+```
+
+Message file content:
+
+```
+Section 1b status: NEED_CLARIFICATION. Implementation plan (Sections 2–4) is drafted based on current understanding but awaiting your response before coding starts.
+Open items:
+1. [item] — DEV's current assumption: [...]
+2. [item] — DEV's current assumption: [...]
 ```
 
 DEV must not start any implementation code until FMN responds and Director re-authorizes.
@@ -662,11 +670,17 @@ Message must include:
 - explicit request for FMN review of Sections 1–4 before Director authorizes build start.
 
 ```
-sigma message send --to FMN --subject "Pre-Build Review Request: DEV-EXEC-v{X.Y}" \
-  --body "Sections 1–4 and Section 1b complete. Status: CLEAR. Ready for pre-build review.
-  Approach summary: [...]
-  Flagged risks: [...]
-  Please review and advise Director on whether to authorize implementation."
+sigma send --from dev --to FMN --subject "Pre-Build Review Request: DEV-EXEC-v{X.Y}" \
+  --message-file <path-to-message-body>
+```
+
+Message file content:
+
+```
+Sections 1–4 and Section 1b complete. Status: CLEAR. Ready for pre-build review.
+Approach summary: [...]
+Flagged risks: [...]
+Please review and advise Director on whether to authorize implementation.
 ```
 
 ### Trigger 3 — When DEV completes implementation and requests FMN post-build review and test
@@ -682,11 +696,17 @@ Message must include:
 - explicit request for FMN to run the post-build test contract and fill Section 13.
 
 ```
-sigma message send --to FMN --subject "Post-Build Review Request: DEV-EXEC-v{X.Y}" \
-  --body "Implementation complete. DEV advisory status: [IMPLEMENTED / PARTIALLY_IMPLEMENTED / NEEDS_FMN_REVIEW]
-  Summary: [...]
-  Deviations from FMN-PLAN: [none / list]
-  Please conduct post-build review, run test contract, and fill DEV-EXEC Section 13 (FMN Review)."
+sigma send --from dev --to FMN --subject "Post-Build Review Request: DEV-EXEC-v{X.Y}" \
+  --message-file <path-to-message-body>
+```
+
+Message file content:
+
+```
+Implementation complete. DEV advisory status: [IMPLEMENTED / PARTIALLY_IMPLEMENTED / NEEDS_FMN_REVIEW]
+Summary: [...]
+Deviations from FMN-PLAN: [none / list]
+Please conduct post-build review, run test contract, and fill DEV-EXEC Section 13 (FMN Review).
 ```
 
 DEV must not wait for Director to prompt this message. Sending it is part of completing the implementation.
