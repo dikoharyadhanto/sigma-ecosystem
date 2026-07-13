@@ -3,6 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.validateProjectId = validateProjectId;
+exports.validateProjectName = validateProjectName;
 exports.projectCommand = projectCommand;
 const commander_1 = require("commander");
 const fs_extra_1 = __importDefault(require("fs-extra"));
@@ -342,42 +344,6 @@ function runSync(opts) {
     }
     console.log(`  Backup saved to: ${backupDir}`);
 }
-// ── sigma project reset ───────────────────────────────────────────────────────
-function runReset(opts) {
-    if (!opts.confirm) {
-        (0, output_1.error)('--confirm is required. This operation resets project state. Pass --confirm to proceed.');
-    }
-    const projectRoot = (0, fs_1.findProjectRoot)();
-    const sigmaDir = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR);
-    const logsDir = path_1.default.join(sigmaDir, 'logs');
-    const progressPath = path_1.default.join(sigmaDir, 'progress.json');
-    // Read existing to preserve project_id and project_name
-    const existing = (0, progress_1.readProgress)(projectRoot);
-    (0, fs_1.ensureDir)(logsDir);
-    const backed = (0, fs_1.backupFile)(progressPath, logsDir);
-    (0, output_1.warn)(`progress.json backed up to: ${backed}`);
-    const fresh = (0, progress_1.createInitialProgress)(existing.project_id, existing.project_name);
-    fs_extra_1.default.writeJsonSync(progressPath, fresh, { spaces: 2 });
-    if (opts.wipe) {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const archiveDir = path_1.default.join(logsDir, `reset-archive-${timestamp}`);
-        (0, fs_1.ensureDir)(archiveDir);
-        for (const folder of ['design', 'build', 'close']) {
-            const src = path_1.default.join(sigmaDir, folder);
-            if ((0, fs_1.fileExists)(src)) {
-                fs_extra_1.default.copySync(src, path_1.default.join(archiveDir, folder));
-                fs_extra_1.default.emptyDirSync(src);
-                console.log(`  Archived and cleared: ${folder}/`);
-            }
-        }
-        (0, output_1.success)('Project hard reset complete. Artifact files archived.');
-        console.log(`  Archive: ${archiveDir}`);
-    }
-    else {
-        (0, output_1.success)('Project soft reset complete. Artifact files preserved.');
-    }
-    console.log('  progress.json reset to initial state.');
-}
 // ── sigma project register ────────────────────────────────────────────────────
 function runRegister() {
     if (!(0, fs_1.fileExists)(config_1.GLOBAL_PROJECTS_FILE)) {
@@ -426,19 +392,6 @@ function projectCommand() {
         .action((opts) => {
         try {
             runSync(opts);
-        }
-        catch (e) {
-            (0, output_1.error)(e.message);
-        }
-    });
-    cmd
-        .command('reset')
-        .description('Reset project state (soft or archive)')
-        .option('--confirm', 'Required — confirms the reset')
-        .option('--wipe', 'Archive and clear artifact folders (design/, build/, close/)')
-        .action((opts) => {
-        try {
-            runReset(opts);
         }
         catch (e) {
             (0, output_1.error)(e.message);

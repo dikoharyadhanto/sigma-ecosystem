@@ -1,29 +1,23 @@
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
-import { readProgress, writeProgress, ProgressJson } from '../engine/progress';
+import { readProgress, writeProgress, ProgressJson, OverrideEntry } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
-
-const OVERRIDE_LOG_FILE = path.join('Sigma', 'memory', 'overrides.jsonl');
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface OverrideEntry {
-  type: 'override';
-  timestamp: string;
-  artifact: string;
-  phase: string;
-  gate_bypassed: string;
-  reason: string;
-  authorized_by: 'Director';
-}
+import { OVERRIDES_FILE } from '../config';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function appendOverrideEntry(projectRoot: string, entry: OverrideEntry): void {
-  const filePath = path.join(projectRoot, OVERRIDE_LOG_FILE);
+  const filePath = path.join(projectRoot, OVERRIDES_FILE);
   fs.ensureFileSync(filePath);
   fs.appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf8');
+}
+
+function versionForArtifact(data: ProgressJson, artifact: string): string | null {
+  if (artifact === 'DIR-INTENT') return data.intent.active_version;
+  if (artifact === 'FMN-PLAN') return data.plan.active_version;
+  if (artifact === 'DEV-EXEC') return data.exec.active_version;
+  return null;
 }
 
 function describeBlockedGate(data: ProgressJson): { artifact: string; gate: string; description: string } | null {
@@ -110,6 +104,7 @@ function runOverride(opts: { reason?: string; dryRun?: boolean; directorConfirm?
     gate_bypassed: blocked.gate,
     reason,
     authorized_by: 'Director',
+    version: versionForArtifact(data, blocked.artifact),
   };
 
   applyOverride(data, blocked.artifact);

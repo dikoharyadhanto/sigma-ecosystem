@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { PROGRESS_FILE, SCHEMA_VERSION } from '../config';
+import { PROGRESS_FILE, OVERRIDES_FILE, SCHEMA_VERSION } from '../config';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,6 +74,19 @@ export interface InvalidMarker {
 export interface RuntimeInvalidState {
   markers: InvalidMarker[];
   last_doctor_run_at: string | null;
+}
+
+export interface OverrideEntry {
+  type: 'override';
+  timestamp: string;
+  artifact: string;
+  phase: string;
+  gate_bypassed: string;
+  reason: string;
+  authorized_by: 'Director';
+  // Version of the tracker's active entry at the time the gate was bypassed.
+  // Missing/null on entries written before this field existed.
+  version?: string | null;
 }
 
 export interface ProgressJson {
@@ -241,7 +254,7 @@ function validateTracker(data: ProgressJson, domain: ArtifactDomain): void {
   }
 }
 
-function hasActiveLockedIntent(data: ProgressJson): boolean {
+export function hasActiveLockedIntent(data: ProgressJson): boolean {
   return data.intent.versions.some(v => v.state === 'LOCKED');
 }
 
@@ -249,7 +262,7 @@ function hasActiveLockedPlan(data: ProgressJson): boolean {
   return data.plan.versions.some(v => v.state === 'LOCKED');
 }
 
-function hasCleanGate2Chain(data: ProgressJson): boolean {
+export function hasCleanGate2Chain(data: ProgressJson): boolean {
   return data.plan.versions.some(
     v => v.state === 'LOCKED' &&
       !v.stale_intent &&
@@ -260,7 +273,7 @@ function hasCleanGate2Chain(data: ProgressJson): boolean {
   );
 }
 
-function hasCleanGate3Chain(data: ProgressJson): boolean {
+export function hasCleanGate3Chain(data: ProgressJson): boolean {
   const activeExec = data.exec.versions.find(
     v => v.version === data.exec.active_version && v.state === 'LOCKED'
   );
@@ -276,6 +289,55 @@ function hasCleanGate3Chain(data: ProgressJson): boolean {
   return data.intent.versions.some(
     v => v.version === referencedPlan.intent_version_ref && v.state === 'LOCKED'
   );
+}
+
+function artifactDomainFor(artifact: string): ArtifactDomain | null {
+  switch (artifact) {
+    case 'DIR-INTENT': return 'intent';
+    case 'FMN-PLAN': return 'plan';
+    case 'DEV-EXEC': return 'exec';
+    default: return null;
+  }
+}
+
+// An override stays in force only until the artifact it bypassed is resolved
+// by the normal flow: locked for real, or explicitly superseded. A version
+// still sitting in DRAFT (unchanged since the override was recorded) means
+// the emergency bypass is still the only thing holding the gate open.
+function isOverrideStillActive(entry: OverrideEntry, data: ProgressJson): boolean {
+  const domain = artifactDomainFor(entry.artifact);
+  if (!domain) return false;
+  const tracker = data[domain] as ArtifactTracker;
+
+  if (entry.version) {
+    const version = tracker.versions.find(v => v.version === entry.version);
+    return !!version && version.state === 'DRAFT';
+  }
+
+  // No version existed yet when the override was recorded — stays active
+  // until the tracker gains any resolved (non-DRAFT) version.
+  return !tracker.versions.some(v => v.state !== 'DRAFT');
+}
+
+function hasActiveOverrideForGate(overrides: OverrideEntry[], data: ProgressJson, gateLabel: string): boolean {
+  return overrides.some(entry => entry.gate_bypassed === gateLabel && isOverrideStillActive(entry, data));
+}
+
+export function readOverrides(projectRoot: string): OverrideEntry[] {
+  const filePath = path.join(projectRoot, OVERRIDES_FILE);
+  if (!fs.existsSync(filePath)) return [];
+
+  const entries: OverrideEntry[] = [];
+  for (const line of fs.readFileSync(filePath, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      entries.push(JSON.parse(trimmed) as OverrideEntry);
+    } catch {
+      // Skip malformed lines — the log is append-only and best-effort.
+    }
+  }
+  return entries;
 }
 
 function markerChain(
@@ -355,7 +417,7 @@ function buildMarker(
   };
 }
 
-export function runDoctorReconciliation(data: ProgressJson): DoctorReport {
+export function runDoctorReconciliation(data: ProgressJson, overrides: OverrideEntry[] = []): DoctorReport {
   const runtimeInvalid = ensureRuntimeInvalid(data);
   const previous = new Map(runtimeInvalid.markers.map(marker => [marker.id, marker]));
   const nextMarkers: InvalidMarker[] = [];
@@ -395,20 +457,21 @@ export function runDoctorReconciliation(data: ProgressJson): DoctorReport {
     }
   }
 
-  // Auto-repair gate booleans to match actual runtime conditions.
-  const expectedGate1 = hasActiveLockedIntent(data);
+  // Auto-repair gate booleans to match actual runtime conditions, unless a
+  // still-active override is the reason the gate is forced open.
+  const expectedGate1 = hasActiveLockedIntent(data) || hasActiveOverrideForGate(overrides, data, 'Gate 1');
   if (data.gates.gate_1_open !== expectedGate1) {
     repaired.push(`gates.gate_1_open repaired from "${data.gates.gate_1_open}" to "${expectedGate1}"`);
     data.gates.gate_1_open = expectedGate1;
   }
 
-  const expectedGate2 = hasCleanGate2Chain(data);
+  const expectedGate2 = hasCleanGate2Chain(data) || hasActiveOverrideForGate(overrides, data, 'Gate 2');
   if (data.gates.gate_2_open !== expectedGate2) {
     repaired.push(`gates.gate_2_open repaired from "${data.gates.gate_2_open}" to "${expectedGate2}"`);
     data.gates.gate_2_open = expectedGate2;
   }
 
-  const expectedGate3 = hasCleanGate3Chain(data);
+  const expectedGate3 = hasCleanGate3Chain(data) || hasActiveOverrideForGate(overrides, data, 'Gate 3');
   if (data.gates.gate_3_satisfied !== expectedGate3) {
     repaired.push(`gates.gate_3_satisfied repaired from "${data.gates.gate_3_satisfied}" to "${expectedGate3}"`);
     data.gates.gate_3_satisfied = expectedGate3;
@@ -611,13 +674,12 @@ export function checkSchemaVersion(data: ProgressJson): void {
 
 // ── Seed State ────────────────────────────────────────────────────────────────
 
+function emptyTracker(): ArtifactTracker {
+  return { active_version: null, active_state: null, versions: [] };
+}
+
 export function createInitialProgress(projectId: string, projectName: string): ProgressJson {
   const now = new Date().toISOString();
-  const emptyTracker: ArtifactTracker = {
-    active_version: null,
-    active_state: null,
-    versions: [],
-  };
 
   return {
     schema_version: SCHEMA_VERSION,
@@ -626,11 +688,11 @@ export function createInitialProgress(projectId: string, projectName: string): P
     lifecycle_state: 'DESIGN',
     created_at: now,
     updated_at: now,
-    intent: { ...emptyTracker },
-    plan: { ...emptyTracker, pending: [] },
-    exec: { ...emptyTracker },
-    close: { ...emptyTracker },
-    roadmap: { ...emptyTracker },
+    intent: emptyTracker(),
+    plan: { ...emptyTracker(), pending: [] },
+    exec: emptyTracker(),
+    close: emptyTracker(),
+    roadmap: emptyTracker(),
     gates: {
       gate_1_open: false,
       gate_2_open: false,
@@ -669,13 +731,13 @@ export function isStaleIntentPresent(data: ProgressJson): StaleIntentWarning[] {
 
 // ── Version Helpers ───────────────────────────────────────────────────────────
 
-function parseMajorVersion(version: string): number {
+export function parseMajorVersion(version: string): number {
   const match = version.match(/^v(\d+)/);
   if (!match) throw new Error(`Cannot parse major version from "${version}"`);
   return parseInt(match[1], 10);
 }
 
-function parseMinorVersion(version: string): number {
+export function parseMinorVersion(version: string): number {
   const match = version.match(/^v\d+(?:\.(\d+))?/);
   if (!match) throw new Error(`Cannot parse minor version from "${version}"`);
   return match[1] ? parseInt(match[1], 10) : 0;

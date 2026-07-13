@@ -43,7 +43,7 @@ const BUNDLE_ROLE_MEMORY_DIR = getBundledRoleMemoryDir();
 
 const PROJECT_ID_PATTERN = /^[A-Z0-9][A-Z0-9-]{0,11}$/;
 
-function validateProjectId(id: string): string {
+export function validateProjectId(id: string): string {
   const clean = id.trim().toUpperCase();
   if (!PROJECT_ID_PATTERN.test(clean)) {
     throw new Error(
@@ -53,7 +53,7 @@ function validateProjectId(id: string): string {
   return clean;
 }
 
-function validateProjectName(name: string): string {
+export function validateProjectName(name: string): string {
   const clean = name.trim();
   if (clean.length === 0 || clean.length > 64) {
     throw new Error('Project name must be between 1 and 64 characters.');
@@ -422,51 +422,6 @@ function runSync(opts: { confirm?: boolean }): void {
   console.log(`  Backup saved to: ${backupDir}`);
 }
 
-// ── sigma project reset ───────────────────────────────────────────────────────
-
-function runReset(opts: { confirm?: boolean; wipe?: boolean }): void {
-  if (!opts.confirm) {
-    error('--confirm is required. This operation resets project state. Pass --confirm to proceed.');
-  }
-
-  const projectRoot = findProjectRoot();
-  const sigmaDir = path.join(projectRoot, PROJECT_SIGMA_DIR);
-  const logsDir = path.join(sigmaDir, 'logs');
-  const progressPath = path.join(sigmaDir, 'progress.json');
-
-  // Read existing to preserve project_id and project_name
-  const existing = readProgress(projectRoot);
-  ensureDir(logsDir);
-
-  const backed = backupFile(progressPath, logsDir);
-  warn(`progress.json backed up to: ${backed}`);
-
-  const fresh = createInitialProgress(existing.project_id, existing.project_name);
-  fs.writeJsonSync(progressPath, fresh, { spaces: 2 });
-
-  if (opts.wipe) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const archiveDir = path.join(logsDir, `reset-archive-${timestamp}`);
-    ensureDir(archiveDir);
-
-    for (const folder of ['design', 'build', 'close']) {
-      const src = path.join(sigmaDir, folder);
-      if (fileExists(src)) {
-        fs.copySync(src, path.join(archiveDir, folder));
-        fs.emptyDirSync(src);
-        console.log(`  Archived and cleared: ${folder}/`);
-      }
-    }
-
-    success('Project hard reset complete. Artifact files archived.');
-    console.log(`  Archive: ${archiveDir}`);
-  } else {
-    success('Project soft reset complete. Artifact files preserved.');
-  }
-
-  console.log('  progress.json reset to initial state.');
-}
-
 // ── sigma project register ────────────────────────────────────────────────────
 
 function runRegister(): void {
@@ -518,15 +473,6 @@ export function projectCommand(): Command {
     .option('--confirm', 'Apply changes (without this flag, dry-run only)')
     .action((opts: { confirm?: boolean }) => {
       try { runSync(opts); } catch (e) { error((e as Error).message); }
-    });
-
-  cmd
-    .command('reset')
-    .description('Reset project state (soft or archive)')
-    .option('--confirm', 'Required — confirms the reset')
-    .option('--wipe', 'Archive and clear artifact folders (design/, build/, close/)')
-    .action((opts: { confirm?: boolean; wipe?: boolean }) => {
-      try { runReset(opts); } catch (e) { error((e as Error).message); }
     });
 
   cmd

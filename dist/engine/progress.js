@@ -4,6 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateProgress = validateProgress;
+exports.hasActiveLockedIntent = hasActiveLockedIntent;
+exports.hasCleanGate2Chain = hasCleanGate2Chain;
+exports.hasCleanGate3Chain = hasCleanGate3Chain;
+exports.readOverrides = readOverrides;
 exports.hasInvalidRuntime = hasInvalidRuntime;
 exports.getInvalidMarkers = getInvalidMarkers;
 exports.isGateInvalid = isGateInvalid;
@@ -19,6 +23,8 @@ exports.checkSchemaVersion = checkSchemaVersion;
 exports.createInitialProgress = createInitialProgress;
 exports.getGateStatus = getGateStatus;
 exports.isStaleIntentPresent = isStaleIntentPresent;
+exports.parseMajorVersion = parseMajorVersion;
+exports.parseMinorVersion = parseMinorVersion;
 exports.nextMajorVersion = nextMajorVersion;
 exports.nextPlanVersion = nextPlanVersion;
 exports.nextExecVersion = nextExecVersion;
@@ -178,6 +184,52 @@ function hasCleanGate3Chain(data) {
         return false;
     return data.intent.versions.some(v => v.version === referencedPlan.intent_version_ref && v.state === 'LOCKED');
 }
+function artifactDomainFor(artifact) {
+    switch (artifact) {
+        case 'DIR-INTENT': return 'intent';
+        case 'FMN-PLAN': return 'plan';
+        case 'DEV-EXEC': return 'exec';
+        default: return null;
+    }
+}
+// An override stays in force only until the artifact it bypassed is resolved
+// by the normal flow: locked for real, or explicitly superseded. A version
+// still sitting in DRAFT (unchanged since the override was recorded) means
+// the emergency bypass is still the only thing holding the gate open.
+function isOverrideStillActive(entry, data) {
+    const domain = artifactDomainFor(entry.artifact);
+    if (!domain)
+        return false;
+    const tracker = data[domain];
+    if (entry.version) {
+        const version = tracker.versions.find(v => v.version === entry.version);
+        return !!version && version.state === 'DRAFT';
+    }
+    // No version existed yet when the override was recorded — stays active
+    // until the tracker gains any resolved (non-DRAFT) version.
+    return !tracker.versions.some(v => v.state !== 'DRAFT');
+}
+function hasActiveOverrideForGate(overrides, data, gateLabel) {
+    return overrides.some(entry => entry.gate_bypassed === gateLabel && isOverrideStillActive(entry, data));
+}
+function readOverrides(projectRoot) {
+    const filePath = path_1.default.join(projectRoot, config_1.OVERRIDES_FILE);
+    if (!fs_extra_1.default.existsSync(filePath))
+        return [];
+    const entries = [];
+    for (const line of fs_extra_1.default.readFileSync(filePath, 'utf8').split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed)
+            continue;
+        try {
+            entries.push(JSON.parse(trimmed));
+        }
+        catch {
+            // Skip malformed lines — the log is append-only and best-effort.
+        }
+    }
+    return entries;
+}
 function markerChain(intentVersion = null, planVersion = null, execVersion = null) {
     return { intent_version: intentVersion, plan_version: planVersion, exec_version: execVersion };
 }
@@ -231,7 +283,7 @@ function buildMarker(existing, now, partial) {
         last_detected_at: now,
     };
 }
-function runDoctorReconciliation(data) {
+function runDoctorReconciliation(data, overrides = []) {
     const runtimeInvalid = ensureRuntimeInvalid(data);
     const previous = new Map(runtimeInvalid.markers.map(marker => [marker.id, marker]));
     const nextMarkers = [];
@@ -269,18 +321,19 @@ function runDoctorReconciliation(data) {
             tracker.active_state = matches[0].state;
         }
     }
-    // Auto-repair gate booleans to match actual runtime conditions.
-    const expectedGate1 = hasActiveLockedIntent(data);
+    // Auto-repair gate booleans to match actual runtime conditions, unless a
+    // still-active override is the reason the gate is forced open.
+    const expectedGate1 = hasActiveLockedIntent(data) || hasActiveOverrideForGate(overrides, data, 'Gate 1');
     if (data.gates.gate_1_open !== expectedGate1) {
         repaired.push(`gates.gate_1_open repaired from "${data.gates.gate_1_open}" to "${expectedGate1}"`);
         data.gates.gate_1_open = expectedGate1;
     }
-    const expectedGate2 = hasCleanGate2Chain(data);
+    const expectedGate2 = hasCleanGate2Chain(data) || hasActiveOverrideForGate(overrides, data, 'Gate 2');
     if (data.gates.gate_2_open !== expectedGate2) {
         repaired.push(`gates.gate_2_open repaired from "${data.gates.gate_2_open}" to "${expectedGate2}"`);
         data.gates.gate_2_open = expectedGate2;
     }
-    const expectedGate3 = hasCleanGate3Chain(data);
+    const expectedGate3 = hasCleanGate3Chain(data) || hasActiveOverrideForGate(overrides, data, 'Gate 3');
     if (data.gates.gate_3_satisfied !== expectedGate3) {
         repaired.push(`gates.gate_3_satisfied repaired from "${data.gates.gate_3_satisfied}" to "${expectedGate3}"`);
         data.gates.gate_3_satisfied = expectedGate3;
@@ -441,13 +494,11 @@ function checkSchemaVersion(data) {
     }
 }
 // ── Seed State ────────────────────────────────────────────────────────────────
+function emptyTracker() {
+    return { active_version: null, active_state: null, versions: [] };
+}
 function createInitialProgress(projectId, projectName) {
     const now = new Date().toISOString();
-    const emptyTracker = {
-        active_version: null,
-        active_state: null,
-        versions: [],
-    };
     return {
         schema_version: config_1.SCHEMA_VERSION,
         project_id: projectId,
@@ -455,11 +506,11 @@ function createInitialProgress(projectId, projectName) {
         lifecycle_state: 'DESIGN',
         created_at: now,
         updated_at: now,
-        intent: { ...emptyTracker },
-        plan: { ...emptyTracker, pending: [] },
-        exec: { ...emptyTracker },
-        close: { ...emptyTracker },
-        roadmap: { ...emptyTracker },
+        intent: emptyTracker(),
+        plan: { ...emptyTracker(), pending: [] },
+        exec: emptyTracker(),
+        close: emptyTracker(),
+        roadmap: emptyTracker(),
         gates: {
             gate_1_open: false,
             gate_2_open: false,

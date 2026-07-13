@@ -10,6 +10,7 @@ export declare const GLOBAL_CONFIG_FILE: string;
 export declare const GLOBAL_MEMORY_FILE: string;
 export declare const PROJECT_SIGMA_DIR = "Sigma";
 export declare const PROGRESS_FILE: string;
+export declare const OVERRIDES_FILE: string;
 export declare const OPERATION_REGISTRY_FILE: string;
 export declare const DOCUMENT_REGISTRY_FILE: string;
 export declare const PROJECT_CONFIG_FILE: string;

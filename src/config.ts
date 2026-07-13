@@ -15,6 +15,7 @@ export const GLOBAL_MEMORY_FILE = path.join(GLOBAL_SIGMA_DIR, 'memory_sigma.json
 
 export const PROJECT_SIGMA_DIR = 'Sigma';
 export const PROGRESS_FILE = path.join(PROJECT_SIGMA_DIR, 'progress.json');
+export const OVERRIDES_FILE = path.join(PROJECT_SIGMA_DIR, 'memory', 'overrides.jsonl');
 export const OPERATION_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-OPERATION-REGISTRY.json');
 export const DOCUMENT_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-REGISTRY.json');
 export const PROJECT_CONFIG_FILE = path.join(PROJECT_SIGMA_DIR, 'project.config.json');

@@ -9,12 +9,21 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
 const fs_1 = require("../utils/fs");
-const OVERRIDE_LOG_FILE = path_1.default.join('Sigma', 'memory', 'overrides.jsonl');
+const config_1 = require("../config");
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function appendOverrideEntry(projectRoot, entry) {
-    const filePath = path_1.default.join(projectRoot, OVERRIDE_LOG_FILE);
+    const filePath = path_1.default.join(projectRoot, config_1.OVERRIDES_FILE);
     fs_extra_1.default.ensureFileSync(filePath);
     fs_extra_1.default.appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf8');
+}
+function versionForArtifact(data, artifact) {
+    if (artifact === 'DIR-INTENT')
+        return data.intent.active_version;
+    if (artifact === 'FMN-PLAN')
+        return data.plan.active_version;
+    if (artifact === 'DEV-EXEC')
+        return data.exec.active_version;
+    return null;
 }
 function describeBlockedGate(data) {
     if (!data.gates.gate_1_open) {
@@ -93,6 +102,7 @@ function runOverride(opts) {
         gate_bypassed: blocked.gate,
         reason,
         authorized_by: 'Director',
+        version: versionForArtifact(data, blocked.artifact),
     };
     applyOverride(data, blocked.artifact);
     (0, progress_1.writeProgress)(projectRoot, data);

@@ -60,6 +60,16 @@ export interface RuntimeInvalidState {
     markers: InvalidMarker[];
     last_doctor_run_at: string | null;
 }
+export interface OverrideEntry {
+    type: 'override';
+    timestamp: string;
+    artifact: string;
+    phase: string;
+    gate_bypassed: string;
+    reason: string;
+    authorized_by: 'Director';
+    version?: string | null;
+}
 export interface ProgressJson {
     schema_version: string;
     project_id: string;
@@ -86,6 +96,10 @@ export interface StaleIntentWarning {
 }
 type ArtifactDomain = 'intent' | 'plan' | 'exec' | 'close' | 'roadmap';
 export declare function validateProgress(data: unknown): ProgressJson;
+export declare function hasActiveLockedIntent(data: ProgressJson): boolean;
+export declare function hasCleanGate2Chain(data: ProgressJson): boolean;
+export declare function hasCleanGate3Chain(data: ProgressJson): boolean;
+export declare function readOverrides(projectRoot: string): OverrideEntry[];
 export declare function hasInvalidRuntime(data: ProgressJson): boolean;
 export declare function getInvalidMarkers(data: ProgressJson): InvalidMarker[];
 export declare function isGateInvalid(data: ProgressJson, gate: InvalidGateKey): boolean;
@@ -98,7 +112,7 @@ export interface DoctorReport {
     invalidCleared: InvalidMarker[];
     remainingInvalid: InvalidMarker[];
 }
-export declare function runDoctorReconciliation(data: ProgressJson): DoctorReport;
+export declare function runDoctorReconciliation(data: ProgressJson, overrides?: OverrideEntry[]): DoctorReport;
 export declare function validateProgressSemantics(data: ProgressJson): void;
 export declare function assertProgressCanMutate(data: ProgressJson): void;
 export declare function readProgress(projectRoot: string): ProgressJson;
@@ -107,6 +121,8 @@ export declare function checkSchemaVersion(data: ProgressJson): void;
 export declare function createInitialProgress(projectId: string, projectName: string): ProgressJson;
 export declare function getGateStatus(data: ProgressJson): GateStatus;
 export declare function isStaleIntentPresent(data: ProgressJson): StaleIntentWarning[];
+export declare function parseMajorVersion(version: string): number;
+export declare function parseMinorVersion(version: string): number;
 export declare function nextMajorVersion(versions: ArtifactVersion[]): string;
 export declare function nextPlanVersion(data: ProgressJson, intentVersionRef: string): string;
 export declare function nextExecVersion(data: ProgressJson, planVersionRef: string): string;

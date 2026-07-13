@@ -547,14 +547,13 @@ Most users do not need to memorize these commands.
 
 AI roles normally execute operational commands after reading project state, role rules, and Director instructions.
 
-Lock, supersede, reset, stale-intent acknowledgment, and risk-related commands require explicit Director authorization.
+Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related commands require explicit Director authorization.
 
 | Domain   | Command                            | Description                                                                    |
 |:-------- |:---------------------------------- |:------------------------------------------------------------------------------ |
 | project  | `sigma project start`              | Initialize a Sigma project in the current directory                            |
 | project  | `sigma project status`             | Show lifecycle phase, gate status, and active artifact versions                |
 | project  | `sigma project sync --confirm`     | Sync doctrine files from global templates into this project                    |
-| project  | `sigma project reset --confirm`    | Reset `progress.json` to initial state                                         |
 | session  | `sigma session bootstrap`          | Load project state at session start                                            |
 | intent   | `sigma intent new`                 | Create a `DIR-INTENT` draft                                                    |
 | intent   | `sigma intent lock`                | Lock the active `DIR-INTENT` with Director approval                            |
@@ -594,6 +593,9 @@ Lock, supersede, reset, stale-intent acknowledgment, and risk-related commands r
 | cso      | `sigma cso new`                    | Create a CSO handoff artifact in `Sigma/logs/`                                 |
 | git      | `sigma git evidence`               | Show read-only Git state summary                                               |
 | override | `sigma override`                   | Bypass current lifecycle gate under Director authority (recorded in audit log) |
+| doctor   | `sigma doctor`                     | Diagnose and reconcile runtime state (repairs drift, marks unresolved breaks INVALID) |
+| doctor   | `sigma doctor --recovery`          | Explicit alias for the default `sigma doctor` behavior                        |
+| doctor   | `sigma doctor --reconstruct`       | Rebuild `progress.json` from artifact files on disk when it is missing or corrupted |
 | setup    | `sigma setup install`              | Install Sigma globally to `~/.sigma/`                                          |
 | setup    | `sigma setup update`               | Update global Sigma templates and governance files                             |
 | setup    | `sigma setup memory`               | Configure sequential-thinking and sigma-memory MCP integration                 |
