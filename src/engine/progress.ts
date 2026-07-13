@@ -249,6 +249,17 @@ function hasActiveLockedPlan(data: ProgressJson): boolean {
   return data.plan.versions.some(v => v.state === 'LOCKED');
 }
 
+function hasCleanGate2Chain(data: ProgressJson): boolean {
+  return data.plan.versions.some(
+    v => v.state === 'LOCKED' &&
+      !v.stale_intent &&
+      !!v.intent_version_ref &&
+      data.intent.versions.some(
+        iv => iv.version === v.intent_version_ref && iv.state === 'LOCKED'
+      )
+  );
+}
+
 function hasCleanGate3Chain(data: ProgressJson): boolean {
   const activeExec = data.exec.versions.find(
     v => v.version === data.exec.active_version && v.state === 'LOCKED'
@@ -391,7 +402,7 @@ export function runDoctorReconciliation(data: ProgressJson): DoctorReport {
     data.gates.gate_1_open = expectedGate1;
   }
 
-  const expectedGate2 = hasActiveLockedPlan(data);
+  const expectedGate2 = hasCleanGate2Chain(data);
   if (data.gates.gate_2_open !== expectedGate2) {
     repaired.push(`gates.gate_2_open repaired from "${data.gates.gate_2_open}" to "${expectedGate2}"`);
     data.gates.gate_2_open = expectedGate2;
@@ -401,6 +412,22 @@ export function runDoctorReconciliation(data: ProgressJson): DoctorReport {
   if (data.gates.gate_3_satisfied !== expectedGate3) {
     repaired.push(`gates.gate_3_satisfied repaired from "${data.gates.gate_3_satisfied}" to "${expectedGate3}"`);
     data.gates.gate_3_satisfied = expectedGate3;
+  }
+
+  // Recover a stranded half-completed reopen: a new major INTENT was locked on
+  // top of a CLOSED project (superseding the prior intent) but lifecycle was
+  // left in CLOSED with no clean build chain of its own. This is narrow on
+  // purpose — it never touches a genuinely closed cycle (which keeps a clean
+  // gate_3 chain) nor a close that acknowledged a stale chain (no superseded
+  // intent behind it).
+  if (
+    data.lifecycle_state === 'CLOSED' &&
+    hasActiveLockedIntent(data) &&
+    !hasCleanGate3Chain(data) &&
+    data.intent.versions.some(v => v.state === 'SUPERSEDED')
+  ) {
+    repaired.push('lifecycle_state repaired from "CLOSED" to "BUILD" (stranded reopen of a new locked INTENT)');
+    data.lifecycle_state = 'BUILD';
   }
 
   for (const domain of ['intent', 'plan', 'exec', 'close', 'roadmap'] as const) {
@@ -732,9 +759,21 @@ export function lockActiveIntent(data: ProgressJson): void {
 
   data.intent.active_state = 'LOCKED';
   data.gates.gate_1_open = true;
-  if (data.lifecycle_state === 'DESIGN') data.lifecycle_state = 'BUILD';
+
+  // Locking an intent (re)opens the BUILD phase for the newly active cycle.
+  // This holds for a DESIGN first-lock, a mid-BUILD major pivot, and a reopen
+  // of a CLOSE/CLOSED project — the command contract is "lifecycle → BUILD".
+  // Guarding on DESIGN left reopened CLOSED projects stranded in CLOSED.
+  data.lifecycle_state = 'BUILD';
 
   propagateStaleIntent(data, activeVersion);
+
+  // gate_2/gate_3 belong to the *previous* intent's chain until new PLAN/EXEC
+  // artifacts are locked under the newly active intent. Recompute against the
+  // current chain so a reopen or pivot cannot inherit a stale-but-open gate
+  // from the superseded cycle.
+  data.gates.gate_2_open = hasCleanGate2Chain(data);
+  data.gates.gate_3_satisfied = hasCleanGate3Chain(data);
 }
 
 // ── PLAN Mutations ────────────────────────────────────────────────────────────
