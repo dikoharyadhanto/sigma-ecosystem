@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-07-03T17:44:56.000Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 62,
+  "total_operations": 59,
   "domains": [
     "close",
     "config",
@@ -10,7 +10,6 @@
     "doctor",
     "exec",
     "git",
-    "gitignore",
     "inbox",
     "intent",
     "memory",
@@ -1166,27 +1165,6 @@
       "error_messages": {}
     },
     {
-      "operation_id": "gitignore_generate",
-      "domain": "gitignore",
-      "action": "generate",
-      "level": "read_only",
-      "role": "any",
-      "description": "Output .gitignore entries appropriate for Sigma projects. Prints to stdout only — does NOT write to any file. Director copies the output manually.",
-      "inputs": [],
-      "outputs": [
-        {
-          "type": "stdout",
-          "description": ".gitignore entries printed to stdout for manual copy by Director"
-        }
-      ],
-      "constraints": [],
-      "gating": {
-        "pre_condition": "none",
-        "post_condition": "none (stdout only)"
-      },
-      "error_messages": {}
-    },
-    {
       "operation_id": "roadmap_new",
       "domain": "roadmap",
       "action": "new",
@@ -1632,50 +1610,6 @@
           "description": "--reply-to <id>"
         }
       ],
-      "outputs": [
-        {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
-        }
-      ],
-      "constraints": [],
-      "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
-      },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
-    },
-    {
-      "operation_id": "sync_progress",
-      "domain": "sync",
-      "action": "progress",
-      "level": "semantic",
-      "role": "any",
-      "description": "Bring progress.json up to current schema:\n  - Coerce exec BUILDING/TESTING/COMPLETED → DRAFT (P2)\n  - Strip legacy cso array (P17)\n  - Add plan.pending if missing",
-      "inputs": [],
-      "outputs": [
-        {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
-        }
-      ],
-      "constraints": [],
-      "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
-      },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
-    },
-    {
-      "operation_id": "sync_roadmap",
-      "domain": "sync",
-      "action": "roadmap",
-      "level": "semantic",
-      "role": "any",
-      "description": "Migrate existing ROADMAP file to CLI-managed format:\n  - Extracts stage titles from FMN-PLAN files\n  - Generates new ROADMAP with H2 headings + delimiter comments\n  - Renames old ROADMAP to ROADMAP-vX-legacy.md\n  - Runs sigma roadmap render to populate Stage Overview",
-      "inputs": [],
       "outputs": [
         {
           "type": "NEEDS_REVIEW",

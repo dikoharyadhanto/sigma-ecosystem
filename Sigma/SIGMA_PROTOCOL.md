@@ -479,11 +479,9 @@ AUD becomes mandatory only when the Director explicitly marks the project as **r
 | `cso` | CSO artifact creation |
 | `config` | Project configuration (language preference, etc.) |
 | `setup` | Installation, configuration, MCP memory setup |
-| `sync` | Backward-compatibility migration commands |
 | `memory` | Show Sigma role memory reminders (read-only) |
 | `doctor` | Diagnose and reconcile Sigma runtime state |
 | `override` | Bypass the current lifecycle gate under Director authority (recorded in `Sigma/memory/overrides.jsonl`) |
-| `gitignore` | Generate `.gitignore` content for Sigma projects |
 
 Run `sigma --help` or `sigma {domain} --help` for current command syntax. The CLI is authoritative — do not rely on this section for exact flag names.
 
@@ -656,3 +654,5 @@ Not every governance role has the same activation bootstrap. ARC starts as stop-
 *SIGMA_PROTOCOL.md v0.2 — Phase 2 slim-down (2026-05-30). Governance doctrine only; operational detail moved to `sigma --help`, role-aware session orientation, and role rule files.*
 
 *v0.3 (2026-07-04): Added Reference List artifact (Section 5.7) and Comprehensive Research pointers (Sections 4.1, 5.1, 14); reconciled Folder-to-Phase Mapping (Section 13) and CLI Command Surface (Section 16) with the actual CLI, which had drifted (`gitignore`, `override`, `sync`, `memory`, `doctor` were missing before this pass, independent of the reference addition).*
+
+*v0.4 (2026-07-14): Removed `gitignore` and `sync` domains from CLI Command Surface (Section 16) — `gitignore generate`, `sync progress`, and `sync roadmap` were removed as trivial/redundant (PLAN-EVAL-02). No functional doctrine change; no automatic legacy schema/ROADMAP migration path remains for pre-current-schema projects.*

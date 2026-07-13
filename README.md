@@ -583,8 +583,6 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | close    | `sigma close status`               | Show closure state                                                             |
 | config   | `sigma config show`                | Show current project language preferences                                      |
 | config   | `sigma config set language <lang>` | Set interaction or document language (e.g. `en`, `id`)                         |
-| sync     | `sigma sync progress`              | Coerce and clean up `Sigma/progress.json` to current schema                    |
-| sync     | `sigma sync roadmap`               | Sync `ROADMAP` documents with progress state                                   |
 | send     | `sigma send`                       | Send a message from one role to another (`--from`, `--to`, `--message`)        |
 | inbox    | `sigma inbox --role <role>`        | List unread messages for a role                                                |
 | inbox    | `sigma inbox read <id>`            | Read a message and mark it as READ                                             |
@@ -625,16 +623,10 @@ sigma setup update
 # 2. Navigate to your project
 cd your-project
 
-# 3. Coerce progress.json to the current schema
-sigma sync progress
-
-# 4. Sync doctrine files from updated global templates into the project
+# 3. Sync doctrine files from updated global templates into the project
 sigma project sync --confirm
 
-# 5. If the project uses a ROADMAP, sync document alignment
-sigma sync roadmap
-
-# 6. Verify project state is consistent
+# 4. Verify project state is consistent
 sigma session bootstrap
 ```
 
@@ -643,10 +635,10 @@ sigma session bootstrap
 | Command                        | What it updates                                                                            |
 |:------------------------------ |:------------------------------------------------------------------------------------------ |
 | `sigma setup update`           | Updates global `~/.sigma/` templates and governance files                                  |
-| `sigma sync progress`          | Coerces and cleans up `Sigma/progress.json` to the current schema                          |
 | `sigma project sync --confirm` | Syncs doctrine files (role rules, protocol) from updated global templates into the project |
-| `sigma sync roadmap`           | Syncs `ROADMAP` documents with current progress state                                      |
 | `sigma session bootstrap`      | Verifies project state after migration                                                     |
+
+> **No automatic legacy schema/ROADMAP migration.** Older projects with a pre-current `progress.json` schema (legacy `BUILDING`/`TESTING`/`COMPLETED` exec states, a leftover root-level `cso` array) or a freeform ROADMAP (no H2 stage convention) no longer have a CLI migration path — `sigma sync progress`/`sigma sync roadmap` were removed as trivial/redundant. This is an accepted risk; such projects require manual schema/document adjustment.
 
 ### Memory reseed (optional)
 

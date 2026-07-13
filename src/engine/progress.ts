@@ -1225,7 +1225,6 @@ export function getNextValidOperations(data: ProgressJson): string[] {
   // always available
   ops.push('session bootstrap');
   ops.push('project status');
-  ops.push('gitignore generate');
 
   return ops;
 }

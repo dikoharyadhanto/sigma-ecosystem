@@ -942,7 +942,6 @@ function getNextValidOperations(data) {
     // always available
     ops.push('session bootstrap');
     ops.push('project status');
-    ops.push('gitignore generate');
     return ops;
 }
 //# sourceMappingURL=progress.js.map

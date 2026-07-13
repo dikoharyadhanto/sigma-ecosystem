@@ -14,10 +14,14 @@
       "Bash(sigma session:*)",
       "Bash(rm /home/dikoharyadhanto/Documents/Works/Projects/sigma-ecosystem/setup/targets/antigravity/arc.md \\\\ *)",
       "Bash(npm run *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(cd \"i:\\\\Works\\\\Project\\\\sigma-ecosystem\" && rm src/commands/gitignore.ts src/commands/sync.ts && echo \"deleted\")",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('Sigma/SIGMA-OPERATION-REGISTRY.json','utf8'\\)\\); console.log\\('valid JSON'\\)\")",
+      "Bash(git stash *)"
     ],
     "additionalDirectories": [
-      "/home/dikoharyadhanto/Documents/Works/Projects/sigma-ecosystem/setup/targets/antigravity"
+      "/home/dikoharyadhanto/Documents/Works/Projects/sigma-ecosystem/setup/targets/antigravity",
+      "i:\\Works\\Project\\sigma-ecosystem\\src\\commands"
     ]
   },
   "enabledMcpjsonServers": [
