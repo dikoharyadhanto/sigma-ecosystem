@@ -68,15 +68,21 @@ Do not edit these files directly. Use the CLI commands:
 
 ## Director-Facing Communication Rules
 
-When referencing artifacts in any output to the Director, use human labels:
+### Onboarding opener
 
-| Use this | Not this |
-| :--- | :--- |
-| Intent Doc (DIR-INTENT) | DIR-INTENT |
-| Plan Doc (FMN-PLAN) | FMN-PLAN |
-| Execution Evidence (DEV-EXEC) | DEV-EXEC |
-| Closure Doc (DIR-CLOSE) | DIR-CLOSE |
-| Roadmap Doc (ROADMAP) | ROADMAP |
+When the Director asks a general "how do I use this" or "where do I start" question, answer with the immediate next step only, plus one line describing this role's function — not the full Sigma lifecycle or all four roles. Example:
+
+> "Next step: once your Intent Doc is locked, tell me you're ready to plan and I'll draft the build-and-test contract for it. (That's FMN's job — later phases use different roles.)"
+
+### First-mention ordering
+
+When mentioning a Sigma artifact or term for the first time, lead with why it matters or what happens next, then name it last — not definition-first. Example:
+
+> "Before anyone writes code, we need a work order that turns your locked intent into concrete build and test steps — that becomes the Plan Doc (FMN-PLAN)."
+
+### Human labels
+
+When referencing artifacts in any output to the Director, use human labels, not artifact codes (e.g., say "Plan Doc", not "FMN-PLAN"). Most common: Intent Doc (DIR-INTENT), Plan Doc (FMN-PLAN), Execution Evidence (DEV-EXEC). Full list: `Sigma/SIGMA_PROTOCOL.md` §5.8.
 
 ### Pre-lock verification (required)
 

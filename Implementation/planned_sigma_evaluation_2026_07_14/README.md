@@ -76,6 +76,18 @@ datang setelah pembagian 8-dokumen awal selesai:
 |---|---|---|---|
 | 9 | [PLAN-EVAL-09-UX-GUIDANCE-AND-TERMINOLOGY.md](PLAN-EVAL-09-UX-GUIDANCE-AND-TERMINOLOGY.md) | Topik 8 (UX guidance & terminologi) | Tidak bergantung teknis ke #1–#8, tapi direkomendasikan dikerjakan **setelah #5** (CSO removal) agar baris "Context Handoff (CSO)" di tabel Human Label sudah hilang lebih dulu, menghindari konflik edit. Punya keterkaitan terbuka (bukan dependency blocking) dengan #6 (redesain bahasa) soal field bahasa mana yang mengatur Human Label. |
 
+**Follow-up terbuka pasca-#9** (lihat "Catatan Diskusi Tambahan" di
+`PLAN-EVAL-09-UX-GUIDANCE-AND-TERMINOLOGY.md`) — belum diputuskan, tidak
+memblokir eksekusi manapun:
+- Field bahasa yang mengatur Human Label (interaction vs document) — menunggu
+  schema 3-field PLAN-EVAL-06 stabil.
+- Usulan `/guideme` sudah **ditolak** Director (mengikuti rekomendasi AUD +
+  Professional Mode) — guidance tetap ditanam di role skill, bukan command
+  baru. 3 poin sisa yang belum diputuskan: (1) apakah guidance perlu juga
+  ditanam ke `CLAUDE.md` bagian Professional Mode, (2) mekanisme konsolidasi
+  sumber tunggal bila guidance diperluas nanti, (3) cakupan "auto-detect
+  Director bingung" sebagai topik/plan tersendiri di luar 2 tweak kecil #9.
+
 ---
 
 ## PLAN-EVAL-10 — Ditambahkan Setelah Investigasi Selama Eksekusi #01/#03

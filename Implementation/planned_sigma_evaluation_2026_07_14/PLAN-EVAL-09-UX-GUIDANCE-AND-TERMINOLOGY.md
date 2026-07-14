@@ -2,7 +2,7 @@
 
 **Sumber**: `Discussion/sigma-system-evaluation-2026-07-14.md` (Topik 8 — Evaluasi UX: Guidance & Komunikasi AI Role terhadap User Baru, Terminologi Sigma)
 **Tanggal**: 2026-07-14
-**Status**: DRAFT FOR REVIEW
+**Status**: IMPLEMENTED (2026-07-14) — lihat "Catatan Diskusi Tambahan" untuk riwayat keputusan `/guideme`
 **Urutan eksekusi**: Ditambahkan setelah 8 dokumen plan awal (lihat catatan sequencing di bawah) — bukan bagian dari urutan #1–#8 asli di `README.md` folder ini, karena Topik 8 baru dibuka Director setelah sesi evaluasi awal ditutup.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN, tidak punya otoritas lock/gate Sigma.
 
@@ -128,45 +128,53 @@ Task breakdown di bawah menyesuaikan cakupan riil (4 file), bukan 6.
 ## Task Breakdown
 
 **Tahap 1 — Tweak Onboarding (arc.md sebagai master, replikasi ke 3 file lain)**
-- [ ] Tambahkan 1-2 contoh kalimat pembuka onboarding di bagian
+- [x] Tambahkan 1-2 contoh kalimat pembuka onboarding di bagian
       "Director-Facing Communication Rules" `arc.md`: next-step ringkas + 1
       baris fungsi role saat user bertanya "cara pakai", bukan seluruh
       lifecycle + 4 role sekaligus.
-- [ ] Replikasi pola yang sama (disesuaikan konteks role) ke `fmn.md`,
+- [x] Replikasi pola yang sama (disesuaikan konteks role) ke `fmn.md`,
       `dev.md`, `aud.md`.
 
 **Tahap 2 — Tweak First-Mention Ordering**
-- [ ] Tambahkan 1 contoh kalimat "kenapa/manfaat dulu, nama Sigma belakangan"
+- [x] Tambahkan 1 contoh kalimat "kenapa/manfaat dulu, nama Sigma belakangan"
       saat istilah/artefak Sigma disebut pertama kali, di `arc.md`.
-- [ ] Replikasi ke `fmn.md`, `dev.md`, `aud.md`.
+- [x] Replikasi ke `fmn.md`, `dev.md`, `aud.md`.
 
 **Tahap 3 — Konsolidasi Tabel Human Label (4 file, bukan 6 — lihat koreksi cakupan di atas)**
-- [ ] Ubah tabel penuh "Use this / Not this" di `arc.md` (baris 74-85),
-      `fmn.md` (baris 75-86), `dev.md` (baris 76-87), `aud.md` (baris
-      117-128) menjadi rujukan singkat ke `Sigma/SIGMA_PROTOCOL.md` §5.8,
+- [x] Ubah tabel penuh "Use this / Not this" di `arc.md`, `fmn.md`, `dev.md`,
+      `aud.md` menjadi rujukan singkat ke `Sigma/SIGMA_PROTOCOL.md` §5.8,
       bukan salinan penuh tabel.
-- [ ] Pastikan bentuk rujukan tetap actionable untuk AI role (mis. tetap
+- [x] Pastikan bentuk rujukan tetap actionable untuk AI role (mis. tetap
       cantumkan aturan "gunakan human label, bukan artifact code" secara
       eksplisit + pointer ke §5.8 untuk daftar lengkap) — jangan sampai
       konsolidasi membuat instruksi jadi kurang jelas dibanding tabel penuh.
-- [ ] Jangan ubah/hapus baris `Context Handoff (CSO)` di keempat file ini
+- [x] Jangan ubah/hapus baris `Context Handoff (CSO)` di keempat file ini
       sebagai bagian plan ini — biarkan tertangani oleh PLAN-EVAL-05 (lihat
       "Catatan Overlap" di atas). Jika PLAN-EVAL-05 sudah dieksekusi lebih
       dulu, baris ini seharusnya sudah hilang sebelum tahap ini berjalan.
+      *(Terverifikasi: baris ini sudah hilang lebih dulu lewat commit CSO
+      removal, jadi tidak ada yang perlu dihindari saat eksekusi.)*
 
 **Tahap 4 — Verifikasi**
-- [ ] Baca ulang keempat file skill setelah perubahan — pastikan urutan
+- [x] Baca ulang keempat file skill setelah perubahan — pastikan urutan
       "Role Activation" tidak melompat ke pertanyaan prosedural tanpa
       pengantar singkat, sesuai kalibrasi Director (perbaikan kecil, bukan
-      restrukturisasi section).
-- [ ] Konfirmasi `sigma-test.md` dan `report.md` tetap tidak diubah (tidak
-      ada tabel duplikat di keduanya).
+      restrukturisasi section). *(Role Activation section tidak disentuh di
+      keempat file; perubahan murni di bagian Director-Facing Communication
+      Rules.)*
+- [x] Konfirmasi `sigma-test.md` dan `report.md` tetap tidak diubah (tidak
+      ada tabel duplikat di keduanya). *(Diverifikasi ulang via grep — tidak
+      ada match tabel Human Label di kedua file, dan tidak disentuh.)*
+- [x] `npm test` dijalankan pasca-perubahan: 131/131 test lulus (21 file
+      test), tidak ada regresi.
 
 **Tahap 5 — Dokumentasi Follow-up Terbuka**
-- [ ] Catat eksplisit di `README.md` folder ini (atau di plan lintas-topik
+- [x] Catat eksplisit di `README.md` folder ini (atau di plan lintas-topik
       berikutnya) bahwa keputusan "field bahasa mana yang mengatur Human
       Label" masih terbuka, menunggu Director memutuskan setelah
       PLAN-EVAL-06 selesai — bukan bagian dari acceptance criteria plan ini.
+      *(Ditambahkan juga 3 poin follow-up `/guideme` dari "Catatan Diskusi
+      Tambahan" di atas, karena sama-sama isu terbuka lintas-plan.)*
 
 ---
 
@@ -183,6 +191,41 @@ Task breakdown di bawah menyesuaikan cakupan riil (4 file), bukan 6.
   bahasa): keputusan final field bahasa untuk Human Label menunggu schema
   3-field dari PLAN-EVAL-06 stabil dulu — dicatat sebagai follow-up, tidak
   memblokir eksekusi plan ini.
+
+---
+
+## Catatan Diskusi Tambahan — Usulan `/guideme` (2026-07-14)
+
+Selama menunggu approval plan ini, Director mendiskusikan usulan skill/command
+baru `/guideme` dengan AUD (di luar Task Breakdown plan ini). Dicatat di sini
+sebagai riwayat keputusan, karena hasilnya menegaskan (bukan mengubah)
+Keputusan Final di atas.
+
+**Keputusan**: `/guideme` **ditolak** sebagai command/skill terpisah. Baik AUD
+maupun Professional Mode (assessment terpisah, hasil sejalan) menilai guidance
+adalah kualitas komunikasi, bukan operasi yang mengubah authority/state —
+sehingga tidak layak jadi command baru yang harus dipelajari Director. Arah
+yang dipertahankan tetap seperti Keputusan Final: guidance ditanam sebagai
+contoh kalimat di dalam role skill yang sudah ada (Tahap 1 & 2), bukan
+artifact atau command baru.
+
+**3 poin follow-up yang sengaja TIDAK diputuskan/dieksekusi di plan ini**
+(dicatat sebagai isu terbuka lintas-plan, lihat juga `README.md`):
+
+1. **Carrier Professional Mode** — apakah guidance semacam ini juga perlu
+   ditanam ke `CLAUDE.md` bagian Professional Mode (yang saat ini eksplisit
+   "does not adhere to Sigma governance rules"), bukan hanya ke 4 role skill
+   file. Belum diputuskan.
+2. **Mekanisme konsolidasi bila "Director Assistance" diperluas nanti** —
+   kalau suatu saat diputuskan ada perilaku guidance yang lebih luas,
+   sebaiknya didefinisikan sekali di satu sumber (mis. `SIGMA_PROTOCOL.md`)
+   dan dirujuk tiap skill file — bukan disalin ulang ke 4-5 file, mengulang
+   pola yang justru sedang dikonsolidasi di Tahap 3.
+3. **Cakupan "auto-detect confusion"** — usulan AUD soal AI otomatis
+   mendeteksi Director bingung/salah panggil role/tanya istilah adalah skala
+   lebih besar dari "2 tweak kecil" yang sudah dikunci Director untuk plan
+   ini. Jika suatu saat ingin dieksekusi, sebaiknya jadi plan/topik
+   tersendiri, bukan diam-diam masuk ke scope plan ini.
 
 ---
 
