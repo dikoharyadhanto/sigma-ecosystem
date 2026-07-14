@@ -6,31 +6,15 @@ export interface ProjectConfig {
   schema_version: string;
   document_language: string;
   interaction_language: string;
-  formal_identifier_language: string;
+  output_document_language: string;
 }
 
 const DEFAULTS: ProjectConfig = {
   schema_version: SCHEMA_VERSION,
-  document_language: 'en',
-  interaction_language: 'en',
-  formal_identifier_language: 'en',
+  document_language: 'English',
+  interaction_language: 'English',
+  output_document_language: 'English',
 };
-
-const LANG_NAMES: Record<string, string> = {
-  en: 'English',
-  id: 'Bahasa Indonesia',
-  fr: 'French',
-  de: 'German',
-  es: 'Spanish',
-  pt: 'Portuguese',
-  zh: 'Chinese',
-  ja: 'Japanese',
-  ko: 'Korean',
-};
-
-export function langLabel(code: string): string {
-  return LANG_NAMES[code] ?? code;
-}
 
 export function readProjectConfig(projectRoot: string): ProjectConfig {
   const filePath = path.join(projectRoot, PROJECT_CONFIG_FILE);
@@ -49,11 +33,11 @@ export function writeProjectConfig(projectRoot: string, config: ProjectConfig): 
   fs.writeJsonSync(filePath, config, { spaces: 2 });
 }
 
-export function createDefaultProjectConfig(lang = 'en'): ProjectConfig {
+export function createDefaultProjectConfig(lang = 'English'): ProjectConfig {
   return {
     schema_version: SCHEMA_VERSION,
     document_language: lang,
     interaction_language: lang,
-    formal_identifier_language: 'en',
+    output_document_language: lang,
   };
 }

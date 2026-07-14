@@ -1,31 +1,64 @@
 import { Command } from 'commander';
 import { findProjectRoot } from '../utils/fs';
-import { readProjectConfig, writeProjectConfig, langLabel } from '../engine/projectConfig';
+import { readProjectConfig, writeProjectConfig } from '../engine/projectConfig';
+import { promptLanguageWizard } from '../engine/languageWizard';
 
 export function configCommand(): Command {
   const cmd = new Command('config');
   cmd.description('Manage project configuration (Sigma/project.config.json)');
 
-  const set = cmd.command('set');
-  set.description('Set a configuration value');
+  // `sigma config` with no subcommand — interactive language wizard.
+  cmd.action(async () => {
+    try {
+      const projectRoot = findProjectRoot();
+      const config = readProjectConfig(projectRoot);
+      console.log('\n=== Sigma Language Preferences ===\n');
+      const updated = await promptLanguageWizard(config);
+      writeProjectConfig(projectRoot, updated);
+      console.log('\nLanguage preferences updated.');
+    } catch (e) {
+      console.error((e as Error).message);
+      process.exit(1);
+    }
+  });
 
-  set.command('language <lang>')
+  const set = cmd.command('set');
+  set.description('Set a configuration value (non-interactive)');
+
+  set.command('language <name>')
     .description(
-      'Set the Director interaction language (e.g., "en", "id"). ' +
-      'Artifact content (FMN-PLAN, DEV-EXEC, ROADMAP) is always written in English regardless of this setting.'
+      'Set a language preference to a free-form language name (e.g. "English", "Indonesia") — not an ISO code. ' +
+      'Requires exactly one of --interaction, --sigma-document, or --output-document.'
     )
-    .action((lang: string) => {
+    .option('--interaction', 'Set the AI communication (Director-facing) language')
+    .option('--sigma-document', 'Set the Sigma document (DIR-INTENT/FMN-PLAN/DEV-EXEC/etc.) language')
+    .option('--output-document', 'Set the non-Sigma output document language')
+    .action((name: string, flags: { interaction?: boolean; sigmaDocument?: boolean; outputDocument?: boolean }) => {
       try {
+        const selected = [flags.interaction, flags.sigmaDocument, flags.outputDocument].filter(Boolean).length;
+        if (selected !== 1) {
+          throw new Error('Specify exactly one of --interaction, --sigma-document, or --output-document.');
+        }
+
         const projectRoot = findProjectRoot();
         const config = readProjectConfig(projectRoot);
-        const prev = config.interaction_language;
-        config.interaction_language = lang;
-        writeProjectConfig(projectRoot, config);
-        console.log(`Language preference updated.`);
-        console.log(`  Interaction: ${prev} → ${lang} (${langLabel(lang)})`);
-        console.log(`  Artifact content: English (unchanged)`);
-        console.log('');
-        console.log(`AI roles will read this setting at bootstrap and communicate in ${langLabel(lang)}.`);
+
+        if (flags.interaction) {
+          const prev = config.interaction_language;
+          config.interaction_language = name;
+          writeProjectConfig(projectRoot, config);
+          console.log(`AI Communication Language: ${prev} -> ${name}`);
+        } else if (flags.sigmaDocument) {
+          const prev = config.document_language;
+          config.document_language = name;
+          writeProjectConfig(projectRoot, config);
+          console.log(`Sigma Docs Language: ${prev} -> ${name}`);
+        } else {
+          const prev = config.output_document_language;
+          config.output_document_language = name;
+          writeProjectConfig(projectRoot, config);
+          console.log(`Output Doc Written Language: ${prev} -> ${name}`);
+        }
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
@@ -39,9 +72,9 @@ export function configCommand(): Command {
         const projectRoot = findProjectRoot();
         const config = readProjectConfig(projectRoot);
         console.log('\n=== Project Config ===\n');
-        console.log(`Interaction language:     ${config.interaction_language} (${langLabel(config.interaction_language)})`);
-        console.log(`Document language:        ${config.document_language} (${langLabel(config.document_language)})`);
-        console.log(`Formal identifiers:       ${config.formal_identifier_language} (${langLabel(config.formal_identifier_language)})`);
+        console.log(`AI Communication Language:     ${config.interaction_language}`);
+        console.log(`Sigma Docs Language:           ${config.document_language}`);
+        console.log(`Output Doc Written Language:   ${config.output_document_language}`);
         console.log('');
       } catch (e) {
         console.error((e as Error).message);

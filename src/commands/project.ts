@@ -28,7 +28,8 @@ import {
   getInvalidWarningLines,
   hasInvalidRuntime,
 } from '../engine/progress';
-import { createDefaultProjectConfig, writeProjectConfig, langLabel } from '../engine/projectConfig';
+import { createDefaultProjectConfig, writeProjectConfig } from '../engine/projectConfig';
+import { promptLanguageWizard } from '../engine/languageWizard';
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, fileExists, findProjectRoot, backupFile } from '../utils/fs';
 
@@ -131,6 +132,7 @@ async function runStart(opts: {
   // Collect project_id and project_name
   let projectId: string;
   let projectName: string;
+  let projectConfig = createDefaultProjectConfig(opts.lang?.trim() || 'English');
 
   if (opts.id && opts.name) {
     projectId = validateProjectId(opts.id);
@@ -159,6 +161,9 @@ async function runStart(opts: {
 
     projectId = validateProjectId(answers.projectId as string);
     projectName = validateProjectName(answers.projectName as string);
+
+    console.log('');
+    projectConfig = await promptLanguageWizard(projectConfig);
   }
 
   info(`Initializing Sigma project: ${projectName} (${projectId})...`);
@@ -213,10 +218,9 @@ async function runStart(opts: {
   const initial = createInitialProgress(projectId, projectName);
   fs.writeJsonSync(progressPath, initial, { spaces: 2 });
 
-  // Write project.config.json with language preference
-  const lang = opts.lang?.trim().toLowerCase() || 'en';
-  writeProjectConfig(projectRoot, createDefaultProjectConfig(lang));
-  console.log(`  Config: Sigma/project.config.json written (document language: ${langLabel(lang)})`);
+  // Write project.config.json with language preferences
+  writeProjectConfig(projectRoot, projectConfig);
+  console.log(`  Config: Sigma/project.config.json written (Sigma docs language: ${projectConfig.document_language})`);
 
   // Create messages folder tree
   const messagesDir = path.join(projectRoot, MESSAGES_DIR);
@@ -449,7 +453,7 @@ export function projectCommand(): Command {
     .description('Initialize a Sigma project in the current directory')
     .option('--id <PROJECT_ID>', 'Project ID (uppercase, max 12 chars)')
     .option('--name <name>', 'Project name (max 64 chars)')
-    .option('--lang <code>', 'Document language ISO 639-1 code (default: en). Use "id" for Bahasa Indonesia.')
+    .option('--lang <name>', 'Language name applied to all language preferences in non-interactive mode (default: "English"). Free-form, e.g. "Indonesia".')
     .option('--confirm', 'Skip interactive prompts (requires --id and --name)')
     .option('--reinit', 'Re-initialize an existing Sigma project (backs up progress.json)')
     .option('--overwrite-bridge', 'Overwrite existing bridge files (CLAUDE.md, GEMINI.md, AGENTS.md)')

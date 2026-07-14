@@ -118,16 +118,17 @@ function runBootstrap(opts) {
     console.log('\n=== Sigma Session Bootstrap ===\n');
     console.log(`Project:          ${data.project_name} (${data.project_id})`);
     console.log(`Lifecycle Phase:  ${data.lifecycle_state}`);
-    // Director language preference — only surface when non-English to avoid noise
-    if (projectConfig.document_language !== 'en' || projectConfig.interaction_language !== 'en') {
-        console.log('\n--- Director Preferences ---');
-        console.log(`  Document language:   ${(0, projectConfig_1.langLabel)(projectConfig.document_language)} (${projectConfig.document_language})`);
-        console.log(`  Interaction:         ${(0, projectConfig_1.langLabel)(projectConfig.interaction_language)} (${projectConfig.interaction_language})`);
-        console.log(`  Formal identifiers:  English (unchanged)`);
-        console.log('');
-        console.log(`  [LANG] Write document prose in ${(0, projectConfig_1.langLabel)(projectConfig.document_language)}.`);
-        console.log('  [LANG] Keep Sigma artifact codes, CLI commands, filenames, and state names unchanged.');
-    }
+    // Director language preferences — always shown, even at default.
+    console.log('\n--- Director Preferences ---');
+    console.log(`  AI Communication Language:    ${projectConfig.interaction_language}`);
+    console.log(`  Sigma Docs Language:          ${projectConfig.document_language}`);
+    console.log(`  Output Doc Written Language:  ${projectConfig.output_document_language}`);
+    console.log('');
+    console.log(`  [LANG] Write Sigma document prose in ${projectConfig.document_language}.`);
+    console.log(`  [LANG] Write non-Sigma output documents in ${projectConfig.output_document_language}.`);
+    console.log(`  [LANG] Communicate with the Director in ${projectConfig.interaction_language}.`);
+    console.log('  [LANG] These settings govern AI write/response direction only — never auto-switch based on the language of the Director\'s message.');
+    console.log('  [LANG] Keep Sigma artifact codes, CLI commands, filenames, and state names unchanged.');
     const artifactLine = (label, code, version, state) => {
         const display = version !== 'none' ? `${label} (${code} ${version})` : `${label} (${code})`;
         return `${display.padEnd(40)} [${fmtState(state)}]`;

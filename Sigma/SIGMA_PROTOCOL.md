@@ -580,11 +580,19 @@ The AI role must not self-certify that a condition is satisfied and proceed unil
 
 ## 16D. Language Preference
 
-Projects may configure a Director communication language via `sigma config set language <value>` (stored in `Sigma/sigma.config.json`). Supported values: `"en"` (default), `"id"` (Indonesian), or any IETF language tag.
+Projects configure language preferences in `Sigma/project.config.json` via `sigma config` (interactive wizard) or `sigma config set language <name> --interaction|--sigma-document|--output-document` (non-interactive). Values are free-form language names understandable by humans and AI (e.g. `"English"`, `"Indonesia"`, `"Bahasa Jawa"`) — not ISO codes or an enum. Default: `"English"`.
 
-During role activation or session orientation, AI roles check `Sigma/sigma.config.json` when available and conduct all Director-facing communication in the configured language.
+Three independent fields exist:
 
-**Artifact content is always written in English regardless of language setting.** FMN-PLAN, DEV-EXEC, ROADMAP, rule files, and all governance artifacts remain in English. The language setting controls AI ↔ Director interaction only — not artifact prose.
+- `interaction_language` — AI ↔ Director communication (chat/session interaction).
+- `document_language` — prose inside Sigma governance artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE, ROADMAP, AUD-NOTE, etc.).
+- `output_document_language` — prose inside non-Sigma output documents (e.g. `Discussion/*.md`, reports outside the formal artifact set).
+
+During role activation or session orientation, AI roles check `Sigma/project.config.json` (surfaced by `sigma session bootstrap`) and follow all three settings.
+
+**Formal Sigma identifiers always stay in English regardless of language setting** — artifact codes (`DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, `DIR-CLOSE`, `ROADMAP`), lifecycle/gate state names (`DRAFT`, `LOCKED`, `SUPERSEDED`, `BUILDING`, `TESTING`, `COMPLETED`), CLI commands, filenames, JSON keys, and other machine-readable syntax are never translated. Only human-readable prose follows the configured language.
+
+**Language preferences govern AI write/response direction only, not reading comprehension.** An AI role must never auto-switch its response or document-writing language just because the Director's message happens to be written in a different language — only an explicit Director instruction changes the effective language for a turn or session, and persisting that change to `sigma config` requires explicit Director approval (see 16C).
 
 ---
 

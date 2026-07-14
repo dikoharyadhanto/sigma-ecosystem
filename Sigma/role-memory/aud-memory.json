@@ -13,7 +13,10 @@
     "Use Sigma messaging for all formal role-to-role communication; never bypass it.",
     "Ask explicit Director approval before locks, risk acceptance, supersession, closure, or authority-sensitive actions.",
     "Stay within the direct evidence chain; stop and ask before expanding investigation scope.",
-    "Confirm the Audit Target, Director Reference, and Evidence Package before issuing brutal critique."
+    "Confirm the Audit Target, Director Reference, and Evidence Package before issuing brutal critique.",
+    "If the Director states an explicit language preference during conversation, offer to persist it via `sigma config` before running it — execute only after explicit Director approval.",
+    "If it is unclear which language setting the Director means, ask explicitly whether it applies to all three (AI Communication Language, Sigma Docs Language, Output Doc Written Language) or only specific ones, before offering to persist.",
+    "Language config governs AI write/response direction only, not reading comprehension — never auto-switch response language just because the Director's message happens to be written in a different language; only an explicit instruction triggers the persist offer above."
   ],
   "role_specific": [
     "Audit only the artifact, evidence, or scope explicitly requested by the Director.",

@@ -16,7 +16,7 @@ import {
 import { findProjectRoot } from '../utils/fs';
 import { readIndex, getUnreadForRole, MessageEntry } from '../engine/mailbox';
 import { MESSAGING_ROLES, SigmaRole } from '../config';
-import { readProjectConfig, langLabel } from '../engine/projectConfig';
+import { readProjectConfig } from '../engine/projectConfig';
 
 interface RoleBootstrapGuidance {
   routine: string[];
@@ -146,16 +146,17 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
   console.log(`Project:          ${data.project_name} (${data.project_id})`);
   console.log(`Lifecycle Phase:  ${data.lifecycle_state}`);
 
-  // Director language preference — only surface when non-English to avoid noise
-  if (projectConfig.document_language !== 'en' || projectConfig.interaction_language !== 'en') {
-    console.log('\n--- Director Preferences ---');
-    console.log(`  Document language:   ${langLabel(projectConfig.document_language)} (${projectConfig.document_language})`);
-    console.log(`  Interaction:         ${langLabel(projectConfig.interaction_language)} (${projectConfig.interaction_language})`);
-    console.log(`  Formal identifiers:  English (unchanged)`);
-    console.log('');
-    console.log(`  [LANG] Write document prose in ${langLabel(projectConfig.document_language)}.`);
-    console.log('  [LANG] Keep Sigma artifact codes, CLI commands, filenames, and state names unchanged.');
-  }
+  // Director language preferences — always shown, even at default.
+  console.log('\n--- Director Preferences ---');
+  console.log(`  AI Communication Language:    ${projectConfig.interaction_language}`);
+  console.log(`  Sigma Docs Language:          ${projectConfig.document_language}`);
+  console.log(`  Output Doc Written Language:  ${projectConfig.output_document_language}`);
+  console.log('');
+  console.log(`  [LANG] Write Sigma document prose in ${projectConfig.document_language}.`);
+  console.log(`  [LANG] Write non-Sigma output documents in ${projectConfig.output_document_language}.`);
+  console.log(`  [LANG] Communicate with the Director in ${projectConfig.interaction_language}.`);
+  console.log('  [LANG] These settings govern AI write/response direction only — never auto-switch based on the language of the Director\'s message.');
+  console.log('  [LANG] Keep Sigma artifact codes, CLI commands, filenames, and state names unchanged.');
 
   const artifactLine = (label: string, code: string, version: string, state: string | null): string => {
     const display = version !== 'none' ? `${label} (${code} ${version})` : `${label} (${code})`;

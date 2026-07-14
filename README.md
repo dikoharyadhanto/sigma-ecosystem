@@ -504,8 +504,9 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | close    | `sigma close new`                  | Create a `DIR-CLOSE` draft                                                     |
 | close    | `sigma close lock`                 | Lock the active `DIR-CLOSE` with Director approval                             |
 | close    | `sigma close status`               | Show closure state                                                             |
+| config   | `sigma config`                     | Interactive wizard for all 3 language preferences (yes/no per field)           |
 | config   | `sigma config show`                | Show current project language preferences                                      |
-| config   | `sigma config set language <lang>` | Set interaction or document language (e.g. `en`, `id`)                         |
+| config   | `sigma config set language <name> --interaction\|--sigma-document\|--output-document` | Set one language preference non-interactively (free-form name, e.g. `English`, `Indonesia`) |
 | send     | `sigma send`                       | Send a message from one role to another (`--from`, `--to`, `--message`)        |
 | inbox    | `sigma inbox --role <role>`        | List unread messages for a role                                                |
 | inbox    | `sigma inbox read <id>`            | Read a message and mark it as READ                                             |

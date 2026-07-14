@@ -16,6 +16,7 @@ const roleMemory_1 = require("../engine/roleMemory");
 const artifacts_1 = require("../utils/artifacts");
 const progress_1 = require("../engine/progress");
 const projectConfig_1 = require("../engine/projectConfig");
+const languageWizard_1 = require("../engine/languageWizard");
 const output_1 = require("../utils/output");
 const fs_1 = require("../utils/fs");
 // ── Bundle paths ─────────────────────────────────────────────────────────────
@@ -79,6 +80,7 @@ async function runStart(opts) {
     // Collect project_id and project_name
     let projectId;
     let projectName;
+    let projectConfig = (0, projectConfig_1.createDefaultProjectConfig)(opts.lang?.trim() || 'English');
     if (opts.id && opts.name) {
         projectId = validateProjectId(opts.id);
         projectName = validateProjectName(opts.name);
@@ -118,6 +120,8 @@ async function runStart(opts) {
         ]);
         projectId = validateProjectId(answers.projectId);
         projectName = validateProjectName(answers.projectName);
+        console.log('');
+        projectConfig = await (0, languageWizard_1.promptLanguageWizard)(projectConfig);
     }
     (0, output_1.info)(`Initializing Sigma project: ${projectName} (${projectId})...`);
     // Create Sigma/ folder and all subfolders
@@ -166,10 +170,9 @@ async function runStart(opts) {
     // Create progress.json
     const initial = (0, progress_1.createInitialProgress)(projectId, projectName);
     fs_extra_1.default.writeJsonSync(progressPath, initial, { spaces: 2 });
-    // Write project.config.json with language preference
-    const lang = opts.lang?.trim().toLowerCase() || 'en';
-    (0, projectConfig_1.writeProjectConfig)(projectRoot, (0, projectConfig_1.createDefaultProjectConfig)(lang));
-    console.log(`  Config: Sigma/project.config.json written (document language: ${(0, projectConfig_1.langLabel)(lang)})`);
+    // Write project.config.json with language preferences
+    (0, projectConfig_1.writeProjectConfig)(projectRoot, projectConfig);
+    console.log(`  Config: Sigma/project.config.json written (Sigma docs language: ${projectConfig.document_language})`);
     // Create messages folder tree
     const messagesDir = path_1.default.join(projectRoot, config_1.MESSAGES_DIR);
     fs_extra_1.default.ensureDirSync(messagesDir);
@@ -364,7 +367,7 @@ function projectCommand() {
         .description('Initialize a Sigma project in the current directory')
         .option('--id <PROJECT_ID>', 'Project ID (uppercase, max 12 chars)')
         .option('--name <name>', 'Project name (max 64 chars)')
-        .option('--lang <code>', 'Document language ISO 639-1 code (default: en). Use "id" for Bahasa Indonesia.')
+        .option('--lang <name>', 'Language name applied to all language preferences in non-interactive mode (default: "English"). Free-form, e.g. "Indonesia".')
         .option('--confirm', 'Skip interactive prompts (requires --id and --name)')
         .option('--reinit', 'Re-initialize an existing Sigma project (backs up progress.json)')
         .option('--overwrite-bridge', 'Overwrite existing bridge files (CLAUDE.md, GEMINI.md, AGENTS.md)')
