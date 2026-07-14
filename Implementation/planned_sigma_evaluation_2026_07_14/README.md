@@ -62,3 +62,16 @@ Sesuai `Discussion/sigma-system-evaluation-2026-07-14.md` bagian "Isu Terbuka":
 
 - Kategorisasi command Sigma CLI di luar yang sudah dibahas (selain `gitignore generate`, `cso`, `override`, `sigma doctor`) — menunggu arahan Director lebih lanjut, tidak ada dasar keputusan untuk dituangkan ke plan.
 - `sigma project register` sebagai topik lanjutan terpisah (disebut sekilas di Topik 4, belum dievaluasi) — bukan bagian dari 7 topik yang disepakati, sengaja tidak dimasukkan ke plan manapun di atas.
+
+---
+
+## Topik 8 — Ditambahkan Setelah Sesi Awal Dibuka Kembali
+
+Sesi evaluasi awal sempat ditutup dengan 7 topik disepakati (di atas). Director
+kemudian membuka kembali sesi untuk menambahkan **Topik 8** (evaluasi UX
+guidance & terminologi Sigma). Plan untuk topik ini disusun terpisah karena
+datang setelah pembagian 8-dokumen awal selesai:
+
+| # | Dokumen | Topik sumber | Catatan sequencing |
+|---|---|---|---|
+| 9 | [PLAN-EVAL-09-UX-GUIDANCE-AND-TERMINOLOGY.md](PLAN-EVAL-09-UX-GUIDANCE-AND-TERMINOLOGY.md) | Topik 8 (UX guidance & terminologi) | Tidak bergantung teknis ke #1–#8, tapi direkomendasikan dikerjakan **setelah #5** (CSO removal) agar baris "Context Handoff (CSO)" di tabel Human Label sudah hilang lebih dulu, menghindari konflik edit. Punya keterkaitan terbuka (bukan dependency blocking) dengan #6 (redesain bahasa) soal field bahasa mana yang mengatur Human Label. |

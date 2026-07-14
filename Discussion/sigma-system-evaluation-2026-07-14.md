@@ -4,7 +4,7 @@
 > Tujuan dokumen: mencatat poin-poin yang **disepakati** antara Director dan Claude selama sesi
 > diskusi evaluasi menyeluruh sistem Sigma, sebagai bahan input sebelum dirumuskan ke fase
 > Plan Implementation (FMN-PLAN atau setara).
-> Status sesi: **SELESAI** — Director melanjutkan ke sesi baru untuk fase Plan Implementation.
+> Status sesi: **DIBUKA KEMBALI** — Director menambahkan Topik 8 (evaluasi UX komunikasi AI role & terminologi Sigma) setelah penutupan awal, sebelum lanjut ke fase Plan Implementation.
 
 ---
 
@@ -357,11 +357,66 @@ Director khawatir keduanya redundan karena selalu menjalankan keduanya bersamaan
 
 ---
 
+### Topik 8 — Evaluasi UX: Guidance & Komunikasi AI Role terhadap User Baru, Terminologi Sigma
+
+**Latar belakang:** Director menjalankan simulasi user baru (fresh project, belum pernah pakai Sigma) memakai Claude yang berperan sebagai AI role Sigma, dimulai dari `sigma project start`. Dari transcript simulasi tsb, Director mengidentifikasi 2 masalah:
+1. Komunikasi AI role dinilai kurang *guidance* dan komunikatif terhadap user baru.
+2. Istilah/term Sigma (ARC, FMN, DEV, AUD, DIR-INTENT, dst.) berpotensi membingungkan user baru.
+
+**Bukti konkret dari simulasi (diverifikasi ke kode, bukan asumsi):**
+
+1. User bertanya "gimana cara pakainya" → dijawab langsung dengan seluruh lifecycle (START→DESIGN→BUILD→CLOSE) + 4 role sekaligus. User lalu harus bertanya mundur 3 kali berurutan: *"arc itu apa?"* → *"dir-intent itu apa?"* → *"sigma ini sebenarnya apa?"* — pola klasik istilah diperkenalkan sebelum konsepnya, memaksa user mundur beberapa level sebelum bisa maju lagi.
+2. `sigma project start` ([project.ts:269](../src/commands/project.ts#L269)) hanya mencetak pesan generik: `Next: Run \`sigma session bootstrap\` or \`sigma project status\` to confirm state.` — tidak ada guidance spesifik fase (mis. "Anda sekarang di DESIGN, langkah berikutnya: buka role ARC").
+3. Skill `arc.md` ([setup/targets/claude_code/arc.md:48-52](../setup/targets/claude_code/arc.md#L48-L52)), Role Activation langkah 2: *"Stop and ask whether the Director wants to open a new DIR-INTENT"* — pertanyaan prosedural ini langsung dilontarkan begitu `/arc` diaktifkan, tanpa didahului 1-2 kalimat penjelasan "ARC itu role apa" atau "DIR-INTENT itu apa". Belum diverifikasi apakah `fmn.md`/`dev.md`/`aud.md` punya pola aktivasi yang sama persis (dicatat sebagai follow-up investigasi).
+4. Dalam transcript simulasi, output mentah `sigma memory --arc` (isi role reminders dari `ARC-RULE.md`) sempat ditampilkan apa adanya ke user yang masih bertanya dasar-dasar — detail operasional internal AI yang seharusnya tidak perlu terlihat oleh user pemula.
+5. Observasi tambahan (belum teruji di simulasi ini): constraint *"role tidak bisa berganti di sesi yang sama, harus sesi baru"* ([arc.md:19-25](../setup/targets/claude_code/arc.md#L19-L25), Role Immutability) disampaikan ke user tanpa instruksi praktis "cara membuka sesi baru" di client yang sedang dipakai.
+
+**Audit eksternal (AUD, sesi terpisah, hasil direlay Director):** Director meminta AUD (auditor eksternal pasif) mereview transcript simulasi yang sama.
+
+- **Verdict AUD: PASS.** AUD menilai user baru bisa sampai ke aktivasi ARC tanpa membuka dokumentasi — dianggap keberhasilan yang berarti.
+- **Yang dinilai berhasil:** AI tidak melempar README (orientasi berbasis runtime state dulu, baru menjelaskan langkah), penjelasan bertahap sesuai progressive disclosure, jawaban "ARC itu apa?" dijawab fungsional bukan definisi otoritas formal.
+- **Satu opportunity yang diberi bobot besar oleh AUD:** urutan penjelasan artifact baru (mis. DIR-INTENT) masih "definisi dulu, baru manfaat" — AUD mengusulkan dibalik jadi "kenapa/manfaat dulu, istilah Sigma belakangan", dirumuskan sebagai prinsip **Director-First Communication**: setiap kali istilah/artefak/operasi Sigma disebut pertama kali, jawab berurutan (1) kenapa ini dilakukan, (2) apa yang terjadi selanjutnya, (3) baru nama Sigma-nya.
+- AUD juga mengusulkan pemisahan **Internal Language** (istilah antar-AI: DIR-INTENT, Gate 2, Authority) vs **Director Language** (tujuan proyek, rencana kerja, implementasi) per role, dan **First Mention Rule** (istilah baru selalu dijelaskan dalam bahasa user saat pertama muncul, boleh pakai istilah Sigma setelahnya).
+
+**Kalibrasi ulang oleh Director (setelah menimbang audit AUD + evaluasi awal):** Director menilai keseluruhan hasil simulasi **sudah cukup baik** (selaras dengan verdict PASS AUD) — perbaikan yang dibutuhkan **kecil**, bukan perubahan arsitektural/doktrin. Rencana propagasi 4-layer (PROTOCOL + RULE + skill + bridge) dan opsi menaikkan "Director-First Communication" ke tier doktrin (`SIGMA_PROTOCOL.md` §4.0b) **ditarik kembali** — dinilai terlalu besar untuk skala masalah yang sebenarnya sempit. Fokus kembali dipersempit menjadi:
+1. Perbaiki kalimat pembuka respons pertama saat user bertanya "cara pakai" — cukup next-step + 1 baris fungsi role, bukan seluruh lifecycle + 4 role sekaligus.
+2. Perbaiki urutan penjelasan saat artifact/istilah disebut pertama kali — kenapa/manfaat dulu, nama Sigma belakangan.
+Kedua tweak ini cukup ditulis sebagai contoh kalimat di skill file yang sudah ada (`arc.md` bagian "Director-Facing Communication Rules", ditiru ke `fmn.md`/`dev.md`/`aud.md`) — tidak perlu entri baru di `SIGMA_PROTOCOL.md` atau `Sigma/rules/*-RULE.md`.
+
+**Temuan tambahan — konsistensi penamaan Human Artifact Label (dari usulan Director menulis ulang daftar label):**
+
+Director mengusulkan format konsisten "Dokumen {Nama} ({KODE SIGMA})", contoh: Dokumen Intent (DIR-INTENT), Dokumen Kontrak Kerja/Plan (FMN-PLAN), Dokumen Eksekusi (DEV-EXEC), Dokumen Closure (DIR-CLOSE) — dengan catatan bahasa akhir (Indonesia/Inggris) menyesuaikan konfigurasi proyek, bukan wajib Indonesia.
+
+Diverifikasi ke kode: **tabel ini sudah ada sebagai canonical source** di `SIGMA_PROTOCOL.md` Section 5.8 "Director-Facing Labels" ([SIGMA_PROTOCOL.md:327-337](../Sigma/SIGMA_PROTOCOL.md#L327-L337)) — format "Human label | Artifact code | Purpose", isinya sudah selaras dengan usulan Director (mis. Plan Doc/FMN-PLAN Purpose = "Build contract and test contract", cocok dengan ide "Kontrak Kerja").
+
+**Namun ditemukan tabel yang sama persis diduplikasi ulang di 6 skill file terpisah** (`arc.md`, `fmn.md`, `dev.md`, `aud.md`, `sigma-test.md`, `report.md` — dikonfirmasi via grep `"Human label"`/`"Use this"` di `setup/targets/claude_code/`) — total 7 salinan tabel yang sama. Ini kelas masalah drift yang sama dengan Topik 1 (ROADMAP): makin banyak salinan manual, makin besar risiko satu direvisi dan sisanya tertinggal.
+
+Isu tambahan yang belum final:
+- Untuk FMN-PLAN, usulan Director "Kontrak Kerja/Plan" menyandingkan dua opsi — direkomendasikan pilih **satu** label tetap (bukan dua alternatif bergaris-miring) supaya label itu sendiri tidak menjadi sumber drift baru.
+- Bahasa label ini (Indonesia/Inggris) kemungkinan mengikuti `interaction_language` (bukan `document_language`), karena label dipakai dalam percakapan lisan ke Director, bukan prosa artefak formal — perlu dikaitkan dengan keputusan Topik 4 (skema bahasa `project.config.json`), belum diputuskan eksplisit.
+- Baris "Context Handoff (CSO)" di §5.8 perlu dihapus sebagai konsekuensi Topik 3/4 (CSO dihapus total) — sudah tercakup umum di implikasi Topik 4 ("referensi SIGMA_PROTOCOL.md" perlu ditinjau), ditandai eksplisit di sini bahwa lokasinya §5.5 dan §5.8.
+
+**Keputusan:**
+1. **Skala perbaikan dipersempit** menjadi 2 tweak teks di skill file (lihat "Kalibrasi ulang" di atas) — bukan perubahan doktrin/protocol/bridge.
+2. **Wording Human Label — dikunci: pakai apa adanya yang sudah tertulis di `SIGMA_PROTOCOL.md` §5.8**, tidak ada rewording baru. Director menolak usulan wording Indonesia ("Dokumen Intent", "Kontrak Kerja/Plan", dst.) sebagai pengganti — cukup pakai tabel existing (Intent Doc, Plan Doc, Execution Evidence, Closure Doc, Roadmap Doc, Reference List). Ini otomatis menyelesaikan isu "pilih satu label FMN-PLAN" — tetap "Plan Doc", tidak digabung dengan alternatif lain.
+3. **Konsolidasi sumber label** — `SIGMA_PROTOCOL.md` §5.8 tetap jadi satu-satunya canonical source; 6 skill file yang menduplikasi tabel ini sebaiknya merujuk ke §5.8 alih-alih menyalin ulang isi tabel, mengurangi 7 salinan jadi 1 sumber + referensi.
+
+**Implikasi teknis untuk fase implementasi (belum dieksekusi, menunggu keputusan Director lebih lanjut):**
+- Tambahkan 2 contoh kalimat (next-step ringkas saat onboarding; urutan kenapa→nama saat artifact pertama disebut) ke `arc.md` bagian "Director-Facing Communication Rules", replikasi pola yang sama ke `fmn.md`/`dev.md`/`aud.md`.
+- Hapus baris "Context Handoff (CSO)" dari §5.8 dan definisi 5.5, konsisten dengan Topik 3/4 — satu-satunya perubahan konten label yang masih perlu dieksekusi (bukan rewording, murni penghapusan baris usang).
+- Refactor 6 skill file (`arc.md`/`fmn.md`/`dev.md`/`aud.md`/`sigma-test.md`/`report.md`) agar merujuk §5.8 sebagai sumber tunggal, bukan menyalin tabel penuh.
+- Tentukan field bahasa mana (`interaction_language` vs field dokumen non-Sigma baru dari Topik 4) yang mengatur bahasa Human Label saat proyek non-default English — keputusan terbuka, dicatat sebagai follow-up lintas-topik (Topik 4 ↔ Topik 8).
+
+**Status topik: DIBUKA — skala perbaikan dan wording label sudah dikalibrasi/dikunci (pakai §5.8 apa adanya); sisa item terbuka hanya konsolidasi duplikasi ke 1 sumber dan keterkaitan field bahasa ke Topik 4.**
+
+---
+
 ## Isu Terbuka / Belum Disepakati
 
 - **`override` + `sigma doctor`**: keputusan akhir (perbaiki vs hapus) sengaja ditunda ke fase Plan Implementation — dicatat sebagai agenda wajib, bukan isu yang hilang.
 - Kategorisasi command lain di luar `gitignore generate`, `cso`, `override`, `sigma doctor` — menunggu arahan Director lebih lanjut (mana yang masuk Reconsider / Evaluate, sisanya default keep).
 - **Topik 6 (`sigma setup` final pass)**: sengaja ditunda, dieksekusi paling akhir setelah seluruh topik evaluasi lain (termasuk yang belum dibahas) tuntas — termasuk keputusan terbuka soal Reasonix/Antigravity sebagai platform deploy skill, dan seluruh implikasi teknis Topik 7 (bridge template, uninstall mechanism, pembersihan registry/memory ekosistem) yang menyatu ke pass final ini.
+- **Topik 8 (UX guidance & terminologi Sigma)**: baru dibuka, belum ada keputusan arah perbaikan — 4 opsi dicatat sebagai bahan pertimbangan (next-step guidance di `project start`/`status`, pengantar konsep di awal skill aktivasi, sembunyikan output `sigma memory --<role>` dari chat, penjelasan ringkas "apa itu Sigma" untuk user baru). Menunggu arahan Director soal prioritas.
 
 ---
 
