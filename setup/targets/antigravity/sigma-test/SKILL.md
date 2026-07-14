@@ -1,6 +1,6 @@
 ---
 name: sigma-test
-description: "Sigma environment diagnostic — read-only check of CLI, MCP, memory, skills, and project structure"
+description: "Sigma environment diagnostic — read-only check of CLI, skills, and project structure"
 ---
 
 # /sigma-test — Sigma Environment Diagnostic
@@ -21,7 +21,7 @@ The active role remains active after the diagnostic is produced.
 
 ## What This Skill Does
 
-Runs a comprehensive read-only health check of the Sigma ecosystem installation for the current AI platform (Antigravity / Gemini). Checks are grouped into five categories. Each check reports PASS, WARN, or FAIL.
+Runs a comprehensive read-only health check of the Sigma ecosystem installation for the current AI platform (Antigravity / Gemini). Checks are grouped into four categories. Each check reports PASS, WARN, or FAIL.
 
 ## Execution Protocol
 
@@ -40,40 +40,7 @@ Run: `sigma session bootstrap`
 - WARN if not in a Sigma project (no `Sigma/progress.json` found) — mark all Project checks as N/A
 - FAIL if command errors out unexpectedly
 
-### 2. MCP Check
-
-Inspect whether `.mcp.json` exists in the current working directory.
-
-Read the file and verify its contents:
-
-- PASS if file exists and contains both `sigma-memory` and `sequential-thinking` under `mcpServers`
-- WARN if file exists but is missing one of the expected server entries
-- FAIL if file does not exist
-
-Also inspect `~/.gemini/antigravity/mcp_config.json`:
-
-- PASS if `mcpServers` contains `sigma-memory` with a `MEMORY_FILE_PATH` env pointing to `~/.sigma/memory_sigma.jsonl`
-- WARN if `sigma-memory` entry is present but `MEMORY_FILE_PATH` is missing or incorrect
-- FAIL if `sigma-memory` is not present (run `sigma setup memory --gemini`)
-
-### 3. Sigma Memory Check
-
-Call MCP tool: `search_nodes({ query: "sigma ecosystem constants" })`
-Call MCP tool: `read_graph()`
-
-Evaluate results:
-
-- PASS if `read_graph()` returns 5 or more entities
-- WARN if `read_graph()` returns 1–4 entities (partially seeded — run `sigma setup memory --reseed`)
-- FAIL if `read_graph()` returns 0 entities or MCP tools are unavailable
-
-Also check file existence: `~/.sigma/memory_sigma.jsonl`
-
-- PASS if file exists and is non-empty
-- WARN if file exists but is empty (run `sigma setup memory --reseed`)
-- FAIL if file is missing (run `sigma setup memory`)
-
-### 4. Skill Files Check
+### 2. Skill Files Check
 
 Check that the following skill directories exist in `~/.gemini/config/plugins/`:
 
@@ -91,7 +58,7 @@ For each directory, verify it contains both `SKILL.md` and `plugin.json`.
 - PASS if directory and both files exist
 - FAIL if directory or files are missing (run `sigma setup install` to redeploy)
 
-### 5. Global Setup Check
+### 3. Global Setup Check
 
 Check that the following paths exist:
 
@@ -104,7 +71,7 @@ Check that the following paths exist:
 - PASS if present
 - FAIL if missing (run `sigma setup install`)
 
-### 6. Project Structure Check
+### 4. Project Structure Check
 
 Only run if inside a Sigma project (`Sigma/progress.json` exists).
 
@@ -138,11 +105,6 @@ Platform: Antigravity (Gemini)
 | :--- | :--- | :--- | :--- |
 | CLI | `sigma --help` | PASS/FAIL | v{version} |
 | CLI | `sigma session bootstrap` | PASS/WARN/FAIL | {phase or reason} |
-| MCP | `.mcp.json` present | PASS/FAIL | |
-| MCP | `sigma-memory` server | PASS/WARN/FAIL | {entity count} entities |
-| MCP | `sequential-thinking` server | PASS/WARN/FAIL | |
-| MCP | Antigravity MCP (`~/.gemini/antigravity/mcp_config.json`) | PASS/WARN/FAIL | |
-| Memory | `memory_sigma.jsonl` | PASS/WARN/FAIL | |
 | Skills | `/arc` | PASS/FAIL | |
 | Skills | `/fmn` | PASS/FAIL | |
 | Skills | `/dev` | PASS/FAIL | |

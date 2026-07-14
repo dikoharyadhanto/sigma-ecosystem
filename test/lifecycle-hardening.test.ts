@@ -14,15 +14,13 @@ describe('Lifecycle hardening coverage', () => {
 
   afterEach(() => env?.cleanup());
 
-  it('sigma project start seeds project structure and an empty decision log', () => {
+  it('sigma project start seeds project structure', () => {
     env = setupTestEnv();
 
     const result = runCli('project start --id TEST --name "Test Project" --confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(fs.existsSync(env.progressPath)).toBe(true);
-    expect(fs.existsSync(path.join(env.sigmaDir, 'memory', 'decisions.jsonl'))).toBe(true);
-    expect(fs.readFileSync(path.join(env.sigmaDir, 'memory', 'decisions.jsonl'), 'utf8')).toBe('');
     expect(fs.existsSync(path.join(env.sigmaDir, 'messages', 'index.json'))).toBe(true);
   });
 

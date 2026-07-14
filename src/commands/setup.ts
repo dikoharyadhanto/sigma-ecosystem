@@ -11,12 +11,10 @@ import {
   GLOBAL_BRIDGE_DIR,
   GLOBAL_PROJECTS_FILE,
   GLOBAL_CONFIG_FILE,
-  GLOBAL_MEMORY_FILE,
   SIGMA_VERSION,
 } from '../config';
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, copyDir, fileExists } from '../utils/fs';
-import { writeMcpJson, writeVscodeMcpJson, createMcpConfig, writeReasonixMcpConfig, writeGeminiMcpConfig } from '../utils/mcp';
 import { detectTools, targetPaths } from '../utils/detect';
 
 // ── Bundle paths (files shipped inside the npm package) ─────────────────────
@@ -31,7 +29,6 @@ const BUNDLE_PROTOCOL = path.join(PACKAGE_ROOT, 'Sigma', 'SIGMA_PROTOCOL.md');
 const SETUP_TARGETS_DIR = path.join(PACKAGE_ROOT, 'setup', 'targets');
 const BUNDLE_BRIDGE_DIR = path.join(SETUP_TARGETS_DIR, 'bridge');
 const BUNDLE_HOOKS_DIR = path.join(SETUP_TARGETS_DIR, 'hooks');
-const BUNDLE_MEMORY_SEED = path.join(PACKAGE_ROOT, 'setup', 'sigma-memory-seed.jsonl');
 
 const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
 
@@ -223,30 +220,6 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
       }
     }
 
-    // Step E — Reasonix MCP config (when Reasonix is selected)
-    if (selectedPlatforms.includes('reasonix')) {
-      try {
-        const { editModeChanged } = writeReasonixMcpConfig(paths.reasonixConfig);
-        console.log(`  OK  Reasonix MCP: mcpServers + shellAllowed written to ${paths.reasonixConfig}`);
-        if (editModeChanged) {
-          console.log('  NOTE: editMode changed to "auto" — required for shell commands to execute in Reasonix.');
-        }
-      } catch (e) {
-        warn(`  ERR: Reasonix MCP config — ${(e as Error).message}`);
-      }
-    }
-
-    // Step E2 — Antigravity MCP config (when Antigravity is selected)
-    if (selectedPlatforms.includes('antigravity')) {
-      try {
-        writeGeminiMcpConfig();
-        const geminiMcpPath = path.join(os.homedir(), '.gemini', 'antigravity', 'mcp_config.json');
-        console.log(`  OK  Antigravity MCP: sigma-memory written to ${geminiMcpPath}`);
-      } catch (e) {
-        warn(`  ERR: Antigravity MCP config — ${(e as Error).message}`);
-      }
-    }
-
     // Step F — Hook deployment (Claude Code only)
     if (selectedPlatforms.includes('claudeCode')) {
       await deployHook(opts.yes);
@@ -392,91 +365,6 @@ async function runUpdate(): Promise<void> {
   console.log('  To sync governance files into a project, run: sigma project sync --confirm');
 }
 
-// ── sigma setup memory ───────────────────────────────────────────────────────
-
-function seedMemoryFile(): void {
-  if (!fileExists(BUNDLE_MEMORY_SEED)) {
-    warn('Memory seed file not found in package bundle. Skipping seed.');
-    return;
-  }
-  const seedContent = fs.readFileSync(BUNDLE_MEMORY_SEED, 'utf-8');
-  fs.writeFileSync(GLOBAL_MEMORY_FILE, seedContent, 'utf-8');
-}
-
-function runMemorySetup(opts: { vscode?: boolean; print?: boolean; reseed?: boolean; reasonix?: boolean; gemini?: boolean }): void {
-  if (!fileExists(GLOBAL_SIGMA_DIR)) {
-    error('Sigma is not installed. Run: sigma setup install');
-  }
-
-  const needsSigmaMemory = Boolean(opts.reseed || opts.reasonix || opts.gemini);
-
-  if (needsSigmaMemory) {
-    // Ensure memory file exists when a global sigma-memory adapter is requested.
-    if (!fileExists(GLOBAL_MEMORY_FILE)) {
-      fs.ensureFileSync(GLOBAL_MEMORY_FILE);
-      seedMemoryFile();
-      success(`Memory file created and seeded: ${GLOBAL_MEMORY_FILE}`);
-    } else if (opts.reseed) {
-      seedMemoryFile();
-      success(`Memory file reseeded: ${GLOBAL_MEMORY_FILE}`);
-    } else {
-      const existing = fs.readFileSync(GLOBAL_MEMORY_FILE, 'utf-8').trim();
-      if (existing.length === 0) {
-        seedMemoryFile();
-        success(`Memory file seeded: ${GLOBAL_MEMORY_FILE}`);
-      } else {
-        info(`Memory file: ${GLOBAL_MEMORY_FILE}`);
-      }
-    }
-  }
-
-  const projectRoot = process.cwd();
-
-  // Write .mcp.json at project root
-  const mcpJsonPath = path.join(projectRoot, '.mcp.json');
-  writeMcpJson(mcpJsonPath);
-  success(`Written: ${mcpJsonPath}`);
-
-  // Optionally write .vscode/mcp.json
-  if (opts.vscode) {
-    const vscodeMcpPath = path.join(projectRoot, '.vscode', 'mcp.json');
-    writeVscodeMcpJson(vscodeMcpPath);
-    success(`Written: ${vscodeMcpPath}`);
-  }
-
-  // Optionally write ~/.reasonix/config.json (global, merged with existing)
-  if (opts.reasonix) {
-    const paths = targetPaths();
-    const { editModeChanged } = writeReasonixMcpConfig(paths.reasonixConfig);
-    success(`Written: ${paths.reasonixConfig}`);
-    if (editModeChanged) {
-      console.log('  NOTE: editMode changed to "yolo" — required for all gates (file edits + shell) to be skipped in Reasonix.');
-    }
-  }
-
-  // Optionally write ~/.gemini/antigravity/mcp_config.json (global, merged with existing)
-  if (opts.gemini) {
-    writeGeminiMcpConfig();
-    const geminiMcpPath = path.join(os.homedir(), '.gemini', 'antigravity', 'mcp_config.json');
-    success(`Written: ${geminiMcpPath}`);
-  }
-
-  if (opts.print) {
-    console.log('\n=== Generated .mcp.json ===\n');
-    console.log(JSON.stringify(createMcpConfig(), null, 2));
-    console.log('');
-  }
-
-  console.log('\n  Local MCP servers configured:');
-  console.log('    sequential-thinking  — structured multi-step reasoning');
-  if (opts.reasonix || opts.gemini) {
-    console.log('\n  Optional global Sigma memory adapters configured for selected tools.');
-    console.log('  Sigma memory remains ecosystem-level only; role activation uses role memory first.');
-  }
-  console.log('\n  Project decision log: Sigma/memory/decisions.jsonl (per-project, CLI-written)');
-  console.log('  Role activation memory: Sigma/role-memory/*.json (project-local or bundled)\n');
-}
-
 // ── Command builder ──────────────────────────────────────────────────────────
 
 export function setupCommand(): Command {
@@ -503,18 +391,6 @@ export function setupCommand(): Command {
         console.error(err instanceof Error ? err.message : String(err));
         process.exit(1);
       });
-    });
-
-  cmd
-    .command('memory')
-    .description('Write project MCP config (sequential-thinking by default) and optional global adapters')
-    .option('--vscode', 'Also write .vscode/mcp.json for VS Code extension')
-    .option('--reasonix', 'Also write MCP entries into ~/.reasonix/config.json (global, merged)')
-    .option('--gemini', 'Also write MCP entries into ~/.gemini/antigravity/mcp_config.json (global, merged)')
-    .option('--print', 'Print generated config to stdout in addition to writing files')
-    .option('--reseed', 'Overwrite memory file with fresh seed from package bundle')
-    .action((opts: { vscode?: boolean; print?: boolean; reseed?: boolean; reasonix?: boolean; gemini?: boolean }) => {
-      try { runMemorySetup(opts); } catch (e) { error((e as Error).message); }
     });
 
   return cmd;

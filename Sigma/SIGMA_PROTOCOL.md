@@ -460,7 +460,7 @@ Findings Section Authorization.
 | `inbox` | Read, manage, and check role inboxes |
 | `git` | Git evidence output (read-only) |
 | `config` | Project configuration (language preference, etc.) |
-| `setup` | Installation, configuration, MCP memory setup |
+| `setup` | Installation and global configuration |
 | `memory` | Show Sigma role memory reminders (read-only) |
 | `doctor` | Diagnose and reconcile Sigma runtime state |
 | `override` | Bypass the current lifecycle gate under Director authority (recorded in `Sigma/memory/overrides.jsonl`) |

@@ -24,16 +24,15 @@ describe('Role memory and bootstrap regressions', () => {
 
   afterEach(() => env?.cleanup());
 
-  it('project start seeds role-memory files and writes local MCP config without sigma-memory', () => {
+  it('project start seeds role-memory files and does not write any MCP config', () => {
     env = setupTestEnv();
 
     const result = runCli('project start --id TEST --name "Test Project" --confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'role-memory', 'arc-memory.json'))).toBe(true);
-    const mcp = fs.readJsonSync(path.join(env.projectDir, '.mcp.json'));
-    expect(mcp.mcpServers['sequential-thinking']).toBeTruthy();
-    expect(mcp.mcpServers['sigma-memory']).toBeUndefined();
+    expect(fs.existsSync(path.join(env.projectDir, '.mcp.json'))).toBe(false);
+    expect(fs.existsSync(path.join(env.projectDir, '.vscode', 'mcp.json'))).toBe(false);
   });
 
   it('sigma memory prints authority note, general reminders, and role-specific reminders', () => {

@@ -140,14 +140,3 @@ Hard prohibitions:
 
 - Never manually edit `Sigma/progress.json`
 - Never assume command syntax without verification
-
-## MCP Tooling
-
-Sequential thinking (`sequential-thinking` server):
-
-- Use for multi-step planning, architecture review, complex analysis
-
-## Memory Isolation
-
-`~/.sigma/memory_sigma.jsonl` is Sigma ecosystem-level only.
-Do not store project context, implementation details, or session notes there.

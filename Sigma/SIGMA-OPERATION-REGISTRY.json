@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-07-14T00:00:00.000Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 56,
+  "total_operations": 55,
   "domains": [
     "close",
     "config",
@@ -1054,7 +1054,7 @@
       "action": "install",
       "level": "system",
       "role": "any",
-      "description": "Install Sigma globally. Creates ~/.sigma/ directory structure, copies templates and doctrine files, installs role shortcuts to agent platforms. Does NOT configure MCP memory — use sigma setup memory for that.",
+      "description": "Install Sigma globally. Creates ~/.sigma/ directory structure, copies templates and doctrine files, installs role shortcuts to agent platforms.",
       "inputs": [],
       "outputs": [
         {
@@ -1105,31 +1105,6 @@
       "error_messages": {
         "not_installed": "~/.sigma/ not found. Run: sigma setup install"
       }
-    },
-    {
-      "operation_id": "setup_memory",
-      "domain": "setup",
-      "action": "memory",
-      "level": "system",
-      "role": "any",
-      "description": "Configure Sigma MCP memory node store. Creates ~/.sigma/memory_sigma.jsonl for the Sigma memory graph. Outputs MCP configuration instructions for the user to apply.",
-      "inputs": [],
-      "outputs": [
-        {
-          "type": "file",
-          "description": "~/.sigma/memory_sigma.jsonl (empty MCP memory store)"
-        },
-        {
-          "type": "display",
-          "description": "MCP configuration instructions for Claude/Gemini/Agents"
-        }
-      ],
-      "constraints": [],
-      "gating": {
-        "pre_condition": "none",
-        "post_condition": "~/.sigma/memory_sigma.jsonl created"
-      },
-      "error_messages": {}
     },
     {
       "operation_id": "roadmap_new",

@@ -72,8 +72,3 @@ Sufficient: "approved", "lock it", "I approve this plan", "go ahead", "run it"
 Ambiguous (not sufficient for lock/risk): "okay", "noted", "makes sense"
 
 If authorization is unclear, ask before executing.
-
-## Memory Isolation
-
-`~/.sigma/memory_sigma.jsonl` is Sigma ecosystem-level only.
-Do not store project-specific facts or session context there.

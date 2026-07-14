@@ -7,7 +7,6 @@ export declare const GLOBAL_GOVERNANCE_DIR: string;
 export declare const GLOBAL_BRIDGE_DIR: string;
 export declare const GLOBAL_PROJECTS_FILE: string;
 export declare const GLOBAL_CONFIG_FILE: string;
-export declare const GLOBAL_MEMORY_FILE: string;
 export declare const PROJECT_SIGMA_DIR = "Sigma";
 export declare const PROGRESS_FILE: string;
 export declare const OVERRIDES_FILE: string;

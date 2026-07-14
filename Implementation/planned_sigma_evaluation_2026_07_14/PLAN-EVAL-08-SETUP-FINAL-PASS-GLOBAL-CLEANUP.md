@@ -50,7 +50,7 @@ mencerminkan state akhir sistem, bukan state parsial.
 - [ ] Putuskan status Reasonix/Antigravity sebagai platform tujuan deploy skill (terpisah dari urusan MCP) — konfirmasi ke Director, catat keputusannya di sini sebelum lanjut.
 - [ ] Hapus entri `checkpoint`/`cso` dari `ROLE_FILES` map ([setup.ts:38-44](../../src/commands/setup.ts#L38-L44)) untuk tiap platform.
 - [ ] Hapus Step E ("Reasonix MCP config") dan Step E2 ("Antigravity MCP config") di `runInstall()` ([setup.ts:226-248](../../src/commands/setup.ts#L226-L248)).
-- [ ] Hapus/sederhanakan `runMemorySetup()`/`sigma setup memory` di `setup.ts:406-478` — putuskan apakah command ini masih diperlukan sama sekali (opsi `--reasonix`, `--gemini`, `--vscode`, `--print` kemungkinan besar tidak relevan lagi) atau dihapus/direduksi drastis.
+- [x] **Sudah selesai lebih awal** (follow-up PLAN-EVAL-07, sesi yang sama, dikonfirmasi Director): `runMemorySetup()`/`sigma setup memory` dihapus total dari `setup.ts` — dikonfirmasi tidak ada consumer yang pernah membaca `memory_sigma.jsonl` sama sekali (satu-satunya jalur akses teoretis, MCP `server-memory`, sudah dihapus di PLAN-EVAL-07 utama). Ikut dihapus: `GLOBAL_MEMORY_FILE` (`config.ts`), `setup/sigma-memory-seed.jsonl`, wrapper orphan `scripts/mcp-run-memory.js`, entry `setup_memory` di `Sigma/SIGMA-OPERATION-REGISTRY.json`, dan section "Memory Isolation"/"Advanced: reseed ecosystem memory" di README.md serta 10 file bridge (root + template). Tidak ada sisa kerja untuk sub-item ini di Bagian A.
 - [ ] Refactor logika deteksi tool + deploy skill (Step B-D di [setup.ts:144-224](../../src/commands/setup.ts#L144-L224)) dan deploy hook (`deployHook()`, [setup.ts:263-321](../../src/commands/setup.ts#L263-L321)) dari `runInstall()` jadi fungsi bersama yang bisa dipanggil juga dari `runUpdate()`.
 - [ ] Tentukan perilaku `update` untuk pemilihan tool: auto-redeploy ke seluruh tool yang terdeteksi/sebelumnya terkonfigurasi (tanpa prompt checkbox interaktif seperti `install`), karena `update` tidak perlu gate konfirmasi "Reinstall?" — hanya refresh konten.
 - [ ] Hapus catatan "skill files... NOT redeployed" di pesan sukses `runUpdate()`, sesuaikan dengan perilaku baru.
@@ -72,7 +72,7 @@ ekosistem (`memory_sigma.jsonl`), (6) bridge stubs (template `CLAUDE.md`/dst.),
 
 1. **Registry lintas-project (`~/.sigma/projects.json`, `sigma project register`) — dihapus.** Director menilai tidak penting.
 
-2. **Memory ekosistem (`~/.sigma/memory_sigma.jsonl`)** — masih aktif di-seed lewat `sigma setup memory` ([setup.ts:397-404](../../src/commands/setup.ts#L397-L404)) dan disebut di template bridge `CLAUDE.md`. Karena satu-satunya mekanisme akses (MCP `server-memory` via adapter Reasonix/Antigravity) sudah dihapus di PLAN-EVAL-07, field ini jadi orphan — dibereskan sebagai bagian perbaikan bridge template (lihat poin 3).
+2. **Memory ekosistem (`~/.sigma/memory_sigma.jsonl`) — sudah dihapus total** (follow-up PLAN-EVAL-07, sesi yang sama, dikonfirmasi Director). Awalnya diperkirakan cukup "jadi orphan, dibereskan sebagai bagian perbaikan bridge template" — setelah recek ulang, dikonfirmasi tidak ada satu pun consumer yang pernah membaca file ini (bahkan sebelum PLAN-EVAL-07: satu-satunya jalur akses teoretis adalah MCP `server-memory`, yang env `MEMORY_FILE_PATH`-nya hanya di-wire lewat adapter Reasonix/Antigravity yang sudah dihapus). Keputusan final: hapus mekanisme seluruhnya (bukan sekadar dibersihkan referensinya), lihat catatan Bagian A di atas untuk cakupan lengkap.
 
 3. **Bridge stubs — diperbaiki total, bukan dihapus.** Template `setup/targets/bridge/{CLAUDE,GEMINI,AGENTS,DEEPSEEK,REASONIX}.md` adalah master template file instruksi AI per-project, isinya nyaris identik `CLAUDE.md` project ini. Ditemukan usang (section MCP Tooling/Memory Isolation menyebut fitur yang sudah dihapus, tabel CLI-Managed Files menyebut `sigma refresh` yang dangling, kalimat "`sigma memory --<role>` after CLI support lands" padahal command itu sudah ada). **Bug terpisah ditemukan**: `sigma project start` ([project.ts:243-250](../../src/commands/project.ts#L243-L250)) **tidak memakai template bridge ini sama sekali** — hanya menulis placeholder kosong, sehingga template lengkap ini terputus (orphaned) dari alur pembuatan project.
 
@@ -88,10 +88,10 @@ ekosistem (`memory_sigma.jsonl`), (6) bridge stubs (template `CLAUDE.md`/dst.),
 - [ ] Hapus `GLOBAL_PROJECTS_FILE`/`registerRoadmapDraft`-related registry code dan command `sigma project register` di `src/commands/project.ts`.
 
 **Tahap B.2 — Memory Ekosistem**
-- [ ] Hapus referensi `memory_sigma.jsonl`/seed logic (`seedMemoryFile`, `GLOBAL_MEMORY_FILE`, opsi `--reeed` dsb.) di `setup.ts` — konsisten dengan penghapusan MCP di PLAN-EVAL-07.
+- [x] **Sudah selesai** (follow-up PLAN-EVAL-07, sesi yang sama). Referensi `memory_sigma.jsonl`/seed logic (`seedMemoryFile`, `GLOBAL_MEMORY_FILE`, command `sigma setup memory` beserta opsi `--reseed`) dihapus total dari `setup.ts`/`config.ts` — bukan hanya "referensi", mekanismenya dihapus penuh karena dikonfirmasi tidak ada consumer sama sekali. Lihat catatan Bagian B poin 2 di atas.
 
 **Tahap B.3 — Bridge Template**
-- [ ] Tulis ulang isi `setup/targets/bridge/{CLAUDE,GEMINI,AGENTS,DEEPSEEK,REASONIX}.md`: hapus section MCP Tooling, Memory Isolation (atau sesuaikan tanpa CSO/MCP), perbaiki tabel CLI-Managed Files (hapus `sigma refresh`), perbaiki kalimat `sigma memory` yang sudah tidak "akan datang".
+- [ ] Tulis ulang isi `setup/targets/bridge/{CLAUDE,GEMINI,AGENTS,DEEPSEEK,REASONIX}.md`: ~~hapus section MCP Tooling, Memory Isolation~~ **sudah selesai** (PLAN-EVAL-07 utama + follow-up, sesi yang sama) — sisa kerja: perbaiki tabel CLI-Managed Files (hapus `sigma refresh`), perbaiki kalimat `sigma memory` yang sudah tidak "akan datang".
 - [ ] Ubah `sigma project start` ([project.ts:243-250](../../src/commands/project.ts#L243-L250)) agar copy dari `~/.sigma/bridge/{file}` (dengan bundle fallback, pola sama seperti `resolveTemplate()`) alih-alih menulis placeholder kosong hardcode.
 
 **Tahap B.4 — Mekanisme Uninstall**

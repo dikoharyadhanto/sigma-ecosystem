@@ -202,15 +202,6 @@ cd your-project
 sigma project start
 ```
 
-### Optional: Configure MCP memory
-
-If your AI environment supports MCP reasoning and memory:
-
-```bash
-sigma setup memory
-sigma setup memory --vscode
-```
-
 ### 3. Open your AI tool and activate ARC
 
 Use your installed AI role shortcut:
@@ -450,7 +441,7 @@ Currently supported targets:
 - Reasonix
 - Antigravity
 
-Additional bridge guidance may be provided for Claude Desktop, Gemini CLI, or other MCP-capable tools depending on setup support.
+Additional bridge guidance may be provided for Claude Desktop, Gemini CLI, or other supported tools depending on setup support.
 
 ---
 
@@ -519,7 +510,6 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | doctor   | `sigma doctor --reconstruct`       | Rebuild `progress.json` from artifact files on disk when it is missing or corrupted |
 | setup    | `sigma setup install`              | Install Sigma globally to `~/.sigma/`                                          |
 | setup    | `sigma setup update`               | Update global Sigma templates and governance files                             |
-| setup    | `sigma setup memory`               | Configure sequential-thinking and sigma-memory MCP integration                 |
 
 ---
 
@@ -563,16 +553,6 @@ sigma session bootstrap
 
 > **No automatic legacy schema/ROADMAP migration.** Older projects with a pre-current `progress.json` schema (legacy `BUILDING`/`TESTING`/`COMPLETED` exec states, a leftover root-level `cso` array) or a freeform ROADMAP (no H2 stage convention) no longer have a CLI migration path — `sigma sync progress`/`sigma sync roadmap` were removed as trivial/redundant. This is an accepted risk; such projects require manual schema/document adjustment.
 
-### Memory reseed (optional)
-
-If ecosystem memory seems stale or incomplete after an update:
-
-```bash
-sigma setup memory --reseed
-```
-
-This refreshes ecosystem-level memory seed entries. It does not overwrite project decisions or locked artifacts.
-
 ### What is preserved
 
 The following are never modified by migration commands:
@@ -586,14 +566,7 @@ Migration commands only update schema wrappers, doctrine files, and template str
 
 ---
 
-## Memory & MCP
-
-Sigma may use MCP servers for reasoning and reusable ecosystem memory.
-
-- `sequential-thinking` is a reasoning aid for complex planning, architecture, debugging, or audit reasoning.
-- `sigma-memory` stores Sigma ecosystem-level knowledge.
-
-Sequential-thinking does not create governance state, approval, or evidence.
+## State Integrity
 
 Sigma governance truth remains in:
 
@@ -603,56 +576,12 @@ Sigma artifacts
 Sigma/memory/overrides.jsonl
 ```
 
-### State integrity
-
 State-changing Sigma commands validate `Sigma/progress.json` before they mutate runtime state. If the file is structurally valid but internally contradictory, the CLI blocks the mutation and names the affected field with recovery guidance.
 
 Read-only status/bootstrap commands remain the safest first step when recovery is needed:
 
 ```bash
 sigma session bootstrap
-```
-
-Configure MCP integration:
-
-```bash
-sigma setup memory
-```
-
-Optional VS Code MCP config:
-
-```bash
-sigma setup memory --vscode
-```
-
-### Optional MCP targets
-
-Use these only if you use the corresponding AI environment:
-
-Optional Reasonix MCP config (writes to `~/.reasonix/config.json`, merged):
-
-```bash
-sigma setup memory --reasonix
-```
-
-Optional Gemini CLI MCP config:
-
-```bash
-sigma setup memory --gemini
-```
-
-### Advanced: reseed ecosystem memory
-
-```bash
-sigma setup memory --reseed
-```
-
-Use `--reseed` after a Sigma update when you want to refresh ecosystem memory seed entries. This overwrites seed data, not project decisions.
-
-Memory file:
-
-```text
-~/.sigma/memory_sigma.jsonl
 ```
 
 ---

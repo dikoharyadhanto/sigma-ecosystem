@@ -14,7 +14,6 @@ import {
   MESSAGE_SUBFOLDERS,
   REFERENCE_LIST_FILE,
 } from '../config';
-import { writeMcpJson, writeVscodeMcpJson } from '../utils/mcp';
 import { getBundledRoleMemoryDir } from '../engine/roleMemory';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import {
@@ -232,11 +231,6 @@ async function runStart(opts: {
   fs.writeJsonSync(indexPath, { messages: [] }, { spaces: 2 });
   console.log('  Mailbox: Sigma/messages/ initialized.');
 
-  const decisionsPath = path.join(sigmaDir, 'memory', 'decisions.jsonl');
-  fs.ensureFileSync(decisionsPath);
-  fs.writeFileSync(decisionsPath, '', 'utf8');
-  console.log('  Memory: Sigma/memory/decisions.jsonl initialized.');
-
   if (fileExists(BUNDLE_ROLE_MEMORY_DIR)) {
     fs.copySync(BUNDLE_ROLE_MEMORY_DIR, path.join(sigmaDir, 'role-memory'), { overwrite: true });
     console.log('  Role memory: Sigma/role-memory/ copied from bundle.');
@@ -257,16 +251,6 @@ async function runStart(opts: {
 
   // Register in global projects.json
   registerProjectEntry(projectId, projectName, projectRoot);
-
-  // Write .mcp.json so AI agents can reach project-local MCP defaults
-  const mcpJsonPath = path.join(projectRoot, '.mcp.json');
-  writeMcpJson(mcpJsonPath);
-  console.log(`  MCP: ${mcpJsonPath} written (sequential-thinking).`);
-
-  // Write .vscode/mcp.json for VS Code/Antigravity integration
-  const vscodeMcpPath = path.join(projectRoot, '.vscode', 'mcp.json');
-  writeVscodeMcpJson(vscodeMcpPath);
-  console.log(`  VS Code MCP: ${vscodeMcpPath} written.`);
 
   success(`Sigma project initialized: ${projectName} (${projectId})`);
   console.log(`  Location: ${sigmaDir}`);

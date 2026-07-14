@@ -11,7 +11,6 @@ export const GLOBAL_GOVERNANCE_DIR = path.join(GLOBAL_SIGMA_DIR, 'governance');
 export const GLOBAL_BRIDGE_DIR = path.join(GLOBAL_SIGMA_DIR, 'bridge');
 export const GLOBAL_PROJECTS_FILE = path.join(GLOBAL_SIGMA_DIR, 'projects.json');
 export const GLOBAL_CONFIG_FILE = path.join(GLOBAL_SIGMA_DIR, 'sigma.config.json');
-export const GLOBAL_MEMORY_FILE = path.join(GLOBAL_SIGMA_DIR, 'memory_sigma.jsonl');
 
 export const PROJECT_SIGMA_DIR = 'Sigma';
 export const PROGRESS_FILE = path.join(PROJECT_SIGMA_DIR, 'progress.json');

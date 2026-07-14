@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.OVERRIDES_FILE = exports.PROGRESS_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_MEMORY_FILE = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_PROJECTS_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
+exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.OVERRIDES_FILE = exports.PROGRESS_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_PROJECTS_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 exports.SIGMA_VERSION = '0.9.0';
@@ -15,7 +15,6 @@ exports.GLOBAL_GOVERNANCE_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'g
 exports.GLOBAL_BRIDGE_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'bridge');
 exports.GLOBAL_PROJECTS_FILE = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'projects.json');
 exports.GLOBAL_CONFIG_FILE = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'sigma.config.json');
-exports.GLOBAL_MEMORY_FILE = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'memory_sigma.jsonl');
 exports.PROJECT_SIGMA_DIR = 'Sigma';
 exports.PROGRESS_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'progress.json');
 exports.OVERRIDES_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'memory', 'overrides.jsonl');

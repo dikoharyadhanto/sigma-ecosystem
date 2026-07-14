@@ -77,8 +77,3 @@ modify workflow state. Run `sigma --help` to see available commands.
 - Do not treat `sigma session bootstrap` as mandatory for every role; ARC and
   AUD start from bounded Director intent/evidence, while FMN and DEV orient
   only inside their direct runtime evidence chain.
-
-## Memory Isolation
-
-`~/.sigma/memory_sigma.jsonl` is Sigma ecosystem-level only.
-Do not store project-specific facts or session context there.

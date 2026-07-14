@@ -11,7 +11,6 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const inquirer_1 = __importDefault(require("inquirer"));
 const config_1 = require("../config");
-const mcp_1 = require("../utils/mcp");
 const roleMemory_1 = require("../engine/roleMemory");
 const artifacts_1 = require("../utils/artifacts");
 const progress_1 = require("../engine/progress");
@@ -182,10 +181,6 @@ async function runStart(opts) {
     const indexPath = path_1.default.join(projectRoot, config_1.MESSAGES_INDEX_FILE);
     fs_extra_1.default.writeJsonSync(indexPath, { messages: [] }, { spaces: 2 });
     console.log('  Mailbox: Sigma/messages/ initialized.');
-    const decisionsPath = path_1.default.join(sigmaDir, 'memory', 'decisions.jsonl');
-    fs_extra_1.default.ensureFileSync(decisionsPath);
-    fs_extra_1.default.writeFileSync(decisionsPath, '', 'utf8');
-    console.log('  Memory: Sigma/memory/decisions.jsonl initialized.');
     if ((0, fs_1.fileExists)(BUNDLE_ROLE_MEMORY_DIR)) {
         fs_extra_1.default.copySync(BUNDLE_ROLE_MEMORY_DIR, path_1.default.join(sigmaDir, 'role-memory'), { overwrite: true });
         console.log('  Role memory: Sigma/role-memory/ copied from bundle.');
@@ -202,14 +197,6 @@ async function runStart(opts) {
     }
     // Register in global projects.json
     registerProjectEntry(projectId, projectName, projectRoot);
-    // Write .mcp.json so AI agents can reach project-local MCP defaults
-    const mcpJsonPath = path_1.default.join(projectRoot, '.mcp.json');
-    (0, mcp_1.writeMcpJson)(mcpJsonPath);
-    console.log(`  MCP: ${mcpJsonPath} written (sequential-thinking).`);
-    // Write .vscode/mcp.json for VS Code/Antigravity integration
-    const vscodeMcpPath = path_1.default.join(projectRoot, '.vscode', 'mcp.json');
-    (0, mcp_1.writeVscodeMcpJson)(vscodeMcpPath);
-    console.log(`  VS Code MCP: ${vscodeMcpPath} written.`);
     (0, output_1.success)(`Sigma project initialized: ${projectName} (${projectId})`);
     console.log(`  Location: ${sigmaDir}`);
     console.log('  Next: Run `sigma session bootstrap` or `sigma project status` to confirm state.');
