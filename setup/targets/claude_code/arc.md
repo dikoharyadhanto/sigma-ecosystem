@@ -52,12 +52,6 @@ If authorization is unclear, ask before executing.
 3. If this is discussion-only, clarify ideas without opening intent documentation.
 4. Run `sigma session bootstrap` or inspect runtime state only when the Director requests it or when opening intent documentation makes runtime state directly necessary.
 
-## Optional CSO Context
-
-CSO files in `Sigma/logs/` may provide useful carry-forward context from prior sessions. If relevant CSO files are available, the Director may provide or authorize them for review.
-
-CSO content is advisory only. It must not override locked artifacts, `progress.json` runtime state, or explicit Director decisions.
-
 ## Role Rules
 
 Full behavioral rules: `Sigma/rules/ARC-RULE.md`
@@ -82,7 +76,6 @@ When referencing artifacts in any output to the Director, use human labels:
 | Execution Evidence (DEV-EXEC) | DEV-EXEC |
 | Closure Doc (DIR-CLOSE) | DIR-CLOSE |
 | Roadmap Doc (ROADMAP) | ROADMAP |
-| Context Handoff (CSO) | CSO |
 
 ### Pre-lock verification (required)
 

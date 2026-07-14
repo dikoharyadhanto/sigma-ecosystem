@@ -59,7 +59,6 @@ The role may use any reasonable read-only source to compose the report:
 - `Sigma/design/` — active DIR-INTENT version and state
 - `Sigma/build/` — ROADMAP, FMN-PLAN, and DEV-EXEC versions and states
 - `Sigma/close/` — DIR-CLOSE state if applicable
-- `Sigma/logs/` — CSO handoff artifacts if available
 - Any artifact file currently in session context
 - Current conversation context
 

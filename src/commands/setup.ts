@@ -36,10 +36,10 @@ const BUNDLE_MEMORY_SEED = path.join(PACKAGE_ROOT, 'setup', 'sigma-memory-seed.j
 const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
 
 const ROLE_FILES: Record<string, Record<string, string>> = {
-  claudeCode:  { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
-  codex:       { arc: 'arc',    fmn: 'fmn',    dev: 'dev',    aud: 'aud',    checkpoint: 'checkpoint',    cso: 'cso',    report: 'report',    sigmaTest: 'sigma-test'    },
-  reasonix:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', checkpoint: 'checkpoint.md', cso: 'cso.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
-  antigravity: { arc: 'sigma-arc', fmn: 'sigma-fmn', dev: 'sigma-dev', aud: 'sigma-aud', checkpoint: 'sigma-checkpoint', cso: 'sigma-cso', report: 'sigma-report', sigmaTest: 'sigma-test' },
+  claudeCode:  { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
+  codex:       { arc: 'arc',    fmn: 'fmn',    dev: 'dev',    aud: 'aud',    report: 'report',    sigmaTest: 'sigma-test'    },
+  reasonix:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
+  antigravity: { arc: 'sigma-arc', fmn: 'sigma-fmn', dev: 'sigma-dev', aud: 'sigma-aud', report: 'sigma-report', sigmaTest: 'sigma-test' },
   cursor:      { sigma: 'SIGMA.mdc' },
 };
 

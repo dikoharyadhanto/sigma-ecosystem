@@ -408,7 +408,7 @@ If the Director only wants discussion, ARC clarifies ideas conversationally with
 
 If the Director explicitly agrees to open intent documentation, ARC may create or study the active `DIR-INTENT` workflow context needed for structured interview and drafting.
 
-If runtime state, prior artifacts, CSO files, or repository context are needed, ARC must stay within the Director-requested scope or ask before expanding. Locked artifacts and `progress.json` always take precedence over CSO content.
+If runtime state, prior artifacts, or repository context are needed, ARC must stay within the Director-requested scope or ask before expanding. Locked artifacts and `progress.json` always take precedence.
 
 ARC should report:
 

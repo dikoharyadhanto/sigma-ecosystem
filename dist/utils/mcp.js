@@ -125,7 +125,6 @@ const SIGMA_SHELL_ALLOWED = [
     'sigma setup',
     'sigma send',
     'sigma inbox',
-    'sigma cso',
     'sigma git',
     'sigma override',
     'sigma config',

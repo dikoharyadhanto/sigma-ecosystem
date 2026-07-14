@@ -187,7 +187,7 @@ Cannot lock any artifact. Cannot author FMN-PLAN or DIR-CLOSE.
 
 ## 5. Artifact Definitions
 
-Sigma uses seven artifact types: five governance artifacts (DIR-INTENT, ROADMAP, FMN-PLAN, DEV-EXEC, DIR-CLOSE), one optional handoff artifact (CSO), and one project-wide supporting index (Reference List).
+Sigma uses six artifact types: five governance artifacts (DIR-INTENT, ROADMAP, FMN-PLAN, DEV-EXEC, DIR-CLOSE), and one project-wide supporting index (Reference List).
 
 ### 5.1 DIR-INTENT — Director's Intent
 
@@ -255,20 +255,6 @@ Closure document authored by the Director. Must explicitly reference the FMN-PLA
 
 ---
 
-### 5.5 CSO — Cognitive State Object
-
-| Property | Value |
-| :--- | :--- |
-| Owner | Any role |
-| Authored by | Any role |
-| Phase | Any |
-| Storage | `Sigma/logs/` |
-| Versioning | Timestamp (`CSO-{ROLE}-{YYYYMMDD}-{HHMM}.md`) |
-
-Optional handoff artifact for preserving session context. `sigma cso new --role <role>` creates a file in `Sigma/logs/` — no `progress.json` tracking. CSO creation satisfies no gate requirement. Multiple CSOs may exist; they are plain markdown files, immutable once written. CSO content is carry-forward context only — locked artifacts and `progress.json` always win over CSO content.
-
----
-
 ### 5.6 ROADMAP — Implementation Staging Map
 
 | Property | Value |
@@ -333,7 +319,6 @@ If Comprehensive Research status is NEEDED, AUD Verificator Mode must review sou
 | Execution Evidence | `DEV-EXEC` | Implementation, verification, evidence |
 | Closure Doc | `DIR-CLOSE` | Final cycle closure |
 | Roadmap Doc | `ROADMAP` | Mandatory staging map |
-| Context Handoff | `CSO` | Session continuity snapshot |
 | Reference List | `reference-list.md` | Comprehensive Research source index |
 
 **Presentation rule**: Show meaning first, artifact code second. Artifact codes remain the authority for filenames, `progress.json` field values, registry files, and CLI arguments.
@@ -399,7 +384,7 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 | `Sigma/build/` | BUILD | `FMN-PLAN-v{VER}.md`, `DEV-EXEC-v{VER}.md`, `ROADMAP-v{VER}.md` |
 | `Sigma/close/` | CLOSE | `DIR-CLOSE-v{VER}.md` |
 | `Sigma/rules/` | All phases (reference) | `ARC-RULE.md`, `AUD-RULE.md`, `FMN-RULE.md`, `DEV-RULE.md` |
-| `Sigma/logs/` | Any phase | CSO files, progress backups, migration logs |
+| `Sigma/logs/` | Any phase | Progress backups, migration logs |
 | `Sigma/reference/` | Any phase (project-wide, cumulative) | `reference-list.md`, `data/` (local research artifacts) |
 
 ---
@@ -474,7 +459,6 @@ Findings Section Authorization.
 | `send` | Send messages between AI roles |
 | `inbox` | Read, manage, and check role inboxes |
 | `git` | Git evidence output (read-only) |
-| `cso` | CSO artifact creation |
 | `config` | Project configuration (language preference, etc.) |
 | `setup` | Installation, configuration, MCP memory setup |
 | `memory` | Show Sigma role memory reminders (read-only) |
@@ -506,7 +490,7 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 | Class | Commands | AI May Execute? | Requires Director Instruction? |
 | :--- | :--- | :---: | :---: |
 | Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check` | Yes | No |
-| Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `cso new`, `reference update`, `send` | Yes, within role boundary | Usually no |
+| Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `reference update`, `send` | Yes, within role boundary | Usually no |
 | Approval | `intent lock`, `roadmap activate`, `plan lock`, `exec lock`, `close lock` | Only after Director approval | Yes |
 | Risk / Supersession | `close new --ack-stale-intent`, `plan supersede`, `exec supersede`, destructive/reset | Only after Director approval | Yes |
 
@@ -553,7 +537,7 @@ These documents MUST be written for Director comprehension.
 
 ### AI-Operational Artifacts
 
-ROADMAP, FMN-PLAN, DEV-EXEC, AUD findings, CSO, `progress.json`, role rule files, protocol and registry files. Dense formatting and technical fields are acceptable.
+ROADMAP, FMN-PLAN, DEV-EXEC, AUD findings, `progress.json`, role rule files, protocol and registry files. Dense formatting and technical fields are acceptable.
 
 ### Director Interaction Model
 

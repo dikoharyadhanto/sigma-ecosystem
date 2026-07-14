@@ -2,11 +2,10 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-07-14T00:00:00.000Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 57,
+  "total_operations": 56,
   "domains": [
     "close",
     "config",
-    "cso",
     "doctor",
     "exec",
     "git",
@@ -1048,38 +1047,6 @@
       "error_messages": {
         "no_git": "No git repository found. Initialize with: git init"
       }
-    },
-    {
-      "operation_id": "cso_new",
-      "domain": "cso",
-      "action": "new",
-      "level": "semantic",
-      "role": "any",
-      "description": "Create a CSO (Cognitive State Object) artifact file. Optional handoff artifact between sessions. Accepts --from <file> to seed from an existing draft. Saves timestamped file to Sigma/logs/. Registers entry in progress.cso array. No gate.",
-      "inputs": [
-        {
-          "name": "--from",
-          "type": "string",
-          "required": false,
-          "description": "Path to a source file to seed the CSO content from"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "file",
-          "description": "Sigma/logs/CSO-{ROLE}-{YYYYMMDD}-{HHMM}.md"
-        },
-        {
-          "type": "state_change",
-          "description": "progress.cso[] entry added"
-        }
-      ],
-      "constraints": [],
-      "gating": {
-        "pre_condition": "none",
-        "post_condition": "CSO file created; progress.cso entry added"
-      },
-      "error_messages": {}
     },
     {
       "operation_id": "setup_install",

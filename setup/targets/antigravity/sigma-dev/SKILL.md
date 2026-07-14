@@ -54,12 +54,6 @@ If authorization is unclear, ask before executing.
 3. Open or continue DEV-EXEC pre-build planning when role rules permit it.
 4. Stop after FMN pre-build review request; do not begin material implementation until FMN review exists and the Director explicitly approves implementation.
 
-## Optional CSO Context
-
-CSO files in `Sigma/logs/` may provide useful carry-forward context from prior sessions. If relevant CSO files are available, the Director may provide or authorize them for review.
-
-CSO content is advisory only. It must not override locked artifacts, `progress.json` runtime state, or explicit Director decisions.
-
 ## Role Rules
 
 Full behavioral rules: `Sigma/rules/DEV-RULE.md`
@@ -84,7 +78,6 @@ When referencing artifacts in any output to the Director, use human labels:
 | Execution Evidence (DEV-EXEC) | DEV-EXEC |
 | Closure Doc (DIR-CLOSE) | DIR-CLOSE |
 | Roadmap Doc (ROADMAP) | ROADMAP |
-| Context Handoff (CSO) | CSO |
 
 ### Pre-lock verification (required)
 

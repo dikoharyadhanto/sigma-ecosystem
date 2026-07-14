@@ -22,7 +22,15 @@
       "Bash(npm test *)",
       "Bash(xargs grep -l \"enforceVerdictGate\\\\|enforceFinalChecklistGate\")",
       "Bash(xargs wc -l)",
-      "Bash(rm -rf /tmp/sigma-smoke /tmp/sigma-smoke-home /tmp/sigma-manual-test 2>/dev/null; echo done)"
+      "Bash(rm -rf /tmp/sigma-smoke /tmp/sigma-smoke-home /tmp/sigma-manual-test 2>/dev/null; echo done)",
+      "Bash(git check-ignore *)",
+      "Bash(rm -v dist/commands/cso.js dist/commands/cso.d.ts dist/commands/cso.d.ts.map dist/commands/cso.js.map)",
+      "Bash(node dist/cli.js --help)",
+      "Bash(node dist/cli.js refresh --help)",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).scripts, null, 2\\)\\)\")",
+      "Bash(node scripts/refresh-registries.js --help)",
+      "Bash(node -e \"const r=require\\('./Sigma/SIGMA-OPERATION-REGISTRY.json'\\); console.log\\('actual ops length:', r.operations.length, 'declared total_operations:', r.total_operations\\)\")",
+      "Bash(node \"C:/Users/dikoh/AppData/Local/Temp/claude/i--Works-Project-sigma-ecosystem/27786694-8eac-4eb1-ba4b-4bc1f311e878/scratchpad/clean-cso-skills.js\")"
     ],
     "additionalDirectories": [
       "/home/dikoharyadhanto/Documents/Works/Projects/sigma-ecosystem/setup/targets/antigravity",

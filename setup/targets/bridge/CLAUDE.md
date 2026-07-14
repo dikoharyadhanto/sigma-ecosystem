@@ -144,4 +144,4 @@ Sequential thinking (`sequential-thinking` server):
 `~/.sigma/memory_sigma.jsonl` is Sigma ecosystem-level only.
 Do not store project context, implementation details, or session notes there.
 Project decisions are recorded in `Sigma/memory/decisions.jsonl` (CLI-written).
-Project context for handoff uses CSO artifacts.
+Inter-role context handoff uses `sigma send` / `sigma inbox`.

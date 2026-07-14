@@ -1,6 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
-import path from 'path';
 import {
   setupTestEnv,
   runCli,
@@ -146,19 +145,5 @@ describe('Sigma doctor and INVALID recovery mode', () => {
     expect(updated.exec.versions[0].state).toBe('LOCKED');
     expect(updated.exec.active_state).toBe('LOCKED');
     expect(updated.runtime_invalid.markers).toHaveLength(0);
-  });
-
-  it('cso new works without --role', () => {
-    env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgress());
-
-    const result = runCli('cso new', env.projectDir, env.homeDir);
-
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/CSO created/i);
-
-    const logsDir = path.join(env.projectDir, 'Sigma', 'logs');
-    const files = fs.readdirSync(logsDir);
-    expect(files.some(file => /^CSO-\d{8}-\d{4}\.md$/.test(file))).toBe(true);
   });
 });

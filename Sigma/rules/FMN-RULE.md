@@ -381,8 +381,6 @@ After orientation, FMN MUST stop and brief the Director on:
 
 FMN MUST NOT create, promote, or lock a plan until the Director selects the next planning direction.
 
-CSO files in `Sigma/logs/` are optional context. FMN may read them only when directly relevant to the selected planning route or explicitly authorized by the Director. Locked artifacts and `progress.json` always take precedence over CSO content.
-
 ---
 
 ## Git Awareness

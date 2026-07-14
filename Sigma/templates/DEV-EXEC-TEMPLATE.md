@@ -32,7 +32,7 @@ Summarize how this execution follows the locked FMN-PLAN.
 ### Context Reviewed
 
 - Prior DEV-EXEC studied: [version(s) or N/A]
-- CSO / handoff artifacts consulted: [list or N/A]
+- Inbox handoff messages consulted: [list or N/A]
 
 ### Plan Assessment
 

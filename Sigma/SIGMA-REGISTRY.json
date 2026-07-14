@@ -215,7 +215,7 @@
       "mandatory_when": [
         "every_cli_operation"
       ],
-      "description": "Single source of runtime truth. Tracks lifecycle state, artifact versions and states, gate flags, STALE_INTENT markers, and CSO log. The CLI reads this before every operation (to check gates) and writes it after every state-mutating operation. Runtime authority: in any conflict between a semantic markdown claim and progress.json, the CLI uses progress.json for gate decisions.",
+      "description": "Single source of runtime truth. Tracks lifecycle state, artifact versions and states, gate flags, and STALE_INTENT markers. The CLI reads this before every operation (to check gates) and writes it after every state-mutating operation. Runtime authority: in any conflict between a semantic markdown claim and progress.json, the CLI uses progress.json for gate decisions.",
       "tolerate_missing": false,
       "missing_behavior": "All CLI operations error with: 'No Sigma project found. Run: sigma project start'"
     },
@@ -285,7 +285,7 @@
       "mandatory_when": [
         "artifact_creation"
       ],
-      "description": "Canonical Markdown templates for all Sigma artifacts, CSO, MSG, and the Reference List. Eight files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, ROADMAP-TEMPLATE.md, CSO-TEMPLATE.md, MSG-TEMPLATE.md, REFERENCE-LIST-TEMPLATE.md. CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma roadmap new, sigma cso new, sigma send, and the one-time sigma project start / sigma reference update scaffolding of reference-list.md.",
+      "description": "Canonical Markdown templates for all Sigma artifacts, MSG, and the Reference List. Seven files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, ROADMAP-TEMPLATE.md, MSG-TEMPLATE.md, REFERENCE-LIST-TEMPLATE.md. CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma roadmap new, sigma send, and the one-time sigma project start / sigma reference update scaffolding of reference-list.md.",
       "tolerate_missing": true,
       "missing_behavior": "Warn on artifact creation commands; CLI may fall back to inline templates if folder is missing."
     },

@@ -103,7 +103,6 @@ Artifacts are **governance documents** that preserve decisions, evidence, and au
 | `FMN-PLAN` | Plan Doc | Build contract and test contract — Director-approved |
 | `DEV-EXEC` | Execution Evidence | Implementation report and proof |
 | `DIR-CLOSE` | Closure Doc | Final closure decision |
-| `CSO` | Context Handoff | Session continuity between AI sessions |
 
 Artifact versions (e.g. `FMN-PLAN-v0.2`) are governance identifiers, not product release versions.
 
@@ -257,36 +256,24 @@ Implement according to the locked FMN-PLAN.
 Audit this plan before I approve it.
 ```
 
-Use Director utility shortcuts whenever you need situational awareness or handoff:
+Use the Director utility shortcut whenever you need situational awareness:
 
 ```text
 /report
 Give me a quick status briefing.
 ```
 
-```text
-/checkpoint
-Save the current context before we continue.
-```
-
-```text
-/cso
-Create a formal handoff summary for the next session.
-```
-
 ---
 
 ## Director Utility Shortcuts
 
-These shortcuts are intentionally typed by the Director.
+This shortcut is intentionally typed by the Director.
 
-They are not role-switching commands in the same way as `/arc`, `/fmn`, `/dev`, or `/aud`. They exist to help the Director stay oriented, preserve context, and hand off work between sessions.
+It is not a role-switching command in the same way as `/arc`, `/fmn`, `/dev`, or `/aud`. It exists to help the Director stay oriented.
 
-| Shortcut      | Use It When                                                                   | What It Produces                 | Role Impact                |
-|:------------- |:----------------------------------------------------------------------------- |:-------------------------------- |:-------------------------- |
-| `/report`     | You want to know the latest state, decisions, risks, and next move            | Short chat-only briefing         | No role switch             |
-| `/checkpoint` | You are mid-session and want to save the current context before continuing    | Quick CSO file in `Sigma/logs/`  | No role switch             |
-| `/cso`        | You are ending a session, changing context, or preparing a deliberate handoff | Formal CSO file in `Sigma/logs/` | Activates CSO Handler role |
+| Shortcut  | Use It When                                                         | What It Produces         | Role Impact     |
+|:--------- |:-------------------------------------------------------------------- |:------------------------- |:--------------- |
+| `/report` | You want to know the latest state, decisions, risks, and next move | Short chat-only briefing | No role switch  |
 
 ### `/report` — know where you are
 
@@ -313,66 +300,7 @@ Typical result:
 
 `/report` is chat-only. It does not create files and does not change project state.
 
-### `/checkpoint` — save the moment
-
-Use `/checkpoint` during an active role session when you have reached a useful pause point.
-
-Good moments to use `/checkpoint`:
-
-- after a major decision,
-- after finishing a planning block,
-- before switching topic,
-- before a long break,
-- before the context window gets too large,
-- before asking another role to continue later.
-
-`/checkpoint` creates a quick CSO file in `Sigma/logs/`, then returns to the current role.
-
-Example:
-
-```text
-/checkpoint
-```
-
-If you were working as FMN, you are still FMN after the checkpoint.
-
-Control sentence:
-
-```text
-/checkpoint preserves context.
-```
-
-### `/cso` — create a formal handoff
-
-Use `/cso` when you want a more deliberate handoff document.
-
-Good moments to use `/cso`:
-
-- at the end of a session,
-- before handing work to another AI role,
-- before handing work to another AI model,
-- before pausing a project for several days,
-- when you want a cleaner handoff than a quick checkpoint.
-
-Unlike `/checkpoint`, `/cso` activates the CSO Handler role for the session.
-
-Control sentence:
-
-```text
-/cso transfers context.
-```
-
-### Recommended habit
-
-Use these three shortcuts often:
-
-```text
-/report      → when you need orientation
-/checkpoint  → when you want to preserve progress without stopping
-/cso         → when you want a formal handoff
-```
-
-They are small commands, but they are important. They prevent context loss, reduce confusion, and make AI-assisted work easier to resume.
+Handoff between sessions or roles uses `sigma send` / `sigma inbox` directly (see Command Reference below).
 
 ---
 
@@ -440,8 +368,6 @@ If approval is unclear, the AI role must ask before acting.
 | DEV — Developer | `/dev`        | Implements the locked plan and records evidence in `DEV-EXEC`                 |
 | AUD — Auditor   | `/aud`        | Passive external auditor; reviews provided evidence; advisory only            |
 | REPORT          | `/report`     | Short chat-only Director briefing: current state, decisions, risks, next move |
-| CHECKPOINT      | `/checkpoint` | Quick CSO capture that preserves context without switching role               |
-| CSO Handler     | `/cso`        | Formal CSO handoff for session transfer or role/vendor handoff                |
 
 Role skill files are deployed by:
 
@@ -585,7 +511,6 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | inbox    | `sigma inbox read <id>`            | Read a message and mark it as READ                                             |
 | inbox    | `sigma inbox archive <id>`         | Archive a message                                                              |
 | inbox    | `sigma inbox check`                | Run inbox integrity check (index vs disk files, attachments, field values)     |
-| cso      | `sigma cso new`                    | Create a CSO handoff artifact in `Sigma/logs/`                                 |
 | git      | `sigma git evidence`               | Show read-only Git state summary                                               |
 | override | `sigma override`                   | Bypass current lifecycle gate under Director authority (recorded in audit log) |
 | doctor   | `sigma doctor`                     | Diagnose and reconcile runtime state (repairs drift, marks unresolved breaks INVALID) |
@@ -653,7 +578,7 @@ The following are never modified by migration commands:
 
 - Locked artifacts (`DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, `DIR-CLOSE`)
 - `Sigma/progress.json` gate and lock decisions
-- `Sigma/logs/` — CSO handoff files
+- `Sigma/logs/` — legacy CSO handoff files (if present; CSO was removed from current Sigma)
 - All content inside `Sigma/build/`, `Sigma/design/`, `Sigma/close/`
 
 Migration commands only update schema wrappers, doctrine files, and template structure — not Director decisions or locked evidence.

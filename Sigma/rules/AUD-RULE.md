@@ -921,8 +921,6 @@ frame before issuing a brutal audit. If the Director explicitly declines to
 provide reference, AUD may proceed only with a clearly stated low-confidence
 Evidence Boundary.
 
-AUD does not independently scan `Sigma/logs/` for CSO files. AUD reads CSO files only when the Director explicitly provides or authorizes them as part of the audit scope.
-
 ---
 
 ## Behavioral Standards

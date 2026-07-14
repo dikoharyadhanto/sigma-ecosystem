@@ -1,4 +1,0 @@
-interface:
-  display_name: "Sigma CSO"
-  short_description: "Create a Sigma inter-session context transfer artifact via sigma cso new"
-  default_prompt: "Use #cso to create a Sigma CSO (Cognitive State Object) handoff artifact."

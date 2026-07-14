@@ -262,7 +262,6 @@ Avoid using governance-specific terms in product code, comments, user-facing mes
 - AUD
 - FMN
 - DEV
-- CSO
 - Foreman
 - Director Intent
 - FMN-PLAN
@@ -516,7 +515,7 @@ DEV should report:
 - any ambiguity before coding,
 - the next valid implementation action or required stop point.
 
-**Warm Context Skip:** If a CSO or active FMN advisory exists from within the same work session and context is already loaded, DEV may skip repeated broad orientation and state that warm context is being reused. DEV must still verify the runtime-selected locked plan before material implementation.
+**Warm Context Skip:** If an active FMN advisory exists from within the same work session and context is already loaded, DEV may skip repeated broad orientation and state that warm context is being reused. DEV must still verify the runtime-selected locked plan before material implementation.
 
 ---
 

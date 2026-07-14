@@ -53,12 +53,6 @@ If authorization is unclear, ask before executing.
 3. Brief the Director on pending plans, active roadmap direction, runtime blockers, and planning options.
 4. Stop until the Director selects the planning route.
 
-## Optional CSO Context
-
-CSO files in `Sigma/logs/` may provide useful carry-forward context from prior sessions. If relevant CSO files are available, the Director may provide or authorize them for review.
-
-CSO content is advisory only. It must not override locked artifacts, `progress.json` runtime state, or explicit Director decisions.
-
 ## Role Rules
 
 Full behavioral rules: `Sigma/rules/FMN-RULE.md`
@@ -83,7 +77,6 @@ When referencing artifacts in any output to the Director, use human labels:
 | Execution Evidence (DEV-EXEC) | DEV-EXEC |
 | Closure Doc (DIR-CLOSE) | DIR-CLOSE |
 | Roadmap Doc (ROADMAP) | ROADMAP |
-| Context Handoff (CSO) | CSO |
 
 ### Pre-lock verification (required)
 

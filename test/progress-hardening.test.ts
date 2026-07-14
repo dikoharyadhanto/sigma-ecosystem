@@ -60,19 +60,6 @@ describe('Progress hardening', () => {
     expect(result.stdout).toMatch(/gates\.gate_3_satisfied repaired/i);
   });
 
-  it('cso new remains standalone even when runtime state previously needed doctor reconciliation', () => {
-    env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgress({
-      gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: true },
-    }));
-
-    runCli('doctor', env.projectDir, env.homeDir);
-    const result = runCli('cso new', env.projectDir, env.homeDir);
-
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/CSO created/i);
-  });
-
   it('allows a new draft intent while prior locked artifacts keep gates open', () => {
     env = setupTestEnv();
     fs.writeJsonSync(env.progressPath, makeProgressWithDraftIntentAfterLockedChain());

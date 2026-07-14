@@ -95,7 +95,6 @@ function baseProgress() {
     close: { active_version: null, active_state: null, versions: [] },
     roadmap: { active_version: null, active_state: null, versions: [] },
     gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false },
-    cso: [],
   };
 }
 
