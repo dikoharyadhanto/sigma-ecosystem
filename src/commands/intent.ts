@@ -84,10 +84,7 @@ export function intentCommand(): Command {
           throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot lock.');
         }
         const absPath = resolveSigmaDocPath(projectRoot, data, 'intent');
-        const report = validateSigmaDocFile(absPath, 'intent', {
-          enforceVerdictGate: true,
-          enforceFinalChecklistGate: true,
-        });
+        const report = validateSigmaDocFile(absPath, 'intent');
         printSigmaDocReport(report, projectRoot);
         ensureSigmaDocEligible(report, 'intent');
         const version = data.intent.active_version!;

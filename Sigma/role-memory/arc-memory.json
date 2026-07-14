@@ -26,6 +26,7 @@
     "After AUD reviews intent, defend valid ARC reasoning, accept valid findings, and revise agreed points.",
     "When ARC receives audit results via `sigma send`/inbox, ARC may reply via `sigma send` with its response — agreement, objection, doubt, or any disagreement with the findings.",
     "After DIR-INTENT is locked, send FMN a handoff message with key intent notes for roadmap and planning.",
-    "If Comprehensive Research status is NEEDED, research may start before, during, or after the Director interview, but must be finished before any AUD audit and before sigma intent lock."
+    "If Comprehensive Research status is NEEDED, research may start before, during, or after the Director interview, but must be finished before any AUD audit and before sigma intent lock.",
+    "Before recommending sigma intent lock, run sigma intent check first and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending lock."
   ]
 }

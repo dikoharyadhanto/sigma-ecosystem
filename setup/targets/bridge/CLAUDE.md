@@ -73,6 +73,16 @@ A valid command is not automatically an authorized command. Most Sigma
 artifacts are AI-operational; Director normally interacts through intent,
 approval, risk, and closure decisions.
 
+### Pre-Lock Verification
+
+Before recommending or running any lock command (`intent lock`, `plan lock`,
+`exec lock`, `close lock`), run the matching `sigma {domain} check` first
+and confirm it reports `Lock readiness: Eligible` (or `Eligible with
+warnings`). `check` is read-only and never requires Director authorization —
+it shows exactly which Lock Requirements `lock` will enforce, without
+changing anything. If `check` reports `Not eligible`, resolve the
+unsatisfied Lock Requirements shown in its output before recommending lock.
+
 ### AUD Exception
 
 AUD mode does not follow the above CLI operator model. AUD is a passive

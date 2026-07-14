@@ -86,6 +86,10 @@ When referencing artifacts in any output to the Director, use human labels:
 | Roadmap Doc (ROADMAP) | ROADMAP |
 | Context Handoff (CSO) | CSO |
 
+### Pre-lock verification (required)
+
+Before presenting the approval prompt below for `sigma exec lock`, run `sigma exec check` first. Only present the approval prompt once check reports `Lock readiness: Eligible` (or `Eligible with warnings`). If check reports `Not eligible`, resolve the unsatisfied Lock Requirements shown in its output before asking the Director to approve lock.
+
 ### Approval prompt format
 
 When asking the Director to approve a lock, use this structure:

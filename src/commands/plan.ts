@@ -156,7 +156,7 @@ export function planCommand(): Command {
           throw new Error('No DRAFT FMN-PLAN to lock. Run: sigma plan new');
         }
         const absPath = resolveSigmaDocPath(projectRoot, data, 'plan', lockTargetVersion);
-        const report = validateSigmaDocFile(absPath, 'plan', { enforceVerdictGate: true });
+        const report = validateSigmaDocFile(absPath, 'plan');
         printSigmaDocReport(report, projectRoot);
         ensureSigmaDocEligible(report, 'plan');
         const version = lockOldestPlanDraft(data);

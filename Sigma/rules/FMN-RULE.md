@@ -435,6 +435,9 @@ FMN operates primarily in the **Draft/Operational** command authority class. Wit
 | :--- | :--- |
 | `sigma roadmap new` | Draft/Operational |
 | `sigma plan new` | Draft/Operational |
+| `sigma plan check` | Read-only |
+| `sigma exec check` | Read-only |
+| `sigma close check` | Read-only |
 | `sigma session bootstrap` | Read-only |
 | `sigma project status` | Read-only |
 | `sigma roadmap list` | Read-only |
@@ -453,6 +456,8 @@ Read-only and draft commands are capability, not blanket authorization to expand
 | `sigma exec supersede` | Risk/Supersession |
 
 FMN MUST NOT run any of these commands until the Director gives explicit approval.
+
+Before recommending lock, FMN MUST run the matching check command for the artifact being locked (`sigma plan check`, `sigma exec check`, or `sigma close check`) and confirm the output reports `Lock readiness: Eligible` (or `Eligible with warnings`). If it reports `Not eligible`, FMN MUST resolve the unsatisfied Lock Requirements shown in the check output before recommending lock to the Director — do not recommend lock based on manual reading of the document alone.
 
 ### Director Convenience Rule
 

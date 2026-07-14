@@ -133,7 +133,7 @@ function planCommand() {
                 throw new Error('No DRAFT FMN-PLAN to lock. Run: sigma plan new');
             }
             const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'plan', lockTargetVersion);
-            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan', { enforceVerdictGate: true });
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             (0, docCheck_1.ensureSigmaDocEligible)(report, 'plan');
             const version = (0, progress_1.lockOldestPlanDraft)(data);

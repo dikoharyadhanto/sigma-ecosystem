@@ -310,6 +310,214 @@ Test AUD findings.
 `;
 }
 
+export function validExecDoc(version: string, planVersionRef: string, verdict = 'READY_FOR_LOCK'): string {
+  return `<!-- SIGMA:DOC type=DEV_EXEC schema=1 -->
+# DEV-EXEC ${version}
+
+<!-- SIGMA:DEV_EXEC:SECTION:SOURCE_PLAN_ALIGNMENT -->
+## 1. Source Plan Alignment
+
+Test source plan alignment. References PLAN ${planVersionRef}.
+
+<!-- SIGMA:DEV_EXEC:SECTION:DEV_PRE_BUILD_ASSESSMENT -->
+## 2. DEV Pre-Build Assessment
+
+Test pre-build assessment.
+
+<!-- SIGMA:DEV_EXEC:SECTION:IMPLEMENTATION_APPROACH -->
+## 3. Implementation Approach
+
+Test implementation approach.
+
+<!-- SIGMA:DEV_EXEC:SECTION:FILES_COMPONENTS_TO_CHANGE -->
+## 4. Files / Components To Change
+
+Test files.
+
+<!-- SIGMA:DEV_EXEC:SECTION:KEY_TECHNICAL_DECISIONS -->
+## 5. Key Technical Decisions
+
+Test decisions.
+
+<!-- SIGMA:DEV_EXEC:SECTION:FMN_PRE_BUILD_REVIEW -->
+## 6. FMN Pre-Build Review
+
+Test pre-build review.
+
+<!-- SIGMA:DEV_EXEC:SECTION:IMPLEMENTATION_WALKTHROUGH -->
+## 7. Implementation Walkthrough
+
+Test walkthrough.
+
+<!-- SIGMA:DEV_EXEC:SECTION:DEVIATIONS_FROM_FMN_PLAN -->
+## 8. Deviations From FMN-PLAN
+
+Test deviations.
+
+<!-- SIGMA:DEV_EXEC:SECTION:DEPENDENCY_ENVIRONMENT_CHANGES -->
+## 9. Dependency / Environment Changes
+
+Test dependency changes.
+
+<!-- SIGMA:DEV_EXEC:SECTION:DEVELOPER_VERIFICATION -->
+## 10. Developer Verification
+
+Test verification.
+
+<!-- SIGMA:DEV_EXEC:SECTION:GIT_CHANGE_EVIDENCE -->
+## 11. Git / Change Evidence
+
+Test evidence.
+
+<!-- SIGMA:DEV_EXEC:SECTION:ISSUES_ENCOUNTERED -->
+## 12. Issues Encountered
+
+Test issues.
+
+<!-- SIGMA:DEV_EXEC:SECTION:KNOWN_LIMITATIONS_TECH_DEBT -->
+## 13. Known Limitations / Technical Debt
+
+Test limitations.
+
+<!-- SIGMA:DEV_EXEC:SECTION:DEV_COMPLETION_STATEMENT -->
+## 14. DEV Completion Statement
+
+Test completion statement.
+
+<!-- SIGMA:DEV_EXEC:SECTION:FMN_POST_BUILD_REVIEW -->
+## 15. FMN Post-Build Review
+
+Test post-build review.
+
+### Advisory Verdict
+
+- [x] ${verdict}
+
+<!-- SIGMA:DEV_EXEC:SECTION:DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS -->
+## 16. Director Observation Report & Minor Requests
+
+Test observation report.
+`;
+}
+
+export function validCloseDoc(version: string, verdict = 'CLOSE_ACCEPTED'): string {
+  return `<!-- SIGMA:DOC type=DIR_CLOSE schema=2 -->
+# DIR-CLOSE ${version}
+
+<!-- SIGMA:DIR_CLOSE:SECTION:CLOSURE_DECISION -->
+## 1. Closure Decision
+
+- [x] ${verdict}
+
+Test closure statement.
+
+<!-- SIGMA:DIR_CLOSE:SECTION:HUMAN_PROJECT_STORY -->
+## 2. Human Project Story
+
+Test project story.
+
+<!-- SIGMA:DIR_CLOSE:SECTION:DELIVERED_STATE -->
+## 3. Delivered State
+
+Test delivered state.
+
+<!-- SIGMA:DIR_CLOSE:SECTION:INTENT_SATISFACTION -->
+## 4. Intent Satisfaction
+
+Test intent satisfaction.
+
+<!-- SIGMA:DIR_CLOSE:SECTION:EVIDENCE_MAP -->
+## 5. Evidence Map
+
+Test evidence map.
+
+<!-- SIGMA:DIR_CLOSE:SECTION:LIMITATIONS_DEVIATIONS_CORRECTIONS -->
+## 6. Limitations, Deviations, and Corrections
+
+Test limitations.
+
+<!-- SIGMA:DIR_CLOSE:SECTION:OPERATIONAL_HANDOFF_NOTES -->
+## 7. Operational Handoff
+
+Test handoff notes.
+
+<!-- SIGMA:DIR_CLOSE:SECTION:NEW_INTENT_BOUNDARY -->
+## 8. New Intent Boundary
+
+Test new intent boundary.
+
+<!-- SIGMA:DIR_CLOSE:SECTION:FINAL_DIRECTOR_DECISION -->
+## 9. Final Director Decision
+
+### Reason
+
+Test project closed successfully with all acceptance criteria met.
+
+### Accepted Limitations
+
+- None.
+
+### Required Follow-Up
+
+- None.
+
+### Closure Sentence
+
+Director accepts closure of Test Project as complete, with no known limitations, and directs all further expansion to begin from a new Intent.
+`;
+}
+
+export function makeProgressWithDraftExec() {
+  const now = new Date().toISOString();
+  return makeProgress({
+    lifecycle_state: 'BUILD',
+    intent: {
+      active_version: 'v1',
+      active_state: 'LOCKED',
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
+    },
+    plan: {
+      active_version: 'v1',
+      active_state: 'LOCKED',
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+    },
+    exec: {
+      active_version: 'v0.1',
+      active_state: 'DRAFT',
+      versions: [{ version: 'v0.1', state: 'DRAFT', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1' }],
+    },
+    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
+  });
+}
+
+export function makeProgressWithDraftClose() {
+  const now = new Date().toISOString();
+  return makeProgress({
+    lifecycle_state: 'BUILD',
+    intent: {
+      active_version: 'v1',
+      active_state: 'LOCKED',
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
+    },
+    plan: {
+      active_version: 'v1',
+      active_state: 'LOCKED',
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+    },
+    exec: {
+      active_version: 'v0.1',
+      active_state: 'LOCKED',
+      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' }],
+    },
+    close: {
+      active_version: 'v1',
+      active_state: 'DRAFT',
+      versions: [{ version: 'v1', state: 'DRAFT', file: 'Sigma/close/DIR-CLOSE-v1.md', created_at: now, updated_at: now }],
+    },
+    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
+  });
+}
+
 export function makeProgressWithDraftIntentAfterLockedChain() {
   const now = new Date().toISOString();
   return makeProgress({

@@ -455,6 +455,7 @@ ARC operates primarily in the **Draft/Operational** command authority class.
 | Command | Class |
 | :--- | :--- |
 | `sigma intent new` | Draft/Operational |
+| `sigma intent check` | Read-only |
 | `sigma session bootstrap` | Read-only |
 | `sigma project status` | Read-only |
 | `sigma git evidence` | Read-only |
@@ -468,6 +469,8 @@ Read-only commands are capability, not default activation steps. ARC should run 
 | `sigma intent lock` | Approval |
 
 ARC MUST NOT run `sigma intent lock` until the Director gives explicit approval. ARC may recommend it.
+
+Before recommending lock, ARC MUST run `sigma intent check` and confirm the output reports `Lock readiness: Eligible` (or `Eligible with warnings`). If it reports `Not eligible`, ARC MUST resolve the unsatisfied Lock Requirements shown in the check output before recommending `sigma intent lock` to the Director — do not recommend lock based on manual reading of the document alone.
 
 ### Director Convenience Rule
 

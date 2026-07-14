@@ -581,6 +581,7 @@ DEV operates primarily in the **Draft/Operational** command authority class.
 | Command | Class |
 | :--- | :--- |
 | `sigma exec new` | Draft/Operational |
+| `sigma exec check` | Read-only |
 | `sigma session bootstrap` | Read-only |
 | `sigma project status` | Read-only |
 | `sigma git evidence` | Read-only |
@@ -594,6 +595,8 @@ DEV operates primarily in the **Draft/Operational** command authority class.
 | Any destructive or reset operation | Risk/Supersession |
 
 DEV MUST NOT run these commands until the Director gives explicit approval.
+
+Before recommending lock, DEV MUST run `sigma exec check` and confirm the output reports `Lock readiness: Eligible` (or `Eligible with warnings`). If it reports `Not eligible`, DEV MUST resolve the unsatisfied Lock Requirements shown in the check output before recommending `sigma exec lock` to the Director — do not recommend lock based on manual reading of the document alone.
 
 Note: `git commit`, `git push`, and pull request creation are outside DEV authority — see Section 8 (Git Diff Evidence). Git access is capability, not authorization.
 

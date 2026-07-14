@@ -31,7 +31,7 @@ describe('Document checks and auto-validation', () => {
     expect(result.stdout).toMatch(/Result: OK/);
   });
 
-  it('intent check passes for a template-generated draft', () => {
+  it('intent check passes structurally for a template-generated draft, but reports it not yet lock-ready', () => {
     env = setupTestEnv();
     const progress = makeProgressWithDraftIntent() as Record<string, unknown>;
     progress.intent = { active_version: null, active_state: null, versions: [] };
@@ -41,9 +41,16 @@ describe('Document checks and auto-validation', () => {
     const created = runCli('intent new', env.projectDir, env.homeDir);
     expect(created.exitCode).toBe(0);
 
+    // check exit code reflects structural validity only (PLAN-EVAL-11 Isu Terbuka #1) —
+    // a freshly created, unfilled template is structurally valid but not lock-ready yet,
+    // and check must not fail on that (it only fails lock).
     const checked = runCli('intent check', env.projectDir, env.homeDir);
     expect(checked.exitCode).toBe(0);
-    expect(checked.stdout).toMatch(/Lock readiness: Eligible/);
+    expect(checked.stdout).toMatch(/Result: OK/);
+    expect(checked.stdout).toMatch(/Lock Requirements/);
+    expect(checked.stdout).toMatch(/✗ AUD Advisory Verdict recorded/);
+    expect(checked.stdout).toMatch(/NOT READY FOR LOCK/);
+    expect(checked.stdout).toMatch(/Lock readiness: Not eligible/);
   });
 
   it('intent lock is blocked when required markers are missing', () => {
@@ -153,8 +160,8 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
     const result = runCli('intent lock', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stdout).toMatch(/Lock Requirement.*not checked/);
-    expect(result.stdout).toMatch(/Risk appetite is stated/);
+    expect(result.stdout).toMatch(/✗ Risk appetite is stated\./);
+    expect(result.stdout).toMatch(/NOT READY FOR LOCK \(1 requirement\(s\) unsatisfied\)/);
   });
 
   it('intent lock fails when a Quality Bar dimension in Section 4 is still a placeholder', () => {
@@ -172,8 +179,8 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
     const result = runCli('intent lock', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stdout).toMatch(/Quality Bar \(Section 4\).*placeholder/);
-    expect(result.stdout).toMatch(/Security/);
+    expect(result.stdout).toMatch(/✗ Quality Bar — Security minimum standard stated or N\/A/);
+    expect(result.stdout).toMatch(/NOT READY FOR LOCK \(1 requirement\(s\) unsatisfied\)/);
   });
 
   it('intent lock succeeds when Lock Requirement is complete and Quality Bar has no placeholders, ignoring unchecked Conditional Requirement', () => {
@@ -186,7 +193,8 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
     const result = runCli('intent lock', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/Final Validation Checklist — Lock Requirement: all items checked/);
-    expect(result.stdout).toMatch(/Quality Bar \(Section 4\): minimum standard stated or N\/A for all dimensions/);
+    expect(result.stdout).toMatch(/Document is structurally valid and all Lock Requirements are satisfied\./);
+    expect(result.stdout).toMatch(/✓ Quality Bar — Security minimum standard stated or N\/A/);
+    expect(result.stdout).toMatch(/Lock readiness: Eligible/);
   });
 });

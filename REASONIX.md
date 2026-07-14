@@ -28,6 +28,11 @@ sigma plan status
 sigma exec status
 sigma close status
 sigma git evidence
+sigma intent check
+sigma plan check
+sigma exec check
+sigma close check
+sigma roadmap check
 ```
 
 The following commands require explicit Director authorization before running:
@@ -53,6 +58,13 @@ When explicitly operating as a Sigma governance role, load role memory if
 available and follow the matching `Sigma/rules/{ROLE}-RULE.md`. Do not treat
 `sigma session bootstrap` as mandatory for every role; run it only when the
 role rule, Director request, or direct runtime evidence chain requires it.
+
+Before recommending or running any lock command, run the matching
+`sigma {domain} check` first and confirm it reports `Lock readiness:
+Eligible` (or `Eligible with warnings`). `check` is on the whitelist above —
+it never requires Director authorization. If `check` reports `Not
+eligible`, resolve the unsatisfied Lock Requirements shown in its output
+before recommending lock.
 
 ## Director Authorization Language
 

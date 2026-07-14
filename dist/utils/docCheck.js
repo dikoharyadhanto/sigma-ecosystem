@@ -32,6 +32,25 @@ const QUALITY_BAR_CHECKLIST_PHRASES = [
     'Performance / Cost minimum standard',
 ];
 const QUALITY_BAR_DIMENSIONS = ['Security', 'UX Trust', 'UI / Product Packaging', 'Performance / Cost'];
+const EXEC_VERDICT_SECTION_ID = 'FMN_POST_BUILD_REVIEW';
+const EXEC_VERDICT_LABELS = new Set([
+    'READY_FOR_LOCK',
+    'NEEDS_DEV_UPDATE',
+    'REVISION_REQUIRED',
+    'COMPLETE_WITH_RISK',
+    'OTHER',
+]);
+const CLOSE_VERDICT_SECTION_ID = 'CLOSURE_DECISION';
+const CLOSE_VERDICT_LABELS = new Set([
+    'CLOSE_ACCEPTED',
+    'CLOSE_ACCEPTED_WITH_LIMITATIONS',
+    'DO_NOT_CLOSE',
+    'OPEN_NEW_PLAN',
+    'UPDATE_CURRENT_EXEC',
+    'OTHER',
+]);
+const CLOSE_VERDICT_ALLOWED_LABELS = new Set(['CLOSE_ACCEPTED', 'CLOSE_ACCEPTED_WITH_LIMITATIONS']);
+const FINAL_DIRECTOR_DECISION_SECTION_ID = 'FINAL_DIRECTOR_DECISION';
 const DOC_SPECS = {
     intent: {
         heading: 'Sigma Intent Check',
@@ -143,7 +162,212 @@ function pushResult(condition, successMessage, failureMessage, passes, errors) {
     else
         errors.push(failureMessage);
 }
-function validateSigmaDocFile(absPath, domain, options = {}) {
+/** End boundary (exclusive) of a marked section's body: the line before the next marker, or EOF. */
+function sectionEndLine(relevantMarkers, marker, totalLines) {
+    const laterMarkers = relevantMarkers
+        .filter(m => m.line > marker.line)
+        .sort((a, b) => a.line - b.line);
+    return laterMarkers.length > 0 ? laterMarkers[0].line - 1 : totalLines;
+}
+/** Labels ticked (`- [x] LABEL`) within `lines[start, end)`, restricted to a known label set. */
+function scanTickedLabels(lines, start, end, labelSet) {
+    const ticked = [];
+    for (let i = start; i < end; i += 1) {
+        const match = lines[i].match(/^-\s*\[([ xX])\]\s*([A-Z_]+)/);
+        if (match && labelSet.has(match[2]) && /x/i.test(match[1])) {
+            ticked.push(match[2]);
+        }
+    }
+    return ticked;
+}
+/** First non-empty line of prose directly under a heading matching `headingRegex`, within `[start, end)`. */
+function findHeadingBody(lines, start, end, headingRegex) {
+    let headingIndex = -1;
+    for (let i = start; i < end; i += 1) {
+        if (headingRegex.test(lines[i].trim())) {
+            headingIndex = i;
+            break;
+        }
+    }
+    if (headingIndex === -1)
+        return null;
+    let bodyEnd = end;
+    for (let i = headingIndex + 1; i < end; i += 1) {
+        if (/^#{2,3}\s+/.test(lines[i].trim())) {
+            bodyEnd = i;
+            break;
+        }
+    }
+    const next = nextNonEmptyLine(lines, headingIndex + 1);
+    if (!next || next.index >= bodyEnd)
+        return null;
+    return next.text.trim();
+}
+function isPlaceholderContent(text) {
+    if (!text)
+        return true;
+    return /^\[.*\]$/.test(text.trim());
+}
+function evaluateAudVerdictGate(domain, relevantMarkers, lines, requirements, passes, warnings) {
+    const verdictSectionId = VERDICT_SECTION_ID[domain];
+    if (!verdictSectionId)
+        return;
+    const marker = relevantMarkers.find(m => m.sectionId === verdictSectionId);
+    if (!marker)
+        return;
+    const end = sectionEndLine(relevantMarkers, marker, lines.length);
+    const ticked = scanTickedLabels(lines, marker.line, end, VERDICT_CHECKBOX_LABELS);
+    let verbatimValue = null;
+    for (let i = marker.line; i < end; i += 1) {
+        const verbatimMatch = lines[i].match(/Director Instruction \(verbatim\)[^:]*:\s*(.*)$/);
+        if (verbatimMatch)
+            verbatimValue = verbatimMatch[1].trim();
+    }
+    requirements.push({ label: 'AUD Advisory Verdict recorded (exactly one)', satisfied: ticked.length === 1, scope: 'lock' });
+    if (ticked.length === 0) {
+        warnings.push('AUD Advisory Verdict: no verdict checkbox is checked — exactly one is required before lock');
+    }
+    else if (ticked.length > 1) {
+        warnings.push(`AUD Advisory Verdict: more than one verdict checkbox is checked (${ticked.join(', ')}) — exactly one is required`);
+    }
+    else {
+        passes.push(`AUD Advisory Verdict: exactly one checkbox checked (${ticked[0]})`);
+        if (ticked[0] === 'SKIP_FOR_AUDIT') {
+            const isEmpty = !verbatimValue || verbatimValue.length === 0 || verbatimValue === '[...]';
+            requirements.push({
+                label: 'Director Instruction (verbatim) recorded for SKIP_FOR_AUDIT',
+                satisfied: !isEmpty,
+                scope: 'conditional',
+            });
+            if (isEmpty) {
+                warnings.push('AUD Advisory Verdict: SKIP_FOR_AUDIT is checked but "Director Instruction (verbatim)" is empty — the Director\'s instruction must be recorded verbatim before lock');
+            }
+            else {
+                passes.push('AUD Advisory Verdict: SKIP_FOR_AUDIT has a recorded Director Instruction');
+            }
+        }
+    }
+}
+function evaluateFinalChecklistGate(relevantMarkers, lines, requirements) {
+    const checklistMarker = relevantMarkers.find(m => m.sectionId === FINAL_CHECKLIST_SECTION_ID);
+    if (checklistMarker) {
+        const checklistEnd = sectionEndLine(relevantMarkers, checklistMarker, lines.length);
+        let lockRequirementEnd = checklistEnd;
+        for (let i = checklistMarker.line; i < checklistEnd; i += 1) {
+            if (CONDITIONAL_REQUIREMENT_HEADING.test(lines[i].trim())) {
+                lockRequirementEnd = i;
+                break;
+            }
+        }
+        for (let i = checklistMarker.line; i < lockRequirementEnd; i += 1) {
+            const checkboxMatch = lines[i].match(/^-\s*\[([ xX])\]\s*(.+)$/);
+            if (!checkboxMatch)
+                continue;
+            const text = checkboxMatch[2].trim();
+            const isQualityBarItem = QUALITY_BAR_CHECKLIST_PHRASES.some(phrase => text.includes(phrase));
+            if (isQualityBarItem)
+                continue;
+            requirements.push({ label: text, satisfied: /x/i.test(checkboxMatch[1]), scope: 'lock' });
+        }
+    }
+    const qualityBarMarker = relevantMarkers.find(m => m.sectionId === QUALITY_BAR_SECTION_ID);
+    if (qualityBarMarker) {
+        const qualityBarEnd = sectionEndLine(relevantMarkers, qualityBarMarker, lines.length);
+        for (let i = qualityBarMarker.line; i < qualityBarEnd; i += 1) {
+            const rowMatch = lines[i].match(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/);
+            if (!rowMatch)
+                continue;
+            const dimension = rowMatch[1].trim();
+            if (!QUALITY_BAR_DIMENSIONS.includes(dimension))
+                continue;
+            const standardCell = rowMatch[2].trim();
+            requirements.push({
+                label: `Quality Bar — ${dimension} minimum standard stated or N/A`,
+                satisfied: !/^\[.*\]$/.test(standardCell),
+                scope: 'lock',
+            });
+        }
+    }
+}
+function evaluateExecVerdictGate(relevantMarkers, lines, requirements, passes, warnings) {
+    const marker = relevantMarkers.find(m => m.sectionId === EXEC_VERDICT_SECTION_ID);
+    if (!marker)
+        return;
+    const end = sectionEndLine(relevantMarkers, marker, lines.length);
+    const ticked = scanTickedLabels(lines, marker.line, end, EXEC_VERDICT_LABELS);
+    requirements.push({
+        label: 'FMN Post-Build Advisory Verdict recorded (exactly one)',
+        satisfied: ticked.length === 1,
+        scope: 'lock',
+    });
+    if (ticked.length === 0) {
+        warnings.push('FMN Post-Build Advisory Verdict: no verdict checkbox is checked — exactly one is required before lock');
+    }
+    else if (ticked.length > 1) {
+        warnings.push(`FMN Post-Build Advisory Verdict: more than one verdict checkbox is checked (${ticked.join(', ')}) — exactly one is required`);
+    }
+    else {
+        // Verdict-agnostic by design (PLAN-EVAL-11 Bagian B): FMN is advisory, not approval
+        // authority, so which verdict is checked never affects whether this is satisfied.
+        passes.push(`FMN Post-Build Advisory Verdict: exactly one checkbox checked (${ticked[0]})`);
+    }
+}
+function evaluateCloseVerdictGate(relevantMarkers, lines, requirements, passes, warnings) {
+    const marker = relevantMarkers.find(m => m.sectionId === CLOSE_VERDICT_SECTION_ID);
+    if (!marker)
+        return;
+    const end = sectionEndLine(relevantMarkers, marker, lines.length);
+    const ticked = scanTickedLabels(lines, marker.line, end, CLOSE_VERDICT_LABELS);
+    const recorded = ticked.length === 1;
+    requirements.push({ label: 'Closure Decision verdict recorded (exactly one)', satisfied: recorded, scope: 'lock' });
+    if (ticked.length === 0) {
+        warnings.push('Closure Decision: no verdict checkbox is checked — exactly one is required before lock');
+    }
+    else if (ticked.length > 1) {
+        warnings.push(`Closure Decision: more than one verdict checkbox is checked (${ticked.join(', ')}) — exactly one is required`);
+    }
+    // Verdict-aware by design (PLAN-EVAL-11 Bagian C): the verdict here is Director's own
+    // closure decision, not an advisory role's — so unlike exec, its content does gate lock.
+    const permits = recorded && CLOSE_VERDICT_ALLOWED_LABELS.has(ticked[0]);
+    requirements.push({
+        label: 'Closure Decision verdict permits lock (CLOSE_ACCEPTED or CLOSE_ACCEPTED_WITH_LIMITATIONS)',
+        satisfied: permits,
+        scope: 'lock',
+    });
+    if (recorded) {
+        if (permits) {
+            passes.push(`Closure Decision: verdict "${ticked[0]}" permits close lock`);
+        }
+        else {
+            warnings.push(`Closure Decision: verdict "${ticked[0]}" does not permit close lock — allowed verdicts are CLOSE_ACCEPTED, CLOSE_ACCEPTED_WITH_LIMITATIONS`);
+        }
+    }
+}
+function evaluateFinalDirectorDecisionGate(relevantMarkers, lines, requirements, passes, warnings) {
+    const marker = relevantMarkers.find(m => m.sectionId === FINAL_DIRECTOR_DECISION_SECTION_ID);
+    if (!marker)
+        return;
+    const end = sectionEndLine(relevantMarkers, marker, lines.length);
+    const reasonText = findHeadingBody(lines, marker.line, end, /^###\s*Reason\s*$/i);
+    const reasonSatisfied = !isPlaceholderContent(reasonText);
+    requirements.push({ label: 'Final Director Decision — Reason is stated (not placeholder)', satisfied: reasonSatisfied, scope: 'lock' });
+    if (reasonSatisfied) {
+        passes.push('Final Director Decision: Reason is stated');
+    }
+    else {
+        warnings.push('Final Director Decision: Reason is still a placeholder — state the actual reason before lock');
+    }
+    const sentenceText = findHeadingBody(lines, marker.line, end, /^###\s*Closure Sentence\s*$/i);
+    const sentenceSatisfied = !isPlaceholderContent(sentenceText);
+    requirements.push({ label: 'Final Director Decision — Closure Sentence is stated (not placeholder)', satisfied: sentenceSatisfied, scope: 'lock' });
+    if (sentenceSatisfied) {
+        passes.push('Final Director Decision: Closure Sentence is stated');
+    }
+    else {
+        warnings.push('Final Director Decision: Closure Sentence is still a placeholder — state the actual sentence before lock');
+    }
+}
+function validateSigmaDocFile(absPath, domain) {
     const spec = DOC_SPECS[domain];
     const content = fs_extra_1.default.readFileSync(absPath, 'utf8');
     const lines = content.split(/\r?\n/);
@@ -254,113 +478,20 @@ function validateSigmaDocFile(absPath, domain, options = {}) {
         const uniqueRefs = [...new Set(numericSectionRefs)];
         warnings.push(`Numeric section references found: ${uniqueRefs.join(', ')}`);
     }
-    if (options.enforceVerdictGate) {
-        const verdictSectionId = VERDICT_SECTION_ID[domain];
-        const verdictMarker = verdictSectionId
-            ? relevantMarkers.find(marker => marker.sectionId === verdictSectionId)
-            : undefined;
-        if (verdictMarker) {
-            const laterMarkers = relevantMarkers
-                .filter(marker => marker.line > verdictMarker.line)
-                .sort((a, b) => a.line - b.line);
-            const endBoundary = laterMarkers.length > 0 ? laterMarkers[0].line - 1 : lines.length;
-            const tickedLabels = [];
-            let verbatimValue = null;
-            for (let i = verdictMarker.line; i < endBoundary; i += 1) {
-                const line = lines[i];
-                const checkboxMatch = line.match(/^-\s*\[([ xX])\]\s*([A-Z_]+)/);
-                if (checkboxMatch) {
-                    const label = checkboxMatch[2];
-                    if (VERDICT_CHECKBOX_LABELS.has(label) && /x/i.test(checkboxMatch[1])) {
-                        tickedLabels.push(label);
-                    }
-                    continue;
-                }
-                const verbatimMatch = line.match(/Director Instruction \(verbatim\)[^:]*:\s*(.*)$/);
-                if (verbatimMatch) {
-                    verbatimValue = verbatimMatch[1].trim();
-                }
-            }
-            if (tickedLabels.length === 0) {
-                errors.push('AUD Advisory Verdict: no verdict checkbox is checked — exactly one is required before lock');
-            }
-            else if (tickedLabels.length > 1) {
-                errors.push(`AUD Advisory Verdict: more than one verdict checkbox is checked (${tickedLabels.join(', ')}) — exactly one is required`);
-            }
-            else {
-                passes.push(`AUD Advisory Verdict: exactly one checkbox checked (${tickedLabels[0]})`);
-                if (tickedLabels[0] === 'SKIP_FOR_AUDIT') {
-                    const isEmpty = !verbatimValue || verbatimValue.length === 0 || verbatimValue === '[...]';
-                    if (isEmpty) {
-                        errors.push('AUD Advisory Verdict: SKIP_FOR_AUDIT is checked but "Director Instruction (verbatim)" is empty — the Director\'s instruction must be recorded verbatim before lock');
-                    }
-                    else {
-                        passes.push('AUD Advisory Verdict: SKIP_FOR_AUDIT has a recorded Director Instruction');
-                    }
-                }
-            }
-        }
+    // Lock Requirements — content-aware gates. Always evaluated (both check and lock call
+    // this same function the same way) so the two commands can never disagree; see the
+    // Lock Validation Equivalence invariant on SigmaDocRequirement above.
+    const requirements = [];
+    evaluateAudVerdictGate(domain, relevantMarkers, lines, requirements, passes, warnings);
+    if (domain === 'intent') {
+        evaluateFinalChecklistGate(relevantMarkers, lines, requirements);
     }
-    if (options.enforceFinalChecklistGate && domain === 'intent') {
-        const checklistMarker = relevantMarkers.find(marker => marker.sectionId === FINAL_CHECKLIST_SECTION_ID);
-        if (checklistMarker) {
-            const laterMarkers = relevantMarkers
-                .filter(marker => marker.line > checklistMarker.line)
-                .sort((a, b) => a.line - b.line);
-            const checklistEnd = laterMarkers.length > 0 ? laterMarkers[0].line - 1 : lines.length;
-            let lockRequirementEnd = checklistEnd;
-            for (let i = checklistMarker.line; i < checklistEnd; i += 1) {
-                if (CONDITIONAL_REQUIREMENT_HEADING.test(lines[i].trim())) {
-                    lockRequirementEnd = i;
-                    break;
-                }
-            }
-            const unchecked = [];
-            for (let i = checklistMarker.line; i < lockRequirementEnd; i += 1) {
-                const checkboxMatch = lines[i].match(/^-\s*\[([ xX])\]\s*(.+)$/);
-                if (!checkboxMatch)
-                    continue;
-                const text = checkboxMatch[2].trim();
-                const isQualityBarItem = QUALITY_BAR_CHECKLIST_PHRASES.some(phrase => text.includes(phrase));
-                if (isQualityBarItem)
-                    continue;
-                if (!/x/i.test(checkboxMatch[1])) {
-                    unchecked.push(text);
-                }
-            }
-            if (unchecked.length > 0) {
-                errors.push(`Final Validation Checklist — Lock Requirement: ${unchecked.length} item(s) not checked: ${unchecked.join(' | ')}`);
-            }
-            else {
-                passes.push('Final Validation Checklist — Lock Requirement: all items checked');
-            }
-        }
-        const qualityBarMarker = relevantMarkers.find(marker => marker.sectionId === QUALITY_BAR_SECTION_ID);
-        if (qualityBarMarker) {
-            const laterMarkers = relevantMarkers
-                .filter(marker => marker.line > qualityBarMarker.line)
-                .sort((a, b) => a.line - b.line);
-            const qualityBarEnd = laterMarkers.length > 0 ? laterMarkers[0].line - 1 : lines.length;
-            const unresolvedDimensions = [];
-            for (let i = qualityBarMarker.line; i < qualityBarEnd; i += 1) {
-                const rowMatch = lines[i].match(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/);
-                if (!rowMatch)
-                    continue;
-                const dimension = rowMatch[1].trim();
-                if (!QUALITY_BAR_DIMENSIONS.includes(dimension))
-                    continue;
-                const standardCell = rowMatch[2].trim();
-                if (/^\[.*\]$/.test(standardCell)) {
-                    unresolvedDimensions.push(dimension);
-                }
-            }
-            if (unresolvedDimensions.length > 0) {
-                errors.push(`Quality Bar (Section 4): minimum standard still a placeholder for: ${unresolvedDimensions.join(', ')} — state a real standard or "N/A"`);
-            }
-            else {
-                passes.push('Quality Bar (Section 4): minimum standard stated or N/A for all dimensions');
-            }
-        }
+    if (domain === 'exec') {
+        evaluateExecVerdictGate(relevantMarkers, lines, requirements, passes, warnings);
+    }
+    if (domain === 'close') {
+        evaluateCloseVerdictGate(relevantMarkers, lines, requirements, passes, warnings);
+        evaluateFinalDirectorDecisionGate(relevantMarkers, lines, requirements, passes, warnings);
     }
     return {
         ok: errors.length === 0,
@@ -371,6 +502,7 @@ function validateSigmaDocFile(absPath, domain, options = {}) {
         errors,
         warnings,
         passes,
+        requirements,
     };
 }
 function resolveVersionedFile(projectRoot, data, domain, version) {
@@ -423,6 +555,7 @@ function printSigmaDocReport(report, projectRoot) {
     console.log(`Document Type: ${report.documentType ?? 'UNKNOWN'}`);
     console.log(`Schema: ${report.schema ?? 'UNKNOWN'}`);
     console.log('');
+    console.log('Structural Validation');
     for (const pass of report.passes) {
         console.log(`[PASS] ${pass}`);
     }
@@ -432,13 +565,32 @@ function printSigmaDocReport(report, projectRoot) {
     for (const error of report.errors) {
         console.log(`[ERROR] ${error}`);
     }
+    const unsatisfied = report.requirements.filter(requirement => !requirement.satisfied);
+    if (report.requirements.length > 0) {
+        console.log('');
+        console.log('Lock Requirements');
+        for (const requirement of report.requirements) {
+            console.log(`${requirement.satisfied ? '✓' : '✗'} ${requirement.label}`);
+        }
+    }
     console.log('');
     console.log(`Result: ${report.ok ? (report.warnings.length > 0 ? 'OK WITH WARNINGS' : 'OK') : 'FAILED'}`);
-    console.log(`Lock readiness: ${report.ok ? (report.warnings.length > 0 ? 'Eligible with warnings' : 'Eligible') : 'Not eligible'}`);
+    if (report.requirements.length > 0) {
+        console.log(unsatisfied.length === 0
+            ? 'Document is structurally valid and all Lock Requirements are satisfied.'
+            : `Document is ${report.ok ? 'structurally valid but' : 'NOT structurally valid and'} NOT READY FOR LOCK (${unsatisfied.length} requirement(s) unsatisfied).`);
+    }
+    const lockReady = report.ok && unsatisfied.length === 0;
+    console.log(`Lock readiness: ${lockReady ? (report.warnings.length > 0 ? 'Eligible with warnings' : 'Eligible') : 'Not eligible'}`);
 }
 function ensureSigmaDocEligible(report, command) {
     if (!report.ok) {
         throw new Error(`${report.heading} failed. Run: sigma ${command} check`);
+    }
+    const unsatisfied = report.requirements.filter(requirement => !requirement.satisfied);
+    if (unsatisfied.length > 0) {
+        const list = unsatisfied.map(requirement => `  - ${requirement.label}`).join('\n');
+        throw new Error(`${report.heading}: ${unsatisfied.length} lock requirement(s) not satisfied:\n${list}\nRun: sigma ${command} check`);
     }
 }
 //# sourceMappingURL=docCheck.js.map

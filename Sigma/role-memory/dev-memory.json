@@ -25,6 +25,7 @@
     "Implement only within the locked FMN-PLAN scope and raise clarification if the plan is unclear.",
     "Record implementation results, deviations, verification, changed files, and limitations truthfully in DEV-EXEC.",
     "After implementation evidence is complete, message FMN for post-build review, then stop and report to Director.",
-    "Never run git commit or git push; after DEV-EXEC is approved and locked, remind the Director to commit and push."
+    "Never run git commit or git push; after DEV-EXEC is approved and locked, remind the Director to commit and push.",
+    "Before recommending sigma exec lock, run sigma exec check first and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending lock."
   ]
 }

@@ -505,7 +505,7 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 
 | Class | Commands | AI May Execute? | Requires Director Instruction? |
 | :--- | :--- | :---: | :---: |
-| Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox` | Yes | No |
+| Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check` | Yes | No |
 | Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `cso new`, `reference update`, `send` | Yes, within role boundary | Usually no |
 | Approval | `intent lock`, `roadmap activate`, `plan lock`, `exec lock`, `close lock` | Only after Director approval | Yes |
 | Risk / Supersession | `close new --ack-stale-intent`, `plan supersede`, `exec supersede`, destructive/reset | Only after Director approval | Yes |
@@ -517,6 +517,12 @@ Clear authorization: `approved`, `lock this`, `lanjut lock`, `accept risk`, `ack
 Ambiguous — not sufficient: `looks good`, `menarik`, `sepertinya oke`, `lanjut bahas`, `apa pendapatmu?`, `okay`, `noted`, `interesting`.
 
 If authorization is unclear, ask before executing.
+
+### Pre-Lock Verification Rule
+
+Before recommending or executing any Approval-class lock command (`intent lock`, `plan lock`, `exec lock`, `close lock`), the AI role MUST first run the matching `{domain} check` command and confirm it reports `Lock readiness: Eligible` (or `Eligible with warnings`). `check` never mutates state and never requires Director authorization — it is a Lock Readiness dashboard: it shows exactly which Lock Requirements `lock` will enforce, without changing anything.
+
+If `check` reports `Not eligible`, the AI role must resolve the unsatisfied Lock Requirements shown in its output before recommending or executing lock — do not recommend lock from memory or a manual read of the document alone. By design, a document `check` reports fully satisfied cannot then fail `lock` for the same requirement (see PLAN-EVAL-11, "Lock Validation Equivalence") — if that ever happens, treat it as a CLI defect, not a normal outcome.
 
 ### Director Convenience Rule
 

@@ -89,3 +89,18 @@ cause dan rencana perbaikan sebagai keputusan tersendiri.
 | # | Dokumen | Topik sumber | Catatan sequencing |
 |---|---|---|---|
 | 10 | [PLAN-EVAL-10-PRE-EXISTING-TEST-FAILURES-INVESTIGATION.md](PLAN-EVAL-10-PRE-EXISTING-TEST-FAILURES-INVESTIGATION.md) | Ditemukan selama eksekusi #01 (`sigma doctor`/`override`/`reset`) dan #03 (ROADMAP) | Investigasi murni, tidak ada implementasi. Tidak bergantung ke #1–#9 manapun — murni perbaikan test fixture bila kelak disetujui untuk dieksekusi. |
+
+---
+
+## PLAN-EVAL-11 — Ditambahkan Setelah Implementasi #04 (Bagian C/D/E)
+
+Bukan berasal dari 7+1 topik sesi evaluasi manapun. Muncul dari pertanyaan Director
+pasca-implementasi #04 tentang bagaimana AI mengetahui syarat lock sebuah dokumen —
+mengungkap gap: gate isi-konten (`enforceVerdictGate`/`enforceFinalChecklistGate`)
+hanya aktif di `lock`, tidak pernah bisa di-preview lewat `check`. Investigasi lanjutan
+menemukan `exec`/`close` sudah punya struktur checkbox verdict natural (DEV-EXEC §15,
+DIR-CLOSE §1) yang belum pernah divalidasi CLI sama sekali.
+
+| # | Dokumen | Topik sumber | Catatan sequencing |
+|---|---|---|---|
+| 11 | [PLAN-EVAL-11-UNIFIED-CHECK-AND-LOCK-REQUIREMENT-GATES.md](PLAN-EVAL-11-UNIFIED-CHECK-AND-LOCK-REQUIREMENT-GATES.md) | Ditemukan selama diskusi lanjutan pasca-eksekusi #04 | DRAFT FOR REVIEW — beberapa keputusan desain kunci (gate verdict-agnostic vs verdict-aware untuk exec/close) belum final, perlu keputusan Director sebelum implementasi. Bergantung teknis ke #04 (memakai `enforceVerdictGate`/`enforceFinalChecklistGate` yang sudah dibangun di sana). |

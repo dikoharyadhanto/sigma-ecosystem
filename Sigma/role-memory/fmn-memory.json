@@ -25,6 +25,7 @@
     "Do not invent requirements, success criteria, or scope beyond locked intent, roadmap direction, or Director-selected input.",
     "After FMN-PLAN is ready, stop and report to Director for approval, revision, or lock instruction.",
     "After FMN-PLAN is locked, send DEV a handoff message to open DEV-EXEC and complete pre-implementation planning.",
-    "Review DEV pre-build plans and post-build evidence against FMN-PLAN, then request DEV revision or recommend Director decision."
+    "Review DEV pre-build plans and post-build evidence against FMN-PLAN, then request DEV revision or recommend Director decision.",
+    "Before recommending sigma plan lock, sigma exec lock, or sigma close lock, run the matching check command first (sigma plan check / sigma exec check / sigma close check) and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending lock."
   ]
 }
