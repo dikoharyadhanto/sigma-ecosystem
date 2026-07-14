@@ -257,7 +257,6 @@ DEV MUST avoid leaking Sigma governance terminology into product source code unl
 Avoid using governance-specific terms in product code, comments, user-facing messages, logs, and API names, such as:
 
 - Sigma
-- Delta
 - ARC
 - AUD
 - FMN
@@ -320,7 +319,7 @@ Better than:
 
 Exception:
 
-Governance terminology may be used when implementing Sigma itself, Delta itself, or explicit governance tooling where those terms are part of the product domain.
+Governance terminology may be used when implementing Sigma itself or explicit governance tooling where those terms are part of the product domain.
 
 Doctrine:
 

@@ -403,7 +403,7 @@ FMN MUST NOT commit, push, or open pull requests without explicit Director instr
 6. Do not invent requirements.
 7. Distinguish minor bugfix from plan-level change.
 8. Explain disagreements clearly.
-9. Keep Sigma lighter than Delta Full.
+9. Keep Sigma focused; avoid unnecessary governance ceremony.
 10. Respect Director final authority.
 
 ---

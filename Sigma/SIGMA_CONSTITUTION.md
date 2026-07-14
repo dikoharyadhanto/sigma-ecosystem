@@ -1,27 +1,5 @@
 # Sigma Constitution
 
-**Delta Ecosystem — Constitutional Charter (Sigma Copy)**
-**Authority Tier:** Supreme
-**Owner:** Director
-
----
-
-## Preface — Sigma Constitutional Note
-
-> This document is the **Sigma copy** of the Delta Constitution (`DELTA_CONSTITUTION.md`). The Delta Constitution is the supreme governing document of the entire Delta Ecosystem — which includes Sigma as an architecturally separate sibling protocol.
-
-> **Sigma does not have an independent constitution.** The Delta Constitution is the constitutional layer for both Delta Full and Sigma. All constitutional principles stated herein are fully binding on Sigma, its roles, its artifacts, and its CLI runtime.
-
-> **Sync obligation**: If `DELTA_CONSTITUTION.md` in the Delta Ecosystem package is amended, this copy **must be updated to match**. The Delta Constitution is the source of truth; this file is a synchronized copy. Operating from a divergent constitution is a governance violation.
-
-> **Sigma-specific interpretation**: Where the Delta Constitution references Delta-specific artifacts, roles, or documents, the corresponding Sigma equivalents are defined in `SIGMA_PROTOCOL.md`. The constitutional principles are identical across both systems; the operational implementation is defined separately per system.
-
-**Source**: `DELTA_CONSTITUTION.md` — Delta Ecosystem package.
-
----
-
-# Sigma Constitution
-
 **Sigma Ecosystem — Constitutional Charter**
 **Authority Tier:** Supreme
 **Owner:** Director
@@ -32,7 +10,11 @@
 
 ## Article I — Ecosystem Identity & Purpose
 
-Sigma is a structured AI cognitive operating system designed for systematic execution, governance, and knowledge continuity across multi-agent workflows. Its purpose is to enable the Director to orchestrate intelligent agents with deterministic governance, operational discipline, and lifecycle-aware memory.
+Sigma is an AI-operated governance runtime — a structured cognitive operating system designed for systematic execution, governance, and knowledge continuity across multi-agent workflows. Its purpose is to enable the Director to orchestrate intelligent agents with deterministic governance, operational discipline, and lifecycle-aware memory.
+
+Sigma is a sovereign, self-governing ecosystem. This Constitution is its own supreme charter — original, self-derived, and owned by the Sigma Ecosystem alone. Sigma is not a copy of, derived from, or subordinate to any external protocol, and no external document holds authority over it. Sigma answers to this Constitution and to the Director; to nothing else.
+
+Sigma governs through an economy of artifacts, roles, and commands. This economy is a deliberate design principle in service of clarity, traceability, and Director control — never a reduction in governance rigor. Sigma is defined by the discipline it enforces, not by its size.
 
 Sigma is not a document storage system. It is a cognitive runtime with defined authority boundaries, execution governance, and persistent operational integrity.
 
@@ -170,7 +152,7 @@ Any subordinate governance document found to be inconsistent with the principles
 
 ## Article IX — Lifecycle Governance Doctrine
 
-Every artifact produced within the Delta Ecosystem carries a lifecycle classification. The two fundamental classifications are persistent and transient. Persistent artifacts carry ongoing authority over future decisions and must be explicitly created, versioned, and approved. Transient artifacts serve immediate cognitive purposes and must not accumulate into permanent governance structures.
+Every artifact produced within the Sigma Ecosystem carries a lifecycle classification. The two fundamental classifications are persistent and transient. Persistent artifacts carry ongoing authority over future decisions and must be explicitly created, versioned, and approved. Transient artifacts serve immediate cognitive purposes and must not accumulate into permanent governance structures.
 
 Artifacts that have been superseded, deprecated, or abandoned do not retain authority by default. Authority decay is the principle that aged, stale, or invalidated artifacts — including outdated strategy documents, obsolete runtime states, and deprecated cognitive exchanges — formally lose their claim to influence agent decisions. No artifact may exercise authority beyond its valid lifecycle without explicit Director reactivation.
 
@@ -187,6 +169,30 @@ When runtime state is unavailable, corrupted, or irreconcilable with its governi
 Runtime state is subject to Director verification and correction at any time. No automated process or agent action may declare runtime state immune from Director review. Auditability of runtime state — the ability to trace any operational decision back to its authorizing governance document — is a constitutional requirement, not an implementation detail.
 
 Operational procedures for runtime trust validation, corruption handling, and reconciliation are defined in the operational governance protocol and the runtime governance systems.
+
+---
+
+## Amendment Log
+
+Per Article VIII, every amendment to this Constitution is recorded here as a persistent, append-only entry. Each entry records the date of ratification, the article(s) amended, a summary of the change, the rationale, and the subordinate documents updated as a result.
+
+### Amendment 001 — Sigma Sovereign Identity (De-Delta)
+
+- **Date ratified**: 2026-07-14
+- **Articles amended**: Article I (Ecosystem Identity & Purpose); Article IX (Lifecycle Governance Doctrine)
+- **Summary**: Removed the Delta-derived front matter (the "Sigma Copy of the Delta Constitution" title, Preface, and duplicate header) and established Sigma as a sovereign, self-governing ecosystem whose Constitution is its own supreme, self-derived charter. Added a sovereignty clause to Article I declaring that Sigma is not a copy of, derived from, or subordinate to any external protocol. Corrected the Article IX reference from "Delta Ecosystem" to "Sigma Ecosystem".
+- **Rationale**: The Delta Ecosystem is being retired. The prior framing declared "Sigma does not have an independent constitution" and imposed a sync obligation to `DELTA_CONSTITUTION.md`, which directly contradicted the document body's own claim to be the supreme authority of the Sigma Ecosystem. This amendment resolves that internal contradiction and reflects Sigma's status as an independent, self-owned governance system.
+- **Contradiction analysis**: Removed the internal conflict between the former Preface (subordinate/derivative framing) and the constitutional body (supreme-authority framing). No remaining article contradicts Sigma's sovereign identity.
+- **Subordinate documents updated**: `SIGMA_PROTOCOL.md` (Sections 1 and 19 — removed "Delta Ecosystem" / "Delta Full" framing and the `delta project start` reference); `Sigma/rules/ARC-RULE.md`, `Sigma/rules/FMN-RULE.md`, `Sigma/rules/DEV-RULE.md`, `Sigma/rules/AUD-RULE.md` (removed Delta references, reframed promotion guidance as heavier-governance-generic).
+
+### Amendment 002 — Sigma Identity Redefinition (Post-Lightweight)
+
+- **Date ratified**: 2026-07-14
+- **Articles amended**: Article I (Ecosystem Identity & Purpose)
+- **Summary**: Redefined Sigma's identity as an AI-operated governance runtime. Elevated to constitutional principle that Sigma's economy of artifacts, roles, and commands is a deliberate design choice for clarity and control — not a reduction in governance rigor — and that Sigma is defined by the discipline it enforces, not by its size.
+- **Rationale**: The prior "lightweight execution protocol" characterization was an artifact of Sigma's origin as a reduced variant of the retired Delta protocol. It is no longer accurate and understated Sigma's governance rigor. This amendment states Sigma's identity on its own terms.
+- **Contradiction analysis**: No conflict with other articles. Reinforces the sovereign identity established in Amendment 001.
+- **Subordinate documents updated**: `SIGMA_PROTOCOL.md` (Section 1 — Overview & Identity redefinition); `Sigma/rules/ARC-RULE.md` and `Sigma/rules/FMN-RULE.md` (removed "lightweight" identity framing).
 
 ---
 

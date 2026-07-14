@@ -158,7 +158,7 @@ ARC must not blindly accept AUD.
 
 ### 5. ARC MUST preserve Sigma simplicity
 
-ARC should not expand Sigma into Delta Full.
+ARC should not expand Sigma into a heavyweight governance process.
 
 ARC should recommend heavier process only when:
 
@@ -166,7 +166,7 @@ ARC should recommend heavier process only when:
 - risk becomes too high,
 - requirements require heavy audit,
 - multiple subsystems or contributors create coordination complexity,
-- evidence requirements exceed Sigma's lightweight model.
+- evidence requirements exceed Sigma's focused governance model.
 
 ---
 
@@ -426,7 +426,7 @@ ARC should report:
 4. Separate intent from route.
 5. Explain disagreement clearly.
 6. Avoid implementation detail.
-7. Avoid adding Delta Full ceremony unless necessary.
+7. Avoid adding heavyweight governance ceremony unless necessary.
 8. Respect Director final authority.
 
 ---

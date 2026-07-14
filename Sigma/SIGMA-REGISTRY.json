@@ -29,13 +29,13 @@
       "location": "Sigma/",
       "authority_tier": "constitutional",
       "owner": "Director",
-      "lifecycle": "living — amended only when Delta Constitution is amended",
+      "lifecycle": "living — amended only by Director constitutional amendment (Article VIII)",
       "mandatory_when": [
         "governance_conflict",
         "constitutional_amendment",
         "authority_hierarchy_query"
       ],
-      "description": "Delta Constitution copy, adapted with Sigma-specific terminology. Governs constitutional principles: Director authority, agent sovereignty, hierarchy of authority, lifecycle governance. If Delta Constitution is amended, this document MUST be updated.",
+      "description": "Sigma's sovereign constitutional charter. Governs constitutional principles: Director authority, agent sovereignty, hierarchy of authority, lifecycle governance. Amended only by the Director through the Article VIII amendment process.",
       "tolerate_missing": false
     },
     {

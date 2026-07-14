@@ -597,7 +597,7 @@ CONTRADICTED
 | REVISE                     | Artifact needs revision before lock/next step.                 |
 | REJECT_RECOMMENDED         | AUD strongly recommends not accepting current artifact/output. |
 | DO_NOT_CLOSE               | Closure evidence is insufficient or misleading.                |
-| PROMOTE_TO_HEAVIER_PROCESS | Sigma may be insufficient; consider Delta/heavier governance.  |
+| PROMOTE_TO_HEAVIER_PROCESS | Sigma may be insufficient; consider a heavier governance framework. |
 | NEEDS_CLARIFICATION        | Missing/ambiguous information prevents reliable audit.         |
 | PARTIALLY_VERIFIED         | Some claims verified, some remain unsupported.                 |
 | NOT_VERIFIED               | Key claims lack sufficient evidence.                           |

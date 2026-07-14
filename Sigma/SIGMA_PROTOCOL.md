@@ -14,22 +14,22 @@
 
 ## 1. Overview & Identity
 
-Sigma is a **lightweight execution protocol** in the Delta Ecosystem, designed for small-to-medium projects, prototypes, fast execution cycles, and solo-builder workflows.
+Sigma is an **AI-operated governance runtime** — a structured cognitive operating system that governs how the Director and AI roles carry work from intent to verified closure across multi-agent workflows. It provides deterministic governance, operational discipline, and lifecycle-aware memory, enforced through a CLI runtime rather than through manual document conventions.
 
-Sigma inherits Delta's core principles — intent clarity, traceability, evidence-based closure, Director authority — while compressing the artifact count, role handoffs, and command complexity to fit projects where Delta Full's governance overhead is disproportionate to the work being done.
+Sigma is built on a firm set of core principles — intent clarity, traceability, evidence-based closure, and Director authority — realized through a focused artifact set, explicit role boundaries, and gate-enforced lifecycle progression. Its economy of artifacts and roles is a deliberate design choice in service of clarity and control, not a reduction in governance rigor.
 
-**Sigma is not a modification of Delta Full.** It is an architecturally separate sibling protocol with its own CLI, artifact structures, folder layout, and runtime model.
+**Sigma is a self-contained, standalone protocol** with its own CLI, artifact structures, folder layout, and runtime model.
 
-**Target use cases:**
+**Well-suited for:**
 
-- Small to medium projects that do not warrant Delta Full's full governance chain
-- Prototypes and fast iteration cycles
-- Solo-builder workflows where compressing multiple roles into fewer agents is appropriate
+- Projects that need disciplined, auditable governance without a large multi-role bureaucracy
+- Fast iteration cycles where intent-to-closure traceability must still hold
+- Solo-builder and small-team workflows where a focused set of roles carries the full lifecycle
 
-**When Sigma is not appropriate** (see Section 19 for promotion):
+**When Sigma may not be the right fit** (see Section 19 for promotion):
 
-- High-risk, regulated, or enterprise projects requiring formal multi-role governance
-- Projects where compliance requires Delta Full's complete audit trail
+- Environments that mandate a large, formally separated multi-role governance body
+- Regulatory regimes requiring a specific external compliance or audit framework
 
 ---
 
@@ -620,9 +620,9 @@ Git evidence in Sigma is informational — it is not a governance gate and does 
 
 When a project outgrows Sigma's governance capacity, the Director may decide to promote to a heavier process.
 
-**Signals that Sigma may be insufficient**: project scope beyond what a single FMN + DEV cycle can manage; compliance or enterprise governance requirements; multiple contributors requiring formal role separation; risk profile warranting Delta Full's full audit trail.
+**Signals that Sigma may be insufficient**: project scope beyond what a single FMN + DEV cycle can manage; compliance or enterprise governance requirements; multiple contributors requiring formal role separation; risk profile warranting a full enterprise-grade audit trail.
 
-**Promotion process**: Director closes the Sigma project with a DIR-CLOSE documenting the reason; Director opens a new Delta Full project via `delta project start`. No automatic migration — Sigma artifacts do not convert to Delta Full artifacts.
+**Promotion process**: Director closes the Sigma project with a DIR-CLOSE documenting the reason, then initiates the heavier governance process separately. No automatic migration — Sigma artifacts do not convert automatically into another framework's artifacts.
 
 **There is no `sigma promote` command.** Promotion is a Director decision and a manual process.
 
