@@ -18,7 +18,6 @@ The following commands are safe to run without Director authorization:
 ```
 sigma --help
 sigma project status
-sigma project list
 sigma intent status
 sigma roadmap list
 sigma plan status
@@ -42,7 +41,6 @@ sigma exec lock
 sigma close lock
 sigma close new --ack-stale-intent
 sigma * supersede
-sigma project reset
 ```
 
 ## CLI Operator Model

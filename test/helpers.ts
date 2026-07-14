@@ -51,10 +51,6 @@ export function setupTestEnv(): TestEnv {
     cli_version: '0.9.0',
     installed_at: new Date().toISOString(),
   });
-  fs.writeJsonSync(path.join(sigmaGlobal, 'projects.json'), {
-    schema_version: SCHEMA_VERSION,
-    projects: [],
-  });
 
   // Project Sigma/ structure
   const sigmaDir = path.join(projectDir, 'Sigma');

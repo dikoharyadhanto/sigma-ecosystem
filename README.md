@@ -471,6 +471,7 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | project  | `sigma project start`              | Initialize a Sigma project in the current directory                            |
 | project  | `sigma project status`             | Show lifecycle phase, gate status, and active artifact versions                |
 | project  | `sigma project sync --confirm`     | Sync doctrine files from global templates into this project                    |
+| project  | `sigma project register`           | Repair/backfill `.sigma-identity.json` at project root (not a global registry) |
 | session  | `sigma session bootstrap`          | Load project state at session start                                            |
 | intent   | `sigma intent new`                 | Create a `DIR-INTENT` draft                                                    |
 | intent   | `sigma intent lock`                | Lock the active `DIR-INTENT` with Director approval                            |
@@ -508,14 +509,15 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | doctor   | `sigma doctor`                     | Diagnose and reconcile runtime state (repairs drift, marks unresolved breaks INVALID) |
 | doctor   | `sigma doctor --recovery`          | Explicit alias for the default `sigma doctor` behavior                        |
 | doctor   | `sigma doctor --reconstruct`       | Rebuild `progress.json` from artifact files on disk when it is missing or corrupted |
-| setup    | `sigma setup install`              | Install Sigma globally to `~/.sigma/`                                          |
-| setup    | `sigma setup update`               | Update global Sigma templates and governance files                             |
+| setup    | `sigma setup install`              | Install Sigma globally to `~/.sigma/`, deploy skill files + hook               |
+| setup    | `sigma setup update`               | Update global templates/governance and redeploy skill files + hook             |
+| setup    | `sigma setup uninstall --confirm`  | Remove `~/.sigma/`, deployed skill files, and the hook entry (global only)     |
 
 ---
 
-## Updating Sigma — Backward Compatibility for Registered Projects
+## Updating Sigma — Backward Compatibility for Existing Projects
 
-When `sigma-cli` is updated, existing projects registered in the Sigma system may need to be migrated to stay compatible with the new schema and doctrine files.
+When `sigma-cli` is updated, existing projects created with `sigma project start` may need to be migrated to stay compatible with the new schema and doctrine files.
 
 ### When to run migration
 
@@ -559,10 +561,22 @@ The following are never modified by migration commands:
 
 - Locked artifacts (`DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, `DIR-CLOSE`)
 - `Sigma/progress.json` gate and lock decisions
+- `.sigma-identity.json` at project root (project identity — untouched by migration or `sigma setup uninstall`)
 - `Sigma/logs/` — legacy CSO handoff files (if present; CSO was removed from current Sigma)
 - All content inside `Sigma/build/`, `Sigma/design/`, `Sigma/close/`
 
 Migration commands only update schema wrappers, doctrine files, and template structure — not Director decisions or locked evidence.
+
+### Removing Sigma — `sigma setup uninstall`
+
+```bash
+sigma setup uninstall          # dry run — lists what would be removed
+sigma setup uninstall --confirm
+```
+
+Removes the global installation only: `~/.sigma/` (templates, rules, governance, bridge, `sigma.config.json`), role skill files deployed to detected AI tool directories, and the `protect-sigma.js` hook entry in `~/.claude/settings.json` (removed surgically — only Sigma's entry, not the rest of the file).
+
+Global-only by construction: uninstall never resolves a project-local path, so no `Sigma/` folder, `.sigma-identity.json`, or bridge file in any project is ever touched, regardless of which directory you run it from. The only consequence is that the `sigma` command stops working until you reinstall.
 
 ---
 

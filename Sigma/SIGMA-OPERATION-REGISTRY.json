@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-07-14T00:00:00.000Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 55,
+  "total_operations": 56,
   "domains": [
     "close",
     "config",
@@ -38,7 +38,7 @@
       "action": "start",
       "level": "semantic",
       "role": "any",
-      "description": "Initialize a Sigma project in the current directory. Creates Sigma/ folder structure (rules/, design/, build/, close/, logs/, memory/), seeds progress.json, copies doctrine files from ~/.sigma/templates/, and registers the project in ~/.sigma/projects.json. Lifecycle state set to DESIGN.",
+      "description": "Initialize a Sigma project in the current directory. Creates Sigma/ folder structure (rules/, design/, build/, close/, logs/, memory/), seeds progress.json, writes .sigma-identity.json at project root, and copies doctrine files from ~/.sigma/templates/. Lifecycle state set to DESIGN.",
       "inputs": [],
       "outputs": [
         {
@@ -51,6 +51,10 @@
         },
         {
           "type": "file",
+          "description": ".sigma-identity.json at project root (project_id, project_name, registered) — fallback identity source for sigma doctor --reconstruct if progress.json is ever lost or corrupted"
+        },
+        {
+          "type": "file",
           "description": "Sigma/SIGMA_PROTOCOL.md (from template)"
         },
         {
@@ -59,11 +63,7 @@
         },
         {
           "type": "file",
-          "description": "Bridge files at project root: CLAUDE.md, GEMINI.md, AGENTS.md"
-        },
-        {
-          "type": "registry_entry",
-          "description": "~/.sigma/projects.json entry for this project"
+          "description": "Bridge files at project root: CLAUDE.md, GEMINI.md, AGENTS.md, DEEPSEEK.md, REASONIX.md"
         }
       ],
       "constraints": [],
@@ -210,27 +210,46 @@
       "action": "register",
       "level": "semantic",
       "role": "any",
-      "description": "Re-register current project in ~/.sigma/projects.json. Reads project_id and project_name from Sigma/progress.json. Use when the project is moved to a new path or the global registry is missing or corrupted.",
-      "inputs": [],
+      "description": "Repair/harvest tool for .sigma-identity.json at project root — not a cross-project registry operation. project_start already writes this file once; this command exists to restore it if it is missing or corrupted, or to backfill it into a project created before the file existed. Reads project_id and project_name from Sigma/progress.json when readable; otherwise requires --id and --name.",
+      "inputs": [
+        {
+          "name": "--id",
+          "type": "string",
+          "required": false,
+          "description": "Project ID, used only if Sigma/progress.json is unreadable"
+        },
+        {
+          "name": "--name",
+          "type": "string",
+          "required": false,
+          "description": "Project name, used only if Sigma/progress.json is unreadable"
+        }
+      ],
       "outputs": [
         {
-          "type": "registry_entry",
-          "description": "~/.sigma/projects.json entry updated or created for this project"
+          "type": "file",
+          "description": ".sigma-identity.json written or overwritten at project root"
         }
       ],
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
-          "error_message": "No Sigma project found. Run: sigma project start"
+          "condition": "Sigma/ folder must exist (does not require progress.json to be readable)",
+          "error_message": "Not inside a Sigma project. No Sigma/ directory found in this directory or any parent."
+        },
+        {
+          "type": "fallback",
+          "condition": "If Sigma/progress.json is missing, unreadable, or incomplete, --id and --name are required",
+          "error_message": "Sigma/progress.json is missing, unreadable, or incomplete — cannot determine project identity automatically. Pass --id <PROJECT_ID> --name <name> to proceed."
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
-        "post_condition": "project registered in ~/.sigma/projects.json with current path"
+        "pre_condition": "Sigma/ folder exists; progress.json readable OR --id/--name provided",
+        "post_condition": ".sigma-identity.json written at project root"
       },
       "error_messages": {
-        "not_found": "No Sigma project found. Run: sigma project start"
+        "not_found": "Not inside a Sigma project. No Sigma/ directory found in this directory or any parent.",
+        "no_identity_source": "Sigma/progress.json is missing, unreadable, or incomplete — cannot determine project identity automatically. Pass --id <PROJECT_ID> --name <name> to proceed."
       }
     },
     {
@@ -1054,20 +1073,33 @@
       "action": "install",
       "level": "system",
       "role": "any",
-      "description": "Install Sigma globally. Creates ~/.sigma/ directory structure, copies templates and doctrine files, installs role shortcuts to agent platforms.",
-      "inputs": [],
+      "description": "Install Sigma globally. Creates ~/.sigma/ directory structure, copies templates and doctrine files, detects AI tool directories and interactively deploys role skill files + the protect-sigma hook to selected tools.",
+      "inputs": [
+        {
+          "name": "--force",
+          "type": "flag",
+          "required": false,
+          "description": "Skip the reinstall confirmation prompt"
+        },
+        {
+          "name": "--yes",
+          "type": "flag",
+          "required": false,
+          "description": "Non-interactive: select all detected AI tools without prompting"
+        }
+      ],
       "outputs": [
         {
           "type": "folder",
-          "description": "~/.sigma/ with templates/, and supporting files"
+          "description": "~/.sigma/ with templates/, rules/, governance/, bridge/, and supporting files"
         },
         {
           "type": "file",
-          "description": "~/.sigma/projects.json (empty registry)"
+          "description": "Role skill shortcuts deployed to detected/selected AI tool directories (e.g. ~/.claude/commands/)"
         },
         {
           "type": "file",
-          "description": "Role shortcuts for agent platforms (CLAUDE.md, GEMINI.md, AGENTS.md templates)"
+          "description": "protect-sigma.js hook deployed and ~/.claude/settings.json patched (Claude Code only)"
         }
       ],
       "constraints": [],
@@ -1083,12 +1115,20 @@
       "action": "update",
       "level": "system",
       "role": "any",
-      "description": "Safe non-destructive global update. Syncs ~/.sigma/templates/, rule files, protocol templates, and bridge file templates from the installed package version. Does NOT touch any active project's Sigma/ folder. Use sigma project sync for project-level doctrine updates.",
+      "description": "Safe non-destructive global update. Backs up and syncs ~/.sigma/templates/, rule files, protocol templates, and bridge file templates from the installed package version, then redeploys role skill files + the protect-sigma hook to every detected AI tool directory (no interactive selection — refreshes whatever is already present). Does NOT touch any active project's Sigma/ folder. Use sigma project sync for project-level doctrine updates.",
       "inputs": [],
       "outputs": [
         {
           "type": "file",
-          "description": "~/.sigma/templates/* updated from installed package"
+          "description": "~/.sigma/templates/*, rules/*, governance/*, bridge/* updated from installed package"
+        },
+        {
+          "type": "file",
+          "description": "Role skill shortcuts redeployed to every detected AI tool directory"
+        },
+        {
+          "type": "folder",
+          "description": "~/.sigma/backups/{timestamp}/ containing pre-update file backups"
         }
       ],
       "constraints": [
@@ -1100,11 +1140,45 @@
       ],
       "gating": {
         "pre_condition": "~/.sigma/ exists",
-        "post_condition": "global templates updated; active project Sigma/ folders untouched"
+        "post_condition": "global templates and deployed skill/hook files updated; active project Sigma/ folders untouched"
       },
       "error_messages": {
         "not_installed": "~/.sigma/ not found. Run: sigma setup install"
       }
+    },
+    {
+      "operation_id": "setup_uninstall",
+      "domain": "setup",
+      "action": "uninstall",
+      "level": "system",
+      "role": "director",
+      "description": "Remove the Sigma global installation: deletes ~/.sigma/ entirely, removes deployed role skill files from every AI tool directory (file-by-file, never removes the tool's own directory), and surgically removes only the protect-sigma.js hook entry from ~/.claude/settings.json (cleaning up any container left empty by the removal, without touching unrelated settings.json content). Global-only by construction — never resolves a project-local path, so local project folders (Sigma/, .sigma-identity.json, bridge files) are never touched regardless of current working directory. Dry-run by default; requires --confirm to apply. Idempotent — a second run reports nothing to do.",
+      "inputs": [
+        {
+          "name": "--confirm",
+          "type": "flag",
+          "required": true,
+          "description": "Required to apply — without it, prints a dry-run list of what would be removed"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Dry-run: list of paths and hook entry that would be removed (no flag required, read-only)"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "--confirm flag must be present to apply changes",
+          "error_message": "N/A — omitting --confirm runs a dry-run, not an error"
+        }
+      ],
+      "gating": {
+        "pre_condition": "none — dry-run without --confirm; --confirm required to apply",
+        "post_condition": "~/.sigma/ removed; deployed skill files removed; hook entry removed from ~/.claude/settings.json; local project folders untouched"
+      },
+      "error_messages": {}
     },
     {
       "operation_id": "roadmap_new",

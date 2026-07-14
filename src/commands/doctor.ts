@@ -11,7 +11,7 @@ import {
 } from '../engine/progress';
 import { reconstructProgress, findSigmaProjectRoot } from '../engine/reconstruct';
 import { findProjectRoot, ensureDir } from '../utils/fs';
-import { PROJECT_SIGMA_DIR, GLOBAL_PROJECTS_FILE } from '../config';
+import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE } from '../config';
 import { validateProjectId, validateProjectName } from './project';
 
 function runDefaultDoctor(): void {
@@ -74,15 +74,15 @@ function resolveProjectIdentity(projectRoot: string, opts: { id?: string; name?:
     }
   }
 
-  if (fs.existsSync(GLOBAL_PROJECTS_FILE)) {
+  const identityPath = path.join(projectRoot, PROJECT_IDENTITY_FILE);
+  if (fs.existsSync(identityPath)) {
     try {
-      const registry = fs.readJsonSync(GLOBAL_PROJECTS_FILE) as {
-        projects: Array<{ project_id: string; project_name: string; path: string }>;
-      };
-      const match = registry.projects.find(p => path.resolve(p.path) === path.resolve(projectRoot));
-      if (match) return { id: match.project_id, name: match.project_name };
+      const identity = fs.readJsonSync(identityPath) as { project_id?: string; project_name?: string };
+      if (identity.project_id && identity.project_name) {
+        return { id: identity.project_id, name: identity.project_name };
+      }
     } catch {
-      // registry is unreadable — fall through
+      // identity file is unreadable — fall through
     }
   }
 
@@ -91,8 +91,9 @@ function resolveProjectIdentity(projectRoot: string, opts: { id?: string; name?:
   }
 
   throw new Error(
-    'Cannot determine project identity (project_id/project_name) — progress.json is unreadable and this ' +
-    'project is not registered in ~/.sigma/projects.json. Pass --id <PROJECT_ID> --name <name> to proceed.'
+    'Cannot determine project identity (project_id/project_name) — progress.json is unreadable and ' +
+    '.sigma-identity.json is missing or unreadable. Pass --id <PROJECT_ID> --name <name> to proceed, ' +
+    'or run `sigma project register` first if progress.json can still be read.'
   );
 }
 

@@ -23,7 +23,6 @@ const BUNDLE_PROTOCOL = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'SIGMA_PROTOC
 const SETUP_TARGETS_DIR = path_1.default.join(PACKAGE_ROOT, 'setup', 'targets');
 const BUNDLE_BRIDGE_DIR = path_1.default.join(SETUP_TARGETS_DIR, 'bridge');
 const BUNDLE_HOOKS_DIR = path_1.default.join(SETUP_TARGETS_DIR, 'hooks');
-const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
 const ROLE_FILES = {
     claudeCode: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
     codex: { arc: 'arc', fmn: 'fmn', dev: 'dev', aud: 'aud', report: 'report', sigmaTest: 'sigma-test' },
@@ -101,16 +100,12 @@ async function runInstall(opts) {
     }
     else {
         // Fall back to seeding stubs for backward compatibility
-        for (const stub of BRIDGE_STUBS) {
+        for (const stub of config_1.BRIDGE_STUBS) {
             const stubPath = path_1.default.join(config_1.GLOBAL_BRIDGE_DIR, stub);
             if (!(0, fs_1.fileExists)(stubPath)) {
                 fs_extra_1.default.writeFileSync(stubPath, `# ${stub}\n\n<!-- Sigma bridge stub -->\n`);
             }
         }
-    }
-    // Seed projects.json
-    if (!(0, fs_1.fileExists)(config_1.GLOBAL_PROJECTS_FILE)) {
-        fs_extra_1.default.writeJsonSync(config_1.GLOBAL_PROJECTS_FILE, { schema_version: '1.0.0', projects: [] }, { spaces: 2 });
     }
     // Seed sigma.config.json
     if (!(0, fs_1.fileExists)(config_1.GLOBAL_CONFIG_FILE)) {
@@ -120,9 +115,8 @@ async function runInstall(opts) {
             installed_at: new Date().toISOString(),
         }, { spaces: 2 });
     }
-    // Step B — Detect tools
+    // Detect tools
     const detected = (0, detect_1.detectTools)();
-    const paths = (0, detect_1.targetPaths)();
     const detectedPlatforms = Object.entries(detected)
         .filter(([, v]) => v)
         .map(([k]) => k);
@@ -131,7 +125,7 @@ async function runInstall(opts) {
         (0, output_1.info)('Detected directories: ~/.claude/commands, ~/.codex/skills, ~/.reasonix/skills, ~/.gemini/agents');
     }
     else {
-        // Step C — Select platforms
+        // Select platforms (interactive checkbox, unless --yes)
         let selectedPlatforms;
         if (opts.yes) {
             selectedPlatforms = detectedPlatforms;
@@ -147,67 +141,73 @@ async function runInstall(opts) {
             ]);
             selectedPlatforms = chosen;
         }
-        // Step D — Deploy skill files
-        const targetDirMap = {
-            claudeCode: paths.claudeCommands,
-            codex: paths.codexSkills,
-            reasonix: paths.reasonixSkills,
-            antigravity: paths.antigravityAgents,
-            cursor: paths.cursorRules,
-        };
-        for (const platform of selectedPlatforms) {
-            const sourceDir = path_1.default.join(SETUP_TARGETS_DIR, PLATFORM_SOURCE_DIR[platform]);
-            const targetDir = targetDirMap[platform];
-            if (!(0, fs_1.fileExists)(sourceDir)) {
-                (0, output_1.warn)(`Skill source not found for ${platform} — skipping`);
-                continue;
-            }
-            (0, fs_1.ensureDir)(targetDir);
-            const roles = ROLE_FILES[platform];
-            let ok = 0;
-            let failed = 0;
-            for (const [, fileName] of Object.entries(roles)) {
-                const src = path_1.default.join(sourceDir, fileName);
-                const dst = path_1.default.join(targetDir, fileName);
-                try {
-                    // Remove dst if its type conflicts with src (directory vs file).
-                    // A previous install may have left a flat file where a directory is now expected
-                    // (Sigma codex skills were flat files before; they are now directories).
-                    // Delta's directory-based skills at this path are also handled.
-                    if ((0, fs_1.fileExists)(dst)) {
-                        const srcIsDir = fs_extra_1.default.statSync(src).isDirectory();
-                        const dstIsDir = fs_extra_1.default.statSync(dst).isDirectory();
-                        if (srcIsDir !== dstIsDir) {
-                            fs_extra_1.default.removeSync(dst);
-                        }
-                    }
-                    fs_extra_1.default.copySync(src, dst, { overwrite: true });
-                    ok++;
-                }
-                catch {
-                    (0, output_1.warn)(`  ERR: ${dst}`);
-                    failed++;
-                }
-            }
-            const label = PLATFORM_LABELS[platform];
-            if (failed === 0) {
-                console.log(`  OK  ${label} (${ok} skills)`);
-            }
-            else {
-                console.log(`  PARTIAL ${label} (${ok} OK, ${failed} ERR)`);
-            }
-        }
-        // Step F — Hook deployment (Claude Code only)
-        if (selectedPlatforms.includes('claudeCode')) {
-            await deployHook(opts.yes);
-        }
+        await deploySkillsAndHook(selectedPlatforms);
     }
     (0, output_1.success)('Sigma installed successfully.');
     console.log(`  Global dir: ${config_1.GLOBAL_SIGMA_DIR}`);
     console.log('  Run `sigma project start` to initialize a project.');
 }
+// ── Shared skill + hook deployment (install & update) ───────────────────────
+async function deploySkillsAndHook(selectedPlatforms) {
+    if (selectedPlatforms.length === 0)
+        return;
+    const paths = (0, detect_1.targetPaths)();
+    const targetDirMap = {
+        claudeCode: paths.claudeCommands,
+        codex: paths.codexSkills,
+        reasonix: paths.reasonixSkills,
+        antigravity: paths.antigravityAgents,
+        cursor: paths.cursorRules,
+    };
+    for (const platform of selectedPlatforms) {
+        const sourceDir = path_1.default.join(SETUP_TARGETS_DIR, PLATFORM_SOURCE_DIR[platform]);
+        const targetDir = targetDirMap[platform];
+        if (!(0, fs_1.fileExists)(sourceDir)) {
+            (0, output_1.warn)(`Skill source not found for ${platform} — skipping`);
+            continue;
+        }
+        (0, fs_1.ensureDir)(targetDir);
+        const roles = ROLE_FILES[platform];
+        let ok = 0;
+        let failed = 0;
+        for (const [, fileName] of Object.entries(roles)) {
+            const src = path_1.default.join(sourceDir, fileName);
+            const dst = path_1.default.join(targetDir, fileName);
+            try {
+                // Remove dst if its type conflicts with src (directory vs file).
+                // A previous install may have left a flat file where a directory is now expected
+                // (Sigma codex skills were flat files before; they are now directories).
+                // Delta's directory-based skills at this path are also handled.
+                if ((0, fs_1.fileExists)(dst)) {
+                    const srcIsDir = fs_extra_1.default.statSync(src).isDirectory();
+                    const dstIsDir = fs_extra_1.default.statSync(dst).isDirectory();
+                    if (srcIsDir !== dstIsDir) {
+                        fs_extra_1.default.removeSync(dst);
+                    }
+                }
+                fs_extra_1.default.copySync(src, dst, { overwrite: true });
+                ok++;
+            }
+            catch {
+                (0, output_1.warn)(`  ERR: ${dst}`);
+                failed++;
+            }
+        }
+        const label = PLATFORM_LABELS[platform];
+        if (failed === 0) {
+            console.log(`  OK  ${label} (${ok} skills)`);
+        }
+        else {
+            console.log(`  PARTIAL ${label} (${ok} OK, ${failed} ERR)`);
+        }
+    }
+    // Hook deployment (Claude Code only)
+    if (selectedPlatforms.includes('claudeCode')) {
+        await deployHook();
+    }
+}
 // ── Hook deployment ──────────────────────────────────────────────────────────
-async function deployHook(yes) {
+async function deployHook() {
     const hookSrc = path_1.default.join(BUNDLE_HOOKS_DIR, 'protect-sigma.js');
     const hooksDir = path_1.default.join(config_1.GLOBAL_SIGMA_DIR, 'hooks');
     const hookDst = path_1.default.join(hooksDir, 'protect-sigma.js');
@@ -311,11 +311,125 @@ async function runUpdate() {
         fs_extra_1.default.writeJsonSync(config_1.GLOBAL_CONFIG_FILE, cfg, { spaces: 2 });
         console.log('  Updated: sigma.config.json (cli_version)');
     }
+    // Redeploy skill files + hook to every detected AI tool directory.
+    // No interactive selection here — update refreshes whatever is already
+    // present (or newly detected), it does not ask "reinstall?" like install does.
+    const detected = (0, detect_1.detectTools)();
+    const detectedPlatforms = Object.entries(detected)
+        .filter(([, v]) => v)
+        .map(([k]) => k);
+    if (detectedPlatforms.length === 0) {
+        (0, output_1.info)('No AI tool directories detected. Skipping skill deployment.');
+    }
+    else {
+        await deploySkillsAndHook(detectedPlatforms);
+    }
     (0, output_1.success)('Sigma updated successfully.');
     console.log(`  Backup saved to: ${backupBase}`);
     console.log('  Note: existing project Sigma/ folders were NOT touched.');
-    console.log('  Note: skill files in AI tool directories were NOT redeployed.');
     console.log('  To sync governance files into a project, run: sigma project sync --confirm');
+}
+// ── sigma setup uninstall ────────────────────────────────────────────────────
+//
+// Global-only by construction: every path here is derived from GLOBAL_SIGMA_DIR,
+// targetPaths(), or os.homedir() — this function never resolves a project-local
+// path (no findProjectRoot(), no process.cwd(), no PROJECT_SIGMA_DIR). That is
+// what guarantees local project folders are never touched, not a runtime check.
+function readClaudeSettings(settingsPath) {
+    if (!(0, fs_1.fileExists)(settingsPath))
+        return null;
+    try {
+        return fs_extra_1.default.readJsonSync(settingsPath);
+    }
+    catch {
+        return null;
+    }
+}
+function hookEntryExists(settingsPath) {
+    const settings = readClaudeSettings(settingsPath);
+    const preToolUse = settings?.hooks?.PreToolUse;
+    if (!preToolUse)
+        return false;
+    return preToolUse.some(entry => {
+        const entryHooks = entry.hooks;
+        return entryHooks?.some(h => typeof h.command === 'string' && h.command.includes('protect-sigma.js')) ?? false;
+    });
+}
+// Idempotent mirror of deployHook()'s idempotent-add logic: removes only the
+// Sigma-owned hook entry, then cleans up any container left empty as a
+// consequence — never touches unrelated keys/entries in settings.json.
+function removeHookEntry(settingsPath) {
+    const settings = readClaudeSettings(settingsPath);
+    const hooks = settings?.hooks;
+    const preToolUse = hooks?.PreToolUse;
+    if (!settings || !hooks || !preToolUse)
+        return;
+    for (const entry of preToolUse) {
+        const entryHooks = entry.hooks;
+        if (!entryHooks)
+            continue;
+        entry.hooks = entryHooks.filter(h => !(typeof h.command === 'string' && h.command.includes('protect-sigma.js')));
+    }
+    hooks.PreToolUse = preToolUse.filter(entry => (entry.hooks?.length ?? 0) > 0);
+    if (hooks.PreToolUse.length === 0)
+        delete hooks.PreToolUse;
+    if (Object.keys(hooks).length === 0)
+        delete settings.hooks;
+    fs_extra_1.default.writeJsonSync(settingsPath, settings, { spaces: 2 });
+}
+async function runUninstall(opts) {
+    const paths = (0, detect_1.targetPaths)();
+    const settingsPath = path_1.default.join(os_1.default.homedir(), '.claude', 'settings.json');
+    const targetDirMap = {
+        claudeCode: paths.claudeCommands,
+        codex: paths.codexSkills,
+        reasonix: paths.reasonixSkills,
+        antigravity: paths.antigravityAgents,
+        cursor: paths.cursorRules,
+    };
+    const skillFilesToRemove = [];
+    for (const platform of Object.keys(ROLE_FILES)) {
+        const targetDir = targetDirMap[platform];
+        for (const fileName of Object.values(ROLE_FILES[platform])) {
+            const dst = path_1.default.join(targetDir, fileName);
+            if ((0, fs_1.fileExists)(dst))
+                skillFilesToRemove.push(dst);
+        }
+    }
+    const hasGlobalDir = (0, fs_1.fileExists)(config_1.GLOBAL_SIGMA_DIR);
+    const hasHookEntry = hookEntryExists(settingsPath);
+    if (!hasGlobalDir && skillFilesToRemove.length === 0 && !hasHookEntry) {
+        (0, output_1.info)('Nothing to uninstall — no Sigma global installation, skill files, or hook entry found.');
+        return;
+    }
+    if (!opts.confirm) {
+        (0, output_1.info)('Dry run — the following would be removed:');
+        if (hasGlobalDir)
+            console.log(`  ${config_1.GLOBAL_SIGMA_DIR}/ (entire directory)`);
+        for (const f of skillFilesToRemove)
+            console.log(`  ${f}`);
+        if (hasHookEntry)
+            console.log(`  protect-sigma.js hook entry in ${settingsPath}`);
+        (0, output_1.warn)('Pass --confirm to apply. Local project folders (Sigma/, .sigma-identity.json) are never touched.');
+        return;
+    }
+    (0, output_1.info)('Uninstalling Sigma...');
+    if (hasGlobalDir) {
+        fs_extra_1.default.removeSync(config_1.GLOBAL_SIGMA_DIR);
+        console.log(`  Removed: ${config_1.GLOBAL_SIGMA_DIR}/`);
+    }
+    if (skillFilesToRemove.length > 0) {
+        for (const f of skillFilesToRemove)
+            fs_extra_1.default.removeSync(f);
+        console.log(`  Removed: ${skillFilesToRemove.length} skill file(s) from AI tool directories`);
+    }
+    if (hasHookEntry) {
+        removeHookEntry(settingsPath);
+        console.log(`  Removed: protect-sigma.js hook entry from ${settingsPath}`);
+    }
+    (0, output_1.success)('Sigma uninstalled successfully.');
+    console.log('  Local project folders (Sigma/, .sigma-identity.json) were not touched.');
+    console.log('  The `sigma` command will no longer function until reinstalled.');
 }
 // ── Command builder ──────────────────────────────────────────────────────────
 function setupCommand() {
@@ -334,9 +448,19 @@ function setupCommand() {
     });
     cmd
         .command('update')
-        .description('Update ~/.sigma/ templates, rules, governance, and bridge templates from package bundle')
+        .description('Update ~/.sigma/ templates, rules, governance, bridge templates, and redeploy skill files + hook')
         .action(() => {
         runUpdate().catch(err => {
+            console.error(err instanceof Error ? err.message : String(err));
+            process.exit(1);
+        });
+    });
+    cmd
+        .command('uninstall')
+        .description('Remove the Sigma global installation (~/.sigma/), deployed skill files, and the protect-sigma hook entry — never touches local project folders')
+        .option('--confirm', 'Apply changes (without this flag, dry-run only)')
+        .action((opts) => {
+        runUninstall(opts).catch(err => {
             console.error(err instanceof Error ? err.message : String(err));
             process.exit(1);
         });

@@ -65,22 +65,24 @@ function resolveProjectIdentity(projectRoot, opts) {
             // progress.json is unreadable — fall through to other identity sources
         }
     }
-    if (fs_extra_1.default.existsSync(config_1.GLOBAL_PROJECTS_FILE)) {
+    const identityPath = path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE);
+    if (fs_extra_1.default.existsSync(identityPath)) {
         try {
-            const registry = fs_extra_1.default.readJsonSync(config_1.GLOBAL_PROJECTS_FILE);
-            const match = registry.projects.find(p => path_1.default.resolve(p.path) === path_1.default.resolve(projectRoot));
-            if (match)
-                return { id: match.project_id, name: match.project_name };
+            const identity = fs_extra_1.default.readJsonSync(identityPath);
+            if (identity.project_id && identity.project_name) {
+                return { id: identity.project_id, name: identity.project_name };
+            }
         }
         catch {
-            // registry is unreadable — fall through
+            // identity file is unreadable — fall through
         }
     }
     if (opts.id && opts.name) {
         return { id: (0, project_1.validateProjectId)(opts.id), name: (0, project_1.validateProjectName)(opts.name) };
     }
-    throw new Error('Cannot determine project identity (project_id/project_name) — progress.json is unreadable and this ' +
-        'project is not registered in ~/.sigma/projects.json. Pass --id <PROJECT_ID> --name <name> to proceed.');
+    throw new Error('Cannot determine project identity (project_id/project_name) — progress.json is unreadable and ' +
+        '.sigma-identity.json is missing or unreadable. Pass --id <PROJECT_ID> --name <name> to proceed, ' +
+        'or run `sigma project register` first if progress.json can still be read.');
 }
 function runReconstruct(opts) {
     const projectRoot = (0, reconstruct_1.findSigmaProjectRoot)();

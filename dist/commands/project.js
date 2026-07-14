@@ -12,6 +12,7 @@ const path_1 = __importDefault(require("path"));
 const inquirer_1 = __importDefault(require("inquirer"));
 const config_1 = require("../config");
 const roleMemory_1 = require("../engine/roleMemory");
+const reconstruct_1 = require("../engine/reconstruct");
 const artifacts_1 = require("../utils/artifacts");
 const progress_1 = require("../engine/progress");
 const projectConfig_1 = require("../engine/projectConfig");
@@ -23,6 +24,18 @@ const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
 const BUNDLE_OP_REGISTRY = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-OPERATION-REGISTRY.json');
 const BUNDLE_DOC_REGISTRY = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-REGISTRY.json');
 const BUNDLE_ROLE_MEMORY_DIR = (0, roleMemory_1.getBundledRoleMemoryDir)();
+const BUNDLE_BRIDGE_DIR = path_1.default.join(PACKAGE_ROOT, 'setup', 'targets', 'bridge');
+// Resolve a bridge template the same way resolveTemplate() resolves doctrine templates:
+// prefer the global (Director-editable) copy, fall back to the package bundle.
+function resolveBridgeTemplate(fileName) {
+    const global = path_1.default.join(config_1.GLOBAL_BRIDGE_DIR, fileName);
+    if ((0, fs_1.fileExists)(global))
+        return global;
+    const bundle = path_1.default.join(BUNDLE_BRIDGE_DIR, fileName);
+    if ((0, fs_1.fileExists)(bundle))
+        return bundle;
+    return null;
+}
 // ── Validation ────────────────────────────────────────────────────────────────
 const PROJECT_ID_PATTERN = /^[A-Z0-9][A-Z0-9-]{0,11}$/;
 function validateProjectId(id) {
@@ -39,24 +52,14 @@ function validateProjectName(name) {
     }
     return clean;
 }
-function registerProjectEntry(projectId, projectName, projectPath) {
-    if (!(0, fs_1.fileExists)(config_1.GLOBAL_PROJECTS_FILE))
-        return;
-    const data = fs_extra_1.default.readJsonSync(config_1.GLOBAL_PROJECTS_FILE);
-    const idx = data.projects.findIndex(p => p.project_id === projectId);
-    const entry = {
+function writeProjectIdentity(projectRoot, projectId, projectName) {
+    const identity = {
+        schema_version: config_1.SCHEMA_VERSION,
         project_id: projectId,
         project_name: projectName,
-        path: projectPath,
-        registered_at: new Date().toISOString(),
+        registered: true,
     };
-    if (idx >= 0) {
-        data.projects[idx] = entry;
-    }
-    else {
-        data.projects.push(entry);
-    }
-    fs_extra_1.default.writeJsonSync(config_1.GLOBAL_PROJECTS_FILE, data, { spaces: 2 });
+    fs_extra_1.default.writeJsonSync(path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE), identity, { spaces: 2 });
 }
 // ── sigma project start ───────────────────────────────────────────────────────
 async function runStart(opts) {
@@ -169,6 +172,10 @@ async function runStart(opts) {
     // Create progress.json
     const initial = (0, progress_1.createInitialProgress)(projectId, projectName);
     fs_extra_1.default.writeJsonSync(progressPath, initial, { spaces: 2 });
+    // Write .sigma-identity.json (root-level, used by `sigma doctor --reconstruct`
+    // as a fallback if progress.json is ever lost or corrupted)
+    writeProjectIdentity(projectRoot, projectId, projectName);
+    console.log('  Identity: .sigma-identity.json written.');
     // Write project.config.json with language preferences
     (0, projectConfig_1.writeProjectConfig)(projectRoot, projectConfig);
     console.log(`  Config: Sigma/project.config.json written (Sigma docs language: ${projectConfig.document_language})`);
@@ -188,15 +195,24 @@ async function runStart(opts) {
     else {
         (0, output_1.warn)('Sigma/role-memory bundle not found — skipping');
     }
-    // Create bridge file stubs
-    for (const bridgeFile of ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md']) {
+    // Copy bridge file templates (CLAUDE.md, GEMINI.md, AGENTS.md, DEEPSEEK.md, REASONIX.md)
+    let bridgeCopied = 0;
+    for (const bridgeFile of config_1.BRIDGE_STUBS) {
         const bridgePath = path_1.default.join(projectRoot, bridgeFile);
-        if (!(0, fs_1.fileExists)(bridgePath) || opts.overwriteBridge) {
-            fs_extra_1.default.writeFileSync(bridgePath, `# ${bridgeFile}\n\n<!-- Sigma bridge stub — Phase 6 will write real content -->\n`);
+        if ((0, fs_1.fileExists)(bridgePath) && !opts.overwriteBridge)
+            continue;
+        const template = resolveBridgeTemplate(bridgeFile);
+        if (template) {
+            fs_extra_1.default.copySync(template, bridgePath, { overwrite: true });
+            bridgeCopied++;
+        }
+        else {
+            (0, output_1.warn)(`Bridge template not found for ${bridgeFile} — skipping`);
         }
     }
-    // Register in global projects.json
-    registerProjectEntry(projectId, projectName, projectRoot);
+    if (bridgeCopied > 0) {
+        console.log(`  Bridge: ${bridgeCopied} file(s) written from template.`);
+    }
     (0, output_1.success)(`Sigma project initialized: ${projectName} (${projectId})`);
     console.log(`  Location: ${sigmaDir}`);
     console.log('  Next: Run `sigma session bootstrap` or `sigma project status` to confirm state.');
@@ -335,15 +351,38 @@ function runSync(opts) {
     console.log(`  Backup saved to: ${backupDir}`);
 }
 // ── sigma project register ────────────────────────────────────────────────────
-function runRegister() {
-    if (!(0, fs_1.fileExists)(config_1.GLOBAL_PROJECTS_FILE)) {
-        (0, output_1.error)('~/.sigma/projects.json not found. Run: sigma setup install');
+//
+// Repurposed as a repair/harvest tool for .sigma-identity.json — `project start`
+// already writes it once, so this command exists for: (a) restoring a
+// missing/corrupted identity file, (b) backfilling projects created before this
+// file existed. Uses findSigmaProjectRoot() (Sigma/ folder only) rather than
+// findProjectRoot() (requires progress.json) so it still works when progress.json
+// itself is the thing that's broken.
+function resolveRegisterIdentity(projectRoot, opts) {
+    const progressPath = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'progress.json');
+    if ((0, fs_1.fileExists)(progressPath)) {
+        try {
+            const data = fs_extra_1.default.readJsonSync(progressPath);
+            if (data.project_id && data.project_name) {
+                return { id: data.project_id, name: data.project_name };
+            }
+        }
+        catch {
+            // progress.json is unreadable — fall through to manual flags
+        }
     }
-    const projectRoot = (0, fs_1.findProjectRoot)();
-    const data = (0, progress_1.readProgress)(projectRoot);
-    registerProjectEntry(data.project_id, data.project_name, projectRoot);
-    (0, output_1.success)(`Project registered: ${data.project_name} (${data.project_id})`);
-    console.log(`  Path: ${projectRoot}`);
+    if (opts.id && opts.name) {
+        return { id: validateProjectId(opts.id), name: validateProjectName(opts.name) };
+    }
+    throw new Error('Sigma/progress.json is missing, unreadable, or incomplete — cannot determine project identity ' +
+        'automatically. Pass --id <PROJECT_ID> --name <name> to proceed.');
+}
+function runRegister(opts) {
+    const projectRoot = (0, reconstruct_1.findSigmaProjectRoot)();
+    const identity = resolveRegisterIdentity(projectRoot, opts);
+    writeProjectIdentity(projectRoot, identity.id, identity.name);
+    (0, output_1.success)(`Project identity written: ${identity.name} (${identity.id})`);
+    console.log(`  File: ${path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE)}`);
 }
 // ── Command builder ───────────────────────────────────────────────────────────
 function projectCommand() {
@@ -357,7 +396,7 @@ function projectCommand() {
         .option('--lang <name>', 'Language name applied to all language preferences in non-interactive mode (default: "English"). Free-form, e.g. "Indonesia".')
         .option('--confirm', 'Skip interactive prompts (requires --id and --name)')
         .option('--reinit', 'Re-initialize an existing Sigma project (backs up progress.json)')
-        .option('--overwrite-bridge', 'Overwrite existing bridge files (CLAUDE.md, GEMINI.md, AGENTS.md)')
+        .option('--overwrite-bridge', 'Overwrite existing bridge files (CLAUDE.md, GEMINI.md, AGENTS.md, DEEPSEEK.md, REASONIX.md)')
         .action((opts) => {
         runStart(opts).catch(err => {
             console.error(err instanceof Error ? err.message : String(err));
@@ -389,10 +428,12 @@ function projectCommand() {
     });
     cmd
         .command('register')
-        .description('Register this project in ~/.sigma/projects.json')
-        .action(() => {
+        .description('(Re)generate .sigma-identity.json for this project — repairs a missing/corrupted identity file, or backfills a project created before it existed')
+        .option('--id <PROJECT_ID>', 'Project ID, used only if progress.json is unreadable')
+        .option('--name <name>', 'Project name, used only if progress.json is unreadable')
+        .action((opts) => {
         try {
-            runRegister();
+            runRegister(opts);
         }
         catch (e) {
             (0, output_1.error)(e.message);

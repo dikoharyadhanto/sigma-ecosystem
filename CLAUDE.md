@@ -117,14 +117,14 @@ If authorization is unclear, ask before executing.
 | File                                  | Command                                                         |
 |:------------------------------------- |:--------------------------------------------------------------- |
 | `Sigma/progress.json`                 | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
-| `Sigma/SIGMA-REGISTRY.json`           | `sigma refresh`                                                 |
-| `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma refresh`                                                 |
+| `Sigma/SIGMA-REGISTRY.json`           | `sigma project sync --confirm`                                  |
+| `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma project sync --confirm`                                  |
 
 ## Governance Role Activation
 
 On governance role activation, load the role memory if available
-(`Sigma/role-memory/{role}-memory.json`; after CLI support lands,
-`sigma memory --<role>`), then follow the matching role rule file.
+(`Sigma/role-memory/{role}-memory.json`, or run `sigma memory --arc`/`--fmn`/`--dev`/`--aud`),
+then follow the matching role rule file.
 
 Do not treat `sigma session bootstrap` as mandatory for every role.
 Use it only when the active role rule, Director request, or direct runtime
