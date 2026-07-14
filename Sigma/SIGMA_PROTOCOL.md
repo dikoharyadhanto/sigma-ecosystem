@@ -445,16 +445,14 @@ AUD is **optional by default.**
 
 AUD becomes mandatory only when the Director explicitly marks the project as **risk-sensitive** in `progress.json`. The CLI does not auto-assign risk sensitivity.
 
-### Invocation commands
+### Recording AUD Findings
 
-| Command | Scope |
-| :--- | :--- |
-| `sigma intent review` | AUD review of the active DIR-INTENT |
-| `sigma plan audit` | AUD audit of the active FMN-PLAN |
-| `sigma exec audit` | AUD audit of the active DEV-EXEC |
-| `sigma close audit` | AUD audit of the active DIR-CLOSE |
-
-`intent` uses `review` (not `audit`) because Intent Core is sovereign. All other domains use `audit`. No standalone `sigma audit` command — AUD is always invoked in the context of a specific artifact domain.
+There is no CLI command that invokes AUD or appends its findings. AUD Findings
+are written manually into the artifact's AUD Findings section (`DIR-INTENT`
+Section 12, `FMN-PLAN` Section 7) by ARC or FMN, sourced from either an AUD
+message received via `sigma send`/`sigma inbox` mailbox, or the Director relaying audit
+results directly in a chat session. See `ARC-RULE.md` / `FMN-RULE.md` — AUD
+Findings Section Authorization.
 
 ---
 
@@ -467,10 +465,10 @@ AUD becomes mandatory only when the Director explicitly marks the project as **r
 | :--- | :--- |
 | `project` | Project initialization, status, lifecycle management |
 | `session` | Session orientation — read-only runtime context for agents when role flow or Director request requires it |
-| `intent` | DIR-INTENT lifecycle (new, review, lock, status, list) |
-| `plan` | FMN-PLAN lifecycle (new, audit, lock, supersede, queue, status, list) |
-| `exec` | DEV-EXEC lifecycle (new, audit, lock, supersede, status, list) |
-| `close` | DIR-CLOSE lifecycle (new, audit, lock, status) |
+| `intent` | DIR-INTENT lifecycle (new, lock, status, list) |
+| `plan` | FMN-PLAN lifecycle (new, lock, supersede, queue, status, list) |
+| `exec` | DEV-EXEC lifecycle (new, lock, supersede, status, list) |
+| `close` | DIR-CLOSE lifecycle (new, lock, status) |
 | `roadmap` | ROADMAP lifecycle (new, check, activate, render, list) |
 | `reference` | Sync and manage the project-wide Reference List (`update`) — Comprehensive Research source index |
 | `send` | Send messages between AI roles |
@@ -509,7 +507,6 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 | :--- | :--- | :---: | :---: |
 | Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox` | Yes | No |
 | Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `cso new`, `reference update`, `send` | Yes, within role boundary | Usually no |
-| Advisory | `intent review`, `plan audit`, `exec audit`, `close audit` | Yes, when requested | Usually yes — Director-triggered |
 | Approval | `intent lock`, `roadmap activate`, `plan lock`, `exec lock`, `close lock` | Only after Director approval | Yes |
 | Risk / Supersession | `close new --ack-stale-intent`, `plan supersede`, `exec supersede`, destructive/reset | Only after Director approval | Yes |
 

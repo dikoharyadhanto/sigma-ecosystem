@@ -17,7 +17,7 @@ import {
   isGateInvalid,
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
-import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
+import { copyTemplateToArtifact } from '../utils/artifacts';
 import { renderRoadmapFile } from '../utils/roadmap';
 import {
   ensureSigmaDocEligible,
@@ -144,28 +144,6 @@ export function planCommand(): Command {
       }
     });
 
-  cmd.command('audit')
-    .description('Append AUD advisory findings to active FMN-PLAN (no state change)')
-    .action(() => {
-      try {
-        const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
-        if (!data.plan.active_version) {
-          throw new Error('No active FMN-PLAN found. Run: sigma plan new');
-        }
-        const activeEntry = data.plan.versions.find(v => v.version === data.plan.active_version);
-        const relPath = activeEntry?.file ?? path.join('Sigma', 'build', `FMN-PLAN-${data.plan.active_version}.md`);
-        const absPath = path.join(projectRoot, relPath);
-        if (!fs.existsSync(absPath)) throw new Error(`Active PLAN file not found: ${relPath}`);
-        appendAuditFindings(absPath, 'plan', 'audit');
-        console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
   cmd.command('lock')
     .description('Lock oldest DRAFT FMN-PLAN in FIFO order (opens Gate 2)')
     .action(() => {
@@ -178,7 +156,7 @@ export function planCommand(): Command {
           throw new Error('No DRAFT FMN-PLAN to lock. Run: sigma plan new');
         }
         const absPath = resolveSigmaDocPath(projectRoot, data, 'plan', lockTargetVersion);
-        const report = validateSigmaDocFile(absPath, 'plan');
+        const report = validateSigmaDocFile(absPath, 'plan', { enforceVerdictGate: true });
         printSigmaDocReport(report, projectRoot);
         ensureSigmaDocEligible(report, 'plan');
         const version = lockOldestPlanDraft(data);

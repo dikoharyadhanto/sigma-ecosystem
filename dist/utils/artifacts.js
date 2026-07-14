@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolveTemplate = resolveTemplate;
 exports.copyTemplateToArtifact = copyTemplateToArtifact;
-exports.appendAuditFindings = appendAuditFindings;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
@@ -24,10 +23,5 @@ function copyTemplateToArtifact(templateName, absPath) {
     const templatePath = resolveTemplate(templateName);
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(absPath));
     fs_extra_1.default.copySync(templatePath, absPath);
-}
-function appendAuditFindings(absPath, domain, action) {
-    const now = new Date().toISOString();
-    const section = `\n---\n\n## AUD Advisory Findings\n\n*Appended: ${now}*\n*Operation: sigma ${domain} ${action}*\n*Status: ADVISORY ONLY — does not change runtime state*\n\n**Audit Scope**: [AUD fills this]\n\n**Findings**:\n\n[AUD fills this]\n\n**Recommendation**: [AUD fills this]\n`;
-    fs_extra_1.default.appendFileSync(absPath, section);
 }
 //# sourceMappingURL=artifacts.js.map

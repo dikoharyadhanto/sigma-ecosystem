@@ -13,7 +13,7 @@ import {
   assertProgressCanMutate,
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
-import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
+import { copyTemplateToArtifact } from '../utils/artifacts';
 import {
   ensureSigmaDocEligible,
   printSigmaDocReport,
@@ -97,28 +97,6 @@ export function closeCommand(): Command {
         const report = validateSigmaDocFile(absPath, 'close');
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
-  cmd.command('audit')
-    .description('Append AUD advisory findings to active DIR-CLOSE (no state change)')
-    .action(() => {
-      try {
-        const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
-        if (!data.close.active_version) {
-          throw new Error('No active DIR-CLOSE found. Run: sigma close new');
-        }
-        const activeEntry = data.close.versions.find(v => v.version === data.close.active_version);
-        const relPath = activeEntry?.file ?? path.join('Sigma', 'close', `DIR-CLOSE-${data.close.active_version}.md`);
-        const absPath = path.join(projectRoot, relPath);
-        if (!fs.existsSync(absPath)) throw new Error(`Active CLOSE file not found: ${relPath}`);
-        appendAuditFindings(absPath, 'close', 'audit');
-        console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

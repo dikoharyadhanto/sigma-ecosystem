@@ -395,6 +395,17 @@ The first `FMN-PLAN` must explicitly carry forward:
 
 > **Audit Status**: ADVISORY
 > AUD findings support Director judgment. They do not approve, reject, lock, or block runtime state.
+>
+> **Who may write this section**: ARC or FMN, sourced from either (a) an AUD
+> message received via `sigma send`/`sigma inbox` mailbox, or (b) the Director relaying
+> audit results directly in a chat session. DEV must not write in this
+> section.
+>
+> **Verdict integrity**: The checkbox verdict in 12.2 must be transcribed
+> exactly as AUD stated it — ARC/FMN must not alter, soften, or upgrade it.
+> Narrative content (Major Findings, Recommended Director Action) may be
+> ARC/FMN's interpretation of the audit — verbatim copy-paste is not
+> required.
 
 ### 12.1 AUD Review Scope
 
@@ -414,6 +425,9 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 - [ ] REJECT_RECOMMENDED
 - [ ] PROMOTE_TO_HEAVIER_PROCESS
 - [ ] OTHER: [describe]
+- [ ] SKIP_FOR_AUDIT — Director explicitly approved skipping audit for this lock cycle
+
+**Director Instruction (verbatim)** *(required only if SKIP_FOR_AUDIT is checked — transcribe the Director's exact words, not a paraphrase)*: [...]
 
 **Major Findings**:
 
@@ -432,9 +446,14 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 
 > Complete this checklist before running `sigma intent lock`.
 
+### 13.1 Lock Requirement
+
+> All items below must be checked before `sigma intent lock` will succeed.
+> For the four Quality Bar items, `sigma intent lock` validates the actual
+> Section 4 table content (a real minimum standard or an explicit "N/A"),
+> not just this checkbox.
+
 - [ ] Intent Core is clear enough to guide execution.
-- [ ] If Comprehensive Research status = NEEDED, all four subsections are filled or explicitly marked N/A, and `reference-list.md` has real entries for this intent's research — not just leftover entries from earlier work.
-- [ ] If Comprehensive Research status = NEEDED, AUD Verificator Mode has reviewed source-tier compliance for the cited IDs and recorded a verdict in Section 12 — or the Director has explicitly accepted the risk of locking without that review.
 - [ ] Scope in/out is explicit.
 - [ ] Success criteria are observable or measurable.
 - [ ] Security minimum standard is stated or explicitly marked not applicable.
@@ -449,3 +468,12 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 - [ ] Primary failure concern is stated.
 - [ ] Evidence requirement is stated.
 - [ ] Director verdict is recorded.
+
+### 13.2 Conditional Requirement
+
+> These items are not a lock gate — they only matter when their own
+> condition applies. Leave unchecked and irrelevant when the condition
+> does not apply; `sigma intent lock` does not evaluate them.
+
+- [ ] If Comprehensive Research status = NEEDED, all four subsections are filled or explicitly marked N/A, and `reference-list.md` has real entries for this intent's research — not just leftover entries from earlier work.
+- [ ] If Comprehensive Research status = NEEDED, AUD Verificator Mode has reviewed source-tier compliance for the cited IDs and recorded a verdict in Section 12 — or the Director has explicitly accepted the risk of locking without that review.

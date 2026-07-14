@@ -84,29 +84,6 @@ function execCommand() {
             process.exit(1);
         }
     });
-    cmd.command('audit')
-        .description('Append AUD advisory findings to active DEV-EXEC (no state change)')
-        .action(() => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            if (!data.exec.active_version) {
-                throw new Error('No active DEV-EXEC found. Run: sigma exec new');
-            }
-            const activeEntry = data.exec.versions.find(v => v.version === data.exec.active_version);
-            const relPath = activeEntry?.file ?? path_1.default.join('Sigma', 'build', `DEV-EXEC-${data.exec.active_version}.md`);
-            const absPath = path_1.default.join(projectRoot, relPath);
-            if (!fs_extra_1.default.existsSync(absPath))
-                throw new Error(`Active EXEC file not found: ${relPath}`);
-            (0, artifacts_1.appendAuditFindings)(absPath, 'exec', 'audit');
-            console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
-        }
-        catch (e) {
-            console.error(e.message);
-            process.exit(1);
-        }
-    });
     cmd.command('lock')
         .description('Lock active DEV-EXEC (re-evaluates Gate 3)')
         .action(() => {

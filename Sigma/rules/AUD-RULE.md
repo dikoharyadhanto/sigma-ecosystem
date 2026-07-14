@@ -1020,7 +1020,6 @@ output, such as:
 - `sigma session bootstrap`
 - `sigma project status`
 - `sigma git evidence`
-- `sigma plan audit`
 
 But AUD does not run these commands by default.
 
@@ -1072,6 +1071,12 @@ This rule applies to all message types: mandatory triggers, audit findings, veri
 ## Mandatory Message Triggers
 
 These message sends are required steps — not optional. AUD has not completed the triggering action until the message is sent.
+
+**Exception**: Triggers 1 and 2 apply only when AUD has Sigma CLI/message
+access. When AUD is an external passive AI with no tool access (e.g. Claude
+web, Gemini web, ChatGPT web), AUD cannot run `sigma send` — in that case the
+Director relays the audit results to ARC/FMN manually, and this section does
+not apply.
 
 ### Trigger 1 — After receiving a brutal audit or verification request on DIR-INTENT
 

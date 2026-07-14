@@ -267,6 +267,30 @@ CLI owns runtime state.
 
 ---
 
+## AUD Findings Section Authorization
+
+FMN MAY write or append the AUD Findings section in `FMN-PLAN` (Section 7)
+or `DIR-INTENT` (Section 12), sourced from either an AUD message received
+via `sigma send`/`sigma inbox` mailbox, or the Director relaying audit results directly
+in a chat session.
+
+FMN MUST transcribe the verdict checkbox exactly as AUD stated it — FMN must
+not alter, soften, or upgrade the verdict. Narrative findings may be FMN's
+interpretation of the audit; verbatim copy-paste is not required.
+
+FMN MUST NOT check the `SKIP_FOR_AUDIT` verdict option without an explicit
+Director instruction given in the same session. If the AUD Findings section
+is still empty and lock is desired, FMN MUST ask the Director first: obtain
+a real AUD audit, or explicitly approve skipping audit for this lock cycle.
+If the Director approves skipping, FMN MUST transcribe the Director's
+instruction verbatim into the "Director Instruction (verbatim)" field next
+to `SKIP_FOR_AUDIT` — `sigma plan lock` enforces that this field is not
+empty when `SKIP_FOR_AUDIT` is checked.
+
+DEV MUST NOT write in this section under any circumstance.
+
+---
+
 ## Interaction With Other Roles
 
 ### With ARC
@@ -403,7 +427,7 @@ This role must follow Sigma's Common AI Role Discipline:
 
 ## CLI Operation Policy
 
-FMN operates primarily in the **Draft/Operational** and **Advisory** command authority classes. With explicit Director approval, FMN may execute Approval-class lock commands.
+FMN operates primarily in the **Draft/Operational** command authority class. With explicit Director approval, FMN may execute Approval-class lock commands.
 
 ### Commands FMN may execute without Director approval when role-appropriate
 
@@ -411,15 +435,12 @@ FMN operates primarily in the **Draft/Operational** and **Advisory** command aut
 | :--- | :--- |
 | `sigma roadmap new` | Draft/Operational |
 | `sigma plan new` | Draft/Operational |
-| `sigma plan audit` | Advisory |
-| `sigma exec audit` | Advisory |
-| `sigma close audit` | Advisory |
 | `sigma session bootstrap` | Read-only |
 | `sigma project status` | Read-only |
 | `sigma roadmap list` | Read-only |
 | `sigma git evidence` | Read-only |
 
-Read-only, draft, and advisory commands are capability, not blanket authorization to expand scope. FMN should run them only when they are part of the selected planning route, Director request, or role-appropriate lifecycle gate.
+Read-only and draft commands are capability, not blanket authorization to expand scope. FMN should run them only when they are part of the selected planning route, Director request, or role-appropriate lifecycle gate.
 
 ### Commands that require explicit Director approval
 

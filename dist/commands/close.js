@@ -75,29 +75,6 @@ function closeCommand() {
             process.exit(1);
         }
     });
-    cmd.command('audit')
-        .description('Append AUD advisory findings to active DIR-CLOSE (no state change)')
-        .action(() => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            if (!data.close.active_version) {
-                throw new Error('No active DIR-CLOSE found. Run: sigma close new');
-            }
-            const activeEntry = data.close.versions.find(v => v.version === data.close.active_version);
-            const relPath = activeEntry?.file ?? path_1.default.join('Sigma', 'close', `DIR-CLOSE-${data.close.active_version}.md`);
-            const absPath = path_1.default.join(projectRoot, relPath);
-            if (!fs_extra_1.default.existsSync(absPath))
-                throw new Error(`Active CLOSE file not found: ${relPath}`);
-            (0, artifacts_1.appendAuditFindings)(absPath, 'close', 'audit');
-            console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
-        }
-        catch (e) {
-            console.error(e.message);
-            process.exit(1);
-        }
-    });
     cmd.command('lock')
         .description('Lock active DIR-CLOSE (lifecycle → CLOSED); auto-locks the ACTIVE ROADMAP as a side effect')
         .option('--yes', 'Skip interactive APPROVE prompt')

@@ -18,9 +18,3 @@ export function copyTemplateToArtifact(templateName: string, absPath: string): v
   fs.ensureDirSync(path.dirname(absPath));
   fs.copySync(templatePath, absPath);
 }
-
-export function appendAuditFindings(absPath: string, domain: string, action: string): void {
-  const now = new Date().toISOString();
-  const section = `\n---\n\n## AUD Advisory Findings\n\n*Appended: ${now}*\n*Operation: sigma ${domain} ${action}*\n*Status: ADVISORY ONLY — does not change runtime state*\n\n**Audit Scope**: [AUD fills this]\n\n**Findings**:\n\n[AUD fills this]\n\n**Recommendation**: [AUD fills this]\n`;
-  fs.appendFileSync(absPath, section);
-}

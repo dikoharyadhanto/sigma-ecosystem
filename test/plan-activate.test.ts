@@ -156,3 +156,38 @@ describe('sigma plan activate', () => {
     expect(result.stdout).toMatch(/DRAFT/);
   });
 });
+
+describe('AUD Advisory Verdict gate on plan lock', () => {
+  let env: TestEnv;
+
+  afterEach(() => env?.cleanup());
+
+  it('plan lock fails when no verdict checkbox is checked', () => {
+    env = setupTestEnv();
+    fs.writeJsonSync(env.progressPath, makeProgressWithSingleDraftPlan());
+    const planFile = path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.1.md');
+    fs.writeFileSync(planFile, validPlanDoc('v1.1').replace('- [x] PASS', ''));
+
+    const result = runCli('plan lock', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toMatch(/no verdict checkbox is checked/);
+  });
+
+  it('plan lock succeeds when SKIP_FOR_AUDIT is checked with a recorded Director Instruction', () => {
+    env = setupTestEnv();
+    fs.writeJsonSync(env.progressPath, makeProgressWithSingleDraftPlan());
+    const planFile = path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.1.md');
+    fs.writeFileSync(
+      planFile,
+      validPlanDoc('v1.1').replace(
+        '- [x] PASS',
+        '- [x] SKIP_FOR_AUDIT\n\nDirector Instruction (verbatim): Director said skip audit for this cycle, proceed.'
+      )
+    );
+
+    const result = runCli('plan lock', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+  });
+});

@@ -305,6 +305,8 @@ ARC MUST ensure `DIR-INTENT` includes:
 - AUD Findings section, optional
 - Director Decision Notes, if Director wants semantic notes
 
+ARC MUST complete the Lock Requirement checklist in Section 13 before recommending `sigma intent lock`.
+
 ARC MUST NOT include runtime metadata that belongs to Sigma CLI or `progress.json`.
 
 Do not write:
@@ -317,6 +319,30 @@ Do not write:
 
 Documents own meaning.
 CLI owns runtime state.
+
+---
+
+## AUD Findings Section Authorization
+
+ARC MAY write or append the AUD Findings section in `DIR-INTENT` (Section 12)
+or `FMN-PLAN` (Section 7), sourced from either an AUD message received via
+`sigma send`/`sigma inbox` mailbox, or the Director relaying audit results directly in
+a chat session.
+
+ARC MUST transcribe the verdict checkbox exactly as AUD stated it — ARC must
+not alter, soften, or upgrade the verdict. Narrative findings may be ARC's
+interpretation of the audit; verbatim copy-paste is not required.
+
+ARC MUST NOT check the `SKIP_FOR_AUDIT` verdict option without an explicit
+Director instruction given in the same session. If the AUD Findings section
+is still empty and lock is desired, ARC MUST ask the Director first: obtain
+a real AUD audit, or explicitly approve skipping audit for this lock cycle.
+If the Director approves skipping, ARC MUST transcribe the Director's
+instruction verbatim into the "Director Instruction (verbatim)" field next
+to `SKIP_FOR_AUDIT` — `sigma intent lock` enforces that this field is not
+empty when `SKIP_FOR_AUDIT` is checked.
+
+DEV MUST NOT write in this section under any circumstance.
 
 ---
 
@@ -422,19 +448,18 @@ This role must follow Sigma's Common AI Role Discipline:
 
 ## CLI Operation Policy
 
-ARC operates primarily in the **Draft/Operational** and **Advisory** command authority classes.
+ARC operates primarily in the **Draft/Operational** command authority class.
 
 ### Commands ARC may execute without Director approval when role-appropriate
 
 | Command | Class |
 | :--- | :--- |
 | `sigma intent new` | Draft/Operational |
-| `sigma intent review` | Advisory |
 | `sigma session bootstrap` | Read-only |
 | `sigma project status` | Read-only |
 | `sigma git evidence` | Read-only |
 
-Read-only and advisory commands are capability, not default activation steps. ARC should run them only when the Director requests them, when the Director has agreed to open intent documentation and runtime state is needed, or when a role-appropriate lifecycle gate requires them.
+Read-only commands are capability, not default activation steps. ARC should run them only when the Director requests them, when the Director has agreed to open intent documentation and runtime state is needed, or when a role-appropriate lifecycle gate requires them.
 
 ### Commands that require explicit Director approval
 

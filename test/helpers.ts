@@ -188,7 +188,12 @@ Test success definition.
 <!-- SIGMA:DIR_INTENT:SECTION:QUALITY_BAR -->
 ## 4. Quality Bar
 
-Test quality bar.
+| Dimension | Minimum Standard For This Intent | Must Not Happen | Evidence Required |
+|:--------- |:-------------------------------- |:--------------- |:----------------- |
+| Security | N/A | N/A | N/A |
+| UX Trust | N/A | N/A | N/A |
+| UI / Product Packaging | N/A | N/A | N/A |
+| Performance / Cost | N/A | N/A | N/A |
 
 <!-- SIGMA:DIR_INTENT:SECTION:STRATEGIC_TRADE_OFFS -->
 ## 5. Strategic Trade-Offs
@@ -230,10 +235,35 @@ Test execution direction.
 
 Test AUD findings.
 
+- [x] PASS
+
 <!-- SIGMA:DIR_INTENT:SECTION:FINAL_VALIDATION_CHECKLIST -->
 ## 13. Final Validation Checklist
 
 Test checklist.
+
+### 13.1 Lock Requirement
+
+- [x] Intent Core is clear enough to guide execution.
+- [x] Scope in/out is explicit.
+- [x] Success criteria are observable or measurable.
+- [x] Security minimum standard is stated or explicitly marked not applicable.
+- [x] UX Trust minimum standard is stated or explicitly marked not applicable.
+- [x] UI / Product Packaging minimum standard is stated or explicitly marked not applicable.
+- [x] Performance / Cost minimum standard is stated or explicitly marked not applicable.
+- [x] FMN is instructed to preserve the Quality Bar in every PLAN.
+- [x] Constraints and preferences are separated.
+- [x] Technical choices are marked as auditable means, not sovereign intent.
+- [x] At least one execution direction exists for FMN (Execution Direction for FMN).
+- [x] Risk appetite is stated.
+- [x] Primary failure concern is stated.
+- [x] Evidence requirement is stated.
+- [x] Director verdict is recorded.
+
+### 13.2 Conditional Requirement
+
+- [ ] Comprehensive Research subsections filled or N/A.
+- [ ] AUD Verificator Mode reviewed source-tier compliance, or Director accepted the risk.
 `;
 }
 
@@ -275,6 +305,8 @@ Test handoff.
 ## 7. AUD Findings
 
 Test AUD findings.
+
+- [x] PASS
 `;
 }
 

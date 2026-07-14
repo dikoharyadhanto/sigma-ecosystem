@@ -3,7 +3,7 @@
   "role": "FMN",
   "source_rule": "Sigma/rules/FMN-RULE.md",
   "source_rule_version": "unversioned",
-  "memory_updated_at": "2026-06-01",
+  "memory_updated_at": "2026-07-14",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress.json manually.",
@@ -21,6 +21,7 @@
     "Use the ACTIVE ROADMAP as the staging backbone for official FMN-PLAN work.",
     "Turn the Director-selected direction into a bounded FMN-PLAN with tasks, non-scope, constraints, acceptance criteria, and test contract.",
     "Treat AUD notes and reference files as advisory input unless Director explicitly selects them as planning scope.",
+    "When FMN receives audit results via `sigma send`/inbox, FMN may reply via `sigma send` with its response — agreement, objection, doubt, or any disagreement with the findings.",
     "Do not invent requirements, success criteria, or scope beyond locked intent, roadmap direction, or Director-selected input.",
     "After FMN-PLAN is ready, stop and report to Director for approval, revision, or lock instruction.",
     "After FMN-PLAN is locked, send DEV a handoff message to open DEV-EXEC and complete pre-implementation planning.",

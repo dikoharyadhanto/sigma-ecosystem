@@ -72,7 +72,7 @@ Reason: [explanation of confidence level]
 AUD does not execute Sigma CLI commands by default.
 
 AUD may recommend that the Director or another role provide command output
-(such as `sigma session bootstrap`, `sigma project status`, `sigma plan audit`)
+(such as `sigma session bootstrap`, `sigma project status`, `sigma git evidence`)
 — but AUD does not run these commands independently.
 
 If the Director explicitly authorizes a specific command in this session, AUD

@@ -1,5 +1,4 @@
 import { Command } from 'commander';
-import fs from 'fs-extra';
 import path from 'path';
 import readline from 'readline';
 import {
@@ -11,7 +10,7 @@ import {
   assertProgressCanMutate,
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
-import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
+import { copyTemplateToArtifact } from '../utils/artifacts';
 import {
   ensureSigmaDocEligible,
   printSigmaDocReport,
@@ -74,28 +73,6 @@ export function intentCommand(): Command {
       }
     });
 
-  cmd.command('review')
-    .description('Append AUD advisory findings to active DIR-INTENT (no state change)')
-    .action(() => {
-      try {
-        const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
-        if (!data.intent.active_version) {
-          throw new Error('No active DIR-INTENT found. Run: sigma intent new');
-        }
-        const activeEntry = data.intent.versions.find(v => v.version === data.intent.active_version);
-        const relPath = activeEntry?.file ?? path.join('Sigma', 'design', `DIR-INTENT-${data.intent.active_version}.md`);
-        const absPath = path.join(projectRoot, relPath);
-        if (!fs.existsSync(absPath)) throw new Error(`Active INTENT file not found: ${relPath}`);
-        appendAuditFindings(absPath, 'intent', 'review');
-        console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
   cmd.command('lock')
     .description('Lock active DIR-INTENT (opens Gate 1, lifecycle → BUILD)')
     .action(() => {
@@ -107,7 +84,10 @@ export function intentCommand(): Command {
           throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot lock.');
         }
         const absPath = resolveSigmaDocPath(projectRoot, data, 'intent');
-        const report = validateSigmaDocFile(absPath, 'intent');
+        const report = validateSigmaDocFile(absPath, 'intent', {
+          enforceVerdictGate: true,
+          enforceFinalChecklistGate: true,
+        });
         printSigmaDocReport(report, projectRoot);
         ensureSigmaDocEligible(report, 'intent');
         const version = data.intent.active_version!;

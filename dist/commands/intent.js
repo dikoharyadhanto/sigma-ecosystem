@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.intentCommand = intentCommand;
 const commander_1 = require("commander");
-const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const readline_1 = __importDefault(require("readline"));
 const progress_1 = require("../engine/progress");
@@ -62,29 +61,6 @@ function intentCommand() {
             process.exit(1);
         }
     });
-    cmd.command('review')
-        .description('Append AUD advisory findings to active DIR-INTENT (no state change)')
-        .action(() => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            if (!data.intent.active_version) {
-                throw new Error('No active DIR-INTENT found. Run: sigma intent new');
-            }
-            const activeEntry = data.intent.versions.find(v => v.version === data.intent.active_version);
-            const relPath = activeEntry?.file ?? path_1.default.join('Sigma', 'design', `DIR-INTENT-${data.intent.active_version}.md`);
-            const absPath = path_1.default.join(projectRoot, relPath);
-            if (!fs_extra_1.default.existsSync(absPath))
-                throw new Error(`Active INTENT file not found: ${relPath}`);
-            (0, artifacts_1.appendAuditFindings)(absPath, 'intent', 'review');
-            console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
-        }
-        catch (e) {
-            console.error(e.message);
-            process.exit(1);
-        }
-    });
     cmd.command('lock')
         .description('Lock active DIR-INTENT (opens Gate 1, lifecycle → BUILD)')
         .action(() => {
@@ -96,7 +72,10 @@ function intentCommand() {
                 throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot lock.');
             }
             const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'intent');
-            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'intent');
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'intent', {
+                enforceVerdictGate: true,
+                enforceFinalChecklistGate: true,
+            });
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             (0, docCheck_1.ensureSigmaDocEligible)(report, 'intent');
             const version = data.intent.active_version;

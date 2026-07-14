@@ -570,16 +570,13 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | plan     | `sigma plan activate`              | Set an existing DRAFT version as the active plan (FIFO lock order unchanged)   |
 | plan     | `sigma plan queue`                 | Show the FIFO draft lock queue and pending plans (read-only)                   |
 | plan     | `sigma plan lock`                  | Lock the oldest DRAFT `FMN-PLAN` in FIFO order (opens Gate 2)                  |
-| plan     | `sigma plan audit`                 | Run advisory audit of the active `FMN-PLAN`                                    |
 | plan     | `sigma plan status`                | Show active plan version and state                                             |
 | plan     | `sigma plan supersede`             | Supersede a locked plan version                                                |
 | exec     | `sigma exec new`                   | Create a `DEV-EXEC` draft                                                      |
 | exec     | `sigma exec lock`                  | Lock the active `DEV-EXEC` with Director approval                              |
-| exec     | `sigma exec audit`                 | Run advisory audit of the active `DEV-EXEC`                                    |
 | exec     | `sigma exec status`                | Show active execution version and state                                        |
 | close    | `sigma close new`                  | Create a `DIR-CLOSE` draft                                                     |
 | close    | `sigma close lock`                 | Lock the active `DIR-CLOSE` with Director approval                             |
-| close    | `sigma close audit`                | Run advisory audit of the active `DIR-CLOSE`                                   |
 | close    | `sigma close status`               | Show closure state                                                             |
 | config   | `sigma config show`                | Show current project language preferences                                      |
 | config   | `sigma config set language <lang>` | Set interaction or document language (e.g. `en`, `id`)                         |

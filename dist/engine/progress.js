@@ -905,9 +905,6 @@ function getNextValidOperations(data) {
     if (data.intent.active_state === 'DRAFT') {
         ops.push('intent lock');
     }
-    if (intentLocked) {
-        ops.push('intent review');
-    }
     // roadmap domain — mandatory gate for plan new
     if (intentLocked && !roadmapActive) {
         ops.push('roadmap new');

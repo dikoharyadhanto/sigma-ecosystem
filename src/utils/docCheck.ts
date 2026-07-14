@@ -35,6 +35,41 @@ export interface SigmaDocCheckReport {
   passes: string[];
 }
 
+export interface SigmaDocCheckOptions {
+  /** Enforce the AUD Advisory Verdict checkbox gate (intent/plan lock only). */
+  enforceVerdictGate?: boolean;
+  /** Enforce the Final Validation Checklist Lock Requirement gate (intent lock only). */
+  enforceFinalChecklistGate?: boolean;
+}
+
+const VERDICT_SECTION_ID: Partial<Record<SigmaDocDomain, string>> = {
+  intent: 'AUD_FINDINGS_ADVISORY_ONLY',
+  plan: 'AUD_FINDINGS',
+};
+
+const VERDICT_CHECKBOX_LABELS = new Set([
+  'PASS',
+  'PASS_WITH_RISK',
+  'REVISE',
+  'REJECT_RECOMMENDED',
+  'PROMOTE_TO_HEAVIER_PROCESS',
+  'OTHER',
+  'SKIP_FOR_AUDIT',
+]);
+
+const FINAL_CHECKLIST_SECTION_ID = 'FINAL_VALIDATION_CHECKLIST';
+const QUALITY_BAR_SECTION_ID = 'QUALITY_BAR';
+const CONDITIONAL_REQUIREMENT_HEADING = /^###\s*13\.2\s+Conditional Requirement/i;
+
+const QUALITY_BAR_CHECKLIST_PHRASES = [
+  'Security minimum standard',
+  'UX Trust minimum standard',
+  'UI / Product Packaging minimum standard',
+  'Performance / Cost minimum standard',
+];
+
+const QUALITY_BAR_DIMENSIONS = ['Security', 'UX Trust', 'UI / Product Packaging', 'Performance / Cost'];
+
 const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
   intent: {
     heading: 'Sigma Intent Check',
@@ -146,7 +181,11 @@ function pushResult(condition: boolean, successMessage: string, failureMessage: 
   else errors.push(failureMessage);
 }
 
-export function validateSigmaDocFile(absPath: string, domain: SigmaDocDomain): SigmaDocCheckReport {
+export function validateSigmaDocFile(
+  absPath: string,
+  domain: SigmaDocDomain,
+  options: SigmaDocCheckOptions = {},
+): SigmaDocCheckReport {
   const spec = DOC_SPECS[domain];
   const content = fs.readFileSync(absPath, 'utf8');
   const lines = content.split(/\r?\n/);
@@ -266,6 +305,116 @@ export function validateSigmaDocFile(absPath: string, domain: SigmaDocDomain): S
   if (numericSectionRefs.length > 0) {
     const uniqueRefs = [...new Set(numericSectionRefs)];
     warnings.push(`Numeric section references found: ${uniqueRefs.join(', ')}`);
+  }
+
+  if (options.enforceVerdictGate) {
+    const verdictSectionId = VERDICT_SECTION_ID[domain];
+    const verdictMarker = verdictSectionId
+      ? relevantMarkers.find(marker => marker.sectionId === verdictSectionId)
+      : undefined;
+
+    if (verdictMarker) {
+      const laterMarkers = relevantMarkers
+        .filter(marker => marker.line > verdictMarker.line)
+        .sort((a, b) => a.line - b.line);
+      const endBoundary = laterMarkers.length > 0 ? laterMarkers[0].line - 1 : lines.length;
+
+      const tickedLabels: string[] = [];
+      let verbatimValue: string | null = null;
+      for (let i = verdictMarker.line; i < endBoundary; i += 1) {
+        const line = lines[i];
+        const checkboxMatch = line.match(/^-\s*\[([ xX])\]\s*([A-Z_]+)/);
+        if (checkboxMatch) {
+          const label = checkboxMatch[2];
+          if (VERDICT_CHECKBOX_LABELS.has(label) && /x/i.test(checkboxMatch[1])) {
+            tickedLabels.push(label);
+          }
+          continue;
+        }
+        const verbatimMatch = line.match(/Director Instruction \(verbatim\)[^:]*:\s*(.*)$/);
+        if (verbatimMatch) {
+          verbatimValue = verbatimMatch[1].trim();
+        }
+      }
+
+      if (tickedLabels.length === 0) {
+        errors.push('AUD Advisory Verdict: no verdict checkbox is checked — exactly one is required before lock');
+      } else if (tickedLabels.length > 1) {
+        errors.push(`AUD Advisory Verdict: more than one verdict checkbox is checked (${tickedLabels.join(', ')}) — exactly one is required`);
+      } else {
+        passes.push(`AUD Advisory Verdict: exactly one checkbox checked (${tickedLabels[0]})`);
+        if (tickedLabels[0] === 'SKIP_FOR_AUDIT') {
+          const isEmpty = !verbatimValue || verbatimValue.length === 0 || verbatimValue === '[...]';
+          if (isEmpty) {
+            errors.push('AUD Advisory Verdict: SKIP_FOR_AUDIT is checked but "Director Instruction (verbatim)" is empty — the Director\'s instruction must be recorded verbatim before lock');
+          } else {
+            passes.push('AUD Advisory Verdict: SKIP_FOR_AUDIT has a recorded Director Instruction');
+          }
+        }
+      }
+    }
+  }
+
+  if (options.enforceFinalChecklistGate && domain === 'intent') {
+    const checklistMarker = relevantMarkers.find(marker => marker.sectionId === FINAL_CHECKLIST_SECTION_ID);
+    if (checklistMarker) {
+      const laterMarkers = relevantMarkers
+        .filter(marker => marker.line > checklistMarker.line)
+        .sort((a, b) => a.line - b.line);
+      const checklistEnd = laterMarkers.length > 0 ? laterMarkers[0].line - 1 : lines.length;
+
+      let lockRequirementEnd = checklistEnd;
+      for (let i = checklistMarker.line; i < checklistEnd; i += 1) {
+        if (CONDITIONAL_REQUIREMENT_HEADING.test(lines[i].trim())) {
+          lockRequirementEnd = i;
+          break;
+        }
+      }
+
+      const unchecked: string[] = [];
+      for (let i = checklistMarker.line; i < lockRequirementEnd; i += 1) {
+        const checkboxMatch = lines[i].match(/^-\s*\[([ xX])\]\s*(.+)$/);
+        if (!checkboxMatch) continue;
+        const text = checkboxMatch[2].trim();
+        const isQualityBarItem = QUALITY_BAR_CHECKLIST_PHRASES.some(phrase => text.includes(phrase));
+        if (isQualityBarItem) continue;
+        if (!/x/i.test(checkboxMatch[1])) {
+          unchecked.push(text);
+        }
+      }
+
+      if (unchecked.length > 0) {
+        errors.push(`Final Validation Checklist — Lock Requirement: ${unchecked.length} item(s) not checked: ${unchecked.join(' | ')}`);
+      } else {
+        passes.push('Final Validation Checklist — Lock Requirement: all items checked');
+      }
+    }
+
+    const qualityBarMarker = relevantMarkers.find(marker => marker.sectionId === QUALITY_BAR_SECTION_ID);
+    if (qualityBarMarker) {
+      const laterMarkers = relevantMarkers
+        .filter(marker => marker.line > qualityBarMarker.line)
+        .sort((a, b) => a.line - b.line);
+      const qualityBarEnd = laterMarkers.length > 0 ? laterMarkers[0].line - 1 : lines.length;
+
+      const unresolvedDimensions: string[] = [];
+      for (let i = qualityBarMarker.line; i < qualityBarEnd; i += 1) {
+        const rowMatch = lines[i].match(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/);
+        if (!rowMatch) continue;
+        const dimension = rowMatch[1].trim();
+        if (!QUALITY_BAR_DIMENSIONS.includes(dimension)) continue;
+        const standardCell = rowMatch[2].trim();
+        if (/^\[.*\]$/.test(standardCell)) {
+          unresolvedDimensions.push(dimension);
+        }
+      }
+
+      if (unresolvedDimensions.length > 0) {
+        errors.push(`Quality Bar (Section 4): minimum standard still a placeholder for: ${unresolvedDimensions.join(', ')} — state a real standard or "N/A"`);
+      } else {
+        passes.push('Quality Bar (Section 4): minimum standard stated or N/A for all dimensions');
+      }
+    }
   }
 
   return {

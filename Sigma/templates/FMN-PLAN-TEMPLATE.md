@@ -105,8 +105,42 @@ DEV should report in DEV-EXEC:
 <!-- SIGMA:FMN_PLAN:SECTION:AUD_FINDINGS -->
 ## 7. AUD Findings
 
-> **Filled by AUD — Advisory only. AUD findings do not approve, reject, or block lock state.**
-> FMN and DEV must not write in this section.
+> **Advisory only. AUD findings do not approve, reject, or block lock state.**
 > This section may be appended after the plan is locked.
+>
+> **Who may write this section**: ARC or FMN, sourced from either (a) an AUD
+> message received via `sigma send`/`sigma inbox` mailbox, or (b) the Director relaying
+> audit results directly in a chat session. DEV must not write in this
+> section.
+>
+> **Verdict integrity**: The checkbox verdict below must be transcribed
+> exactly as AUD stated it — ARC/FMN must not alter, soften, or upgrade it.
+> Narrative content (Major Findings, Recommended Director Action) may be
+> ARC/FMN's interpretation of the audit — verbatim copy-paste is not
+> required.
+
+### 7.1 AUD Advisory Verdict
+
+**Verdict**:
+
+> Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
+
+- [ ] PASS
+- [ ] PASS_WITH_RISK
+- [ ] REVISE
+- [ ] REJECT_RECOMMENDED
+- [ ] PROMOTE_TO_HEAVIER_PROCESS
+- [ ] OTHER: [describe]
+- [ ] SKIP_FOR_AUDIT — Director explicitly approved skipping audit for this lock cycle
+
+**Director Instruction (verbatim)** *(required only if SKIP_FOR_AUDIT is checked — transcribe the Director's exact words, not a paraphrase)*: [...]
+
+**Major Findings**:
+
+1. [...]
+2. [...]
+3. [...]
+
+**Recommended Director Action**:
 
 [...]

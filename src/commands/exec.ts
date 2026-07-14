@@ -12,7 +12,7 @@ import {
   getOperationalGate,
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
-import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
+import { copyTemplateToArtifact } from '../utils/artifacts';
 import {
   ensureSigmaDocEligible,
   printSigmaDocReport,
@@ -101,28 +101,6 @@ export function execCommand(): Command {
         const report = validateSigmaDocFile(absPath, 'exec');
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
-  cmd.command('audit')
-    .description('Append AUD advisory findings to active DEV-EXEC (no state change)')
-    .action(() => {
-      try {
-        const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
-        if (!data.exec.active_version) {
-          throw new Error('No active DEV-EXEC found. Run: sigma exec new');
-        }
-        const activeEntry = data.exec.versions.find(v => v.version === data.exec.active_version);
-        const relPath = activeEntry?.file ?? path.join('Sigma', 'build', `DEV-EXEC-${data.exec.active_version}.md`);
-        const absPath = path.join(projectRoot, relPath);
-        if (!fs.existsSync(absPath)) throw new Error(`Active EXEC file not found: ${relPath}`);
-        appendAuditFindings(absPath, 'exec', 'audit');
-        console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

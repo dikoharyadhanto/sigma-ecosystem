@@ -121,29 +121,6 @@ function planCommand() {
             process.exit(1);
         }
     });
-    cmd.command('audit')
-        .description('Append AUD advisory findings to active FMN-PLAN (no state change)')
-        .action(() => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            if (!data.plan.active_version) {
-                throw new Error('No active FMN-PLAN found. Run: sigma plan new');
-            }
-            const activeEntry = data.plan.versions.find(v => v.version === data.plan.active_version);
-            const relPath = activeEntry?.file ?? path_1.default.join('Sigma', 'build', `FMN-PLAN-${data.plan.active_version}.md`);
-            const absPath = path_1.default.join(projectRoot, relPath);
-            if (!fs_extra_1.default.existsSync(absPath))
-                throw new Error(`Active PLAN file not found: ${relPath}`);
-            (0, artifacts_1.appendAuditFindings)(absPath, 'plan', 'audit');
-            console.log(`Advisory findings section appended to ${relPath}. Fill in the AUD findings — runtime state unchanged.`);
-        }
-        catch (e) {
-            console.error(e.message);
-            process.exit(1);
-        }
-    });
     cmd.command('lock')
         .description('Lock oldest DRAFT FMN-PLAN in FIFO order (opens Gate 2)')
         .action(() => {
@@ -156,7 +133,7 @@ function planCommand() {
                 throw new Error('No DRAFT FMN-PLAN to lock. Run: sigma plan new');
             }
             const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'plan', lockTargetVersion);
-            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
+            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan', { enforceVerdictGate: true });
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             (0, docCheck_1.ensureSigmaDocEligible)(report, 'plan');
             const version = (0, progress_1.lockOldestPlanDraft)(data);

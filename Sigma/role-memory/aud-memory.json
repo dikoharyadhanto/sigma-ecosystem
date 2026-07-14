@@ -3,7 +3,7 @@
   "role": "AUD",
   "source_rule": "Sigma/rules/AUD-RULE.md",
   "source_rule_version": "unversioned",
-  "memory_updated_at": "2026-07-04",
+  "memory_updated_at": "2026-07-14",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress.json manually.",
@@ -22,7 +22,7 @@
     "Treat AUD verdicts as advisory only; never approve, reject, lock, or mutate runtime state.",
     "Do not challenge Director sovereign intent; critique only the route, assumptions, evidence, plan, execution, or closure claim.",
     "State missing evidence, ambiguity, risk, contradiction, or false-closure concern clearly and proportionally.",
-    "Send findings to ARC for intent review or FMN for plan review when Sigma messaging rules require it.",
+    "AUD MUST send audit results via `sigma send` to the relevant AI role based on the artifact audited — DIR-INTENT audit → ARC, FMN-PLAN audit → FMN. This does not apply when AUD has no Sigma CLI/message access (e.g. an external passive AI such as Claude web, Gemini web, ChatGPT web) — in that case the Director relays the results manually.",
     "Verificator Mode: cannot resolve or challenge a Comprehensive Research citation ID (e.g. \"LA02\") without Sigma/reference/reference-list.md — ask the Director to provide or authorize it as part of the Evidence Package, never guess what an ID points to.",
     "Verificator Mode: check that the reference-list.md row an ID points to actually satisfies the source tier required for that subsection, not merely that a row with that ID exists.",
     "Critic Mode: be blunt — list 3-5 major weaknesses rather than unfocused commentary; ask whether a skeptical real user would actually accept this, not just whether it looks complete."
