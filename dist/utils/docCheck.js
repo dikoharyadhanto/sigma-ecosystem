@@ -35,12 +35,9 @@ const DOC_SPECS = {
         expectedType: 'ROADMAP',
         fallbackPath: path_1.default.join('Sigma', 'build', 'ROADMAP.md'),
         requiredSections: [
-            'ROADMAP_PURPOSE',
-            'SOURCE_INTENT_ALIGNMENT',
-            'STAGE_OVERVIEW',
+            'OVERVIEW',
             'CORE_PROCESS_FLOW',
-            'STAGE_DETAILS',
-            'FMN_ROADMAP_NOTES',
+            'STAGE_OVERVIEW',
         ],
     },
     plan: {
@@ -190,9 +187,6 @@ function validateSigmaDocFile(absPath, domain) {
         for (const sectionId of missingRequired) {
             errors.push(`Missing required section marker: ${sectionId}`);
         }
-        if (domain === 'roadmap' && missingRequired.includes('CORE_PROCESS_FLOW') && markerMap.has('PHASE_DEPENDENCIES')) {
-            warnings.push('ROADMAP appears to use the old Phase Dependencies format. Run: sigma roadmap migrate-core-flow');
-        }
     }
     const duplicateSectionIds = [...markerMap.entries()]
         .filter(([, markers]) => markers.length > 1)
@@ -208,9 +202,6 @@ function validateSigmaDocFile(absPath, domain) {
     const unknownSectionIds = [...markerMap.keys()].filter(sectionId => !spec.requiredSections.includes(sectionId));
     if (unknownSectionIds.length > 0) {
         warnings.push(`Unknown section markers found: ${unknownSectionIds.join(', ')}`);
-        if (domain === 'roadmap' && unknownSectionIds.includes('PHASE_DEPENDENCIES')) {
-            warnings.push('Legacy ROADMAP section marker detected: PHASE_DEPENDENCIES. Run: sigma roadmap migrate-core-flow');
-        }
     }
     const invalidHeadingMarkers = relevantMarkers.filter(marker => marker.headingLine === null);
     if (invalidHeadingMarkers.length === 0) {

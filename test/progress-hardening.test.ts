@@ -6,6 +6,7 @@ import {
   runCli,
   makeProgress,
   makeProgressWithDraftIntentAfterLockedChain,
+  validIntentDoc,
   TestEnv,
 } from './helpers';
 
@@ -78,7 +79,7 @@ describe('Progress hardening', () => {
     fs.ensureDirSync(path.join(env.projectDir, 'Sigma', 'design'));
     fs.writeFileSync(
       path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v2.md'),
-      '# DIR-INTENT v2\n\n## 2. Success Definition\n\nUpdated target.\n'
+      validIntentDoc('v2')
     );
 
     const result = runCli('intent lock', env.projectDir, env.homeDir);

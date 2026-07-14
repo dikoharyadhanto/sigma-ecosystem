@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { setupTestEnv, runCli, makeProgress, TestEnv } from './helpers';
+import { setupTestEnv, runCli, makeProgress, validPlanDoc, TestEnv } from './helpers';
 
 // Build a progress fixture with a locked intent and one or more plan DRAFTs
 function makeProgressWithMultiplePlanDrafts() {
@@ -60,7 +60,7 @@ describe('sigma plan new — gate ordering follows current CLI', () => {
     env = setupTestEnv();
     fs.writeJsonSync(env.progressPath, makeProgressWithSingleDraftPlan());
 
-    const result = runCli('plan new', env.projectDir, env.homeDir);
+    const result = runCli('plan new --title "Test Stage" --focus "Test focus"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/Gate 1\.5 blocked/i);
@@ -71,7 +71,7 @@ describe('sigma plan new — gate ordering follows current CLI', () => {
     env = setupTestEnv();
     fs.writeJsonSync(env.progressPath, makeProgressWithSingleDraftPlan());
 
-    const result = runCli('plan new', env.projectDir, env.homeDir);
+    const result = runCli('plan new --title "Test Stage" --focus "Test focus"', env.projectDir, env.homeDir);
 
     expect(result.stderr).toMatch(/sigma roadmap new/i);
     expect(result.stderr).toMatch(/sigma roadmap activate/i);
@@ -129,7 +129,7 @@ describe('sigma plan activate', () => {
 
     // Create a stub plan file so the harvester doesn't fail
     const planFile = path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.2.md');
-    fs.writeFileSync(planFile, '# FMN-PLAN v1.2\n\nTest plan.\n');
+    fs.writeFileSync(planFile, validPlanDoc('v1.2'));
 
     const lockResult = runCli('plan lock', env.projectDir, env.homeDir);
     expect(lockResult.exitCode).toBe(0);

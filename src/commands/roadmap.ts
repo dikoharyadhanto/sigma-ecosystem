@@ -1,5 +1,4 @@
 import { Command } from 'commander';
-import fs from 'fs-extra';
 import path from 'path';
 import readline from 'readline';
 import {
@@ -12,13 +11,7 @@ import {
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
-import {
-  parseStages,
-  renderRoadmapFile,
-  appendRoadmapSectionStub,
-  STAGE_STUB_TEMPLATE,
-  migrateRoadmapCoreProcessFlowFile,
-} from '../utils/roadmap';
+import { renderRoadmapFile, getStagePlansForRoadmap } from '../utils/roadmap';
 import {
   printSigmaDocReport,
   resolveSigmaDocPath,
@@ -123,26 +116,6 @@ export function roadmapCommand(): Command {
       }
     });
 
-  cmd.command('migrate-core-flow')
-    .description('Migrate legacy Phase Dependencies section into manual Core Process Flow')
-    .option('--v <version>', 'Migrate a specific ROADMAP version instead of the active one')
-    .action((opts: { v?: string }) => {
-      try {
-        const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        const roadmapPath = resolveSigmaDocPath(projectRoot, data, 'roadmap', opts.v);
-        const message = migrateRoadmapCoreProcessFlowFile(roadmapPath);
-        console.log(message);
-        console.log('Running roadmap validation...\n');
-        const report = validateSigmaDocFile(roadmapPath, 'roadmap');
-        printSigmaDocReport(report, projectRoot);
-        if (!report.ok) process.exit(1);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
   // ── roadmap activate ─────────────────────────────────────────────────────────
 
   cmd.command('activate')
@@ -219,107 +192,6 @@ export function roadmapCommand(): Command {
       }
     });
 
-  // ── roadmap reconcile ────────────────────────────────────────────────────────
-
-  cmd.command('reconcile')
-    .description('Check consistency between progress.json plan entries and ROADMAP H2 stage sections')
-    .option('--check', 'Read-only consistency check (default)')
-    .option('--fix', 'Append stub H2 sections for plans missing from ROADMAP')
-    .action((opts: { check?: boolean; fix?: boolean }) => {
-      try {
-        const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-
-        const active = getActiveRoadmapEntry(data);
-        if (!active) {
-          throw new Error('No ACTIVE ROADMAP found. Run: sigma roadmap new');
-        }
-
-        const roadmapPath = getRoadmapFilePath(data, projectRoot, active.version);
-        if (!fs.existsSync(roadmapPath)) {
-          throw new Error(`ROADMAP file not found: ${roadmapPath}`);
-        }
-
-        const content = fs.readFileSync(roadmapPath, 'utf8');
-        const roadmapStages = parseStages(content);
-        const roadmapVersionSet = new Set(roadmapStages.map(s => `v${s.version}`));
-
-        const planVersions = data.plan.versions.filter(v => v.state !== 'SUPERSEDED');
-        const planVersionSet = new Set(planVersions.map(v => v.version));
-
-        let mismatches = 0;
-        const missingInRoadmap: string[] = [];
-
-        console.log('\n=== sigma roadmap reconcile ===\n');
-        console.log(`Checking progress.json → ROADMAP ${active.version} document...`);
-        for (const plan of planVersions) {
-          const stageVersion = plan.version.replace(/^v/, '');
-          const found = roadmapVersionSet.has(plan.version);
-          const mark = found ? '✓' : '✗';
-          const note = found
-            ? `Stage ${stageVersion} found in ROADMAP`
-            : `Stage ${stageVersion} NOT found in ROADMAP`;
-          console.log(`  FMN-PLAN ${plan.version}  ${mark}  ${note}`);
-          if (!found) {
-            mismatches++;
-            missingInRoadmap.push(plan.version);
-          }
-        }
-
-        console.log(`\nChecking ROADMAP ${active.version} document → progress.json...`);
-        for (const stage of roadmapStages) {
-          const planVer = `v${stage.version}`;
-          const found = planVersionSet.has(planVer);
-          const mark = found ? '✓' : '✗';
-          const note = found
-            ? `FMN-PLAN ${planVer} registered`
-            : `FMN-PLAN ${planVer} NOT registered in progress.json`;
-          console.log(`  Stage ${stage.version}  ${mark}  ${note}`);
-          if (!found) mismatches++;
-        }
-
-        console.log('');
-        if (mismatches === 0) {
-          console.log('Result: All entries consistent. No mismatches found.');
-        } else {
-          console.log(`Result: ${mismatches} mismatch(es) found.`);
-          if (!opts.fix) {
-            console.log('  Run sigma roadmap reconcile --fix to append missing stage stubs,');
-            console.log('  or manually add missing H2 headings to the ROADMAP file.');
-          }
-        }
-        console.log('');
-
-        // --fix: append stub sections for plans missing from ROADMAP
-        if (opts.fix && missingInRoadmap.length > 0) {
-          console.log(`Applying --fix: appending ${missingInRoadmap.length} missing stage stub(s)...`);
-          for (const planVer of missingInRoadmap) {
-            appendRoadmapSectionStub(roadmapPath, planVer);
-            console.log(`  Appended: Stage ${planVer.replace(/^v/, '')} stub`);
-          }
-          renderRoadmapFile(roadmapPath, data);
-          console.log('ROADMAP Stage Overview regenerated.');
-          console.log('');
-          // Re-check to confirm fix succeeded
-          const fixedContent = fs.readFileSync(roadmapPath, 'utf8');
-          const fixedStages = parseStages(fixedContent);
-          const fixedSet = new Set(fixedStages.map(s => `v${s.version}`));
-          const stillMissing = missingInRoadmap.filter(v => !fixedSet.has(v));
-          if (stillMissing.length > 0) {
-            console.log(`Warning: ${stillMissing.length} stage(s) still missing after fix: ${stillMissing.join(', ')}`);
-            process.exit(1);
-          } else {
-            console.log('Fix applied successfully. All stages now consistent.');
-          }
-        } else if (mismatches > 0) {
-          process.exit(1);
-        }
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
   // ── roadmap list ─────────────────────────────────────────────────────────────
 
   cmd.command('list')
@@ -335,18 +207,12 @@ export function roadmapCommand(): Command {
           return;
         }
 
-        const roadmapPath = getRoadmapFilePath(data, projectRoot, active.version);
-        if (!fs.existsSync(roadmapPath)) {
-          throw new Error(`ROADMAP file not found: ${roadmapPath}`);
-        }
-
-        const content = fs.readFileSync(roadmapPath, 'utf8');
-        const stages = parseStages(content);
+        const stagePlans = getStagePlansForRoadmap(data, active.version);
 
         console.log(`\n=== ROADMAP ${active.version} — Stage List ===\n`);
 
-        if (stages.length === 0) {
-          console.log('No stages found in ROADMAP. Add stage sections or run: sigma plan new');
+        if (stagePlans.length === 0) {
+          console.log('No stages found for this ROADMAP. Run: sigma plan new');
           console.log('');
           return;
         }
@@ -364,14 +230,13 @@ export function roadmapCommand(): Command {
         );
         console.log('-'.repeat(COL_STAGE + COL_STATUS + COL_TITLE + COL_FOCUS));
 
-        for (const s of stages) {
-          const planEntry = data.plan.versions.find(v => v.version === `v${s.version}`);
-          const status = planEntry?.state ?? 'PENDING';
-          const title = planEntry?.title ?? s.title;
-          const focus = planEntry?.focus ?? s.focus;
+        for (const plan of stagePlans) {
+          const stage = plan.version.replace(/^v/, '');
+          const title = plan.title ?? 'TBD';
+          const focus = plan.focus ?? 'TBD';
 
-          const stageCol = s.version.padEnd(COL_STAGE);
-          const statusCol = status.padEnd(COL_STATUS);
+          const stageCol = stage.padEnd(COL_STAGE);
+          const statusCol = plan.state.padEnd(COL_STATUS);
           const titleCol = title.length > COL_TITLE - 2
             ? title.substring(0, COL_TITLE - 4) + '... '
             : title.padEnd(COL_TITLE);

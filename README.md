@@ -560,10 +560,10 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | intent   | `sigma intent status`              | Show active intent version and state                                           |
 | intent   | `sigma intent list`                | List intent versions                                                           |
 | roadmap  | `sigma roadmap new`                | Create a `ROADMAP` draft (auto-activates if no ACTIVE exists)                  |
+| roadmap  | `sigma roadmap check`              | Validate the active `ROADMAP` structure and markers                            |
 | roadmap  | `sigma roadmap activate`           | Activate a DRAFT `ROADMAP` (demotes current ACTIVE to INACTIVE)                |
-| roadmap  | `sigma roadmap render`             | Regenerate derived sections in the active `ROADMAP`                            |
-| roadmap  | `sigma roadmap reconcile`          | Check or fix `ROADMAP` stage stub alignment (`--check` / `--fix`)              |
-| roadmap  | `sigma roadmap list`               | List roadmap versions                                                          |
+| roadmap  | `sigma roadmap render`             | Regenerate the Stage Overview table in the active `ROADMAP`                     |
+| roadmap  | `sigma roadmap list`               | List stages in the active `ROADMAP` with title, focus, and plan status         |
 | plan     | `sigma plan new`                   | Create an `FMN-PLAN` draft (requires locked INTENT + ACTIVE ROADMAP)           |
 | plan     | `sigma plan new --pending`         | Stage a future plan without entering the version queue                         |
 | plan     | `sigma plan promote`               | Promote a pending plan into the official FIFO draft queue                      |

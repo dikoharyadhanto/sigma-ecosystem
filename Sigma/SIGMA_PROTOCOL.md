@@ -281,7 +281,7 @@ Optional handoff artifact for preserving session context. `sigma cso new --role 
 
 **Mandatory governance artifact.** ROADMAP is required before FMN-PLAN can be created — `plan new` is blocked unless an ACTIVE ROADMAP exists (Gate 1.5).
 
-ROADMAP breaks a locked DIR-INTENT into large build stages. Each ROADMAP H2 stage section maps to an FMN-PLAN version. ROADMAP is partially CLI-managed — stage sections are written by `sigma plan new` and `sigma plan promote`; official stage creation/promotion requires both `--title` and `--focus`; the Stage Overview table is rendered by `sigma roadmap render`; the Core Process Flow section remains manual.
+ROADMAP breaks a locked DIR-INTENT into large build stages. Each Stage Overview row maps to an FMN-PLAN version. ROADMAP is partially CLI-managed — stage title/focus/status are supplied via `--title`/`--focus` on `sigma plan new` and `sigma plan promote`, stored in `progress.json`, and rendered into the Stage Overview table by `sigma roadmap render`; the Core Process Flow section remains manual.
 
 **State machine**: `DRAFT → ACTIVE → INACTIVE → LOCKED`
 
@@ -294,7 +294,7 @@ ROADMAP breaks a locked DIR-INTENT into large build stages. Each ROADMAP H2 stag
 
 **Core invariant**: Only one ROADMAP may be ACTIVE at a time. `sigma roadmap activate --v <ver>` atomically demotes the current ACTIVE to INACTIVE and promotes the target DRAFT to ACTIVE.
 
-**Reconcile invariant**: Every official FMN-PLAN version must correspond to exactly one ROADMAP H2 stage section. `sigma roadmap reconcile --check` verifies bidirectional consistency between `progress.json` and ROADMAP content — every plan registered in `progress.json` must have a matching H2 stage, and every H2 stage must map to a known plan version.
+The Stage Overview table is generated directly from `progress.json` on every `sigma roadmap render` — there is no separate reconciliation step, since the table has no independent copy of stage data that could drift out of sync.
 
 If ROADMAP conflicts with DIR-INTENT, DIR-INTENT wins.
 
@@ -471,7 +471,7 @@ AUD becomes mandatory only when the Director explicitly marks the project as **r
 | `plan` | FMN-PLAN lifecycle (new, audit, lock, supersede, queue, status, list) |
 | `exec` | DEV-EXEC lifecycle (new, audit, lock, supersede, status, list) |
 | `close` | DIR-CLOSE lifecycle (new, audit, lock, status) |
-| `roadmap` | ROADMAP lifecycle (new, activate, render, reconcile, list) |
+| `roadmap` | ROADMAP lifecycle (new, check, activate, render, list) |
 | `reference` | Sync and manage the project-wide Reference List (`update`) — Comprehensive Research source index |
 | `send` | Send messages between AI roles |
 | `inbox` | Read, manage, and check role inboxes |
@@ -507,7 +507,7 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 
 | Class | Commands | AI May Execute? | Requires Director Instruction? |
 | :--- | :--- | :---: | :---: |
-| Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap reconcile --check`, `inbox` | Yes | No |
+| Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox` | Yes | No |
 | Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `cso new`, `reference update`, `send` | Yes, within role boundary | Usually no |
 | Advisory | `intent review`, `plan audit`, `exec audit`, `close audit` | Yes, when requested | Usually yes — Director-triggered |
 | Approval | `intent lock`, `roadmap activate`, `plan lock`, `exec lock`, `close lock` | Only after Director approval | Yes |
@@ -656,3 +656,5 @@ Not every governance role has the same activation bootstrap. ARC starts as stop-
 *v0.3 (2026-07-04): Added Reference List artifact (Section 5.7) and Comprehensive Research pointers (Sections 4.1, 5.1, 14); reconciled Folder-to-Phase Mapping (Section 13) and CLI Command Surface (Section 16) with the actual CLI, which had drifted (`gitignore`, `override`, `sync`, `memory`, `doctor` were missing before this pass, independent of the reference addition).*
 
 *v0.4 (2026-07-14): Removed `gitignore` and `sync` domains from CLI Command Surface (Section 16) — `gitignore generate`, `sync progress`, and `sync roadmap` were removed as trivial/redundant (PLAN-EVAL-02). No functional doctrine change; no automatic legacy schema/ROADMAP migration path remains for pre-current-schema projects.*
+
+*v0.5 (2026-07-14): ROADMAP restructured from 6 sections to 3 (Overview, Core Process Flow, Stage Overview) and the `roadmap` command family consolidated from 7 to 5 subcommands — `reconcile` and `migrate-core-flow` removed as redundant once the Stage Overview table reads directly from `progress.json` (PLAN-EVAL-03). Stage title/focus/status no longer live in per-stage document sections; they are supplied via `--title`/`--focus` on `plan new`/`plan promote` and stored in `progress.json` only.*

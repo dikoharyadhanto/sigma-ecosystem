@@ -75,3 +75,17 @@ datang setelah pembagian 8-dokumen awal selesai:
 | # | Dokumen | Topik sumber | Catatan sequencing |
 |---|---|---|---|
 | 9 | [PLAN-EVAL-09-UX-GUIDANCE-AND-TERMINOLOGY.md](PLAN-EVAL-09-UX-GUIDANCE-AND-TERMINOLOGY.md) | Topik 8 (UX guidance & terminologi) | Tidak bergantung teknis ke #1–#8, tapi direkomendasikan dikerjakan **setelah #5** (CSO removal) agar baris "Context Handoff (CSO)" di tabel Human Label sudah hilang lebih dulu, menghindari konflik edit. Punya keterkaitan terbuka (bukan dependency blocking) dengan #6 (redesain bahasa) soal field bahasa mana yang mengatur Human Label. |
+
+---
+
+## PLAN-EVAL-10 — Ditambahkan Setelah Investigasi Selama Eksekusi #01/#03
+
+Bukan berasal dari 7+1 topik sesi evaluasi manapun. Selama implementasi #01 dan #03,
+`npm test` konsisten menunjukkan 7 kegagalan yang terverifikasi pre-existing (lewat
+`git stash`) di kedua sesi, tapi akar masalahnya belum pernah diinvestigasi. Director
+meminta dokumen investigasi terpisah — **tanpa implementasi** — untuk mencatat root
+cause dan rencana perbaikan sebagai keputusan tersendiri.
+
+| # | Dokumen | Topik sumber | Catatan sequencing |
+|---|---|---|---|
+| 10 | [PLAN-EVAL-10-PRE-EXISTING-TEST-FAILURES-INVESTIGATION.md](PLAN-EVAL-10-PRE-EXISTING-TEST-FAILURES-INVESTIGATION.md) | Ditemukan selama eksekusi #01 (`sigma doctor`/`override`/`reset`) dan #03 (ROADMAP) | Investigasi murni, tidak ada implementasi. Tidak bergantung ke #1–#9 manapun — murni perbaikan test fixture bila kelak disetujui untuk dieksekusi. |

@@ -52,8 +52,8 @@ function planCommand() {
     cmd.command('new')
         .description('Create a new FMN-PLAN draft (requires locked DIR-INTENT + ACTIVE ROADMAP). Use --pending to stage a future plan without entering the version queue.')
         .option('--pending', 'Stage as a pending plan (no version assigned; not in lock queue)')
-        .requiredOption('--title <title>', 'Stage title written into the ROADMAP stage heading, stage overview table, and plan breakdown')
-        .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table and plan breakdown')
+        .requiredOption('--title <title>', 'Stage title written into the ROADMAP Stage Overview table')
+        .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP Stage Overview table')
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -99,13 +99,10 @@ function planCommand() {
             const absPath = path_1.default.join(projectRoot, relPath);
             // Artifact writes first, writeProgress last
             (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath);
-            const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
-            if (roadmapAbsPath) {
-                (0, roadmap_1.appendRoadmapSectionStub)(roadmapAbsPath, version, opts.title, opts.focus);
-            }
             (0, progress_1.registerPlanDraft)(data, version, relPath, intentVersionRef, opts.title, opts.focus);
             (0, progress_1.writeProgress)(projectRoot, data);
             // Render after state is written (idempotent re-sync)
+            const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
             if (roadmapAbsPath) {
                 (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, data);
             }
@@ -116,8 +113,7 @@ function planCommand() {
             if (!report.ok)
                 process.exit(1);
             if (roadmapAbsPath) {
-                console.log(`ROADMAP updated: Stage ${version.replace(/^v/, '')} appended + Stage Overview regenerated`);
-                console.log(`NOTE: Roadmap has been updated. FMN needs to update the content in the Roadmap.`);
+                console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${version.replace(/^v/, '')}`);
             }
         }
         catch (e) {
@@ -224,8 +220,8 @@ function planCommand() {
     cmd.command('promote')
         .description('Promote a pending plan into the official draft queue with an assigned version')
         .requiredOption('--id <id>', 'Pending plan ID to promote (e.g. a3b9)')
-        .requiredOption('--title <title>', 'Stage title written into the ROADMAP stage heading, stage overview table, and plan breakdown')
-        .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table and plan breakdown')
+        .requiredOption('--title <title>', 'Stage title written into the ROADMAP Stage Overview table')
+        .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP Stage Overview table')
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -253,17 +249,14 @@ function planCommand() {
             const oldAbsPath = path_1.default.join(projectRoot, pending.file);
             const newRelPath = path_1.default.join('Sigma', 'build', `FMN-PLAN-${newVersion}.md`);
             const newAbsPath = path_1.default.join(projectRoot, newRelPath);
-            // Artifact writes first: rename file + append ROADMAP stub
+            // Artifact writes first: rename file
             fs_extra_1.default.ensureDirSync(path_1.default.dirname(newAbsPath));
             fs_extra_1.default.moveSync(oldAbsPath, newAbsPath);
-            const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
-            if (roadmapAbsPath) {
-                (0, roadmap_1.appendRoadmapSectionStub)(roadmapAbsPath, newVersion, opts.title, opts.focus);
-            }
             // Write progress last
             (0, progress_1.promotePendingPlan)(data, opts.id, newVersion, newRelPath, lockedIntent.version, opts.title, opts.focus);
             (0, progress_1.writeProgress)(projectRoot, data);
             // Render after state is written (idempotent)
+            const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
             if (roadmapAbsPath) {
                 (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, data);
             }
@@ -274,8 +267,7 @@ function planCommand() {
             if (!report.ok)
                 process.exit(1);
             if (roadmapAbsPath) {
-                console.log(`ROADMAP updated: Stage ${newVersion.replace(/^v/, '')} appended + Stage Overview regenerated`);
-                console.log(`NOTE: Roadmap has been updated. FMN needs to update the content in the Roadmap.`);
+                console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${newVersion.replace(/^v/, '')}`);
             }
             console.log(`Run: sigma plan lock   to lock ${newVersion} when ready`);
         }
@@ -416,8 +408,6 @@ function planCommand() {
             }
             (0, progress_1.updatePlanMetadata)(data, opts.v, opts.title, opts.focus);
             (0, progress_1.writeProgress)(projectRoot, data);
-            const stageVersion = opts.v.replace(/^v/, '');
-            (0, roadmap_1.updateStageMetadata)(roadmapAbsPath, stageVersion, opts.title, opts.focus);
             (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, data);
             const parts = [];
             if (opts.title)
@@ -425,7 +415,7 @@ function planCommand() {
             if (opts.focus)
                 parts.push(`focus → "${opts.focus}"`);
             console.log(`FMN-PLAN ${opts.v}: ${parts.join(', ')}`);
-            console.log(`ROADMAP updated: Stage ${stageVersion} metadata updated + Stage Overview regenerated`);
+            console.log(`ROADMAP updated: Stage Overview regenerated`);
         }
         catch (e) {
             console.error(e.message);

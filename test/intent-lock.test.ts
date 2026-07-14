@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { setupTestEnv, runCli, makeProgress, makeProgressWithDraftIntent, TestEnv } from './helpers';
+import { setupTestEnv, runCli, makeProgress, makeProgressWithDraftIntent, validIntentDoc, TestEnv } from './helpers';
 
 describe('Intent lock mutation', () => {
   let env: TestEnv;
@@ -14,7 +14,7 @@ describe('Intent lock mutation', () => {
 
     // Create a stub intent file so the harvester does not fail
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
-    fs.writeFileSync(intentFile, '# DIR-INTENT v1\n\n## Director Notes\n\nTest intent.\n');
+    fs.writeFileSync(intentFile, validIntentDoc('v1'));
 
     const result = runCli('intent lock', env.projectDir, env.homeDir);
 

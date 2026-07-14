@@ -11,7 +11,7 @@ describe('Chain gate: INTENT → PLAN → EXEC', () => {
     env = setupTestEnv();
     fs.writeJsonSync(env.progressPath, makeProgress());
 
-    const result = runCli('plan new', env.projectDir, env.homeDir);
+    const result = runCli('plan new --title "Test Stage" --focus "Test focus"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/GATE 1 BLOCKED/i);

@@ -18,7 +18,7 @@ import {
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
 import { appendAuditFindings, copyTemplateToArtifact } from '../utils/artifacts';
-import { renderRoadmapFile, appendRoadmapSectionStub, updateStageMetadata } from '../utils/roadmap';
+import { renderRoadmapFile } from '../utils/roadmap';
 import {
   ensureSigmaDocEligible,
   printSigmaDocReport,
@@ -69,8 +69,8 @@ export function planCommand(): Command {
   cmd.command('new')
     .description('Create a new FMN-PLAN draft (requires locked DIR-INTENT + ACTIVE ROADMAP). Use --pending to stage a future plan without entering the version queue.')
     .option('--pending', 'Stage as a pending plan (no version assigned; not in lock queue)')
-    .requiredOption('--title <title>', 'Stage title written into the ROADMAP stage heading, stage overview table, and plan breakdown')
-    .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table and plan breakdown')
+    .requiredOption('--title <title>', 'Stage title written into the ROADMAP Stage Overview table')
+    .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP Stage Overview table')
     .action((opts: { pending?: boolean; title?: string; focus?: string }) => {
       try {
         const projectRoot = findProjectRoot();
@@ -121,14 +121,11 @@ export function planCommand(): Command {
 
         // Artifact writes first, writeProgress last
         copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);
-        const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
-        if (roadmapAbsPath) {
-          appendRoadmapSectionStub(roadmapAbsPath, version, opts.title, opts.focus);
-        }
         registerPlanDraft(data, version, relPath, intentVersionRef, opts.title, opts.focus);
         writeProgress(projectRoot, data);
 
         // Render after state is written (idempotent re-sync)
+        const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
         if (roadmapAbsPath) {
           renderRoadmapFile(roadmapAbsPath, data);
         }
@@ -139,8 +136,7 @@ export function planCommand(): Command {
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
         if (roadmapAbsPath) {
-          console.log(`ROADMAP updated: Stage ${version.replace(/^v/, '')} appended + Stage Overview regenerated`);
-          console.log(`NOTE: Roadmap has been updated. FMN needs to update the content in the Roadmap.`);
+          console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${version.replace(/^v/, '')}`);
         }
       } catch (e) {
         console.error((e as Error).message);
@@ -253,8 +249,8 @@ export function planCommand(): Command {
   cmd.command('promote')
     .description('Promote a pending plan into the official draft queue with an assigned version')
     .requiredOption('--id <id>', 'Pending plan ID to promote (e.g. a3b9)')
-    .requiredOption('--title <title>', 'Stage title written into the ROADMAP stage heading, stage overview table, and plan breakdown')
-    .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP stage overview table and plan breakdown')
+    .requiredOption('--title <title>', 'Stage title written into the ROADMAP Stage Overview table')
+    .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP Stage Overview table')
     .action((opts: { id: string; title?: string; focus?: string }) => {
       try {
         const projectRoot = findProjectRoot();
@@ -290,19 +286,16 @@ export function planCommand(): Command {
         const newRelPath = path.join('Sigma', 'build', `FMN-PLAN-${newVersion}.md`);
         const newAbsPath = path.join(projectRoot, newRelPath);
 
-        // Artifact writes first: rename file + append ROADMAP stub
+        // Artifact writes first: rename file
         fs.ensureDirSync(path.dirname(newAbsPath));
         fs.moveSync(oldAbsPath, newAbsPath);
-        const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
-        if (roadmapAbsPath) {
-          appendRoadmapSectionStub(roadmapAbsPath, newVersion, opts.title, opts.focus);
-        }
 
         // Write progress last
         promotePendingPlan(data, opts.id, newVersion, newRelPath, lockedIntent.version, opts.title, opts.focus);
         writeProgress(projectRoot, data);
 
         // Render after state is written (idempotent)
+        const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
         if (roadmapAbsPath) {
           renderRoadmapFile(roadmapAbsPath, data);
         }
@@ -313,8 +306,7 @@ export function planCommand(): Command {
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
         if (roadmapAbsPath) {
-          console.log(`ROADMAP updated: Stage ${newVersion.replace(/^v/, '')} appended + Stage Overview regenerated`);
-          console.log(`NOTE: Roadmap has been updated. FMN needs to update the content in the Roadmap.`);
+          console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${newVersion.replace(/^v/, '')}`);
         }
         console.log(`Run: sigma plan lock   to lock ${newVersion} when ready`);
       } catch (e) {
@@ -459,15 +451,13 @@ export function planCommand(): Command {
         updatePlanMetadata(data, opts.v, opts.title, opts.focus);
         writeProgress(projectRoot, data);
 
-        const stageVersion = opts.v.replace(/^v/, '');
-        updateStageMetadata(roadmapAbsPath, stageVersion, opts.title, opts.focus);
         renderRoadmapFile(roadmapAbsPath, data);
 
         const parts: string[] = [];
         if (opts.title) parts.push(`title → "${opts.title}"`);
         if (opts.focus) parts.push(`focus → "${opts.focus}"`);
         console.log(`FMN-PLAN ${opts.v}: ${parts.join(', ')}`);
-        console.log(`ROADMAP updated: Stage ${stageVersion} metadata updated + Stage Overview regenerated`);
+        console.log(`ROADMAP updated: Stage Overview regenerated`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

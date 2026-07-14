@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-07-03T17:44:56.000Z",
+  "generated_at": "2026-07-14T00:00:00.000Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 59,
+  "total_operations": 57,
   "domains": [
     "close",
     "config",
@@ -1532,28 +1532,6 @@
       "NEEDS_REVIEW": true
     },
     {
-      "operation_id": "roadmap_reconcile",
-      "domain": "roadmap",
-      "action": "reconcile",
-      "level": "semantic",
-      "role": "any",
-      "description": "Check consistency between progress.json plan entries and ROADMAP H2 stage sections",
-      "inputs": [],
-      "outputs": [
-        {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
-        }
-      ],
-      "constraints": [],
-      "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
-      },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
-    },
-    {
       "operation_id": "send",
       "domain": "send",
       "action": "send",
@@ -1832,35 +1810,6 @@
       "level": "read_only",
       "role": "any",
       "description": "Validate the active ROADMAP structure and markers",
-      "inputs": [
-        {
-          "name": "--v",
-          "type": "string",
-          "required": true,
-          "description": "--v <version>"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
-        }
-      ],
-      "constraints": [],
-      "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
-      },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
-    },
-    {
-      "operation_id": "roadmap_migrate-core-flow",
-      "domain": "roadmap",
-      "action": "migrate-core-flow",
-      "level": "semantic",
-      "role": "any",
-      "description": "Migrate legacy Phase Dependencies section into manual Core Process Flow",
       "inputs": [
         {
           "name": "--v",

@@ -166,6 +166,118 @@ export function makeProgressWithLockedExec() {
   });
 }
 
+export function validIntentDoc(version: string): string {
+  return `<!-- SIGMA:DOC type=DIR_INTENT schema=3 -->
+# DIR-INTENT ${version}
+
+<!-- SIGMA:DIR_INTENT:SECTION:INTENT_CORE -->
+## 1. Intent Core
+
+Test intent core.
+
+<!-- SIGMA:DIR_INTENT:SECTION:COMPREHENSIVE_RESEARCH -->
+## 2. Comprehensive Research
+
+Test research.
+
+<!-- SIGMA:DIR_INTENT:SECTION:SUCCESS_DEFINITION -->
+## 3. Success Definition
+
+Test success definition.
+
+<!-- SIGMA:DIR_INTENT:SECTION:QUALITY_BAR -->
+## 4. Quality Bar
+
+Test quality bar.
+
+<!-- SIGMA:DIR_INTENT:SECTION:STRATEGIC_TRADE_OFFS -->
+## 5. Strategic Trade-Offs
+
+Test trade-offs.
+
+<!-- SIGMA:DIR_INTENT:SECTION:SCOPE_BOUNDARY -->
+## 6. Scope Boundary
+
+Test scope boundary.
+
+<!-- SIGMA:DIR_INTENT:SECTION:CONSTRAINTS_AND_PREFERENCES -->
+## 7. Constraints & Preferences
+
+Test constraints.
+
+<!-- SIGMA:DIR_INTENT:SECTION:TECHNICAL_AND_ARCHITECTURE_DIRECTION -->
+## 8. Technical & Architecture Direction
+
+Test technical direction.
+
+<!-- SIGMA:DIR_INTENT:SECTION:FUNCTIONAL_REQUIREMENTS -->
+## 9. Functional Requirements
+
+Test functional requirements.
+
+<!-- SIGMA:DIR_INTENT:SECTION:RISK_AND_FAILURE_DEFINITION -->
+## 10. Risk & Failure Definition
+
+Test risk definition.
+
+<!-- SIGMA:DIR_INTENT:SECTION:EXECUTION_DIRECTION_FOR_FMN -->
+## 11. Execution Direction for FMN
+
+Test execution direction.
+
+<!-- SIGMA:DIR_INTENT:SECTION:AUD_FINDINGS_ADVISORY_ONLY -->
+## 12. AUD Findings — Advisory Only
+
+Test AUD findings.
+
+<!-- SIGMA:DIR_INTENT:SECTION:FINAL_VALIDATION_CHECKLIST -->
+## 13. Final Validation Checklist
+
+Test checklist.
+`;
+}
+
+export function validPlanDoc(version: string): string {
+  return `<!-- SIGMA:DOC type=FMN_PLAN schema=1 -->
+# FMN-PLAN ${version}
+
+<!-- SIGMA:FMN_PLAN:SECTION:SOURCE_ALIGNMENT -->
+## 1. Source Alignment
+
+Test source alignment.
+
+<!-- SIGMA:FMN_PLAN:SECTION:WORK_ORDER_TASK_PLAN -->
+## 2. Work Order / Task Plan
+
+Test work order.
+
+<!-- SIGMA:FMN_PLAN:SECTION:ACCEPTANCE_CRITERIA -->
+## 3. Acceptance Criteria
+
+Test acceptance criteria.
+
+<!-- SIGMA:FMN_PLAN:SECTION:IMPLEMENTATION_CONSTRAINTS -->
+## 4. Implementation Constraints
+
+Test constraints.
+
+<!-- SIGMA:FMN_PLAN:SECTION:PRE_BUILD_TEST_CONTRACT -->
+## 5. Pre-Build Test Contract
+
+Test contract.
+
+<!-- SIGMA:FMN_PLAN:SECTION:DEV_HANDOFF_INSTRUCTIONS -->
+## 6. DEV Handoff Instructions
+
+Test handoff.
+
+<!-- SIGMA:FMN_PLAN:SECTION:AUD_FINDINGS -->
+## 7. AUD Findings
+
+Test AUD findings.
+`;
+}
+
 export function makeProgressWithDraftIntentAfterLockedChain() {
   const now = new Date().toISOString();
   return makeProgress({

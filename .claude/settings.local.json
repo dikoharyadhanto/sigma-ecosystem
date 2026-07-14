@@ -17,7 +17,9 @@
       "Bash(npx vitest *)",
       "Bash(cd \"i:\\\\Works\\\\Project\\\\sigma-ecosystem\" && rm src/commands/gitignore.ts src/commands/sync.ts && echo \"deleted\")",
       "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('Sigma/SIGMA-OPERATION-REGISTRY.json','utf8'\\)\\); console.log\\('valid JSON'\\)\")",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(npx tsc *)",
+      "Bash(npm test *)"
     ],
     "additionalDirectories": [
       "/home/dikoharyadhanto/Documents/Works/Projects/sigma-ecosystem/setup/targets/antigravity",
