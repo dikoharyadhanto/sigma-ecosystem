@@ -19,6 +19,7 @@ export const PROJECT_IDENTITY_FILE = '.sigma-identity.json';
 export const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
 export const PROGRESS_FILE = path.join(PROJECT_SIGMA_DIR, 'progress.json');
 export const OVERRIDES_FILE = path.join(PROJECT_SIGMA_DIR, 'memory', 'overrides.jsonl');
+export const OPERATIONS_LOG_FILE = path.join(PROJECT_SIGMA_DIR, 'logs', 'operations.jsonl');
 export const OPERATION_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-OPERATION-REGISTRY.json');
 export const DOCUMENT_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-REGISTRY.json');
 export const PROJECT_CONFIG_FILE = path.join(PROJECT_SIGMA_DIR, 'project.config.json');

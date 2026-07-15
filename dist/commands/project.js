@@ -19,6 +19,7 @@ const projectConfig_1 = require("../engine/projectConfig");
 const languageWizard_1 = require("../engine/languageWizard");
 const output_1 = require("../utils/output");
 const fs_1 = require("../utils/fs");
+const operationLog_1 = require("../utils/operationLog");
 // ── Bundle paths ─────────────────────────────────────────────────────────────
 const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
 const BUNDLE_OP_REGISTRY = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-OPERATION-REGISTRY.json');
@@ -52,12 +53,33 @@ function validateProjectName(name) {
     }
     return clean;
 }
-function writeProjectIdentity(projectRoot, projectId, projectName) {
+// Preserves the existing logs_created_at unless the operations log was just
+// (re)initialized — first-time creation and loss recovery are the same event
+// and both get a fresh timestamp; an untouched, still-valid log keeps its
+// original timestamp across repeated `start`/`register` calls.
+function resolveLogsCreatedAt(projectRoot, logsReinitialized) {
+    if (!logsReinitialized) {
+        const identityPath = path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE);
+        if ((0, fs_1.fileExists)(identityPath)) {
+            try {
+                const existing = fs_extra_1.default.readJsonSync(identityPath);
+                if (existing.logs_created_at)
+                    return existing.logs_created_at;
+            }
+            catch {
+                // fall through to a fresh timestamp
+            }
+        }
+    }
+    return new Date().toISOString();
+}
+function writeProjectIdentity(projectRoot, projectId, projectName, logsCreatedAt) {
     const identity = {
         schema_version: config_1.SCHEMA_VERSION,
         project_id: projectId,
         project_name: projectName,
         registered: true,
+        logs_created_at: logsCreatedAt,
     };
     fs_extra_1.default.writeJsonSync(path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE), identity, { spaces: 2 });
 }
@@ -131,6 +153,10 @@ async function runStart(opts) {
     for (const sub of config_1.SUBFOLDERS) {
         (0, fs_1.ensureDir)(path_1.default.join(sigmaDir, sub));
     }
+    // Operation history log — created empty here so it exists from the very
+    // first operation onward. Result feeds logs_created_at on the identity
+    // file below.
+    const logsReinitialized = (0, operationLog_1.ensureOperationsLog)(projectRoot);
     // Scaffold the project-wide reference list (Comprehensive Research source index)
     (0, artifacts_1.copyTemplateToArtifact)('REFERENCE-LIST-TEMPLATE.md', path_1.default.join(projectRoot, config_1.REFERENCE_LIST_FILE));
     console.log('  Reference: Sigma/reference/reference-list.md initialized.');
@@ -174,7 +200,7 @@ async function runStart(opts) {
     fs_extra_1.default.writeJsonSync(progressPath, initial, { spaces: 2 });
     // Write .sigma-identity.json (root-level, used by `sigma doctor --reconstruct`
     // as a fallback if progress.json is ever lost or corrupted)
-    writeProjectIdentity(projectRoot, projectId, projectName);
+    writeProjectIdentity(projectRoot, projectId, projectName, resolveLogsCreatedAt(projectRoot, logsReinitialized));
     console.log('  Identity: .sigma-identity.json written.');
     // Write project.config.json with language preferences
     (0, projectConfig_1.writeProjectConfig)(projectRoot, projectConfig);
@@ -380,7 +406,10 @@ function resolveRegisterIdentity(projectRoot, opts) {
 function runRegister(opts) {
     const projectRoot = (0, reconstruct_1.findSigmaProjectRoot)();
     const identity = resolveRegisterIdentity(projectRoot, opts);
-    writeProjectIdentity(projectRoot, identity.id, identity.name);
+    // Recreates Sigma/logs/operations.jsonl if it was lost or corrupted since
+    // the last register/start. A still-valid log is left untouched.
+    const logsReinitialized = (0, operationLog_1.ensureOperationsLog)(projectRoot);
+    writeProjectIdentity(projectRoot, identity.id, identity.name, resolveLogsCreatedAt(projectRoot, logsReinitialized));
     (0, output_1.success)(`Project identity written: ${identity.name} (${identity.id})`);
     console.log(`  File: ${path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE)}`);
 }

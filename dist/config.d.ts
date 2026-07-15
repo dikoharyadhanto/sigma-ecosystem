@@ -11,6 +11,7 @@ export declare const PROJECT_IDENTITY_FILE = ".sigma-identity.json";
 export declare const BRIDGE_STUBS: string[];
 export declare const PROGRESS_FILE: string;
 export declare const OVERRIDES_FILE: string;
+export declare const OPERATIONS_LOG_FILE: string;
 export declare const OPERATION_REGISTRY_FILE: string;
 export declare const DOCUMENT_REGISTRY_FILE: string;
 export declare const PROJECT_CONFIG_FILE: string;

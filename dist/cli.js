@@ -18,6 +18,7 @@ const config_2 = require("./commands/config");
 const memory_1 = require("./commands/memory");
 const doctor_1 = require("./commands/doctor");
 const reference_1 = require("./commands/reference");
+const operationLog_1 = require("./utils/operationLog");
 const program = new commander_1.Command();
 program
     .name('sigma')
@@ -43,6 +44,33 @@ program.on('command:*', (operands) => {
     console.error(`Unknown command: sigma ${operands.join(' ')}`);
     console.error('Run `sigma --help` for available commands.');
     process.exit(1);
+});
+// ── Operation history log ───────────────────────────────────────────────────
+// Every command handler catches its own errors and calls process.exit(1)
+// directly (never throws out to commander), so a postAction hook would never
+// see failed operations — the process is already dead by the time it would
+// fire. process.on('exit') always runs immediately before the process
+// actually terminates regardless of cause, so pairing it with preAction (to
+// capture which command is about to run) is the only combination that
+// guarantees every operation is recorded, success or failure, without
+// touching any individual command handler.
+let pendingOperation = null;
+function commandPath(cmd) {
+    const parts = [];
+    let current = cmd;
+    while (current && current.parent) {
+        parts.unshift(current.name());
+        current = current.parent;
+    }
+    return parts.join(' ');
+}
+program.hook('preAction', (_thisCommand, actionCommand) => {
+    pendingOperation = commandPath(actionCommand);
+});
+process.on('exit', (code) => {
+    if (pendingOperation) {
+        (0, operationLog_1.appendOperationLogEntry)(pendingOperation, code);
+    }
 });
 program.parse(process.argv);
 //# sourceMappingURL=cli.js.map

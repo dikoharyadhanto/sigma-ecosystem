@@ -114,11 +114,12 @@ If authorization is unclear, ask before executing.
 
 ## CLI-Managed Files — Do Not Edit Directly
 
-| File                                  | Command                                                         |
-|:------------------------------------- |:--------------------------------------------------------------- |
-| `Sigma/progress.json`                 | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
-| `Sigma/SIGMA-REGISTRY.json`           | `sigma project sync --confirm`                                  |
-| `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma project sync --confirm`                                  |
+| File                                  | Command                                                                                               |
+|:------------------------------------- |:----------------------------------------------------------------------------------------------------- |
+| `Sigma/progress.json`                 | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc.                                       |
+| `Sigma/SIGMA-REGISTRY.json`           | `sigma project sync --confirm`                                                                        |
+| `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma project sync --confirm`                                                                        |
+| `Sigma/logs/operations.jsonl`         | Written automatically by every CLI invocation. Never edit/move/delete without Director authorization. |
 
 ## Governance Role Activation
 
