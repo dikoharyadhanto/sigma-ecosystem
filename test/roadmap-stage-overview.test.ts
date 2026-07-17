@@ -4,30 +4,25 @@ import os from 'os';
 import path from 'path';
 import { renderRoadmapFile } from '../src/utils/roadmap';
 import { validateSigmaDocFile } from '../src/utils/docCheck';
-import { ProgressJson } from '../src/engine/progress';
+import { ChainState } from '../src/engine/chain';
 
-function baseProgress(): ProgressJson {
+function baseChain(): ChainState {
   return {
     schema_version: '1.0.0',
-    project_id: 'TEST',
-    project_name: 'Test',
-    lifecycle_state: 'BUILD',
+    chain_version: 'v1',
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
-    intent: { active_version: 'v1', active_state: 'LOCKED', versions: [] },
+    lifecycle_state: 'BUILD',
+    intent: { version: 'v1', state: 'LOCKED', created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' },
     plan: { active_version: null, active_state: null, versions: [], pending: [] },
     exec: { active_version: null, active_state: null, versions: [] },
-    close: { active_version: null, active_state: null, versions: [] },
+    close: null,
     roadmap: {
-      active_version: 'v1',
-      active_state: 'ACTIVE',
-      versions: [{
-        version: 'v1',
-        state: 'ACTIVE',
-        file: 'Sigma/build/ROADMAP-v1.md',
-        created_at: '2026-01-01T00:00:00.000Z',
-        updated_at: '2026-01-01T00:00:00.000Z',
-      }],
+      version: 'v1',
+      state: 'DRAFT',
+      file: 'Sigma/build/ROADMAP-v1.md',
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
     },
     gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
   };
@@ -104,11 +99,11 @@ describe('ROADMAP Stage Overview (3-section format)', () => {
     expect(report.errors).toContain('Missing required section marker: CORE_PROCESS_FLOW');
   });
 
-  it('render populates Stage Overview rows directly from progress.json plan entries', () => {
+  it('render populates Stage Overview rows directly from the chain\'s plan entries', () => {
     const filePath = writeTempRoadmap(ROADMAP_TEMPLATE);
 
-    const data = baseProgress();
-    data.plan.versions = [
+    const chain = baseChain();
+    chain.plan.versions = [
       {
         version: 'v1.1',
         state: 'DRAFT',
@@ -130,18 +125,18 @@ describe('ROADMAP Stage Overview (3-section format)', () => {
       },
     ];
 
-    renderRoadmapFile(filePath, data);
+    renderRoadmapFile(filePath, chain);
 
     const rendered = fs.readFileSync(filePath, 'utf8');
     expect(rendered).toMatch(/\| 1\.1 \| Example Stage \| Example Focus \| DRAFT \| — \|/);
     expect(rendered).toMatch(/\| 1\.2 \| Superseded Stage \| Superseded Focus \| SUPERSEDED \| Scope changed \|/);
   });
 
-  it('render excludes plan entries belonging to a different INTENT major', () => {
+  it('render excludes plan entries whose intent_version_ref does not match this chain\'s own intent (defensive — PLAN-EVAL-01 §5)', () => {
     const filePath = writeTempRoadmap(ROADMAP_TEMPLATE);
 
-    const data = baseProgress();
-    data.plan.versions = [
+    const chain = baseChain();
+    chain.plan.versions = [
       {
         version: 'v1.1',
         state: 'DRAFT',
@@ -162,7 +157,7 @@ describe('ROADMAP Stage Overview (3-section format)', () => {
       },
     ];
 
-    renderRoadmapFile(filePath, data);
+    renderRoadmapFile(filePath, chain);
 
     const rendered = fs.readFileSync(filePath, 'utf8');
     expect(rendered).toMatch(/Belongs to v1/);
@@ -183,7 +178,7 @@ describe('ROADMAP Stage Overview (3-section format)', () => {
     ].join('\n');
     const filePath = writeTempRoadmap(withLegacyBlock);
 
-    renderRoadmapFile(filePath, baseProgress());
+    renderRoadmapFile(filePath, baseChain());
 
     const rendered = fs.readFileSync(filePath, 'utf8');
     expect(rendered).toMatch(/SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW/);

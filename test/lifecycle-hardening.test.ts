@@ -4,8 +4,13 @@ import path from 'path';
 import {
   setupTestEnv,
   runCli,
-  makeProgressWithLockedPlan,
   makeProgressWithLockedExec,
+  stubLegacyProgressJson,
+  writeChainFixture,
+  makeChain,
+  makeChainWithLockedPlan,
+  makeChainWithLockedExec,
+  chainPath,
   TestEnv,
 } from './helpers';
 
@@ -25,6 +30,8 @@ describe('Lifecycle hardening coverage', () => {
   });
 
   it('sigma session bootstrap reports gates and next operations from a locked chain', () => {
+    // `session bootstrap` is not yet migrated to chain.ts (PLAN-EVAL-01
+    // Fase 4) — this exercises the old progress.json path unchanged.
     env = setupTestEnv();
     fs.writeJsonSync(env.progressPath, makeProgressWithLockedExec());
 
@@ -38,7 +45,8 @@ describe('Lifecycle hardening coverage', () => {
 
   it('sigma close new creates a close draft for a clean locked chain', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithLockedExec());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedExec());
 
     const result = runCli('close new', env.projectDir, env.homeDir);
 
@@ -47,20 +55,22 @@ describe('Lifecycle hardening coverage', () => {
     expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md'))).toBe(true);
   });
 
-  it('sigma close new rejects a second draft for an INTENT that already has a non-superseded DIR-CLOSE', () => {
+  it('sigma close new rejects a second draft for a chain that already has a non-superseded DIR-CLOSE', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithLockedExec());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedExec());
 
     const first = runCli('close new', env.projectDir, env.homeDir);
     expect(first.exitCode).toBe(0);
 
     const second = runCli('close new', env.projectDir, env.homeDir);
     expect(second.exitCode).toBe(1);
-    expect(second.stderr).toMatch(/DIR-CLOSE already exists for INTENT/i);
+    expect(second.stderr).toMatch(/DIR-CLOSE already exists for this chain/i);
   });
 
   it('sigma exec new skips exec version gaps caused by superseded plans', () => {
     env = setupTestEnv();
+    stubLegacyProgressJson(env);
     const now = new Date().toISOString();
     const planVersions = [];
     const execVersions = [];
@@ -123,28 +133,30 @@ describe('Lifecycle hardening coverage', () => {
       intent_version_ref: 'v2',
     });
 
-    const progress = makeProgressWithLockedPlan() as Record<string, any>;
-    progress.intent = {
-      active_version: 'v2',
-      active_state: 'LOCKED',
-      versions: [{ version: 'v2', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v2.md', created_at: now, updated_at: now, locked_at: now }],
-    };
-    progress.plan = { active_version: 'v1.35', active_state: 'LOCKED', pending: [], versions: planVersions };
-    progress.exec = { active_version: 'v1.34', active_state: 'LOCKED', versions: execVersions };
-    fs.writeJsonSync(env.progressPath, progress);
+    // Chain "v2" — the old fixture's intent major (kept as-is; chain naming
+    // doesn't need to start at v1).
+    const chain = makeChain('v2', {
+      lifecycle_state: 'BUILD',
+      intent: { version: 'v2', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v2.md', created_at: now, updated_at: now, locked_at: now },
+      plan: { active_version: 'v1.35', active_state: 'LOCKED', pending: [], versions: planVersions },
+      exec: { active_version: 'v1.34', active_state: 'LOCKED', versions: execVersions },
+      gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
+    });
+    writeChainFixture(env, 'v2', chain);
 
     const result = runCli('exec new', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Created: Sigma[\\/]build[\\/]DEV-EXEC-v1\.35\.md/);
-    const updated = fs.readJsonSync(env.progressPath) as Record<string, any>;
+    const updated = fs.readJsonSync(chainPath(env, 'v2')) as Record<string, any>;
     expect(updated.exec.versions.filter((v: Record<string, unknown>) => v.version === 'v1.34')).toHaveLength(1);
     expect(updated.exec.versions.some((v: Record<string, unknown>) => v.version === 'v1.35' && v.plan_version_ref === 'v1.35')).toBe(true);
   });
 
   it('sigma exec new refuses to overwrite an existing target artifact file', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithLockedPlan());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedPlan());
     const target = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v1.1.md');
     fs.writeFileSync(target, 'locked evidence must survive');
 
@@ -153,7 +165,7 @@ describe('Lifecycle hardening coverage', () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/EXEC FILE CONFLICT/);
     expect(fs.readFileSync(target, 'utf8')).toBe('locked evidence must survive');
-    const updated = fs.readJsonSync(env.progressPath) as Record<string, any>;
+    const updated = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     expect(updated.exec.versions).toHaveLength(0);
   });
 });

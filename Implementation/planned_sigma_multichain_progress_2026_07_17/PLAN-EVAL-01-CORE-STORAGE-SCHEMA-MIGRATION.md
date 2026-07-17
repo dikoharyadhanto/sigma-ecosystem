@@ -255,31 +255,33 @@ tidak diam-diam menelan pekerjaan PLAN-EVAL-04:
   file yang sama untuk diarbitrase) — ini **konsekuensi otomatis migrasi
   skema**, wajib ditangani di PLAN-EVAL-01 karena kalau tidak, tipe
   `RoadmapState` tidak valid untuk objek tunggal.
-- **Bagian perilaku** (roadmap auto-LOCKED sebagai efek samping `close lock`,
-  Gate 1.5 didefinisikan ulang jadi "roadmap ada dan belum SUPERSEDED") —
-  ini **keputusan lifecycle baru**, tetap PLAN-EVAL-04, TIDAK diimplementasikan
-  di sini.
+- **Bagian perilaku** — **KOREKSI (ditemukan saat implementasi Fase 3,
+  2026-07-17)**: draf ini sebelumnya salah mengira "roadmap auto-LOCKED
+  sebagai efek samping `close lock`" adalah keputusan lifecycle **baru**
+  milik PLAN-EVAL-04. Itu keliru — dicek langsung ke `src/commands/close.ts`
+  sebelum Fase 3 dimulai: `close lock` **sudah** memanggil
+  `lockActiveRoadmap()` sebagai efek samping **hari ini, sebelum migrasi
+  apa pun disentuh**. Ini bukan fitur baru untuk didesain — ini perilaku
+  existing yang wajib dipertahankan PLAN-EVAL-01 (§8 poin 4 di bawah
+  diperbarui sesuai ini juga). Sisa PLAN-EVAL-04 yang genuinely baru cuma
+  *definisi ulang* Gate 1.5 (baris berikutnya) dan pemakaian istilah "ada
+  dan belum SUPERSEDED" — bukan mekanisme cascade-nya sendiri.
 
-**Keputusan untuk PLAN-EVAL-01** (migrasi struktural minimal, tidak mendahului
-PLAN-EVAL-04): `RoadmapState` per-chain jadi `'DRAFT' | 'LOCKED' | 'SUPERSEDED'`
-— 3 state, ACTIVE/INACTIVE dijatuhkan dari enum karena memang tidak bisa
-terisi lagi (tidak ada kompetisi untuk diarbitrase), TAPI `sigma roadmap lock`
-sebagai command eksplisit **tetap ada** dan **tetap dipanggil manual** persis
-seperti perilaku hari ini — auto-lock-saat-close-lock (yang menghapus command
-`roadmap lock` itu sendiri) TIDAK diimplementasikan di sini, itu murni
-PLAN-EVAL-04. Efek langsungnya: `registerRoadmapDraft()`/`activateRoadmap()`/
-`lockActiveRoadmap()` disederhanakan (hilang seluruh logika "cari ACTIVE lain
-untuk didemosi", sama seperti intent di §3.4), tapi command surface
-`roadmap new` → `roadmap lock` tetap 1:1 sama seperti sekarang. `activateRoadmap()`
-sendiri kehilangan alasan untuk ada (tidak ada DRAFT lain untuk diaktifkan
-dalam 1 chain) — direkomendasikan **dihapus**, bukan disederhanakan; Gate 1.5
-di `plan.ts:106-115` yang mengecek `data.roadmap.versions.find(v => v.state
-=== 'ACTIVE')` diganti cek paling sempit yang setara secara perilaku hari
-ini: `chain.roadmap !== null && chain.roadmap.state !== 'SUPERSEDED'` (bukan
-definisi baru "ada dan belum SUPERSEDED" ala PLAN-EVAL-04 — itu istilah yang
-sama tapi lahir dari alasan berbeda: di sini murni karena tidak ada state
-`ACTIVE` lagi untuk dicek, dan `roadmap lock` tetap command manual terpisah
-dari `close lock`, tidak digabung).
+**Keputusan untuk PLAN-EVAL-01**: `RoadmapState` per-chain jadi
+`'DRAFT' | 'LOCKED' | 'SUPERSEDED'` — 3 state, ACTIVE/INACTIVE dijatuhkan
+dari enum karena memang tidak bisa terisi lagi (tidak ada kompetisi untuk
+diarbitrase). **Tidak ada command `sigma roadmap lock`** — sama seperti
+hari ini, itu tidak pernah ada sebagai command berdiri sendiri baik sebelum
+maupun sesudah migrasi ini; roadmap hanya pernah menjadi LOCKED lewat
+cascade `close lock` (lihat Fase 3, §6). `registerRoadmapDraft()`/
+`activateRoadmap()`/`lockActiveRoadmap()` disederhanakan (hilang seluruh
+logika "cari ACTIVE lain untuk didemosi", sama seperti intent di §3.4).
+`activateRoadmap()` sendiri kehilangan alasan untuk ada (tidak ada DRAFT
+lain untuk diaktifkan dalam 1 chain) — **dihapus**, bukan disederhanakan;
+Gate 1.5 di `plan.ts:106-115` yang mengecek `data.roadmap.versions.find(v
+=> v.state === 'ACTIVE')` diganti cek paling sempit yang setara secara
+perilaku hari ini: `chain.roadmap !== null && chain.roadmap.state !==
+'SUPERSEDED'`.
 
 ### 3.6 Temuan baru — `findProjectRoot()` (`src/utils/fs.ts`) tidak disebut di DISCUSSION doc tapi jangkarnya patah total
 
@@ -546,9 +548,43 @@ sendiri sebelum lanjut ke fase berikutnya.
    nol). `npm run build` bersih, `npm test` **195/195 (27 file)**. Diverifikasi
    juga manual end-to-end di luar test harness (`intent new` → `status` →
    `list` menghasilkan `progress-v1.json` + `activate_status.json` yang benar).
-4. **Fase 3 — `roadmap.ts`, `plan.ts`, `exec.ts`, `close.ts`** (urutan
-   mengikuti urutan alami siklus hidup satu chain — masing-masing bisa
-   diverifikasi manual berurutan di atas chain yang sama dari Fase 2).
+4. **Fase 3 — `roadmap.ts`, `plan.ts`, `exec.ts`, `close.ts`. SELESAI
+   (2026-07-17).**
+
+   **Koreksi penting ditemukan saat implementasi, memperbaiki kesalahan di
+   draf §3.5/§8 poin 4 sebelumnya**: `close lock` **sudah** auto-mengunci
+   roadmap sebagai efek samping **hari ini, sebelum migrasi apa pun**
+   (`close.ts` sudah memanggil `lockActiveRoadmap()` — dicek langsung di
+   kode sebelum Fase 3 dimulai). Draf §3.5 sebelumnya salah mengira ini
+   perilaku baru yang didorong ke PLAN-EVAL-04 — yang sebenarnya PLAN-EVAL-04
+   miliki hanyalah *penamaan ulang definisi* dependensi ini (menjadikannya
+   bagian eksplisit dari redefinisi Gate 1.5), bukan pengenalan mekanismenya.
+   PLAN-EVAL-01 tetap **mempertahankan** cascade ini persis seperti perilaku
+   hari ini — cuma model penyimpanan roadmap di baliknya yang berubah
+   (objek tunggal, bukan cari entry `ACTIVE`). `roadmap.ts` migrasi TIDAK
+   menambah command `roadmap lock` (memang tidak pernah ada sebagai command
+   berdiri sendiri, sebelum maupun sesudah migrasi) — cuma menghapus
+   `roadmap activate` (§3.5, tidak ada DRAFT lain untuk diaktifkan).
+
+   Migrasi lain sesuai rencana: Gate 1.5 di `plan.ts` (`new`/`promote`)
+   ditulis ulang jadi "roadmap ada dan belum SUPERSEDED" (§3.5); `--v`
+   lintas-chain untuk `roadmap check`/`close check` (§3.7); `plan`/`exec`
+   seluruh subcommand disalin nyaris identik (cuma tipe data berubah);
+   `utils/roadmap.ts` (`renderRoadmapFile`/`generateStageOverview`) diadaptasi
+   untuk `ChainState`.
+
+   Diverifikasi: 8 file test diperbaiki (beberapa — `plan-activate.test.ts`,
+   `roadmap-stage-overview.test.ts` — juga menghilangkan fixture "dua intent
+   dalam satu array" yang sama seperti Fase 2; dua test di `plan-supersede.test.ts`
+   ternyata *vacuously passing* sebelum diperbaiki — tidak mengecek `exitCode`,
+   jadi diam-diam tidak menguji apa pun lagi setelah command pindah baca file —
+   ditemukan dan diperbaiki saat migrasi, bukan dibiarkan). `npm run build`
+   bersih, `npm test` **195/195 (27 file)**. Diverifikasi juga end-to-end
+   manual penuh di luar test harness: `intent new` → `lock` → `roadmap new`
+   → `plan new` → `lock` → `exec new` → `lock` → `close new` → `lock`,
+   termasuk mengonfirmasi cascade auto-lock roadmap benar-benar terpicu
+   (`ROADMAP v1 LOCKED.` tercetak) dan `intent list` melaporkan hasil akhir
+   yang benar (`LOCKED CLOSED OPEN OPEN OPEN`).
 5. **Fase 4 — `session.ts`, `project.ts`, `doctor.ts`, `override.ts`,
    `reconstruct.ts`.** Command read-mostly/cross-cutting, aman disentuh
    terakhir karena tidak diperlukan Fase 2–3 untuk berjalan.
@@ -640,11 +676,15 @@ mulai coding (Fase 1, §6) — bukan lagi berstatus terbuka.
    berbahaya dipertahankan (kode mati yang tetap harus divalidasi) daripada
    dihapus; penggantinya (`intent list` projection) sudah wajib dibangun
    terlepas dari keputusan ini, jadi bukan kerja tambahan.
-4. **DIPUTUSKAN — `RoadmapState` kehilangan `ACTIVE`/`INACTIVE`,
-   `roadmap activate` dihapus, `roadmap lock` tetap manual (bukan
-   auto-cascade dari `close lock`)** (§3.5). Rekomendasi: adopsi — bagian
-   struktural dipaksa skema objek tunggal; bagian "tetap manual" sengaja
-   menahan diri supaya batas scope dengan PLAN-EVAL-04 tidak kabur.
+4. **DIPUTUSKAN — `RoadmapState` kehilangan `ACTIVE`/`INACTIVE`, `roadmap
+   activate` dihapus** (§3.5). Rekomendasi: adopsi — dipaksa skema objek
+   tunggal, tidak ada lagi kompetisi untuk diarbitrase. **Koreksi
+   dibanding draf awal poin ini** (ditemukan Fase 3, 2026-07-17): auto-lock
+   roadmap sebagai efek samping `close lock` **bukan** keputusan baru yang
+   ditahan untuk PLAN-EVAL-04 — itu perilaku existing (`close.ts` sudah
+   memanggilnya hari ini, sebelum migrasi apa pun) yang PLAN-EVAL-01 wajib
+   pertahankan, bukan hindari. Tidak pernah ada command `sigma roadmap lock`
+   berdiri sendiri, baik sebelum maupun sesudah migrasi ini.
 5. **DIPUTUSKAN — field `superseded_by`/`intent_version_ref` dijatuhkan
    dari intent/close/roadmap** (§3.2, §3.4). Rekomendasi: adopsi —
    `intent_version_ref` di roadmap/close murni redundan (selalu sama dengan
@@ -689,7 +729,8 @@ bentuk `ChainState`/`ActivateStatus` di §3.2/§3.1 berlaku sebagai final.
   catatan urutan di §9).
 - `doctor --all-versions`/`--reconstruct` 3 mode, algoritma reconstruct
   multi-chain penuh → PLAN-EVAL-05.
-- Redefinisi Gate 1.5 & lifecycle Roadmap/Close (auto-lock roadmap saat
-  `close lock`) → PLAN-EVAL-04. Lihat §3.5 untuk garis batas presisnya
-  dengan bagian yang tetap masuk PLAN-EVAL-01.
+- Sisa redefinisi lifecycle Roadmap/Close di luar Gate 1.5 (yang sudah
+  ditulis ulang di PLAN-EVAL-01 sendiri, §3.5/Fase 3) → PLAN-EVAL-04. **Bukan**
+  termasuk cascade auto-lock roadmap saat `close lock` — itu perilaku
+  existing yang sudah dipertahankan PLAN-EVAL-01 (koreksi §3.5/§8 poin 4).
 - `intent-history.md` auto-render → PLAN-EVAL-06.

@@ -7,7 +7,7 @@ exports.planCommand = planCommand;
 const commander_1 = require("commander");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
-const progress_1 = require("../engine/progress");
+const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const roadmap_1 = require("../utils/roadmap");
@@ -34,31 +34,41 @@ function assertRequiredStageMetadata(title, focus, command) {
         throw new Error(`sigma plan ${command} requires --focus <focus>`);
     }
 }
-function getActiveRoadmapPath(projectRoot, data) {
-    const active = data.roadmap.versions.find(v => v.state === 'ACTIVE');
-    if (!active)
+// PLAN-EVAL-01 §3.5 — Gate 1.5 redefined to match the single-object roadmap
+// (no more ACTIVE state to search for): a chain's roadmap unblocks `plan
+// new` once it exists and hasn't been cascaded to SUPERSEDED.
+function getRoadmapPathIfEligible(projectRoot, chain) {
+    if (!chain.roadmap || chain.roadmap.state === 'SUPERSEDED')
         return null;
-    return path_1.default.join(projectRoot, active.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${active.version}.md`));
+    return path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
 }
-function getOldestDraftPlanVersion(data) {
-    const drafts = data.plan.versions
+function getOldestDraftPlanVersion(chain) {
+    const drafts = chain.plan.versions
         .filter(v => v.state === 'DRAFT')
         .sort((a, b) => a.created_at.localeCompare(b.created_at));
     return drafts[0]?.version ?? null;
+}
+function planDocPath(projectRoot, chain, version) {
+    const entry = version
+        ? chain.plan.versions.find(v => v.version === version)
+        : chain.plan.versions.find(v => v.version === chain.plan.active_version);
+    if (!entry)
+        throw new Error(version ? `FMN-PLAN ${version} not found.` : 'No active FMN-PLAN found. Run: sigma plan new');
+    return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'build', `FMN-PLAN-${entry.version}.md`));
 }
 function planCommand() {
     const cmd = new commander_1.Command('plan');
     cmd.description('Manage FMN-PLAN artifact');
     cmd.command('new')
-        .description('Create a new FMN-PLAN draft (requires locked DIR-INTENT + ACTIVE ROADMAP). Use --pending to stage a future plan without entering the version queue.')
+        .description('Create a new FMN-PLAN draft (requires locked DIR-INTENT + ROADMAP). Use --pending to stage a future plan without entering the version queue.')
         .option('--pending', 'Stage as a pending plan (no version assigned; not in lock queue)')
         .requiredOption('--title <title>', 'Stage title written into the ROADMAP Stage Overview table')
         .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP Stage Overview table')
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            (0, chain_1.assertChainCanMutate)(chain);
             assertRequiredStageMetadata(opts.title, opts.focus, 'new');
             if (opts.pending) {
                 // Pending plan: no gate requirement, no version
@@ -67,8 +77,8 @@ function planCommand() {
                 const absPath = path_1.default.join(projectRoot, relPath);
                 fs_extra_1.default.ensureDirSync(path_1.default.dirname(absPath));
                 (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath);
-                (0, progress_1.registerPendingPlan)(data, id, relPath, opts.title, opts.focus);
-                (0, progress_1.writeProgress)(projectRoot, data);
+                (0, chain_1.registerPendingPlan)(chain, id, relPath, opts.title, opts.focus);
+                (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
                 console.log(`Created: ${relPath} (pending — ID: ${id})`);
                 console.log('Running automatic validation...\n');
                 const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
@@ -78,43 +88,35 @@ function planCommand() {
                 console.log(`Run: sigma plan promote --id ${id}   to assign a version and enter the draft queue`);
                 return;
             }
-            if (!(0, progress_1.getOperationalGate)(data, 'gate_1_open')) {
+            if (!(0, chain_1.getOperationalGate)(chain, 'gate_1_open')) {
                 throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
             }
-            const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
-            if (!lockedIntent) {
+            if (chain.intent.state !== 'LOCKED') {
                 throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
             }
-            // Gate 1.5: require ACTIVE ROADMAP
-            const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
-            if (!activeRoadmap) {
-                throw new Error('Gate 1.5 blocked: An ACTIVE ROADMAP must exist before FMN-PLAN can be created.\n' +
-                    'Run: sigma roadmap new\n' +
-                    'If another ROADMAP is already ACTIVE, create the new one as DRAFT then run:\n' +
-                    '  sigma roadmap activate --v <ver>');
+            // Gate 1.5: require a ROADMAP that exists and isn't SUPERSEDED (§3.5)
+            const roadmapAbsPathForGate = getRoadmapPathIfEligible(projectRoot, chain);
+            if (!roadmapAbsPathForGate) {
+                throw new Error('Gate 1.5 blocked: A ROADMAP must exist for this chain before FMN-PLAN can be created.\n' +
+                    'Run: sigma roadmap new');
             }
-            const intentVersionRef = lockedIntent.version;
-            const version = (0, progress_1.nextPlanVersion)(data, intentVersionRef);
+            const intentVersionRef = chain.intent.version;
+            const version = (0, chain_1.nextPlanVersion)(chain, intentVersionRef);
             const relPath = path_1.default.join('Sigma', 'build', `FMN-PLAN-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
-            // Artifact writes first, writeProgress last
+            // Artifact writes first, writeChain last
             (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath);
-            (0, progress_1.registerPlanDraft)(data, version, relPath, intentVersionRef, opts.title, opts.focus);
-            (0, progress_1.writeProgress)(projectRoot, data);
+            (0, chain_1.registerPlanDraft)(chain, version, relPath, intentVersionRef, opts.title, opts.focus);
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
             // Render after state is written (idempotent re-sync)
-            const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
-            if (roadmapAbsPath) {
-                (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, data);
-            }
+            (0, roadmap_1.renderRoadmapFile)(roadmapAbsPathForGate, chain);
             console.log(`Created: ${relPath} (references INTENT ${intentVersionRef})`);
             console.log('Running automatic validation...\n');
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             if (!report.ok)
                 process.exit(1);
-            if (roadmapAbsPath) {
-                console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${version.replace(/^v/, '')}`);
-            }
+            console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${version.replace(/^v/, '')}`);
         }
         catch (e) {
             console.error(e.message);
@@ -126,18 +128,18 @@ function planCommand() {
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            const lockTargetVersion = getOldestDraftPlanVersion(data);
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            (0, chain_1.assertChainCanMutate)(chain);
+            const lockTargetVersion = getOldestDraftPlanVersion(chain);
             if (!lockTargetVersion) {
                 throw new Error('No DRAFT FMN-PLAN to lock. Run: sigma plan new');
             }
-            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'plan', lockTargetVersion);
+            const absPath = planDocPath(projectRoot, chain, lockTargetVersion);
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             (0, docCheck_1.ensureSigmaDocEligible)(report, 'plan');
-            const version = (0, progress_1.lockOldestPlanDraft)(data);
-            (0, progress_1.writeProgress)(projectRoot, data);
+            const version = (0, chain_1.lockOldestPlanDraft)(chain);
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
             console.log(`FMN-PLAN ${version} LOCKED. Gate 2 open. Next: sigma exec new`);
         }
         catch (e) {
@@ -151,10 +153,10 @@ function planCommand() {
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            (0, progress_1.activatePlanDraft)(data, opts.v);
-            (0, progress_1.writeProgress)(projectRoot, data);
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            (0, chain_1.assertChainCanMutate)(chain);
+            (0, chain_1.activatePlanDraft)(chain, opts.v);
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
             console.log(`FMN-PLAN ${opts.v} set as active draft (lock order remains FIFO — sigma plan lock will lock the oldest DRAFT).`);
         }
         catch (e) {
@@ -169,23 +171,22 @@ function planCommand() {
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            const cascadedExecs = data.exec.versions
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            (0, chain_1.assertChainCanMutate)(chain);
+            const cascadedExecs = chain.exec.versions
                 .filter(v => v.plan_version_ref === opts.v && v.state !== 'SUPERSEDED')
                 .map(v => v.version);
-            (0, progress_1.supersedePlanVersion)(data, opts.v, opts.reason);
-            (0, progress_1.writeProgress)(projectRoot, data);
+            (0, chain_1.supersedePlanVersion)(chain, opts.v, opts.reason);
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
             console.log(`FMN-PLAN ${opts.v} superseded. Reason: ${opts.reason}`);
             if (cascadedExecs.length > 0) {
                 console.log(`Auto-superseded DEV-EXEC: ${cascadedExecs.join(', ')}`);
             }
-            const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
-            if (activeRoadmap) {
-                const roadmapPath = path_1.default.join(projectRoot, activeRoadmap.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${activeRoadmap.version}.md`));
+            if (chain.roadmap) {
+                const roadmapPath = path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
                 if (fs_extra_1.default.existsSync(roadmapPath)) {
-                    (0, roadmap_1.renderRoadmapFile)(roadmapPath, data);
-                    console.log(`ROADMAP ${activeRoadmap.version} re-rendered with SUPERSEDED status.`);
+                    (0, roadmap_1.renderRoadmapFile)(roadmapPath, chain);
+                    console.log(`ROADMAP ${chain.roadmap.version} re-rendered with SUPERSEDED status.`);
                 }
             }
         }
@@ -202,50 +203,42 @@ function planCommand() {
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            (0, chain_1.assertChainCanMutate)(chain);
             assertRequiredStageMetadata(opts.title, opts.focus, 'promote');
-            const pending = data.plan.pending.find(p => p.id === opts.id);
+            const pending = chain.plan.pending.find(p => p.id === opts.id);
             if (!pending) {
                 throw new Error(`Pending plan ID "${opts.id}" not found.\n` +
                     `Run: sigma plan queue   to list pending plans`);
             }
-            if (!(0, progress_1.getOperationalGate)(data, 'gate_1_open')) {
+            if (!(0, chain_1.getOperationalGate)(chain, 'gate_1_open') || chain.intent.state !== 'LOCKED') {
                 throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
             }
-            const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
-            if (!lockedIntent)
-                throw new Error('No locked DIR-INTENT found');
-            const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
-            if (!activeRoadmap) {
-                throw new Error('Gate 1.5 blocked: An ACTIVE ROADMAP must exist to promote a plan.\n' +
+            const roadmapAbsPathForGate = getRoadmapPathIfEligible(projectRoot, chain);
+            if (!roadmapAbsPathForGate) {
+                throw new Error('Gate 1.5 blocked: A ROADMAP must exist for this chain to promote a plan.\n' +
                     'Run: sigma roadmap new');
             }
             // Compute next version before any writes
-            const newVersion = (0, progress_1.nextPlanVersion)(data, lockedIntent.version);
+            const newVersion = (0, chain_1.nextPlanVersion)(chain, chain.intent.version);
             const oldAbsPath = path_1.default.join(projectRoot, pending.file);
             const newRelPath = path_1.default.join('Sigma', 'build', `FMN-PLAN-${newVersion}.md`);
             const newAbsPath = path_1.default.join(projectRoot, newRelPath);
             // Artifact writes first: rename file
             fs_extra_1.default.ensureDirSync(path_1.default.dirname(newAbsPath));
             fs_extra_1.default.moveSync(oldAbsPath, newAbsPath);
-            // Write progress last
-            (0, progress_1.promotePendingPlan)(data, opts.id, newVersion, newRelPath, lockedIntent.version, opts.title, opts.focus);
-            (0, progress_1.writeProgress)(projectRoot, data);
+            // Write chain last
+            (0, chain_1.promotePendingPlan)(chain, opts.id, newVersion, newRelPath, chain.intent.version, opts.title, opts.focus);
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
             // Render after state is written (idempotent)
-            const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
-            if (roadmapAbsPath) {
-                (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, data);
-            }
+            (0, roadmap_1.renderRoadmapFile)(roadmapAbsPathForGate, chain);
             console.log(`Promoted: ${pending.file} → ${newRelPath} (${newVersion})`);
             console.log('Running automatic validation...\n');
             const report = (0, docCheck_1.validateSigmaDocFile)(newAbsPath, 'plan');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             if (!report.ok)
                 process.exit(1);
-            if (roadmapAbsPath) {
-                console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${newVersion.replace(/^v/, '')}`);
-            }
+            console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${newVersion.replace(/^v/, '')}`);
             console.log(`Run: sigma plan lock   to lock ${newVersion} when ready`);
         }
         catch (e) {
@@ -259,8 +252,8 @@ function planCommand() {
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'plan', opts.v);
+            const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            const absPath = planDocPath(projectRoot, chain, opts.v);
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             if (!report.ok)
@@ -276,11 +269,11 @@ function planCommand() {
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            const drafts = data.plan.versions
+            const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            const drafts = chain.plan.versions
                 .filter(v => v.state === 'DRAFT')
                 .sort((a, b) => a.created_at.localeCompare(b.created_at));
-            const pending = data.plan.pending;
+            const pending = chain.plan.pending;
             console.log('\n=== FMN-PLAN Queue ===\n');
             if (drafts.length === 0) {
                 console.log('Official Draft Queue: empty');
@@ -329,15 +322,15 @@ function planCommand() {
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
+            const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
             console.log('\n=== FMN-PLAN Status ===\n');
-            if (!data.plan.active_version) {
+            if (!chain.plan.active_version) {
                 console.log('No active PLAN. Run: sigma plan new');
             }
             else {
-                const active = data.plan.versions.find(v => v.version === data.plan.active_version);
-                console.log(`Version:          ${data.plan.active_version}`);
-                console.log(`State:            ${data.plan.active_state}`);
+                const active = chain.plan.versions.find(v => v.version === chain.plan.active_version);
+                console.log(`Version:          ${chain.plan.active_version}`);
+                console.log(`State:            ${chain.plan.active_state}`);
                 if (active?.intent_version_ref)
                     console.log(`INTENT Ref:       ${active.intent_version_ref}`);
                 if (active?.locked_at)
@@ -345,14 +338,14 @@ function planCommand() {
                 if (active?.file)
                     console.log(`File:             ${active.file}`);
             }
-            const drafts = data.plan.versions.filter(v => v.state === 'DRAFT');
+            const drafts = chain.plan.versions.filter(v => v.state === 'DRAFT');
             if (drafts.length > 1) {
                 console.log(`\nDraft queue:      ${drafts.length} drafts (run: sigma plan queue)`);
             }
-            if (data.plan.pending.length > 0) {
-                console.log(`Pending plans:    ${data.plan.pending.length} (run: sigma plan queue)`);
+            if (chain.plan.pending.length > 0) {
+                console.log(`Pending plans:    ${chain.plan.pending.length} (run: sigma plan queue)`);
             }
-            console.log(`\nGate 2:           ${data.gates.gate_2_open ? 'OPEN' : 'BLOCKED'}`);
+            console.log(`\nGate 2:           ${chain.gates.gate_2_open ? 'OPEN' : 'BLOCKED'}`);
             console.log('');
         }
         catch (e) {
@@ -371,19 +364,19 @@ function planCommand() {
                 throw new Error('Provide at least one of --title or --focus');
             }
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            const planEntry = data.plan.versions.find(v => v.version === opts.v);
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            (0, chain_1.assertChainCanMutate)(chain);
+            const planEntry = chain.plan.versions.find(v => v.version === opts.v);
             if (!planEntry) {
                 throw new Error(`FMN-PLAN ${opts.v} not found. Run: sigma plan list`);
             }
-            const roadmapAbsPath = getActiveRoadmapPath(projectRoot, data);
-            if (!roadmapAbsPath) {
-                throw new Error('No ACTIVE ROADMAP found. Run: sigma roadmap new');
+            if (!chain.roadmap) {
+                throw new Error('No ROADMAP found for this chain. Run: sigma roadmap new');
             }
-            (0, progress_1.updatePlanMetadata)(data, opts.v, opts.title, opts.focus);
-            (0, progress_1.writeProgress)(projectRoot, data);
-            (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, data);
+            const roadmapAbsPath = path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
+            (0, chain_1.updatePlanMetadata)(chain, opts.v, opts.title, opts.focus);
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+            (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, chain);
             const parts = [];
             if (opts.title)
                 parts.push(`title → "${opts.title}"`);
@@ -402,25 +395,25 @@ function planCommand() {
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
+            const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
             console.log('\n=== FMN-PLAN Versions ===\n');
-            if (data.plan.versions.length === 0 && data.plan.pending.length === 0) {
+            if (chain.plan.versions.length === 0 && chain.plan.pending.length === 0) {
                 console.log('None. Run: sigma plan new');
             }
             else {
-                if (data.plan.versions.length > 0) {
+                if (chain.plan.versions.length > 0) {
                     console.log('Version    State        INTENT Ref  Created');
                     console.log('-'.repeat(75));
-                    for (const v of data.plan.versions) {
+                    for (const v of chain.plan.versions) {
                         const ver = v.version.padEnd(10);
                         const st = v.state.padEnd(12);
                         const ir = (v.intent_version_ref ?? '—').padEnd(11);
                         console.log(`${ver} ${st} ${ir} ${v.created_at}`);
                     }
                 }
-                if (data.plan.pending.length > 0) {
+                if (chain.plan.pending.length > 0) {
                     console.log('\nPending Plans (ID / file / created):');
-                    for (const p of data.plan.pending) {
+                    for (const p of chain.plan.pending) {
                         console.log(`  ${p.id}  ${p.file}  ${p.created_at}`);
                     }
                 }

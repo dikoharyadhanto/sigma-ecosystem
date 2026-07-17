@@ -165,6 +165,22 @@ export function makeChainWithFullBuiltCycle(version = 'v1', planExecVersion = 'v
   });
 }
 
+// Intent LOCKED, roadmap LOCKED, one PLAN LOCKED, no EXEC yet — chain-scoped
+// equivalent of makeProgressWithLockedPlan().
+export function makeChainWithLockedPlan(version = 'v1', planVersion = 'v1.1'): object {
+  const now = new Date().toISOString();
+  return makeChain(version, {
+    lifecycle_state: 'BUILD',
+    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    roadmap: { version, state: 'LOCKED', file: `Sigma/build/ROADMAP-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    plan: {
+      active_version: planVersion, active_state: 'LOCKED', pending: [],
+      versions: [{ version: planVersion, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${planVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+    },
+    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
+  });
+}
+
 // Same build depth as makeChainWithFullBuiltCycle() but no CLOSE yet —
 // chain-scoped equivalent of makeProgressWithLockedExec().
 export function makeChainWithLockedExec(version = 'v1', planExecVersion = 'v1.1'): object {
@@ -180,6 +196,46 @@ export function makeChainWithLockedExec(version = 'v1', planExecVersion = 'v1.1'
       active_version: planExecVersion, active_state: 'LOCKED',
       versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/build/DEV-EXEC-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, plan_version_ref: planExecVersion }],
     },
+    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
+  });
+}
+
+// Intent LOCKED, PLAN LOCKED (v1), EXEC DRAFT (v0.1) — chain-scoped
+// equivalent of makeProgressWithDraftExec(). No roadmap, matching the
+// original fixture.
+export function makeChainWithDraftExec(version = 'v1'): object {
+  const now = new Date().toISOString();
+  return makeChain(version, {
+    lifecycle_state: 'BUILD',
+    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    plan: {
+      active_version: version, active_state: 'LOCKED', pending: [],
+      versions: [{ version, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${version}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+    },
+    exec: {
+      active_version: 'v0.1', active_state: 'DRAFT',
+      versions: [{ version: 'v0.1', state: 'DRAFT', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, plan_version_ref: version }],
+    },
+    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
+  });
+}
+
+// Same as makeChainWithDraftExec() but EXEC LOCKED and a DRAFT CLOSE on top
+// — chain-scoped equivalent of makeProgressWithDraftClose().
+export function makeChainWithDraftClose(version = 'v1'): object {
+  const now = new Date().toISOString();
+  return makeChain(version, {
+    lifecycle_state: 'BUILD',
+    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    plan: {
+      active_version: version, active_state: 'LOCKED', pending: [],
+      versions: [{ version, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${version}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+    },
+    exec: {
+      active_version: 'v0.1', active_state: 'LOCKED',
+      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: version }],
+    },
+    close: { version, state: 'DRAFT', file: `Sigma/close/DIR-CLOSE-${version}.md`, created_at: now, updated_at: now },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
   });
 }

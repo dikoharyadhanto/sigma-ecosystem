@@ -2,22 +2,30 @@ import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
 import {
-  readProgress,
-  writeProgress,
+  ChainState,
+  readActiveChain,
+  writeChain,
   nextExecVersion,
   registerExecDraft,
   lockActiveExec,
-  assertProgressCanMutate,
+  assertChainCanMutate,
   getOperationalGate,
-} from '../engine/progress';
+} from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import {
   ensureSigmaDocEligible,
   printSigmaDocReport,
-  resolveSigmaDocPath,
   validateSigmaDocFile,
 } from '../utils/docCheck';
+
+function execDocPath(projectRoot: string, chain: ChainState, version?: string): string {
+  const entry = version
+    ? chain.exec.versions.find(v => v.version === version)
+    : chain.exec.versions.find(v => v.version === chain.exec.active_version);
+  if (!entry) throw new Error(version ? `DEV-EXEC ${version} not found.` : 'No active DEV-EXEC found. Run: sigma exec new');
+  return path.join(projectRoot, entry.file ?? path.join('Sigma', 'build', `DEV-EXEC-${entry.version}.md`));
+}
 
 export function execCommand(): Command {
   const cmd = new Command('exec');
@@ -29,15 +37,15 @@ export function execCommand(): Command {
     .action((opts: { plan?: string }) => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
+        const { chainVersion, data: chain } = readActiveChain(projectRoot);
+        assertChainCanMutate(chain);
 
-        if (!getOperationalGate(data, 'gate_2_open')) {
+        if (!getOperationalGate(chain, 'gate_2_open')) {
           throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
         }
 
         // Guard: block if any exec is in a non-final state (not LOCKED or SUPERSEDED)
-        const activeExec = data.exec.versions.find(
+        const activeExec = chain.exec.versions.find(
           v => v.state !== 'LOCKED' && v.state !== 'SUPERSEDED'
         );
         if (activeExec) {
@@ -48,9 +56,9 @@ export function execCommand(): Command {
         }
 
         // Find LOCKED plans that do NOT have a corresponding LOCKED exec
-        const lockedPlans = data.plan.versions.filter(v => v.state === 'LOCKED');
+        const lockedPlans = chain.plan.versions.filter(v => v.state === 'LOCKED');
         const lockedExecPlanRefs = new Set(
-          data.exec.versions
+          chain.exec.versions
             .filter(v => v.state === 'LOCKED')
             .map(v => v.plan_version_ref)
             .filter(Boolean)
@@ -83,18 +91,18 @@ export function execCommand(): Command {
           );
         }
 
-        const version = nextExecVersion(data, planVersionRef);
+        const version = nextExecVersion(chain, planVersionRef);
         const relPath = path.join('Sigma', 'build', `DEV-EXEC-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
-        if (data.exec.versions.some(v => v.version === version)) {
-          throw new Error(`EXEC CONFLICT: DEV-EXEC ${version} already exists in progress.json`);
+        if (chain.exec.versions.some(v => v.version === version)) {
+          throw new Error(`EXEC CONFLICT: DEV-EXEC ${version} already exists in progress-${chainVersion}.json`);
         }
         if (fs.existsSync(absPath)) {
           throw new Error(`EXEC FILE CONFLICT: ${relPath} already exists. Refusing to overwrite existing DEV-EXEC artifact.`);
         }
         copyTemplateToArtifact('DEV-EXEC-TEMPLATE.md', absPath);
-        registerExecDraft(data, version, relPath, planVersionRef);
-        writeProgress(projectRoot, data);
+        registerExecDraft(chain, version, relPath, planVersionRef);
+        writeChain(projectRoot, chainVersion, chain);
         console.log(`Created: ${relPath} (references PLAN ${planVersionRef})`);
         console.log('Running automatic validation...\n');
         const report = validateSigmaDocFile(absPath, 'exec');
@@ -111,19 +119,19 @@ export function execCommand(): Command {
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
-        if (data.exec.active_state !== 'DRAFT') {
+        const { chainVersion, data: chain } = readActiveChain(projectRoot);
+        assertChainCanMutate(chain);
+        if (chain.exec.active_state !== 'DRAFT') {
           throw new Error('Active DEV-EXEC is not in DRAFT state. Cannot lock.');
         }
-        const absPath = resolveSigmaDocPath(projectRoot, data, 'exec');
+        const absPath = execDocPath(projectRoot, chain);
         const report = validateSigmaDocFile(absPath, 'exec');
         printSigmaDocReport(report, projectRoot);
         ensureSigmaDocEligible(report, 'exec');
-        const version = data.exec.active_version!;
-        lockActiveExec(data);
-        writeProgress(projectRoot, data);
-        const gate3 = data.gates.gate_3_satisfied
+        const version = chain.exec.active_version!;
+        lockActiveExec(chain);
+        writeChain(projectRoot, chainVersion, chain);
+        const gate3 = chain.gates.gate_3_satisfied
           ? 'SATISFIED'
           : 'not satisfied — stale chain or incomplete chain';
         console.log(`DEV-EXEC ${version} LOCKED. Gate 3: ${gate3}`);
@@ -139,8 +147,8 @@ export function execCommand(): Command {
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        const absPath = resolveSigmaDocPath(projectRoot, data, 'exec', opts.v);
+        const { data: chain } = readActiveChain(projectRoot);
+        const absPath = execDocPath(projectRoot, chain, opts.v);
         const report = validateSigmaDocFile(absPath, 'exec');
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
@@ -155,19 +163,19 @@ export function execCommand(): Command {
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
+        const { data: chain } = readActiveChain(projectRoot);
         console.log('\n=== DEV-EXEC Status ===\n');
-        if (!data.exec.active_version) {
+        if (!chain.exec.active_version) {
           console.log('No active EXEC. Run: sigma exec new');
         } else {
-          const active = data.exec.versions.find(v => v.version === data.exec.active_version);
-          console.log(`Version:          ${data.exec.active_version}`);
-          console.log(`State:            ${data.exec.active_state}`);
+          const active = chain.exec.versions.find(v => v.version === chain.exec.active_version);
+          console.log(`Version:          ${chain.exec.active_version}`);
+          console.log(`State:            ${chain.exec.active_state}`);
           if (active?.plan_version_ref) console.log(`PLAN Ref:         ${active.plan_version_ref}`);
           if (active?.locked_at) console.log(`Locked at:        ${active.locked_at}`);
           if (active?.file) console.log(`File:             ${active.file}`);
         }
-        console.log(`\nGate 3:           ${data.gates.gate_3_satisfied ? 'SATISFIED' : 'not satisfied'}`);
+        console.log(`\nGate 3:           ${chain.gates.gate_3_satisfied ? 'SATISFIED' : 'not satisfied'}`);
         console.log('');
       } catch (e) {
         console.error((e as Error).message);
@@ -180,14 +188,14 @@ export function execCommand(): Command {
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
+        const { data: chain } = readActiveChain(projectRoot);
         console.log('\n=== DEV-EXEC Versions ===\n');
-        if (data.exec.versions.length === 0) {
+        if (chain.exec.versions.length === 0) {
           console.log('None. Run: sigma exec new');
         } else {
           console.log('Version    State        PLAN Ref    Created');
           console.log('-'.repeat(75));
-          for (const v of data.exec.versions) {
+          for (const v of chain.exec.versions) {
             const ver = v.version.padEnd(10);
             const st = v.state.padEnd(12);
             const pr = (v.plan_version_ref ?? '—').padEnd(11);

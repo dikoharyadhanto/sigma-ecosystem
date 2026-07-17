@@ -1,6 +1,14 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import fs from 'fs-extra';
-import { setupTestEnv, runCli, makeProgress, makeProgressWithLockedIntent, makeProgressWithLockedPlan, TestEnv } from './helpers';
+import {
+  setupTestEnv,
+  runCli,
+  stubLegacyProgressJson,
+  writeChainFixture,
+  makeChainWithDraftIntent,
+  makeChainWithLockedIntent,
+  makeChainWithLockedPlan,
+  TestEnv,
+} from './helpers';
 
 describe('Chain gate: INTENT → PLAN → EXEC', () => {
   let env: TestEnv;
@@ -9,7 +17,8 @@ describe('Chain gate: INTENT → PLAN → EXEC', () => {
 
   it('sigma plan new is blocked when INTENT is not locked (gate_1_open false)', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgress());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent());
 
     const result = runCli('plan new --title "Test Stage" --focus "Test focus"', env.projectDir, env.homeDir);
 
@@ -19,7 +28,8 @@ describe('Chain gate: INTENT → PLAN → EXEC', () => {
 
   it('sigma exec new is blocked when PLAN is not locked (gate_2_open false)', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithLockedIntent());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedIntent());
 
     const result = runCli('exec new', env.projectDir, env.homeDir);
 
@@ -29,7 +39,8 @@ describe('Chain gate: INTENT → PLAN → EXEC', () => {
 
   it('sigma exec new is not blocked by Gate 2 when PLAN is locked', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithLockedPlan());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedPlan());
 
     // exec new will fail on missing template, but must NOT produce a Gate 2 block
     const result = runCli('exec new', env.projectDir, env.homeDir);
@@ -39,14 +50,14 @@ describe('Chain gate: INTENT → PLAN → EXEC', () => {
 
   it('gates are enforced in order: INTENT gate blocks before PLAN gate', () => {
     env = setupTestEnv();
-    // No intent, no plan locked
-    fs.writeJsonSync(env.progressPath, makeProgress());
+    stubLegacyProgressJson(env);
+    // No intent locked
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent());
 
-    // exec new should hit gate_1 (or gate_2 in exec) — not pass silently
+    // exec new should hit gate_1 (via gate_2_open=false) — not pass silently
     const result = runCli('exec new', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    // Should be blocked at some gate — either gate 1 (via gate_2_open=false) or explicitly gate 2
     expect(result.stderr).toMatch(/GATE/i);
   });
 });

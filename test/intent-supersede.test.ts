@@ -4,11 +4,11 @@ import path from 'path';
 import {
   setupTestEnv,
   runCli,
-  makeProgress,
   stubLegacyProgressJson,
   writeChainFixture,
   makeChainWithFullBuiltCycle,
   makeChainWithLockedExec,
+  makeChainWithLockedPlan,
   chainPath,
   validIntentDoc,
   TestEnv,
@@ -174,31 +174,18 @@ describe('sigma intent supersede', () => {
     expect(v2After).toEqual(v2Before);
   });
 
-  // `plan supersede` is not yet migrated to chain.ts (PLAN-EVAL-01 Fase 3) —
-  // this exercises the old progress.json path unchanged, on purpose.
   it('sigma plan supersede does not change the state of the INTENT that governs it (downward-only)', () => {
     env = setupTestEnv();
-    const now = new Date().toISOString();
-    fs.writeJsonSync(env.progressPath, makeProgress({
-      lifecycle_state: 'BUILD',
-      intent: {
-        active_version: 'v1', active_state: 'LOCKED',
-        versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
-      },
-      plan: {
-        active_version: 'v1.1', active_state: 'LOCKED', pending: [],
-        versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
-      },
-      gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
-    }));
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedPlan('v1', 'v1.1'));
 
     const result = runCli('plan supersede --v v1.1 --reason "replan"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
 
-    const data = fs.readJsonSync(env.progressPath) as Record<string, any>;
+    const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     expect(data.plan.versions[0].state).toBe('SUPERSEDED');
-    expect(data.intent.versions[0].state).toBe('LOCKED');
+    expect(data.intent.state).toBe('LOCKED');
   });
 });
 

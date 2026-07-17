@@ -10,13 +10,18 @@ exports.removeSectionIfPresent = removeSectionIfPresent;
 exports.renderRoadmapFile = renderRoadmapFile;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const progress_1 = require("../engine/progress");
-function getStagePlansForRoadmap(data, roadmapVersion) {
-    const roadmapMajor = (0, progress_1.parseMajorVersion)(roadmapVersion);
-    return data.plan.versions
-        .filter(v => v.intent_version_ref && (0, progress_1.parseMajorVersion)(v.intent_version_ref) === roadmapMajor)
+// PLAN-EVAL-01 Fase 3 — every entry in chain.plan.versions already belongs
+// to this chain's own INTENT by construction (registerPlanDraft() validates
+// planMajor === intentMajor - 1 against this chain's own intent at write
+// time — there is no cross-chain plan to filter out anymore). The filter
+// against intent_version_ref is kept as a defensive no-op, not because it
+// can vary (PLAN-EVAL-01 §5).
+function getStagePlansForRoadmap(chain) {
+    return chain.plan.versions
+        .filter(v => v.intent_version_ref === chain.intent.version)
         .sort((a, b) => (0, progress_1.parseMinorVersion)(a.version) - (0, progress_1.parseMinorVersion)(b.version));
 }
-function generateStageOverview(data, roadmapVersion) {
+function generateStageOverview(chain) {
     const header = [
         '<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->',
         '## 3. Stage Overview',
@@ -24,7 +29,7 @@ function generateStageOverview(data, roadmapVersion) {
         '| Stage | Title | Focus | Status | Reason |',
         '| :--- | :--- | :--- | :--- | :--- |',
     ];
-    const stagePlans = getStagePlansForRoadmap(data, roadmapVersion);
+    const stagePlans = getStagePlansForRoadmap(chain);
     const rows = stagePlans.map(plan => {
         const stage = plan.version.replace(/^v/, '');
         const title = plan.title ?? 'TBD';
@@ -60,16 +65,19 @@ function removeSectionIfPresent(content, name) {
     const after = content.substring(endIdx + endDelim.length).replace(/^\s*\n?/, '\n');
     return `${before}${after}`;
 }
-function renderRoadmapFile(roadmapPath, data) {
+// PLAN-EVAL-01 §3.5 — no more searching for the "ACTIVE" roadmap entry;
+// there is only ever one roadmap per chain, and it's rendered regardless of
+// its own lock state (DRAFT/LOCKED) since the Stage Overview table is
+// independent of that.
+function renderRoadmapFile(roadmapPath, chain) {
     if (!fs_extra_1.default.existsSync(roadmapPath)) {
         throw new Error(`ROADMAP file not found: ${roadmapPath}`);
     }
-    const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
-    if (!activeRoadmap) {
-        throw new Error('No ACTIVE ROADMAP found in progress.json.');
+    if (!chain.roadmap) {
+        throw new Error('No ROADMAP found for this chain.');
     }
     let content = fs_extra_1.default.readFileSync(roadmapPath, 'utf8');
-    content = replaceSection(content, 'stage-overview', generateStageOverview(data, activeRoadmap.version));
+    content = replaceSection(content, 'stage-overview', generateStageOverview(chain));
     content = removeSectionIfPresent(content, 'plan-breakdown');
     fs_extra_1.default.writeFileSync(roadmapPath, content, 'utf8');
 }

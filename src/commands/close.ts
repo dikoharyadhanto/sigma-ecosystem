@@ -2,23 +2,29 @@ import { Command } from 'commander';
 import path from 'path';
 import readline from 'readline';
 import {
-  readProgress,
-  writeProgress,
-  nextMajorVersion,
+  ChainState,
+  readActiveChain,
+  readChain,
+  writeChain,
+  assertChainCanMutate,
   registerCloseDraft,
   lockActiveClose,
   lockActiveRoadmap,
-  ProgressJson,
-  assertProgressCanMutate,
-} from '../engine/progress';
+  hasCleanGate3Chain,
+} from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import {
   ensureSigmaDocEligible,
   printSigmaDocReport,
-  resolveSigmaDocPath,
   validateSigmaDocFile,
 } from '../utils/docCheck';
+
+// PLAN-EVAL-01 Fase 3 — `close lock` already auto-locks the chain's roadmap
+// as a side effect *before* this migration (see `lockActiveRoadmap` call
+// below) — this is existing behavior being preserved under the new storage,
+// not new PLAN-EVAL-04 scope. Only the *state model* backing it changed
+// (single roadmap object instead of searching for the ACTIVE entry, §3.5).
 
 function promptApprove(message: string): Promise<boolean> {
   return new Promise(resolve => {
@@ -30,26 +36,9 @@ function promptApprove(message: string): Promise<boolean> {
   });
 }
 
-interface CloseChain {
-  hasChain: boolean;
-  intentVersionRef?: string;
-}
-
-function evaluateCloseChain(data: ProgressJson): CloseChain {
-  const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
-  if (!lockedIntent) return { hasChain: false };
-
-  const qualifyingPlan = data.plan.versions.find(
-    v => v.state === 'LOCKED' && v.intent_version_ref === lockedIntent.version
-  );
-  if (!qualifyingPlan) return { hasChain: false };
-
-  const qualifyingExec = data.exec.versions.find(
-    v => v.state === 'LOCKED' && v.plan_version_ref === qualifyingPlan.version
-  );
-  if (!qualifyingExec) return { hasChain: false };
-
-  return { hasChain: true, intentVersionRef: lockedIntent.version };
+function closeDocPath(projectRoot: string, chain: ChainState): string {
+  if (!chain.close) throw new Error('No active DIR-CLOSE found. Run: sigma close new');
+  return path.join(projectRoot, chain.close.file ?? path.join('Sigma', 'close', `DIR-CLOSE-${chain.close.version}.md`));
 }
 
 export function closeCommand(): Command {
@@ -57,27 +46,26 @@ export function closeCommand(): Command {
   cmd.description('Manage DIR-CLOSE artifact');
 
   cmd.command('new')
-    .description('Create a new DIR-CLOSE draft (requires INTENT → PLAN → EXEC locked chain)')
+    .description('Create a new DIR-CLOSE draft (requires INTENT → PLAN → EXEC chain all LOCKED)')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
+        const { chainVersion, data: chain } = readActiveChain(projectRoot);
+        assertChainCanMutate(chain);
 
-        const chain = evaluateCloseChain(data);
-        if (!chain.hasChain) {
+        if (!hasCleanGate3Chain(chain)) {
           throw new Error(
             'GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain). Run: sigma exec lock'
           );
         }
 
-        const version = nextMajorVersion(data.close.versions);
+        const version = chain.chain_version;
         const relPath = path.join('Sigma', 'close', `DIR-CLOSE-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
         copyTemplateToArtifact('DIR-CLOSE-TEMPLATE.md', absPath);
 
-        registerCloseDraft(data, version, relPath, chain.intentVersionRef!);
-        writeProgress(projectRoot, data);
+        registerCloseDraft(chain, relPath);
+        writeChain(projectRoot, chainVersion, chain);
         console.log(`Created: ${relPath}`);
         console.log('Running automatic validation...\n');
         const report = validateSigmaDocFile(absPath, 'close');
@@ -90,34 +78,37 @@ export function closeCommand(): Command {
     });
 
   cmd.command('lock')
-    .description('Lock active DIR-CLOSE (lifecycle → CLOSED); auto-locks the ACTIVE ROADMAP as a side effect')
+    .description('Lock active DIR-CLOSE (lifecycle → CLOSED); auto-locks the chain\'s ROADMAP as a side effect')
     .option('--yes', 'Skip interactive APPROVE prompt')
     .action(async (opts: { yes?: boolean }) => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
-        if (data.close.active_state !== 'DRAFT') {
+        const { chainVersion, data: chain } = readActiveChain(projectRoot);
+        assertChainCanMutate(chain);
+        if (!chain.close || chain.close.state !== 'DRAFT') {
           throw new Error('Active DIR-CLOSE is not in DRAFT state. Cannot lock.');
         }
-        const closeVersion = data.close.active_version!;
-        const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
-        const absPath = resolveSigmaDocPath(projectRoot, data, 'close');
+        const closeVersion = chain.close.version;
+        // Only a still-DRAFT roadmap gets swept into the cascade — one
+        // already LOCKED (e.g. a retried close lock) or SUPERSEDED is left
+        // alone, mirroring the pre-migration ACTIVE-only condition.
+        const roadmapToLock = chain.roadmap && chain.roadmap.state === 'DRAFT' ? chain.roadmap : null;
+        const absPath = closeDocPath(projectRoot, chain);
         const report = validateSigmaDocFile(absPath, 'close');
         printSigmaDocReport(report, projectRoot);
         ensureSigmaDocEligible(report, 'close');
 
         console.log('\nClose Lock Preflight\n');
         console.log(`Artifact to lock:  DIR-CLOSE ${closeVersion}`);
-        if (activeRoadmap) {
-          console.log(`Linked roadmap:    ROADMAP ${activeRoadmap.version} ACTIVE`);
+        if (roadmapToLock) {
+          console.log(`Linked roadmap:    ROADMAP ${roadmapToLock.version} DRAFT`);
           console.log('\nSide effects:');
           console.log(`  - DIR-CLOSE ${closeVersion} will become LOCKED`);
-          console.log(`  - ROADMAP ${activeRoadmap.version} will become LOCKED`);
+          console.log(`  - ROADMAP ${roadmapToLock.version} will become LOCKED`);
           console.log('  - No more plans can be added to this ROADMAP');
           console.log('  - Project lifecycle will be considered CLOSED\n');
         } else {
-          console.log('Linked roadmap:    none (no ACTIVE ROADMAP)\n');
+          console.log('Linked roadmap:    none\n');
           console.log('Side effects:');
           console.log(`  - DIR-CLOSE ${closeVersion} will become LOCKED`);
           console.log('  - Project lifecycle will be considered CLOSED\n');
@@ -131,14 +122,14 @@ export function closeCommand(): Command {
           }
         }
 
-        if (activeRoadmap) {
-          lockActiveRoadmap(data);
+        if (roadmapToLock) {
+          lockActiveRoadmap(chain);
         }
-        lockActiveClose(data);
-        writeProgress(projectRoot, data);
+        lockActiveClose(chain);
+        writeChain(projectRoot, chainVersion, chain);
 
-        if (activeRoadmap) {
-          console.log(`ROADMAP ${activeRoadmap.version} LOCKED.`);
+        if (roadmapToLock) {
+          console.log(`ROADMAP ${roadmapToLock.version} LOCKED.`);
         }
         console.log(`DIR-CLOSE ${closeVersion} LOCKED. Lifecycle → CLOSED. Project is complete.`);
       } catch (e) {
@@ -148,13 +139,13 @@ export function closeCommand(): Command {
     });
 
   cmd.command('check')
-    .description('Validate the active DIR-CLOSE structure and markers')
-    .option('--v <version>', 'Check a specific DIR-CLOSE version instead of the active one')
+    .description('Validate a DIR-CLOSE structure and markers')
+    .option('--v <version>', 'Check the DIR-CLOSE of a specific chain instead of the active one')
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        const absPath = resolveSigmaDocPath(projectRoot, data, 'close', opts.v);
+        const chain = opts.v ? readChain(projectRoot, opts.v) : readActiveChain(projectRoot).data;
+        const absPath = closeDocPath(projectRoot, chain);
         const report = validateSigmaDocFile(absPath, 'close');
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
@@ -169,18 +160,17 @@ export function closeCommand(): Command {
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
+        const { data: chain } = readActiveChain(projectRoot);
         console.log('\n=== DIR-CLOSE Status ===\n');
-        if (!data.close.active_version) {
+        if (!chain.close) {
           console.log('No active CLOSE. Run: sigma close new');
         } else {
-          const active = data.close.versions.find(v => v.version === data.close.active_version);
-          console.log(`Version:    ${data.close.active_version}`);
-          console.log(`State:      ${data.close.active_state}`);
-          if (active?.locked_at) console.log(`Locked at:  ${active.locked_at}`);
-          if (active?.file) console.log(`File:       ${active.file}`);
+          console.log(`Version:    ${chain.close.version}`);
+          console.log(`State:      ${chain.close.state}`);
+          if (chain.close.locked_at) console.log(`Locked at:  ${chain.close.locked_at}`);
+          if (chain.close.file) console.log(`File:       ${chain.close.file}`);
         }
-        console.log(`\nLifecycle:  ${data.lifecycle_state}`);
+        console.log(`\nLifecycle:  ${chain.lifecycle_state}`);
         console.log('');
       } catch (e) {
         console.error((e as Error).message);

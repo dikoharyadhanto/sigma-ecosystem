@@ -7,6 +7,10 @@ import {
   makeProgressWithLockedIntent,
   makeProgressWithLockedPlan,
   makeProgressWithLockedExec,
+  stubLegacyProgressJson,
+  writeChainFixture,
+  makeChainWithLockedPlan,
+  chainPath,
   TestEnv,
 } from './helpers';
 
@@ -91,33 +95,35 @@ describe('Sigma doctor and INVALID recovery mode', () => {
     expect(status.stdout).toMatch(/\[INVALID\]/);
   });
 
-  it('exec new can proceed in invalid recovery mode when gate tracker was relaxed by doctor and a locked plan still exists', () => {
+  it('exec new can proceed in invalid recovery mode when a locked plan still exists', () => {
+    // `doctor` (the command that normally produces this state via
+    // reconciliation) is not yet migrated to chain.ts (PLAN-EVAL-01 Fase 4)
+    // — the corrupted-but-marked-INVALID chain state is constructed
+    // directly here instead of round-tripping through `sigma doctor`.
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithLockedPlan());
-    const progress = fs.readJsonSync(env.progressPath) as Record<string, any>;
-    progress.plan.active_state = 'DRAFT';
-    progress.gates.gate_2_open = false;
-    fs.writeJsonSync(env.progressPath, progress, { spaces: 2 });
-
-    runCli('doctor', env.projectDir, env.homeDir);
-
-    const updated = fs.readJsonSync(env.progressPath) as Record<string, any>;
-    updated.runtime_invalid.markers.push({
-      id: 'plan:manual-invalid',
-      domain: 'plan',
-      status: 'INVALID',
-      reason: 'manual test invalid marker',
-      gate: 'gate_2_open',
-      chain: { intent_version: 'v1', plan_version: 'v1', exec_version: null },
-      first_detected_at: new Date().toISOString(),
-      last_detected_at: new Date().toISOString(),
-    });
-    fs.writeJsonSync(env.progressPath, updated, { spaces: 2 });
+    stubLegacyProgressJson(env);
+    const chain = makeChainWithLockedPlan() as Record<string, any>;
+    chain.runtime_invalid = {
+      markers: [{
+        id: 'plan:manual-invalid',
+        domain: 'plan',
+        status: 'INVALID',
+        reason: 'manual test invalid marker',
+        gate: 'gate_2_open',
+        chain: { intent_version: 'v1', plan_version: 'v1.1', exec_version: null },
+        first_detected_at: new Date().toISOString(),
+        last_detected_at: new Date().toISOString(),
+      }],
+      last_doctor_run_at: new Date().toISOString(),
+    };
+    writeChainFixture(env, 'v1', chain);
 
     const result = runCli('exec new', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Created: Sigma[\\/]build[\\/]DEV-EXEC-v1\.1\.md/);
+    const updated = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
+    expect(updated.exec.versions).toHaveLength(1);
   });
 
   it('doctor removes duplicate DRAFT exec when a LOCKED exec with the same version exists', () => {

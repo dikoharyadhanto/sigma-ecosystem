@@ -3,8 +3,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import {
   makeProgressWithDraftIntent,
-  makeProgressWithLockedIntent,
   makeChainWithDraftIntent,
+  makeChainWithLockedIntent,
   stubLegacyProgressJson,
   writeChainFixture,
   runCli,
@@ -73,8 +73,8 @@ describe('Document checks and auto-validation', () => {
 
   it('roadmap new auto-runs validation for created roadmap docs', () => {
     env = setupTestEnv();
-    const progress = makeProgressWithLockedIntent() as Record<string, any>;
-    fs.writeJsonSync(env.progressPath, progress);
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedIntent());
 
     const result = runCli('roadmap new', env.projectDir, env.homeDir);
 

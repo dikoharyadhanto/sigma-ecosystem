@@ -1,48 +1,33 @@
 import { Command } from 'commander';
 import path from 'path';
-import readline from 'readline';
 import {
-  readProgress,
-  writeProgress,
+  ChainState,
+  readActiveChain,
+  readChain,
+  writeChain,
+  assertChainCanMutate,
   registerRoadmapDraft,
-  activateRoadmap,
-  assertProgressCanMutate,
-  ProgressJson,
-} from '../engine/progress';
+} from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { renderRoadmapFile, getStagePlansForRoadmap } from '../utils/roadmap';
 import {
   printSigmaDocReport,
-  resolveSigmaDocPath,
   validateSigmaDocFile,
 } from '../utils/docCheck';
 
+// PLAN-EVAL-01 Fase 3 — `roadmap activate` is REMOVED (§3.5): there is only
+// ever one roadmap per chain now, so there is never a second DRAFT to
+// activate or a current ACTIVE to demote. There is still no `roadmap lock`
+// command — that was never a standalone command even before Opsi C; the
+// existing roadmap already only ever becomes LOCKED as a side effect of
+// `sigma close lock` (see close.ts) — unchanged behavior, just ported.
+
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-function parseMajorFromVersion(version: string): number {
-  const match = version.match(/^v(\d+)/);
-  if (!match) throw new Error(`Cannot parse major version from "${version}"`);
-  return parseInt(match[1], 10);
-}
-
-function getActiveRoadmapEntry(data: ProgressJson) {
-  return data.roadmap.versions.find(v => v.state === 'ACTIVE') ?? null;
-}
-
-function getRoadmapFilePath(data: ProgressJson, projectRoot: string, version: string): string {
-  const entry = data.roadmap.versions.find(v => v.version === version);
-  return path.join(projectRoot, entry?.file ?? path.join('Sigma', 'build', `ROADMAP-${version}.md`));
-}
-
-function promptApprove(message: string): Promise<boolean> {
-  return new Promise(resolve => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question(`${message}\nType APPROVE to continue: `, answer => {
-      rl.close();
-      resolve(answer.trim().toUpperCase() === 'APPROVE');
-    });
-  });
+function roadmapDocPath(projectRoot: string, chain: ChainState): string {
+  if (!chain.roadmap) throw new Error('No ROADMAP found for this chain. Run: sigma roadmap new');
+  return path.join(projectRoot, chain.roadmap.file ?? path.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
 }
 
 // ── Command ───────────────────────────────────────────────────────────────────
@@ -51,62 +36,28 @@ export function roadmapCommand(): Command {
   const cmd = new Command('roadmap');
   cmd.description('Manage ROADMAP artifact');
 
-  // ── roadmap new ─────────────────────────────────────────────────────────────
-
   cmd.command('new')
-    .description('Create a new ROADMAP (requires locked DIR-INTENT; auto-activates if no ACTIVE exists)')
+    .description('Create the ROADMAP for the active chain (requires locked DIR-INTENT; one per chain)')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
+        const { chainVersion, data: chain } = readActiveChain(projectRoot);
+        assertChainCanMutate(chain);
 
-        if (data.intent.active_state !== 'LOCKED') {
+        if (chain.intent.state !== 'LOCKED') {
           throw new Error('ROADMAP requires a locked DIR-INTENT. Run: sigma intent lock');
         }
 
-        const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
-        if (!lockedIntent) throw new Error('No locked DIR-INTENT found');
-
-        const intentMajor = parseMajorFromVersion(lockedIntent.version);
-        const version = `v${intentMajor}`;
-
-        const hasActive = data.roadmap.versions.some(v => v.state === 'ACTIVE');
+        const version = chain.chain_version;
         const relPath = path.join('Sigma', 'build', `ROADMAP-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
 
         copyTemplateToArtifact('ROADMAP-TEMPLATE.md', absPath);
-        registerRoadmapDraft(data, version, relPath, lockedIntent.version);
-        writeProgress(projectRoot, data);
+        registerRoadmapDraft(chain, relPath);
+        writeChain(projectRoot, chainVersion, chain);
 
-        if (hasActive) {
-          console.log(`Created: ${relPath} (DRAFT — existing ACTIVE roadmap still in effect)`);
-          console.log('Running automatic validation...\n');
-          const report = validateSigmaDocFile(absPath, 'roadmap');
-          printSigmaDocReport(report, projectRoot);
-          if (!report.ok) process.exit(1);
-          console.log(`Run: sigma roadmap activate --v ${version}  to activate and demote current ACTIVE to INACTIVE`);
-        } else {
-          console.log(`Created: ${relPath} (ACTIVE — plan new is now unblocked)`);
-          console.log('Running automatic validation...\n');
-          const report = validateSigmaDocFile(absPath, 'roadmap');
-          printSigmaDocReport(report, projectRoot);
-          if (!report.ok) process.exit(1);
-        }
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
-  cmd.command('check')
-    .description('Validate the active ROADMAP structure and markers')
-    .option('--v <version>', 'Check a specific ROADMAP version instead of the active one')
-    .action((opts: { v?: string }) => {
-      try {
-        const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        const absPath = resolveSigmaDocPath(projectRoot, data, 'roadmap', opts.v);
+        console.log(`Created: ${relPath} (DRAFT — plan new is now unblocked)`);
+        console.log('Running automatic validation...\n');
         const report = validateSigmaDocFile(absPath, 'roadmap');
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
@@ -116,100 +67,53 @@ export function roadmapCommand(): Command {
       }
     });
 
-  // ── roadmap activate ─────────────────────────────────────────────────────────
-
-  cmd.command('activate')
-    .description('Activate a DRAFT ROADMAP (demotes current ACTIVE to INACTIVE if one exists)')
-    .requiredOption('--v <version>', 'ROADMAP version to activate (e.g. v2)')
-    .option('--yes', 'Skip interactive APPROVE prompt')
-    .action(async (opts: { v: string; yes?: boolean }) => {
+  cmd.command('check')
+    .description('Validate a ROADMAP structure and markers')
+    .option('--v <version>', 'Check the ROADMAP of a specific chain instead of the active one')
+    .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
-
-        const target = data.roadmap.versions.find(v => v.version === opts.v);
-        if (!target) {
-          throw new Error(`ROADMAP ${opts.v} not found. Run: sigma roadmap list`);
-        }
-        if (target.state !== 'DRAFT') {
-          throw new Error(`ROADMAP ${opts.v} is in state "${target.state}"; activate requires a DRAFT version`);
-        }
-
-        const currentActive = getActiveRoadmapEntry(data);
-
-        if (currentActive) {
-          console.log('\nRoadmap Activation Preflight\n');
-          console.log(`New active roadmap:   ROADMAP ${opts.v}`);
-          console.log(`Currently active:     ROADMAP ${currentActive.version}`);
-          console.log('\nEffect:');
-          console.log(`  ROADMAP ${currentActive.version} will become INACTIVE.`);
-          console.log(`  ROADMAP ${opts.v} will become ACTIVE.`);
-          console.log(`  New FMN-PLAN artifacts will link to ROADMAP ${opts.v}.\n`);
-
-          if (!opts.yes) {
-            const approved = await promptApprove('');
-            if (!approved) {
-              console.log('Activation cancelled.');
-              process.exit(0);
-            }
-          }
-        }
-
-        activateRoadmap(data, opts.v);
-        writeProgress(projectRoot, data);
-
-        if (currentActive) {
-          console.log(`ROADMAP ${currentActive.version} → INACTIVE`);
-        }
-        console.log(`ROADMAP ${opts.v} → ACTIVE`);
+        const chain = opts.v ? readChain(projectRoot, opts.v) : readActiveChain(projectRoot).data;
+        const absPath = roadmapDocPath(projectRoot, chain);
+        const report = validateSigmaDocFile(absPath, 'roadmap');
+        printSigmaDocReport(report, projectRoot);
+        if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
       }
     });
-
-  // ── roadmap render ───────────────────────────────────────────────────────────
 
   cmd.command('render')
-    .description('Regenerate the derived Stage Overview table in the ACTIVE ROADMAP')
+    .description('Regenerate the derived Stage Overview table in the active chain\'s ROADMAP')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-
-        const active = getActiveRoadmapEntry(data);
-        if (!active) {
-          throw new Error('No ACTIVE ROADMAP found. Run: sigma roadmap new');
-        }
-
-        const roadmapPath = getRoadmapFilePath(data, projectRoot, active.version);
-        renderRoadmapFile(roadmapPath, data);
-        console.log(`ROADMAP ${active.version} Stage Overview regenerated: ${active.file ?? roadmapPath}`);
+        const { data: chain } = readActiveChain(projectRoot);
+        const roadmapPath = roadmapDocPath(projectRoot, chain);
+        renderRoadmapFile(roadmapPath, chain);
+        console.log(`ROADMAP ${chain.roadmap!.version} Stage Overview regenerated: ${chain.roadmap!.file ?? roadmapPath}`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
       }
     });
 
-  // ── roadmap list ─────────────────────────────────────────────────────────────
-
   cmd.command('list')
-    .description('List all stages in the ACTIVE ROADMAP with title, focus, and plan status')
+    .description('List all stages in the active chain\'s ROADMAP with title, focus, and plan status')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
+        const { data: chain } = readActiveChain(projectRoot);
 
-        const active = getActiveRoadmapEntry(data);
-        if (!active) {
-          console.log('\nNo ACTIVE ROADMAP found. Run: sigma roadmap new\n');
+        if (!chain.roadmap) {
+          console.log('\nNo ROADMAP found for the active chain. Run: sigma roadmap new\n');
           return;
         }
 
-        const stagePlans = getStagePlansForRoadmap(data, active.version);
+        const stagePlans = getStagePlansForRoadmap(chain);
 
-        console.log(`\n=== ROADMAP ${active.version} — Stage List ===\n`);
+        console.log(`\n=== ROADMAP ${chain.roadmap.version} — Stage List ===\n`);
 
         if (stagePlans.length === 0) {
           console.log('No stages found for this ROADMAP. Run: sigma plan new');

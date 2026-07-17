@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import {
-  makeProgressWithDraftClose,
-  makeProgressWithDraftExec,
+  makeChainWithDraftClose,
+  makeChainWithDraftExec,
+  stubLegacyProgressJson,
+  writeChainFixture,
   runCli,
   setupTestEnv,
   TestEnv,
@@ -18,7 +20,8 @@ describe('FMN Post-Build Advisory Verdict gate (exec lock only, verdict-agnostic
 
   it('exec lock fails when no verdict checkbox is checked', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftExec());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftExec());
     const execFile = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v0.1.md');
     fs.writeFileSync(execFile, validExecDoc('v0.1', 'v1').replace('- [x] READY_FOR_LOCK', ''));
 
@@ -31,7 +34,8 @@ describe('FMN Post-Build Advisory Verdict gate (exec lock only, verdict-agnostic
 
   it('exec lock fails when more than one verdict checkbox is checked', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftExec());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftExec());
     const execFile = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v0.1.md');
     fs.writeFileSync(
       execFile,
@@ -46,7 +50,8 @@ describe('FMN Post-Build Advisory Verdict gate (exec lock only, verdict-agnostic
 
   it('exec lock succeeds regardless of which single verdict is checked — verdict-agnostic (FMN is advisory, not approval authority)', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftExec());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftExec());
     const execFile = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v0.1.md');
     // REVISION_REQUIRED — semantically "not ready" — must still not block exec lock.
     fs.writeFileSync(execFile, validExecDoc('v0.1', 'v1', 'REVISION_REQUIRED'));
@@ -66,7 +71,8 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
 
   it('close lock fails when verdict is DO_NOT_CLOSE', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftClose());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(closeFile, validCloseDoc('v1', 'DO_NOT_CLOSE'));
 
@@ -79,7 +85,8 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
 
   it('close lock fails when verdict is OTHER (treated as blocking, not an implicit positive verdict)', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftClose());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(closeFile, validCloseDoc('v1', 'OTHER'));
 
@@ -91,7 +98,8 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
 
   it('close lock fails when Final Director Decision Reason is still a placeholder', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftClose());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(
       closeFile,
@@ -109,7 +117,8 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
 
   it('close lock fails when Closure Sentence is still a placeholder', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftClose());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(
       closeFile,
@@ -127,7 +136,8 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
 
   it('close lock succeeds when verdict is CLOSE_ACCEPTED and Final Director Decision is filled', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftClose());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(closeFile, validCloseDoc('v1', 'CLOSE_ACCEPTED'));
 
@@ -140,7 +150,8 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
 
   it('close lock succeeds when verdict is CLOSE_ACCEPTED_WITH_LIMITATIONS', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftClose());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(closeFile, validCloseDoc('v1', 'CLOSE_ACCEPTED_WITH_LIMITATIONS'));
 
@@ -157,7 +168,8 @@ describe('Lock Validation Equivalence (PLAN-EVAL-11 Bagian A.5)', () => {
 
   it('exec check and exec lock report the exact same unsatisfied requirement for the same document', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftExec());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftExec());
     const execFile = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v0.1.md');
     fs.writeFileSync(execFile, validExecDoc('v0.1', 'v1').replace('- [x] READY_FOR_LOCK', ''));
 
@@ -175,7 +187,8 @@ describe('Lock Validation Equivalence (PLAN-EVAL-11 Bagian A.5)', () => {
 
   it('a document that check reports as fully lock-ready never fails lock for a requirement reason', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftClose());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(closeFile, validCloseDoc('v1', 'CLOSE_ACCEPTED'));
 

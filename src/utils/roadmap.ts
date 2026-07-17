@@ -1,14 +1,20 @@
 import fs from 'fs-extra';
-import { ArtifactVersion, ProgressJson, parseMajorVersion, parseMinorVersion } from '../engine/progress';
+import { ArtifactVersion, parseMinorVersion } from '../engine/progress';
+import { ChainState } from '../engine/chain';
 
-export function getStagePlansForRoadmap(data: ProgressJson, roadmapVersion: string): ArtifactVersion[] {
-  const roadmapMajor = parseMajorVersion(roadmapVersion);
-  return data.plan.versions
-    .filter(v => v.intent_version_ref && parseMajorVersion(v.intent_version_ref) === roadmapMajor)
+// PLAN-EVAL-01 Fase 3 — every entry in chain.plan.versions already belongs
+// to this chain's own INTENT by construction (registerPlanDraft() validates
+// planMajor === intentMajor - 1 against this chain's own intent at write
+// time — there is no cross-chain plan to filter out anymore). The filter
+// against intent_version_ref is kept as a defensive no-op, not because it
+// can vary (PLAN-EVAL-01 §5).
+export function getStagePlansForRoadmap(chain: ChainState): ArtifactVersion[] {
+  return chain.plan.versions
+    .filter(v => v.intent_version_ref === chain.intent.version)
     .sort((a, b) => parseMinorVersion(a.version) - parseMinorVersion(b.version));
 }
 
-export function generateStageOverview(data: ProgressJson, roadmapVersion: string): string {
+export function generateStageOverview(chain: ChainState): string {
   const header = [
     '<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->',
     '## 3. Stage Overview',
@@ -17,7 +23,7 @@ export function generateStageOverview(data: ProgressJson, roadmapVersion: string
     '| :--- | :--- | :--- | :--- | :--- |',
   ];
 
-  const stagePlans = getStagePlansForRoadmap(data, roadmapVersion);
+  const stagePlans = getStagePlansForRoadmap(chain);
   const rows = stagePlans.map(plan => {
     const stage = plan.version.replace(/^v/, '');
     const title = plan.title ?? 'TBD';
@@ -57,17 +63,20 @@ export function removeSectionIfPresent(content: string, name: string): string {
   return `${before}${after}`;
 }
 
-export function renderRoadmapFile(roadmapPath: string, data: ProgressJson): void {
+// PLAN-EVAL-01 §3.5 — no more searching for the "ACTIVE" roadmap entry;
+// there is only ever one roadmap per chain, and it's rendered regardless of
+// its own lock state (DRAFT/LOCKED) since the Stage Overview table is
+// independent of that.
+export function renderRoadmapFile(roadmapPath: string, chain: ChainState): void {
   if (!fs.existsSync(roadmapPath)) {
     throw new Error(`ROADMAP file not found: ${roadmapPath}`);
   }
-  const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
-  if (!activeRoadmap) {
-    throw new Error('No ACTIVE ROADMAP found in progress.json.');
+  if (!chain.roadmap) {
+    throw new Error('No ROADMAP found for this chain.');
   }
 
   let content = fs.readFileSync(roadmapPath, 'utf8');
-  content = replaceSection(content, 'stage-overview', generateStageOverview(data, activeRoadmap.version));
+  content = replaceSection(content, 'stage-overview', generateStageOverview(chain));
   content = removeSectionIfPresent(content, 'plan-breakdown');
 
   fs.writeFileSync(roadmapPath, content, 'utf8');
