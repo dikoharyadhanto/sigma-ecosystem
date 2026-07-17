@@ -7,7 +7,7 @@ exports.overrideCommand = overrideCommand;
 const commander_1 = require("commander");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
-const progress_1 = require("../engine/progress");
+const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const config_1 = require("../config");
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -16,31 +16,31 @@ function appendOverrideEntry(projectRoot, entry) {
     fs_extra_1.default.ensureFileSync(filePath);
     fs_extra_1.default.appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf8');
 }
-function versionForArtifact(data, artifact) {
+function versionForArtifact(chain, artifact) {
     if (artifact === 'DIR-INTENT')
-        return data.intent.active_version;
+        return chain.intent.version;
     if (artifact === 'FMN-PLAN')
-        return data.plan.active_version;
+        return chain.plan.active_version;
     if (artifact === 'DEV-EXEC')
-        return data.exec.active_version;
+        return chain.exec.active_version;
     return null;
 }
-function describeBlockedGate(data) {
-    if (!data.gates.gate_1_open) {
+function describeBlockedGate(chain) {
+    if (!chain.gates.gate_1_open) {
         return {
             artifact: 'DIR-INTENT',
             gate: 'Gate 1',
             description: 'Intent Doc (DIR-INTENT) is not LOCKED — Gate 1 is blocked.',
         };
     }
-    if (!data.gates.gate_2_open) {
+    if (!chain.gates.gate_2_open) {
         return {
             artifact: 'FMN-PLAN',
             gate: 'Gate 2',
             description: 'Plan Doc (FMN-PLAN) is not LOCKED — Gate 2 is blocked.',
         };
     }
-    if (!data.gates.gate_3_satisfied) {
+    if (!chain.gates.gate_3_satisfied) {
         return {
             artifact: 'DEV-EXEC',
             gate: 'Gate 3',
@@ -49,17 +49,17 @@ function describeBlockedGate(data) {
     }
     return null;
 }
-function applyOverride(data, artifact) {
+function applyOverride(chain, artifact) {
     if (artifact === 'DIR-INTENT') {
-        data.gates.gate_1_open = true;
-        if (data.lifecycle_state === 'DESIGN')
-            data.lifecycle_state = 'BUILD';
+        chain.gates.gate_1_open = true;
+        if (chain.lifecycle_state === 'DESIGN')
+            chain.lifecycle_state = 'BUILD';
     }
     else if (artifact === 'FMN-PLAN') {
-        data.gates.gate_2_open = true;
+        chain.gates.gate_2_open = true;
     }
     else if (artifact === 'DEV-EXEC') {
-        data.gates.gate_3_satisfied = true;
+        chain.gates.gate_3_satisfied = true;
     }
 }
 // ── Command handler ───────────────────────────────────────────────────────────
@@ -77,15 +77,15 @@ function runOverride(opts) {
     }
     const reason = opts.reason.trim();
     const projectRoot = (0, fs_1.findProjectRoot)();
-    const data = (0, progress_1.readProgress)(projectRoot);
-    const blocked = describeBlockedGate(data);
+    const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+    const blocked = describeBlockedGate(chain);
     if (!blocked) {
         console.log('No gate is currently blocked. Override is not needed.');
-        console.log(`Lifecycle: ${data.lifecycle_state} — all gates in expected state.`);
+        console.log(`Lifecycle: ${chain.lifecycle_state} — all gates in expected state.`);
         return;
     }
     console.log('\n=== Sigma Override ===\n');
-    console.log(`Current phase:   ${data.lifecycle_state}`);
+    console.log(`Current phase:   ${chain.lifecycle_state}`);
     console.log(`Blocked gate:    ${blocked.gate}`);
     console.log(`Artifact:        ${blocked.artifact}`);
     console.log(`\nBlocker:         ${blocked.description}`);
@@ -98,14 +98,14 @@ function runOverride(opts) {
         type: 'override',
         timestamp: new Date().toISOString(),
         artifact: blocked.artifact,
-        phase: data.lifecycle_state,
+        phase: chain.lifecycle_state,
         gate_bypassed: blocked.gate,
         reason,
         authorized_by: 'Director',
-        version: versionForArtifact(data, blocked.artifact),
+        version: versionForArtifact(chain, blocked.artifact),
     };
-    applyOverride(data, blocked.artifact);
-    (0, progress_1.writeProgress)(projectRoot, data);
+    applyOverride(chain, blocked.artifact);
+    (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
     appendOverrideEntry(projectRoot, entry);
     console.log(`\nOverride applied: ${blocked.gate} (${blocked.artifact}) bypassed.`);
     console.log('Audit record written to Sigma/memory/overrides.jsonl.');

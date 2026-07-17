@@ -8,16 +8,37 @@ const commander_1 = require("commander");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const progress_1 = require("../engine/progress");
+const chain_1 = require("../engine/chain");
 const reconstruct_1 = require("../engine/reconstruct");
 const fs_1 = require("../utils/fs");
 const config_1 = require("../config");
 const project_1 = require("./project");
+// PLAN-EVAL-01 Fase 4 — only the default reconciliation mode is migrated to
+// chain.ts here (targets the active chain only, matching today's
+// single-target behavior). `--reconstruct` is deliberately left on the
+// legacy progress.ts/reconstruct.ts path below, untouched: its actual job
+// (`discoverArtifacts` scanning every DIR-INTENT-v*.md on disk, potentially
+// spanning multiple chains) already *is* the multi-chain grouping work that
+// belongs to PLAN-EVAL-05 (`--all-versions`/3-mode `--reconstruct`) — there
+// is no smaller "single-chain-only" slice of it to carve out safely here.
+// This does mean Fase 5 (deleting progress.ts) has a hidden prerequisite:
+// `--reconstruct` needs its own chain.ts port (PLAN-EVAL-05 or a dedicated
+// step) before the legacy path it depends on can be removed.
 function runDefaultDoctor() {
     const projectRoot = (0, fs_1.findProjectRoot)();
-    const data = (0, progress_1.readProgress)(projectRoot);
+    // No chain yet (fresh project, before the first `intent new`) is a valid,
+    // doctor-able state — nothing to reconcile, not an error. Matches today's
+    // behavior of running cleanly against an empty progress.json.
+    if ((0, chain_1.listChainVersions)(projectRoot).length === 0) {
+        console.log('\n=== Sigma Doctor ===\n');
+        console.log('No chain exists yet. Nothing to reconcile. Run: sigma intent new');
+        console.log('');
+        return;
+    }
+    const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
     const overrides = (0, progress_1.readOverrides)(projectRoot);
-    const report = (0, progress_1.runDoctorReconciliation)(data, overrides);
-    (0, progress_1.writeProgress)(projectRoot, data);
+    const report = (0, chain_1.runDoctorReconciliation)(chain, overrides);
+    (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
     console.log('\n=== Sigma Doctor ===\n');
     if (report.repaired.length > 0) {
         console.log('--- Repaired ---');
@@ -37,7 +58,7 @@ function runDefaultDoctor() {
             console.log(`  - ${marker.id}`);
         }
     }
-    const remaining = (0, progress_1.getInvalidMarkers)(data);
+    const remaining = (0, chain_1.getInvalidMarkers)(chain);
     console.log('\n--- Current Runtime State ---');
     if (remaining.length === 0) {
         console.log('  VALID');
@@ -48,14 +69,6 @@ function runDefaultDoctor() {
             console.log(`  - ${marker.id}: ${marker.reason}`);
         }
         console.log('\n  Gate enforcement is temporarily relaxed for affected chains while INVALID markers remain.');
-    }
-    const inactiveIntentWarnings = (0, progress_1.getInactiveIntentWarnings)(data);
-    if (inactiveIntentWarnings.length > 0) {
-        console.log('\n--- INACTIVE Intent Warnings (non-blocking) ---');
-        for (const w of inactiveIntentWarnings) {
-            console.log(`  - DIR-INTENT ${w.intentVersion} is INACTIVE but still has: ${w.hangingArtifacts.join(', ')}`);
-        }
-        console.log('  Run `sigma intent supersede --v <version> --reason ... --director-confirm` if this INTENT is truly retired.');
     }
     console.log('');
 }

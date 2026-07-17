@@ -585,9 +585,54 @@ sendiri sebelum lanjut ke fase berikutnya.
    termasuk mengonfirmasi cascade auto-lock roadmap benar-benar terpicu
    (`ROADMAP v1 LOCKED.` tercetak) dan `intent list` melaporkan hasil akhir
    yang benar (`LOCKED CLOSED OPEN OPEN OPEN`).
-5. **Fase 4 — `session.ts`, `project.ts`, `doctor.ts`, `override.ts`,
-   `reconstruct.ts`.** Command read-mostly/cross-cutting, aman disentuh
-   terakhir karena tidak diperlukan Fase 2–3 untuk berjalan.
+5. **Fase 4 — `session.ts`, `project.ts`, `doctor.ts`, `override.ts`.
+   SELESAI (2026-07-17).** `reconstruct.ts` **TIDAK disentuh** — lihat
+   penyempitan scope di bawah.
+
+   **Penyempitan scope ditemukan saat implementasi**: `doctor --reconstruct`
+   TIDAK dimigrasikan di fase ini, berbeda dari rencana awal §5 yang
+   menyiratkan "default reconstruct" bisa di-scope-kan ke satu chain. Analisis
+   lebih dekat menunjukkan `discoverArtifacts()` (di `reconstruct.ts`) pada
+   dasarnya memindai SEMUA `DIR-INTENT-v*.md` yang ada di disk sekaligus,
+   berpotensi lintas major version — pengelompokan itu **sudah** merupakan
+   pekerjaan multi-chain PLAN-EVAL-05 sendiri, tidak ada versi "satu-chain-saja"
+   yang lebih kecil untuk dipisah dengan aman. Keputusan: `--reconstruct`
+   (dan `resolveProjectIdentity()`, yang cuma dipakai olehnya) **dibiarkan
+   utuh** di jalur `progress.ts`/`reconstruct.ts` lama, didorong seluruhnya
+   ke PLAN-EVAL-05. **Konsekuensi baru untuk Fase 5**: menghapus `progress.ts`
+   punya prasyarat tersembunyi — `--reconstruct` butuh port `chain.ts`-nya
+   sendiri (PLAN-EVAL-05 atau langkah khusus) sebelum jalur lama yang
+   menopangnya bisa dihapus.
+
+   Migrasi yang selesai: `session.ts` (bootstrap sekarang menampilkan
+   `Active Chain` secara menonjol — kompensasi visibility untuk `intent
+   activate` tanpa `--director-confirm`, DISCUSSION "Konsolidasi Lanjutan"
+   bagian 6); `project.ts` (`start`/`--reinit` sekarang juga menulis
+   `Sigma/activate_status.json` dengan `active_chain: null`, `progress.json`
+   tetap ditulis apa adanya sebagai file legacy/inert — tidak ada yang
+   membacanya lagi setelah fase ini kecuali `findProjectRoot()` untuk
+   keberadaannya; `status` dipindah ke chain aktif; `sync`/`register` TIDAK
+   disentuh, tidak pernah membaca/menulis `ChainState`); `override.ts`
+   (migrasi mekanis penuh); `doctor.ts` (mode default saja, lihat di atas).
+
+   **Bug nyata ditemukan lewat pengecekan manual, bukan test otomatis**:
+   `session bootstrap`, `project status`, dan `doctor` semuanya crash
+   (exit 1) pada proyek yang baru saja `project start` tapi belum pernah
+   `intent new` — `readActiveChain()` melempar error "No DIR-INTENT exists
+   yet" karena memang belum ada chain sama sekali, tapi ketiga command
+   read-only ini seharusnya menampilkan state kosong dengan anggun (perilaku
+   asli sebelum migrasi), bukan gagal total. Tidak ada fixture test yang
+   menangkap ini karena semua fixture Fase 1–4 kebetulan selalu menyertakan
+   minimal satu chain. Diperbaiki di ketiga command (cek `listChainVersions()
+   .length === 0` lebih dulu, tampilkan "none — no DIR-INTENT yet" alih-alih
+   error), dan ditambahkan 3 test regresi baru khusus untuk kondisi ini.
+
+   Diverifikasi: 8 file test diperbaiki + 3 test baru (kondisi
+   "belum ada chain sama sekali"). `npm run build` bersih, `npm test`
+   **198/198 (27 file)**. Diverifikasi juga manual end-to-end di luar test
+   harness: `project start` (mengonfirmasi `activate_status.json` dibuat),
+   `session bootstrap`/`project status`/`doctor` sebelum dan sesudah
+   `intent new` pertama, dan `override --dry-run`.
 6. **Fase 5 — Hapus `progress.ts` lama** (`ProgressJson`, `PROGRESS_FILE`
    di `config.ts`, `readProgress`/`writeProgress`) setelah dipastikan tidak
    ada satu pun call site tersisa (`grep -rn "readProgress\|writeProgress\|ProgressJson" src/`

@@ -1,13 +1,14 @@
 import { Command } from 'commander';
 import {
-  readProgress,
+  readActiveChain,
+  readProjectIdentity,
+  listChainVersions,
   getGateStatus,
-  getInactiveIntentWarnings,
   getNextValidOperations,
   getGateStatusLabel,
   getInvalidWarningLines,
   hasInvalidRuntime,
-} from '../engine/progress';
+} from '../engine/chain';
 import {
   loadDocumentRegistry,
   getDocumentsForRole,
@@ -34,10 +35,6 @@ function fmtState(s: string | null): string {
   return s ?? '—';
 }
 
-function fmtGate(open: boolean, satisfiedLabel = 'OPEN'): string {
-  return open ? satisfiedLabel : 'BLOCKED';
-}
-
 function getRoleGuidance(role: SigmaRole | undefined, gate2Open: boolean): RoleBootstrapGuidance | null {
   switch (role) {
     case 'ARC':
@@ -55,7 +52,7 @@ function getRoleGuidance(role: SigmaRole | undefined, gate2Open: boolean): RoleB
     case 'FMN':
       return {
         routine: [
-          'Orient to runtime state and the ACTIVE ROADMAP if planning direction needs confirmation.',
+          'Orient to runtime state and the ROADMAP if planning direction needs confirmation.',
           'Brief the Director on pending plans, roadmap direction, latest progress, and planning options.',
         ],
         approval: [
@@ -121,12 +118,19 @@ function printReferenceDocuments(opts: { role?: string }, docEntries: DocumentEn
 
 function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
   const projectRoot = findProjectRoot();
-  const data = readProgress(projectRoot);
-  const gates = getGateStatus(data);
-  const inactiveIntentWarnings = getInactiveIntentWarnings(data);
-  const nextOps = getNextValidOperations(data);
+  const identity = readProjectIdentity(projectRoot);
+
+  // No chain yet (fresh project, before the first `intent new`) is a valid
+  // state to bootstrap from — matches today's graceful "none" display
+  // rather than erroring out.
+  const hasChain = listChainVersions(projectRoot).length > 0;
+  const { chainVersion, data: chain } = hasChain
+    ? readActiveChain(projectRoot)
+    : { chainVersion: null, data: null };
+  const gates = chain ? getGateStatus(chain) : null;
+  const nextOps = chain ? getNextValidOperations(chain) : ['intent new'];
   const role = opts.role?.toUpperCase() as SigmaRole | undefined;
-  const roleGuidance = getRoleGuidance(role, gates.gate_2_open);
+  const roleGuidance = getRoleGuidance(role, gates?.gate_2_open ?? false);
 
   let docEntries: DocumentEntry[] = [];
   if (opts.showDocs) {
@@ -143,8 +147,12 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
   const projectConfig = readProjectConfig(projectRoot);
 
   console.log('\n=== Sigma Session Bootstrap ===\n');
-  console.log(`Project:          ${data.project_name} (${data.project_id})`);
-  console.log(`Lifecycle Phase:  ${data.lifecycle_state}`);
+  console.log(`Project:          ${identity.project_name} (${identity.project_id})`);
+  // PLAN-EVAL-01 — mandatory, prominent (DISCUSSION "Konsolidasi Lanjutan"
+  // bagian 6): `intent activate` doesn't require --director-confirm, so
+  // bootstrap is the compensating visibility for which chain is active.
+  console.log(`Active Chain:     ${chainVersion ?? 'none — no DIR-INTENT yet'}`);
+  console.log(`Lifecycle Phase:  ${chain?.lifecycle_state ?? '—'}`);
 
   // Director language preferences — always shown, even at default.
   console.log('\n--- Director Preferences ---');
@@ -163,32 +171,28 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
     return `${display.padEnd(40)} [${fmtState(state)}]`;
   };
 
-  console.log('\n--- Artifact Status ---');
-  console.log(artifactLine('Intent Doc',         'DIR-INTENT', fmtVersion(data.intent.active_version),  data.intent.active_state));
-  console.log(artifactLine('Plan Doc',           'FMN-PLAN',   fmtVersion(data.plan.active_version),    data.plan.active_state));
-  console.log(artifactLine('Execution Evidence', 'DEV-EXEC',   fmtVersion(data.exec.active_version),    data.exec.active_state));
-  console.log(artifactLine('Closure Doc',        'DIR-CLOSE',  fmtVersion(data.close.active_version),   data.close.active_state));
-  console.log(artifactLine('Roadmap Doc',        'ROADMAP',    fmtVersion(data.roadmap.active_version),  data.roadmap.active_state));
+  if (chain) {
+    console.log('\n--- Artifact Status ---');
+    console.log(artifactLine('Intent Doc',         'DIR-INTENT', fmtVersion(chain.intent.version),               chain.intent.state));
+    console.log(artifactLine('Plan Doc',           'FMN-PLAN',   fmtVersion(chain.plan.active_version),          chain.plan.active_state));
+    console.log(artifactLine('Execution Evidence', 'DEV-EXEC',   fmtVersion(chain.exec.active_version),          chain.exec.active_state));
+    console.log(artifactLine('Closure Doc',        'DIR-CLOSE',  fmtVersion(chain.close?.version ?? null),       chain.close?.state ?? null));
+    console.log(artifactLine('Roadmap Doc',        'ROADMAP',    fmtVersion(chain.roadmap?.version ?? null),     chain.roadmap?.state ?? null));
 
-  console.log('\n--- Gate Status ---');
-  console.log(`Gate 1 (Design Complete):   ${getGateStatusLabel(data, 'gate_1_open')}`);
-  console.log(`Gate 2 (Plan Locked):       ${getGateStatusLabel(data, 'gate_2_open')}`);
-  console.log(`Gate 3 (Build Evidence):    ${getGateStatusLabel(data, 'gate_3_satisfied')}`);
+    console.log('\n--- Gate Status ---');
+    console.log(`Gate 1 (Design Complete):   ${getGateStatusLabel(chain, 'gate_1_open')}`);
+    console.log(`Gate 2 (Plan Locked):       ${getGateStatusLabel(chain, 'gate_2_open')}`);
+    console.log(`Gate 3 (Build Evidence):    ${getGateStatusLabel(chain, 'gate_3_satisfied')}`);
 
-  if (hasInvalidRuntime(data)) {
-    console.log('\n--- INVALID Runtime Warnings ---');
-    for (const line of getInvalidWarningLines(data)) {
-      console.log(`  [INVALID] ${line}`);
-    }
-  }
-
-  console.log('\n--- INACTIVE Intent Warnings (non-blocking) ---');
-  if (inactiveIntentWarnings.length > 0) {
-    for (const w of inactiveIntentWarnings) {
-      console.log(`  [INACTIVE] DIR-INTENT ${w.intentVersion} still has: ${w.hangingArtifacts.join(', ')}`);
+    if (hasInvalidRuntime(chain)) {
+      console.log('\n--- INVALID Runtime Warnings ---');
+      for (const line of getInvalidWarningLines(chain)) {
+        console.log(`  [INVALID] ${line}`);
+      }
     }
   } else {
-    console.log('  none');
+    console.log('\n--- Artifact Status ---');
+    console.log('  No DIR-INTENT exists yet.');
   }
 
   console.log('\n--- CLI-Valid Runtime Operations ---');

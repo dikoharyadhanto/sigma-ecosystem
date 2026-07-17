@@ -7,6 +7,13 @@ import {
   makeProgress,
   makeProgressWithLockedExec,
   makeProgressWithLockedPlan,
+  stubLegacyProgressJson,
+  stubProjectIdentity,
+  writeChainFixture,
+  makeChainWithDraftIntent,
+  makeChainWithLockedExec,
+  makeChainWithLockedPlan,
+  chainPath,
   TestEnv,
 } from './helpers';
 
@@ -74,7 +81,9 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('session bootstrap --role arc omits document-reading prompts by default', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgress());
+    stubLegacyProgressJson(env);
+    stubProjectIdentity(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent());
 
     const result = runCli('session bootstrap --role arc', env.projectDir, env.homeDir);
 
@@ -88,7 +97,9 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('session bootstrap --role aud stays passive and scope-bound', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgress());
+    stubLegacyProgressJson(env);
+    stubProjectIdentity(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent());
 
     const result = runCli('session bootstrap --role aud', env.projectDir, env.homeDir);
 
@@ -100,7 +111,9 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('session bootstrap --role fmn includes planning brief and stop guidance', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithLockedExec());
+    stubLegacyProgressJson(env);
+    stubProjectIdentity(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedExec());
 
     const result = runCli('session bootstrap --role fmn', env.projectDir, env.homeDir);
 
@@ -111,7 +124,9 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('session bootstrap --role dev includes locked-plan and Gate 2 guidance', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithLockedPlan());
+    stubLegacyProgressJson(env);
+    stubProjectIdentity(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedPlan());
 
     const result = runCli('session bootstrap --role dev', env.projectDir, env.homeDir);
 
@@ -123,7 +138,9 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('session bootstrap --role arc --show-docs prints role-specific reference documents', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgress());
+    stubLegacyProgressJson(env);
+    stubProjectIdentity(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent());
     copyDocumentRegistry(env);
 
     const result = runCli('session bootstrap --role arc --show-docs', env.projectDir, env.homeDir);
@@ -136,8 +153,10 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('project status keeps runtime state read-only and labels CLI-valid operations clearly', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithLockedExec());
-    const before = JSON.stringify(fs.readJsonSync(env.progressPath));
+    stubLegacyProgressJson(env);
+    stubProjectIdentity(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedExec());
+    const before = JSON.stringify(fs.readJsonSync(chainPath(env, 'v1')));
 
     const result = runCli('project status', env.projectDir, env.homeDir);
 
@@ -145,6 +164,57 @@ describe('Role memory and bootstrap regressions', () => {
     expect(result.stdout).toMatch(/CLI-Valid Runtime Operations/);
     expect(result.stdout).toMatch(/sigma close new/);
     expect(result.stdout).not.toMatch(/Documents to Read/);
-    expect(JSON.stringify(fs.readJsonSync(env.progressPath))).toBe(before);
+    expect(JSON.stringify(fs.readJsonSync(chainPath(env, 'v1')))).toBe(before);
+  });
+});
+
+// PLAN-EVAL-01 Fase 4 regression — a fresh project (after `project start`,
+// before the first `intent new`) has an activate_status.json but zero
+// progress-v*.json chain files. readActiveChain()/resolveActiveChainVersion()
+// correctly throw in that state (nothing to resolve to) — but read-only
+// report commands must degrade gracefully instead of propagating that as a
+// command failure, matching today's behavior against an empty progress.json.
+describe('Read-only commands degrade gracefully before the first intent new', () => {
+  let env: TestEnv;
+
+  afterEach(() => env?.cleanup());
+
+  it('session bootstrap reports "no DIR-INTENT yet" instead of erroring', () => {
+    env = setupTestEnv();
+    stubLegacyProgressJson(env);
+    stubProjectIdentity(env);
+    // Deliberately no chain fixture written — activate_status.json/chain
+    // files are both absent, same as right after `project start`.
+
+    const result = runCli('session bootstrap', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Active Chain:\s+none/i);
+    expect(result.stdout).toMatch(/No DIR-INTENT exists yet/i);
+    expect(result.stdout).toMatch(/sigma intent new/);
+  });
+
+  it('project status reports "no DIR-INTENT yet" instead of erroring', () => {
+    env = setupTestEnv();
+    stubLegacyProgressJson(env);
+    stubProjectIdentity(env);
+
+    const result = runCli('project status', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Active Chain:\s+none/i);
+    expect(result.stdout).toMatch(/No DIR-INTENT exists yet/i);
+    expect(result.stdout).toMatch(/sigma intent new/);
+  });
+
+  it('doctor reports nothing to reconcile instead of erroring', () => {
+    env = setupTestEnv();
+    stubLegacyProgressJson(env);
+
+    const result = runCli('doctor', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Nothing to reconcile/i);
+    expect(result.stdout).toMatch(/sigma intent new/);
   });
 });

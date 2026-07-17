@@ -4,8 +4,8 @@ import path from 'path';
 import {
   setupTestEnv,
   runCli,
-  makeProgressWithLockedExec,
   stubLegacyProgressJson,
+  stubProjectIdentity,
   writeChainFixture,
   makeChain,
   makeChainWithLockedPlan,
@@ -30,10 +30,10 @@ describe('Lifecycle hardening coverage', () => {
   });
 
   it('sigma session bootstrap reports gates and next operations from a locked chain', () => {
-    // `session bootstrap` is not yet migrated to chain.ts (PLAN-EVAL-01
-    // Fase 4) — this exercises the old progress.json path unchanged.
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithLockedExec());
+    stubLegacyProgressJson(env);
+    stubProjectIdentity(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedExec());
 
     const result = runCli('session bootstrap', env.projectDir, env.homeDir);
 

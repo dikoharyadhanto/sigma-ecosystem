@@ -1,7 +1,8 @@
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
-import { readProgress, writeProgress, ProgressJson, OverrideEntry } from '../engine/progress';
+import { OverrideEntry } from '../engine/progress';
+import { ChainState, readActiveChain, writeChain } from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { OVERRIDES_FILE } from '../config';
 
@@ -13,29 +14,29 @@ function appendOverrideEntry(projectRoot: string, entry: OverrideEntry): void {
   fs.appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf8');
 }
 
-function versionForArtifact(data: ProgressJson, artifact: string): string | null {
-  if (artifact === 'DIR-INTENT') return data.intent.active_version;
-  if (artifact === 'FMN-PLAN') return data.plan.active_version;
-  if (artifact === 'DEV-EXEC') return data.exec.active_version;
+function versionForArtifact(chain: ChainState, artifact: string): string | null {
+  if (artifact === 'DIR-INTENT') return chain.intent.version;
+  if (artifact === 'FMN-PLAN') return chain.plan.active_version;
+  if (artifact === 'DEV-EXEC') return chain.exec.active_version;
   return null;
 }
 
-function describeBlockedGate(data: ProgressJson): { artifact: string; gate: string; description: string } | null {
-  if (!data.gates.gate_1_open) {
+function describeBlockedGate(chain: ChainState): { artifact: string; gate: string; description: string } | null {
+  if (!chain.gates.gate_1_open) {
     return {
       artifact: 'DIR-INTENT',
       gate: 'Gate 1',
       description: 'Intent Doc (DIR-INTENT) is not LOCKED — Gate 1 is blocked.',
     };
   }
-  if (!data.gates.gate_2_open) {
+  if (!chain.gates.gate_2_open) {
     return {
       artifact: 'FMN-PLAN',
       gate: 'Gate 2',
       description: 'Plan Doc (FMN-PLAN) is not LOCKED — Gate 2 is blocked.',
     };
   }
-  if (!data.gates.gate_3_satisfied) {
+  if (!chain.gates.gate_3_satisfied) {
     return {
       artifact: 'DEV-EXEC',
       gate: 'Gate 3',
@@ -45,14 +46,14 @@ function describeBlockedGate(data: ProgressJson): { artifact: string; gate: stri
   return null;
 }
 
-function applyOverride(data: ProgressJson, artifact: string): void {
+function applyOverride(chain: ChainState, artifact: string): void {
   if (artifact === 'DIR-INTENT') {
-    data.gates.gate_1_open = true;
-    if (data.lifecycle_state === 'DESIGN') data.lifecycle_state = 'BUILD';
+    chain.gates.gate_1_open = true;
+    if (chain.lifecycle_state === 'DESIGN') chain.lifecycle_state = 'BUILD';
   } else if (artifact === 'FMN-PLAN') {
-    data.gates.gate_2_open = true;
+    chain.gates.gate_2_open = true;
   } else if (artifact === 'DEV-EXEC') {
-    data.gates.gate_3_satisfied = true;
+    chain.gates.gate_3_satisfied = true;
   }
 }
 
@@ -74,18 +75,18 @@ function runOverride(opts: { reason?: string; dryRun?: boolean; directorConfirm?
 
   const reason = opts.reason.trim();
   const projectRoot = findProjectRoot();
-  const data = readProgress(projectRoot);
+  const { chainVersion, data: chain } = readActiveChain(projectRoot);
 
-  const blocked = describeBlockedGate(data);
+  const blocked = describeBlockedGate(chain);
 
   if (!blocked) {
     console.log('No gate is currently blocked. Override is not needed.');
-    console.log(`Lifecycle: ${data.lifecycle_state} — all gates in expected state.`);
+    console.log(`Lifecycle: ${chain.lifecycle_state} — all gates in expected state.`);
     return;
   }
 
   console.log('\n=== Sigma Override ===\n');
-  console.log(`Current phase:   ${data.lifecycle_state}`);
+  console.log(`Current phase:   ${chain.lifecycle_state}`);
   console.log(`Blocked gate:    ${blocked.gate}`);
   console.log(`Artifact:        ${blocked.artifact}`);
   console.log(`\nBlocker:         ${blocked.description}`);
@@ -100,15 +101,15 @@ function runOverride(opts: { reason?: string; dryRun?: boolean; directorConfirm?
     type: 'override',
     timestamp: new Date().toISOString(),
     artifact: blocked.artifact,
-    phase: data.lifecycle_state,
+    phase: chain.lifecycle_state,
     gate_bypassed: blocked.gate,
     reason,
     authorized_by: 'Director',
-    version: versionForArtifact(data, blocked.artifact),
+    version: versionForArtifact(chain, blocked.artifact),
   };
 
-  applyOverride(data, blocked.artifact);
-  writeProgress(projectRoot, data);
+  applyOverride(chain, blocked.artifact);
+  writeChain(projectRoot, chainVersion, chain);
   appendOverrideEntry(projectRoot, entry);
 
   console.log(`\nOverride applied: ${blocked.gate} (${blocked.artifact}) bypassed.`);

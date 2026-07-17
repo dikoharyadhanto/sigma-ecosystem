@@ -4,7 +4,6 @@ import path from 'path';
 import {
   setupTestEnv,
   runCli,
-  makeProgress,
   stubLegacyProgressJson,
   writeChainFixture,
   makeChainWithLockedExec,
@@ -73,12 +72,19 @@ describe('Progress hardening', () => {
   });
 
   it('blocks impossible Gate 3 satisfaction without a clean locked chain', () => {
-    // `doctor` is not yet migrated to chain.ts (PLAN-EVAL-01 Fase 4) — this
-    // exercises the old progress.json path unchanged, on purpose.
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgress({
+    stubLegacyProgressJson(env);
+    const now = new Date().toISOString();
+    writeChainFixture(env, 'v1', {
+      schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
+      lifecycle_state: 'DESIGN',
+      intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now },
+      roadmap: null,
+      plan: { active_version: null, active_state: null, versions: [], pending: [] },
+      exec: { active_version: null, active_state: null, versions: [] },
+      close: null,
       gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: true },
-    }));
+    });
 
     const result = runCli('doctor', env.projectDir, env.homeDir);
 

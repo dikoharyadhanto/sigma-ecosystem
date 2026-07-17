@@ -20,17 +20,17 @@ import {
 import { getBundledRoleMemoryDir } from '../engine/roleMemory';
 import { findSigmaProjectRoot } from '../engine/reconstruct';
 import { copyTemplateToArtifact } from '../utils/artifacts';
+import { createInitialProgress } from '../engine/progress';
 import {
-  readProgress,
-  writeProgress,
-  createInitialProgress,
-  getGateStatus,
-  getInactiveIntentWarnings,
+  readActiveChain,
+  readProjectIdentity,
+  writeActivateStatus,
+  listChainVersions,
   getNextValidOperations,
   getGateStatusLabel,
   getInvalidWarningLines,
   hasInvalidRuntime,
-} from '../engine/progress';
+} from '../engine/chain';
 import { createDefaultProjectConfig, writeProjectConfig } from '../engine/projectConfig';
 import { promptLanguageWizard } from '../engine/languageWizard';
 import { success, info, warn, error } from '../utils/output';
@@ -247,9 +247,19 @@ async function runStart(opts: {
     warn('SIGMA-REGISTRY.json not found in bundle — skipping');
   }
 
-  // Create progress.json
+  // Create progress.json — PLAN-EVAL-01: this file is legacy/inert now.
+  // Nothing reads its content anymore (only findProjectRoot() checks it
+  // exists, until Fase 5 moves that anchor to activate_status.json). Kept
+  // exactly as before to avoid unrelated churn before that fase lands.
   const initial = createInitialProgress(projectId, projectName);
   fs.writeJsonSync(progressPath, initial, { spaces: 2 });
+
+  // PLAN-EVAL-01 §5.9 — the real per-chain state lives in
+  // Sigma/progress-v<N>.json files, created lazily by `sigma intent new`.
+  // The manifest is created here, upfront, with no chain active yet, so
+  // findProjectRoot() (post-Fase-5) and `sigma intent list` always have
+  // something to read even before the first `intent new`.
+  writeActivateStatus(projectRoot, null);
 
   // Write .sigma-identity.json (root-level, used by `sigma doctor --reconstruct`
   // as a fallback if progress.json is ever lost or corrupted)
@@ -304,56 +314,50 @@ async function runStart(opts: {
 
 function runStatus(): void {
   const projectRoot = findProjectRoot();
-  const data = readProgress(projectRoot);
-  const gates = getGateStatus(data);
-  const inactiveIntentWarnings = getInactiveIntentWarnings(data);
+  const identity = readProjectIdentity(projectRoot);
+
+  // No chain yet (fresh project, before the first `intent new`) is a valid
+  // state — matches today's graceful display rather than erroring out.
+  const hasChain = listChainVersions(projectRoot).length > 0;
+  const { chainVersion, data: chain } = hasChain
+    ? readActiveChain(projectRoot)
+    : { chainVersion: null, data: null };
 
   console.log('\n=== Sigma Project Status ===\n');
-  console.log(`Project:          ${data.project_name} (${data.project_id})`);
-  console.log(`Lifecycle Phase:  ${data.lifecycle_state}`);
-  console.log(`Last Updated:     ${data.updated_at}`);
+  console.log(`Project:          ${identity.project_name} (${identity.project_id})`);
+  console.log(`Active Chain:     ${chainVersion ?? 'none — no DIR-INTENT yet'}`);
+  console.log(`Lifecycle Phase:  ${chain?.lifecycle_state ?? '—'}`);
+  console.log(`Last Updated:     ${chain?.updated_at ?? '—'}`);
 
-  const ARTIFACT_LABELS: Record<string, { label: string; code: string }> = {
-    intent:  { label: 'Intent Doc',         code: 'DIR-INTENT' },
-    plan:    { label: 'Plan Doc',           code: 'FMN-PLAN'   },
-    exec:    { label: 'Execution Evidence', code: 'DEV-EXEC'   },
-    close:   { label: 'Closure Doc',        code: 'DIR-CLOSE'  },
-    roadmap: { label: 'Roadmap Doc',        code: 'ROADMAP'    },
-  };
+  if (chain) {
+    console.log('\n--- Artifact Status ---');
+    const artifactLine = (label: string, code: string, version: string | null, state: string | null): void => {
+      const display = version !== null ? `${label} (${code} ${version})` : `${label} (${code})`;
+      console.log(`${display.padEnd(40)} [${state ?? '—'}]`);
+    };
+    artifactLine('Intent Doc',         'DIR-INTENT', chain.intent.version,           chain.intent.state);
+    artifactLine('Plan Doc',           'FMN-PLAN',   chain.plan.active_version,      chain.plan.active_state);
+    artifactLine('Execution Evidence', 'DEV-EXEC',   chain.exec.active_version,      chain.exec.active_state);
+    artifactLine('Closure Doc',        'DIR-CLOSE',  chain.close?.version ?? null,   chain.close?.state ?? null);
+    artifactLine('Roadmap Doc',        'ROADMAP',    chain.roadmap?.version ?? null, chain.roadmap?.state ?? null);
 
-  console.log('\n--- Artifact Status ---');
-  for (const domain of ['intent', 'plan', 'exec', 'close', 'roadmap'] as const) {
-    const tracker = data[domain];
-    const version = tracker.active_version ?? 'none';
-    const state = tracker.active_state ?? '—';
-    const meta = ARTIFACT_LABELS[domain];
-    const label = version !== 'none'
-      ? `${meta.label} (${meta.code} ${version})`
-      : `${meta.label} (${meta.code})`;
-    console.log(`${label.padEnd(40)} [${state}]`);
-  }
+    console.log('\n--- Gate Status ---');
+    console.log(`Gate 1 (Design Complete):   ${getGateStatusLabel(chain, 'gate_1_open')}`);
+    console.log(`Gate 2 (Plan Locked):       ${getGateStatusLabel(chain, 'gate_2_open')}`);
+    console.log(`Gate 3 (Build Evidence):    ${getGateStatusLabel(chain, 'gate_3_satisfied')}`);
 
-  console.log('\n--- Gate Status ---');
-  console.log(`Gate 1 (Design Complete):   ${getGateStatusLabel(data, 'gate_1_open')}`);
-  console.log(`Gate 2 (Plan Locked):       ${getGateStatusLabel(data, 'gate_2_open')}`);
-  console.log(`Gate 3 (Build Evidence):    ${getGateStatusLabel(data, 'gate_3_satisfied')}`);
-
-  if (hasInvalidRuntime(data)) {
-    console.log('\n--- INVALID Runtime Warnings ---');
-    for (const line of getInvalidWarningLines(data)) {
-      console.log(`  [INVALID] ${line}`);
+    if (hasInvalidRuntime(chain)) {
+      console.log('\n--- INVALID Runtime Warnings ---');
+      for (const line of getInvalidWarningLines(chain)) {
+        console.log(`  [INVALID] ${line}`);
+      }
     }
+  } else {
+    console.log('\n--- Artifact Status ---');
+    console.log('  No DIR-INTENT exists yet.');
   }
 
-  if (inactiveIntentWarnings.length > 0) {
-    console.log('\n--- INACTIVE Intent Warnings (non-blocking) ---');
-    for (const w of inactiveIntentWarnings) {
-      warn(`  DIR-INTENT ${w.intentVersion} is INACTIVE but still has: ${w.hangingArtifacts.join(', ')}`);
-    }
-    console.log('  Run `sigma intent supersede --v <version> --reason ... --director-confirm` if this INTENT is truly retired.');
-  }
-
-  const nextOps = getNextValidOperations(data);
+  const nextOps = chain ? getNextValidOperations(chain) : ['intent new'];
   console.log('\n--- CLI-Valid Runtime Operations ---');
   if (nextOps.length > 0) {
     for (const op of nextOps) {

@@ -91,6 +91,23 @@ export function stubLegacyProgressJson(env: TestEnv): void {
   fs.writeJsonSync(env.progressPath, makeProgress());
 }
 
+// PLAN-EVAL-01 Fase 4 — `session bootstrap`/`project status` now read
+// project identity from .sigma-identity.json (chain.ts's readProjectIdentity)
+// instead of progress.json's project_id/project_name fields (§3.3). Tests
+// that fabricate chain fixtures directly (bypassing `sigma project start`,
+// which writes this file for real) need this stub for those two commands
+// to succeed.
+export function stubProjectIdentity(env: TestEnv, id = 'TEST', name = 'Test Project'): void {
+  const identityPath = path.join(env.projectDir, '.sigma-identity.json');
+  fs.writeJsonSync(identityPath, {
+    schema_version: SCHEMA_VERSION,
+    project_id: id,
+    project_name: name,
+    registered: true,
+    logs_created_at: new Date().toISOString(),
+  });
+}
+
 export function chainPath(env: TestEnv, version: string): string {
   return path.join(env.sigmaDir, `progress-${version}.json`);
 }
