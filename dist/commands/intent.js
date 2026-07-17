@@ -7,10 +7,14 @@ exports.intentCommand = intentCommand;
 const commander_1 = require("commander");
 const path_1 = __importDefault(require("path"));
 const readline_1 = __importDefault(require("readline"));
-const progress_1 = require("../engine/progress");
+const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const docCheck_1 = require("../utils/docCheck");
+// PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
+// onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
+// (a different progress-v<N>.json), not an array entry within one file —
+// PLAN-EVAL-01 §3.7.
 function promptApprove(message) {
     return new Promise(resolve => {
         const rl = readline_1.default.createInterface({ input: process.stdin, output: process.stdout });
@@ -20,21 +24,32 @@ function promptApprove(message) {
         });
     });
 }
+function intentDocPath(projectRoot, chain) {
+    return path_1.default.join(projectRoot, chain.intent.file ?? path_1.default.join('Sigma', 'design', `DIR-INTENT-${chain.intent.version}.md`));
+}
 function intentCommand() {
     const cmd = new commander_1.Command('intent');
     cmd.description('Manage DIR-INTENT artifact');
     cmd.command('new')
-        .description('Create a new DIR-INTENT draft')
+        .description('Create a new DIR-INTENT draft (auto-creates and auto-activates a new chain)')
         .option('--yes', 'Skip interactive APPROVE prompt when reopening a CLOSED project')
         .action(async (opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            if (data.lifecycle_state === 'CLOSED') {
+            // Preflight is read-only and best-effort — a brand-new project with
+            // no chain yet has nothing to check CLOSED-ness against (PLAN-EVAL-01
+            // §4).
+            let activeForPreflight = null;
+            try {
+                activeForPreflight = (0, chain_1.readActiveChain)(projectRoot).data;
+            }
+            catch {
+                // no chain exists yet — first `intent new` on this project
+            }
+            if (activeForPreflight?.lifecycle_state === 'CLOSED') {
                 console.log('\nReopen Preflight\n');
-                console.log('Project lifecycle is currently CLOSED. Running this command will automatically ' +
-                    'reopen the project and begin a new work cycle.\n');
+                console.log('The active chain is currently CLOSED. Running this command will create a new, ' +
+                    'fully isolated chain and activate it — the CLOSED chain is left untouched.\n');
                 if (!opts.yes) {
                     const approved = await promptApprove('Do you wish to continue?');
                     if (!approved) {
@@ -43,13 +58,15 @@ function intentCommand() {
                     }
                 }
             }
-            const version = (0, progress_1.nextMajorVersion)(data.intent.versions);
-            const relPath = path_1.default.join('Sigma', 'design', `DIR-INTENT-${version}.md`);
+            const chainVersion = (0, chain_1.nextChainVersion)(projectRoot);
+            const relPath = path_1.default.join('Sigma', 'design', `DIR-INTENT-${chainVersion}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
             (0, artifacts_1.copyTemplateToArtifact)('DIR-INTENT-TEMPLATE.md', absPath);
-            (0, progress_1.registerIntentDraft)(data, version, relPath);
-            (0, progress_1.writeProgress)(projectRoot, data);
+            const chain = (0, chain_1.createInitialChain)(chainVersion, relPath);
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain); // chain file first
+            (0, chain_1.writeActivateStatus)(projectRoot, chainVersion); // manifest last — PLAN-EVAL-01 §5.9 write order
             console.log(`Created: ${relPath} — open this file and fill in the intent.`);
+            console.log(`Chain ${chainVersion} is now active.`);
             console.log('Running automatic validation...\n');
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'intent');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
@@ -66,19 +83,19 @@ function intentCommand() {
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            if (data.intent.active_state !== 'DRAFT') {
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            (0, chain_1.assertChainCanMutate)(chain);
+            if (chain.intent.state !== 'DRAFT') {
                 throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot lock.');
             }
-            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'intent');
+            const absPath = intentDocPath(projectRoot, chain);
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'intent');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             (0, docCheck_1.ensureSigmaDocEligible)(report, 'intent');
-            const version = data.intent.active_version;
-            (0, progress_1.lockActiveIntent)(data);
-            (0, progress_1.writeProgress)(projectRoot, data);
-            console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma plan new`);
+            const version = chain.intent.version;
+            (0, chain_1.lockActiveIntent)(chain);
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+            console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma roadmap new`);
         }
         catch (e) {
             console.error(e.message);
@@ -86,40 +103,36 @@ function intentCommand() {
         }
     });
     cmd.command('supersede')
-        .description('Supersede a LOCKED or INACTIVE DIR-INTENT — cascades SUPERSEDED to its Roadmap/Plan/Exec/Close (requires --director-confirm)')
-        .requiredOption('--v <version>', 'Version to supersede (e.g. v1)')
+        .description('Supersede a LOCKED DIR-INTENT chain — cascades SUPERSEDED to its Roadmap/Plan/Exec/Close (requires --director-confirm)')
+        .requiredOption('--v <version>', 'Chain version to supersede (e.g. v1) — need not be the active chain')
         .requiredOption('--reason <reason>', 'Reason for superseding')
         .option('--director-confirm', 'Required. Explicit Director authorization to execute the supersede.')
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            (0, progress_1.assertProgressCanMutate)(data);
-            const target = data.intent.versions.find(v => v.version === opts.v);
-            if (!target) {
-                throw new Error(`INTENT version ${opts.v} not found. Run: sigma intent list`);
+            const chain = (0, chain_1.readChain)(projectRoot, opts.v);
+            (0, chain_1.assertChainCanMutate)(chain);
+            if (chain.intent.state !== 'LOCKED') {
+                throw new Error(`INTENT ${opts.v} is in state "${chain.intent.state}"; supersede requires LOCKED.`);
             }
-            if (target.state !== 'LOCKED' && target.state !== 'INACTIVE') {
-                throw new Error(`INTENT ${opts.v} is in state "${target.state}"; supersede requires LOCKED or INACTIVE.`);
-            }
-            const cascade = (0, progress_1.previewIntentSupersedeCascade)(data, opts.v);
-            const total = cascade.roadmap.length + cascade.plan.length + cascade.exec.length + cascade.close.length;
+            const cascade = (0, chain_1.previewIntentSupersedeCascade)(chain);
+            const total = (cascade.roadmap ? 1 : 0) + cascade.plan.length + cascade.exec.length + (cascade.close ? 1 : 0);
             console.log('\nIntent Supersede Preflight\n');
-            console.log(`Target:  DIR-INTENT ${opts.v} (${target.state})`);
+            console.log(`Target:  DIR-INTENT ${opts.v} (${chain.intent.state})`);
             console.log(`Reason:  ${opts.reason}\n`);
             if (total === 0) {
                 console.log('No downstream Roadmap/Plan/Exec/Close artifacts reference this INTENT version.');
             }
             else {
                 console.log('The following artifacts will cascade to SUPERSEDED:');
-                for (const v of cascade.roadmap)
-                    console.log(`  - ROADMAP ${v.version} [${v.state}]${v.state === 'LOCKED' ? '  (LOCKED work)' : ''}`);
+                if (cascade.roadmap)
+                    console.log(`  - ROADMAP ${cascade.roadmap.version} [${cascade.roadmap.state}]${cascade.roadmap.state === 'LOCKED' ? '  (LOCKED work)' : ''}`);
                 for (const v of cascade.plan)
                     console.log(`  - PLAN ${v.version} [${v.state}]${v.state === 'LOCKED' ? '  (LOCKED work)' : ''}`);
                 for (const v of cascade.exec)
                     console.log(`  - EXEC ${v.version} [${v.state}]${v.state === 'LOCKED' ? '  (LOCKED work)' : ''}`);
-                for (const v of cascade.close)
-                    console.log(`  - CLOSE ${v.version} [${v.state}]${v.state === 'LOCKED' ? '  (LOCKED work)' : ''}`);
+                if (cascade.close)
+                    console.log(`  - CLOSE ${cascade.close.version} [${cascade.close.state}]${cascade.close.state === 'LOCKED' ? '  (LOCKED work)' : ''}`);
             }
             console.log('');
             if (!opts.directorConfirm) {
@@ -128,11 +141,11 @@ function intentCommand() {
                 console.error('Add --director-confirm to proceed.');
                 process.exit(1);
             }
-            (0, progress_1.supersedeIntentVersion)(data, opts.v, opts.reason);
-            (0, progress_1.writeProgress)(projectRoot, data);
+            (0, chain_1.supersedeIntentVersion)(chain, opts.reason);
+            (0, chain_1.writeChain)(projectRoot, opts.v, chain);
             console.log(`DIR-INTENT ${opts.v} superseded. Reason: ${opts.reason}`);
             if (total > 0) {
-                console.log(`Cascaded to SUPERSEDED: ${cascade.roadmap.length} roadmap, ${cascade.plan.length} plan, ${cascade.exec.length} exec, ${cascade.close.length} close.`);
+                console.log(`Cascaded to SUPERSEDED: ${cascade.roadmap ? 1 : 0} roadmap, ${cascade.plan.length} plan, ${cascade.exec.length} exec, ${cascade.close ? 1 : 0} close.`);
             }
         }
         catch (e) {
@@ -141,13 +154,13 @@ function intentCommand() {
         }
     });
     cmd.command('check')
-        .description('Validate the active DIR-INTENT structure and markers')
-        .option('--v <version>', 'Check a specific DIR-INTENT version instead of the active one')
+        .description('Validate a DIR-INTENT structure and markers')
+        .option('--v <version>', 'Check a specific chain instead of the active one')
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            const absPath = (0, docCheck_1.resolveSigmaDocPath)(projectRoot, data, 'intent', opts.v);
+            const chain = opts.v ? (0, chain_1.readChain)(projectRoot, opts.v) : (0, chain_1.readActiveChain)(projectRoot).data;
+            const absPath = intentDocPath(projectRoot, chain);
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'intent');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             if (!report.ok)
@@ -163,21 +176,22 @@ function intentCommand() {
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
             console.log('\n=== DIR-INTENT Status ===\n');
-            if (!data.intent.active_version) {
+            if ((0, chain_1.listChainVersions)(projectRoot).length === 0) {
                 console.log('No active INTENT. Run: sigma intent new');
+                console.log('\nGate 1:     BLOCKED');
+                console.log('');
+                return;
             }
-            else {
-                const active = data.intent.versions.find(v => v.version === data.intent.active_version);
-                console.log(`Version:    ${data.intent.active_version}`);
-                console.log(`State:      ${data.intent.active_state}`);
-                if (active?.locked_at)
-                    console.log(`Locked at:  ${active.locked_at}`);
-                if (active?.file)
-                    console.log(`File:       ${active.file}`);
-            }
-            console.log(`\nGate 1:     ${data.gates.gate_1_open ? 'OPEN' : 'BLOCKED'}`);
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            console.log(`Chain:      ${chainVersion}`);
+            console.log(`Version:    ${chain.intent.version}`);
+            console.log(`State:      ${chain.intent.state}`);
+            if (chain.intent.locked_at)
+                console.log(`Locked at:  ${chain.intent.locked_at}`);
+            if (chain.intent.file)
+                console.log(`File:       ${chain.intent.file}`);
+            console.log(`\nGate 1:     ${chain.gates.gate_1_open ? 'OPEN' : 'BLOCKED'}`);
             console.log('');
         }
         catch (e) {
@@ -186,26 +200,33 @@ function intentCommand() {
         }
     });
     cmd.command('list')
-        .description('List all DIR-INTENT versions')
+        .description('List all chains (projection across every progress-v<N>.json — DISCUSSION "Konsolidasi Lanjutan" bagian 2)')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const data = (0, progress_1.readProgress)(projectRoot);
-            console.log('\n=== DIR-INTENT Versions ===\n');
-            if (data.intent.versions.length === 0) {
+            console.log('\n=== DIR-INTENT / Chains ===\n');
+            const versions = (0, chain_1.listChainVersions)(projectRoot);
+            if (versions.length === 0) {
                 console.log('None. Run: sigma intent new');
+                console.log('');
+                return;
             }
-            else {
-                console.log('Version    State        Created                    Locked                     Superseded By');
-                console.log('-'.repeat(100));
-                for (const v of data.intent.versions) {
-                    const ver = v.version.padEnd(10);
-                    const st = v.state.padEnd(12);
-                    const cr = v.created_at.padEnd(26);
-                    const lo = (v.locked_at ?? '—').padEnd(26);
-                    const sup = v.superseded_by ?? '—';
-                    console.log(`${ver} ${st} ${cr} ${lo} ${sup}`);
-                }
+            let activeChainVersion = null;
+            try {
+                activeChainVersion = (0, chain_1.resolveActiveChainVersion)(projectRoot);
+            }
+            catch {
+                // No chain is eligible to be active (e.g. every chain SUPERSEDED) —
+                // still list everything, just without an ACTIVE marker.
+            }
+            console.log('Chain      Intent State   Lifecycle    Gate1  Gate2  Gate3  Active');
+            console.log('-'.repeat(72));
+            for (const v of versions) {
+                const chain = (0, chain_1.readChain)(projectRoot, v);
+                const active = v === activeChainVersion ? '*' : '';
+                console.log(`${v.padEnd(10)} ${chain.intent.state.padEnd(14)} ${chain.lifecycle_state.padEnd(12)} ` +
+                    `${(chain.gates.gate_1_open ? 'OPEN' : '—').padEnd(6)} ${(chain.gates.gate_2_open ? 'OPEN' : '—').padEnd(6)} ` +
+                    `${(chain.gates.gate_3_satisfied ? 'OPEN' : '—').padEnd(6)} ${active}`);
             }
             console.log('');
         }

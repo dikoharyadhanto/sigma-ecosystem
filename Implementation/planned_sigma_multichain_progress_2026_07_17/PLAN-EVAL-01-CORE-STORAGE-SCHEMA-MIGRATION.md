@@ -520,10 +520,32 @@ sendiri sebelum lanjut ke fase berikutnya.
    **188/188 (26 file)** — 160 lama + 28 baru, nol regresi pada suite lama
    (belum ada command yang dipindah, jadi memang seharusnya tidak ada yang
    berubah).
-3. **Fase 2 — `intent.ts` penuh** (termasuk `new` yang membuat chain file
-   pertama kali). Ini titik paling awal di mana `progress-v1.json` +
-   `activate_status.json` benar-benar bisa dihasilkan end-to-end lewat CLI —
-   jadi titik verifikasi manual pertama yang bermakna.
+3. **Fase 2 — `intent.ts` penuh. SELESAI (2026-07-17).** `new` (jalur
+   khusus §4, termasuk preflight reopen read-only), `lock`, `supersede`
+   (target chain eksplisit lewat `--v`, bukan lagi chain aktif — bisa
+   men-supersede chain manapun), `check --v` (resolusi lintas-chain, §3.7),
+   `status` (pesan ramah "No active INTENT" dipertahankan persis, exit 0,
+   untuk kasus belum ada chain sama sekali — bukan error), `list` (projection
+   lintas-chain baru, pengganti `getInactiveIntentWarnings()` yang dihapus).
+   **Temuan bug nyata saat implementasi**: `resolveActiveChainVersion()`
+   (Fase 0) mempercayai `active_chain` yang menunjuk chain yang *ada* tapi
+   sudah `SUPERSEDED` — celah nyata karena `intent supersede` tidak pernah
+   menyentuh `activate_status.json`, jadi men-supersede chain yang sedang
+   aktif meninggalkan manifest basi menunjuk ke chain mati. Diperbaiki:
+   `resolveActiveChainVersion` sekarang memperlakukan pointer ke chain
+   `SUPERSEDED` sama dengan pointer tidak valid (auto-default), perluasan
+   yang disengaja di luar kalimat literal DISCUSSION §12 — didokumentasikan
+   di kode dan dikunci lewat test di dua lapis (unit `chain.ts` +
+   CLI `intent list`).
+   Diverifikasi: `test/intent-lock.test.ts`, `test/intent-reopen.test.ts`,
+   `test/intent-supersede.test.ts`, `test/progress-hardening.test.ts` (2 dari
+   3 test di-redesain, bukan cuma ganti path — skenario "dua intent dalam
+   satu array" sudah tidak bisa direpresentasikan lagi, diganti isolasi
+   fisik dua chain file), `test/doc-check.test.ts` dimigrasi ke fixture
+   chain; `test/intent-list.test.ts` baru (6 test, cakupan yang sebelumnya
+   nol). `npm run build` bersih, `npm test` **195/195 (27 file)**. Diverifikasi
+   juga manual end-to-end di luar test harness (`intent new` → `status` →
+   `list` menghasilkan `progress-v1.json` + `activate_status.json` yang benar).
 4. **Fase 3 — `roadmap.ts`, `plan.ts`, `exec.ts`, `close.ts`** (urutan
    mengikuti urutan alami siklus hidup satu chain — masing-masing bisa
    diverifikasi manual berurutan di atas chain yang sama dari Fase 2).

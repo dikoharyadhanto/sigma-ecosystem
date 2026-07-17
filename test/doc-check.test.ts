@@ -4,6 +4,9 @@ import path from 'path';
 import {
   makeProgressWithDraftIntent,
   makeProgressWithLockedIntent,
+  makeChainWithDraftIntent,
+  stubLegacyProgressJson,
+  writeChainFixture,
   runCli,
   setupTestEnv,
   TestEnv,
@@ -55,7 +58,8 @@ describe('Document checks and auto-validation', () => {
 
   it('intent lock is blocked when required markers are missing', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftIntent());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, '# DIR-INTENT\n\n## 1. Intent Core — Sovereign Layer\n');
 
@@ -88,7 +92,8 @@ describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
 
   it('intent lock fails when no verdict checkbox is checked', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftIntent());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, validIntentDoc('v1').replace('- [x] PASS', ''));
 
@@ -100,7 +105,8 @@ describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
 
   it('intent lock fails when more than one verdict checkbox is checked', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftIntent());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, validIntentDoc('v1').replace('- [x] PASS', '- [x] PASS\n- [x] REVISE'));
 
@@ -112,7 +118,8 @@ describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
 
   it('intent lock fails when SKIP_FOR_AUDIT is checked but Director Instruction is empty', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftIntent());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
       intentFile,
@@ -127,7 +134,8 @@ describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
 
   it('intent lock succeeds when SKIP_FOR_AUDIT is checked with a recorded Director Instruction', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftIntent());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
       intentFile,
@@ -150,7 +158,8 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
 
   it('intent lock fails when a Lock Requirement item is not checked', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftIntent());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
       intentFile,
@@ -166,7 +175,8 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
 
   it('intent lock fails when a Quality Bar dimension in Section 4 is still a placeholder', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftIntent());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
       intentFile,
@@ -185,7 +195,8 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
 
   it('intent lock succeeds when Lock Requirement is complete and Quality Bar has no placeholders, ignoring unchecked Conditional Requirement', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftIntent());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     // validIntentDoc() ships with Conditional Requirement items left unchecked by default.
     fs.writeFileSync(intentFile, validIntentDoc('v1'));

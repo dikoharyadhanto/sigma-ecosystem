@@ -180,6 +180,17 @@ export function writeActivateStatus(projectRoot: string, activeChain: string | n
 // chain_version whose intent is not SUPERSEDED, rather than hard-stopping.
 // Throws only when there is truly no chain to default to (fresh project,
 // before the first `intent new`).
+//
+// Deliberate extension beyond DISCUSSION §12's literal wording ("kosong" /
+// "menunjuk ke chain yang tidak ada"): a stale pointer at an *existing but
+// now-SUPERSEDED* chain is treated the same as an invalid one, not returned
+// as-is. Reachable case: `intent supersede` on the currently active chain
+// never touches activate_status.json (chain-file mutations don't reach into
+// the manifest) — without this check, every command would keep resolving to
+// a dead chain until someone ran `intent activate` manually, which
+// contradicts DISCUSSION "Konsolidasi Lanjutan" bagian 6's "SUPERSEDED kebal
+// permanen" being framed as a general property of SUPERSEDED chains, not
+// just a constraint on the `activate` command specifically.
 export function resolveActiveChainVersion(projectRoot: string): string {
   const existing = listChainVersions(projectRoot);
   if (existing.length === 0) {
@@ -194,7 +205,10 @@ export function resolveActiveChainVersion(projectRoot: string): string {
   }
 
   if (status.active_chain && existing.includes(status.active_chain)) {
-    return status.active_chain;
+    const pointed = readChain(projectRoot, status.active_chain);
+    if (pointed.intent.state !== 'SUPERSEDED') {
+      return status.active_chain;
+    }
   }
 
   // Auto-default: highest chain_version whose intent is not SUPERSEDED.
@@ -219,7 +233,7 @@ export function resolveActiveChainVersion(projectRoot: string): string {
 export function readChain(projectRoot: string, chainVersion: string): ChainState {
   const filePath = chainFilePath(projectRoot, chainVersion);
   if (!fs.existsSync(filePath)) {
-    throw new Error(`No chain file found for ${chainVersion} at ${filePath}`);
+    throw new Error(`Chain ${chainVersion} not found (no ${filePath} on disk). Run: sigma intent list`);
   }
   let raw: unknown;
   try {

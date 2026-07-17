@@ -36,6 +36,7 @@ export interface TestEnv {
   homeDir: string;
   sigmaDir: string;
   progressPath: string;
+  activateStatusPath: string;
   cleanup: () => void;
 }
 
@@ -59,17 +60,128 @@ export function setupTestEnv(): TestEnv {
   }
 
   const progressPath = path.join(sigmaDir, 'progress.json');
+  const activateStatusPath = path.join(sigmaDir, 'activate_status.json');
 
   return {
     projectDir,
     homeDir,
     sigmaDir,
     progressPath,
+    activateStatusPath,
     cleanup: () => {
       fs.removeSync(projectDir);
       fs.removeSync(homeDir);
     },
   };
+}
+
+// ── Chain fixtures (PLAN-EVAL-01 Opsi C — progress-v<N>.json) ───────────────
+
+// findProjectRoot() still anchors on Sigma/progress.json's existence until
+// Fase 5 (PLAN-EVAL-01 §3.6's ordering correction — the anchor can't move
+// until every path that creates a project, including `project start` and
+// this test harness, writes activate_status.json instead). Tests exercising
+// a chain.ts-backed command need *some* file at progressPath purely so
+// findProjectRoot() succeeds — content is irrelevant, migrated commands
+// never read it. NOT called from setupTestEnv() itself: doing that
+// unconditionally breaks every `project start`/`project register` test,
+// which checks for progress.json's *absence* to decide whether a project
+// already exists.
+export function stubLegacyProgressJson(env: TestEnv): void {
+  fs.writeJsonSync(env.progressPath, makeProgress());
+}
+
+export function chainPath(env: TestEnv, version: string): string {
+  return path.join(env.sigmaDir, `progress-${version}.json`);
+}
+
+// Writes one chain file and, by default, points activate_status.json at it.
+// Pass activate: false when a test needs a chain present on disk without it
+// being the active one (e.g. isolation tests with two chains).
+export function writeChainFixture(env: TestEnv, version: string, chain: object, options: { activate?: boolean } = {}): void {
+  fs.writeJsonSync(chainPath(env, version), chain);
+  if (options.activate !== false) {
+    fs.writeJsonSync(env.activateStatusPath, { active_chain: version });
+  }
+}
+
+function baseChain(version: string): Record<string, unknown> {
+  const now = new Date().toISOString();
+  return {
+    schema_version: SCHEMA_VERSION,
+    chain_version: version,
+    created_at: now,
+    updated_at: now,
+    lifecycle_state: 'DESIGN',
+    intent: { version, state: 'DRAFT', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now },
+    roadmap: null,
+    plan: { active_version: null, active_state: null, versions: [], pending: [] },
+    exec: { active_version: null, active_state: null, versions: [] },
+    close: null,
+    gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false },
+  };
+}
+
+export function makeChain(version: string, overrides: Record<string, unknown> = {}): object {
+  return { ...baseChain(version), ...overrides };
+}
+
+export function makeChainWithDraftIntent(version = 'v1'): object {
+  return makeChain(version);
+}
+
+export function makeChainWithLockedIntent(version = 'v1'): object {
+  const now = new Date().toISOString();
+  return makeChain(version, {
+    lifecycle_state: 'BUILD',
+    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
+  });
+}
+
+// Roadmap LOCKED, one PLAN LOCKED, one EXEC LOCKED, CLOSE DRAFT — the
+// chain-scoped equivalent of the old single-file fullLockedChain() fixtures
+// used across intent-supersede.test.ts / progress-hardening.test.ts. Version
+// numbers deliberately match what those tests already asserted against
+// (plan/exec "v1.1"), not the nextPlanVersion()-generated "v0.1" — fixtures
+// don't need to be generatable, only internally consistent for the
+// assertions that read them.
+export function makeChainWithFullBuiltCycle(version = 'v1', planExecVersion = 'v1.1'): object {
+  const now = new Date().toISOString();
+  return makeChain(version, {
+    lifecycle_state: 'BUILD',
+    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    roadmap: { version, state: 'LOCKED', file: `Sigma/build/ROADMAP-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    plan: {
+      active_version: planExecVersion, active_state: 'LOCKED', pending: [],
+      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+    },
+    exec: {
+      active_version: planExecVersion, active_state: 'LOCKED',
+      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/build/DEV-EXEC-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, plan_version_ref: planExecVersion }],
+    },
+    close: { version, state: 'DRAFT', file: `Sigma/close/DIR-CLOSE-${version}.md`, created_at: now, updated_at: now },
+    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
+  });
+}
+
+// Same build depth as makeChainWithFullBuiltCycle() but no CLOSE yet —
+// chain-scoped equivalent of makeProgressWithLockedExec().
+export function makeChainWithLockedExec(version = 'v1', planExecVersion = 'v1.1'): object {
+  const now = new Date().toISOString();
+  return makeChain(version, {
+    lifecycle_state: 'BUILD',
+    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    plan: {
+      active_version: planExecVersion, active_state: 'LOCKED', pending: [],
+      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+    },
+    exec: {
+      active_version: planExecVersion, active_state: 'LOCKED',
+      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/build/DEV-EXEC-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, plan_version_ref: planExecVersion }],
+    },
+    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
+  });
 }
 
 export function makeProgress(overrides: Partial<ReturnType<typeof baseProgress>> = {}): object {

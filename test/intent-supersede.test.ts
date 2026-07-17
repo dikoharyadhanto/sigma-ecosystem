@@ -5,95 +5,29 @@ import {
   setupTestEnv,
   runCli,
   makeProgress,
-  makeProgressWithLockedExec,
+  stubLegacyProgressJson,
+  writeChainFixture,
+  makeChainWithFullBuiltCycle,
+  makeChainWithLockedExec,
+  chainPath,
   validIntentDoc,
   TestEnv,
 } from './helpers';
 
-// Coverage for PLAN-EVAL-01: `sigma intent supersede` is the only path to a
-// real SUPERSEDED INTENT, the cascade is explicit + director-confirmed, and
-// it must never leak outside the exact chain it targets.
+// Coverage for PLAN-EVAL-01 (intent-supersede feature) and its Opsi C
+// storage migration: `sigma intent supersede` is the only path to a real
+// SUPERSEDED INTENT, the cascade is explicit + director-confirmed, and it
+// must never leak outside the exact chain (file) it targets. Under Opsi C,
+// "never leaks outside the exact chain" is now a *structural* guarantee
+// (two chains are two different files) rather than a behavioral one — the
+// isolation tests below assert on that directly (the other chain's file is
+// byte-for-byte read back untouched), not just on array entries staying put.
+
+// `--v` in `--reason "pivot"` reasons below still says "pivot"/"scope pivot"
+// etc. to keep parity with the pre-migration test names/messages.
 
 function fullLockedChain() {
-  const now = new Date().toISOString();
-  return makeProgress({
-    lifecycle_state: 'BUILD',
-    intent: {
-      active_version: 'v1',
-      active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
-    },
-    roadmap: {
-      active_version: 'v1',
-      active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
-    },
-    plan: {
-      active_version: 'v1.1',
-      active_state: 'LOCKED',
-      pending: [],
-      versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
-    },
-    exec: {
-      active_version: 'v1.1',
-      active_state: 'LOCKED',
-      versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1.1' }],
-    },
-    close: {
-      active_version: 'v1',
-      active_state: 'DRAFT',
-      versions: [{ version: 'v1', state: 'DRAFT', file: 'Sigma/close/DIR-CLOSE-v1.md', created_at: now, updated_at: now, intent_version_ref: 'v1' }],
-    },
-    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
-  });
-}
-
-function twoIndependentChains() {
-  const now = new Date().toISOString();
-  return makeProgress({
-    lifecycle_state: 'BUILD',
-    intent: {
-      active_version: 'v2',
-      active_state: 'LOCKED',
-      versions: [
-        { version: 'v1', state: 'INACTIVE', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
-        { version: 'v2', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v2.md', created_at: now, updated_at: now, locked_at: now },
-      ],
-    },
-    roadmap: {
-      active_version: 'v2',
-      active_state: 'ACTIVE',
-      versions: [
-        { version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
-        { version: 'v2', state: 'ACTIVE', file: 'Sigma/build/ROADMAP-v2.md', created_at: now, updated_at: now, intent_version_ref: 'v2' },
-      ],
-    },
-    plan: {
-      active_version: 'v1.1',
-      active_state: 'LOCKED',
-      pending: [],
-      versions: [
-        { version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
-        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v2' },
-      ],
-    },
-    exec: {
-      active_version: 'v1.1',
-      active_state: 'LOCKED',
-      versions: [
-        { version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v0.1' },
-        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1.1' },
-      ],
-    },
-    close: {
-      active_version: 'v1',
-      active_state: 'DRAFT',
-      versions: [
-        { version: 'v1', state: 'DRAFT', file: 'Sigma/close/DIR-CLOSE-v1.md', created_at: now, updated_at: now, intent_version_ref: 'v1' },
-      ],
-    },
-    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
-  });
+  return makeChainWithFullBuiltCycle('v1', 'v1.1');
 }
 
 describe('sigma intent supersede', () => {
@@ -105,7 +39,8 @@ describe('sigma intent supersede', () => {
 
   it('fails when the intent version does not exist', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, fullLockedChain());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', fullLockedChain());
 
     const result = runCli('intent supersede --v v9 --reason "no such intent" --director-confirm', env.projectDir, env.homeDir);
 
@@ -113,45 +48,41 @@ describe('sigma intent supersede', () => {
     expect(result.stderr).toMatch(/not found/i);
   });
 
-  it('fails when the intent version is DRAFT, not LOCKED or INACTIVE', () => {
+  it('fails when the intent version is DRAFT, not LOCKED (INACTIVE no longer exists, PLAN-EVAL-01 §3.4)', () => {
     env = setupTestEnv();
-    const now = new Date().toISOString();
-    fs.writeJsonSync(env.progressPath, makeProgress({
-      intent: {
-        active_version: 'v1',
-        active_state: 'DRAFT',
-        versions: [{ version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now }],
-      },
-    }));
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', { chain_version: 'v1', schema_version: '1.0.0', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), lifecycle_state: 'DESIGN', intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, roadmap: null, plan: { active_version: null, active_state: null, versions: [], pending: [] }, exec: { active_version: null, active_state: null, versions: [] }, close: null, gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false } });
 
     const result = runCli('intent supersede --v v1 --reason "testing" --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/requires LOCKED or INACTIVE/i);
+    expect(result.stderr).toMatch(/requires LOCKED/i);
   });
 
   // ── Director-confirm gate (second code-enforced precedent after override.ts) ─
 
-  it('refuses to execute without --director-confirm and leaves progress.json untouched', () => {
+  it('refuses to execute without --director-confirm and leaves the chain file untouched', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, fullLockedChain());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', fullLockedChain());
 
     const result = runCli('intent supersede --v v1 --reason "pivot"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/--director-confirm/);
 
-    const data = fs.readJsonSync(env.progressPath) as Record<string, any>;
-    expect(data.intent.versions[0].state).toBe('LOCKED');
-    expect(data.roadmap.versions[0].state).toBe('LOCKED');
+    const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
+    expect(data.intent.state).toBe('LOCKED');
+    expect(data.roadmap.state).toBe('LOCKED');
     expect(data.plan.versions[0].state).toBe('LOCKED');
     expect(data.exec.versions[0].state).toBe('LOCKED');
-    expect(data.close.versions[0].state).toBe('DRAFT');
+    expect(data.close.state).toBe('DRAFT');
   });
 
   it('shows a preflight listing every artifact that will cascade, including LOCKED work, before requiring confirm', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, fullLockedChain());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', fullLockedChain());
 
     const result = runCli('intent supersede --v v1 --reason "pivot"', env.projectDir, env.homeDir);
 
@@ -166,75 +97,100 @@ describe('sigma intent supersede', () => {
 
   it('cascades SUPERSEDED to the full Roadmap/Plan/Exec/Close chain, including LOCKED entries', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, fullLockedChain());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', fullLockedChain());
 
     const result = runCli('intent supersede --v v1 --reason "scope pivot" --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
 
-    const data = fs.readJsonSync(env.progressPath) as Record<string, any>;
-    expect(data.intent.versions[0].state).toBe('SUPERSEDED');
-    expect(data.intent.versions[0].supersede_reason).toBe('scope pivot');
-    expect(data.roadmap.versions[0].state).toBe('SUPERSEDED');
+    const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
+    expect(data.intent.state).toBe('SUPERSEDED');
+    expect(data.intent.supersede_reason).toBe('scope pivot');
+    expect(data.roadmap.state).toBe('SUPERSEDED');
     expect(data.plan.versions[0].state).toBe('SUPERSEDED');
     expect(data.exec.versions[0].state).toBe('SUPERSEDED');
-    expect(data.close.versions[0].state).toBe('SUPERSEDED');
+    expect(data.close.state).toBe('SUPERSEDED');
 
     // Cascaded entries carry a cascade reason, not their own superseded_by
-    expect(data.roadmap.versions[0].supersede_reason).toMatch(/cascade/i);
+    // (superseded_by itself is dropped entirely from the schema, §3.4/§3.2).
+    expect(data.roadmap.supersede_reason).toMatch(/cascade/i);
     expect(data.plan.versions[0].supersede_reason).toMatch(/cascade/i);
     expect(data.exec.versions[0].supersede_reason).toMatch(/cascade/i);
-    expect(data.close.versions[0].supersede_reason).toMatch(/cascade/i);
+    expect(data.close.supersede_reason).toMatch(/cascade/i);
   });
 
   it('does not crash and reports no cascade when nothing references the target version', () => {
     env = setupTestEnv();
-    const progress = fullLockedChain() as Record<string, any>;
-    progress.roadmap = { active_version: null, active_state: null, versions: [] };
-    progress.plan = { active_version: null, active_state: null, pending: [], versions: [] };
-    progress.exec = { active_version: null, active_state: null, versions: [] };
-    progress.close = { active_version: null, active_state: null, versions: [] };
-    progress.gates = { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false };
-    fs.writeJsonSync(env.progressPath, progress);
+    stubLegacyProgressJson(env);
+    const now = new Date().toISOString();
+    writeChainFixture(env, 'v1', {
+      schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
+      lifecycle_state: 'BUILD',
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      roadmap: null,
+      plan: { active_version: null, active_state: null, versions: [], pending: [] },
+      exec: { active_version: null, active_state: null, versions: [] },
+      close: null,
+      gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
+    });
 
     const result = runCli('intent supersede --v v1 --reason "no descendants" --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/No downstream Roadmap\/Plan\/Exec\/Close artifacts/);
 
-    const data = fs.readJsonSync(env.progressPath) as Record<string, any>;
-    expect(data.intent.versions[0].state).toBe('SUPERSEDED');
+    const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
+    expect(data.intent.state).toBe('SUPERSEDED');
   });
 
-  // ── Principle C: downward-only, never leaks across chains ──────────────────
+  // ── Principle C: downward-only, never leaks across chains. Under Opsi C
+  // this is a structural guarantee (separate files) — asserted here by
+  // reading the untouched chain's file back byte-for-byte, not just an
+  // array entry. ─────────────────────────────────────────────────────────
 
-  it('does not touch an unrelated INTENT chain (two independent LOCKED/INACTIVE intents)', () => {
+  it('does not touch an unrelated INTENT chain — a second chain file is read back completely unchanged', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, twoIndependentChains());
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', fullLockedChain(), { activate: false });
+    const v2Chain = makeChainWithLockedExec('v2', 'v2.1');
+    writeChainFixture(env, 'v2', v2Chain, { activate: true });
+    const v2Before = fs.readJsonSync(chainPath(env, 'v2'));
 
     const result = runCli('intent supersede --v v1 --reason "retire old complementary intent" --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
 
-    const data = fs.readJsonSync(env.progressPath) as Record<string, any>;
-
     // v1 chain cascades
-    expect(data.intent.versions.find((v: any) => v.version === 'v1').state).toBe('SUPERSEDED');
-    expect(data.roadmap.versions.find((v: any) => v.version === 'v1').state).toBe('SUPERSEDED');
-    expect(data.plan.versions.find((v: any) => v.version === 'v0.1').state).toBe('SUPERSEDED');
-    expect(data.exec.versions.find((v: any) => v.version === 'v0.1').state).toBe('SUPERSEDED');
-    expect(data.close.versions.find((v: any) => v.version === 'v1').state).toBe('SUPERSEDED');
+    const v1 = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
+    expect(v1.intent.state).toBe('SUPERSEDED');
+    expect(v1.roadmap.state).toBe('SUPERSEDED');
+    expect(v1.plan.versions[0].state).toBe('SUPERSEDED');
+    expect(v1.exec.versions[0].state).toBe('SUPERSEDED');
+    expect(v1.close.state).toBe('SUPERSEDED');
 
-    // v2 chain is completely untouched
-    expect(data.intent.versions.find((v: any) => v.version === 'v2').state).toBe('LOCKED');
-    expect(data.roadmap.versions.find((v: any) => v.version === 'v2').state).toBe('ACTIVE');
-    expect(data.plan.versions.find((v: any) => v.version === 'v1.1').state).toBe('LOCKED');
-    expect(data.exec.versions.find((v: any) => v.version === 'v1.1').state).toBe('LOCKED');
+    // v2 chain's file is byte-for-byte identical to before the command ran.
+    const v2After = fs.readJsonSync(chainPath(env, 'v2'));
+    expect(v2After).toEqual(v2Before);
   });
 
+  // `plan supersede` is not yet migrated to chain.ts (PLAN-EVAL-01 Fase 3) —
+  // this exercises the old progress.json path unchanged, on purpose.
   it('sigma plan supersede does not change the state of the INTENT that governs it (downward-only)', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, fullLockedChain());
+    const now = new Date().toISOString();
+    fs.writeJsonSync(env.progressPath, makeProgress({
+      lifecycle_state: 'BUILD',
+      intent: {
+        active_version: 'v1', active_state: 'LOCKED',
+        versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
+      },
+      plan: {
+        active_version: 'v1.1', active_state: 'LOCKED', pending: [],
+        versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      },
+      gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
+    }));
 
     const result = runCli('plan supersede --v v1.1 --reason "replan"', env.projectDir, env.homeDir);
 
@@ -246,25 +202,23 @@ describe('sigma intent supersede', () => {
   });
 });
 
-// ── Regression: intent lock never auto-supersedes; reopen leaves prior CLOSE
-// LOCKED as-is unless Director explicitly supersedes that INTENT chain ───────
+// ── Regression: intent lock never auto-supersedes; reopening never mutates
+// the prior chain's own file (Opsi C makes this structural, not behavioral) ──
 
 describe('intent lock regression — no auto-supersede, no auto-cascade', () => {
   let env: TestEnv;
 
   afterEach(() => env?.cleanup());
 
-  it('reopen on a CLOSED project demotes the old INTENT to INACTIVE and leaves the old DIR-CLOSE LOCKED untouched', () => {
+  it('reopen on a CLOSED project creates an isolated v2 chain and leaves the old CLOSED chain (with its LOCKED DIR-CLOSE) completely untouched', () => {
     env = setupTestEnv();
-    const progress = makeProgressWithLockedExec() as Record<string, any>;
+    stubLegacyProgressJson(env);
     const now = new Date().toISOString();
-    progress.close = {
-      active_version: 'v1',
-      active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/close/DIR-CLOSE-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
-    };
-    progress.lifecycle_state = 'CLOSED';
-    fs.writeJsonSync(env.progressPath, progress);
+    const closedChain = makeChainWithFullBuiltCycle('v1', 'v1.1') as Record<string, any>;
+    closedChain.close = { version: 'v1', state: 'LOCKED', file: 'Sigma/close/DIR-CLOSE-v1.md', created_at: now, updated_at: now, locked_at: now };
+    closedChain.lifecycle_state = 'CLOSED';
+    writeChainFixture(env, 'v1', closedChain);
+    const v1Before = fs.readJsonSync(chainPath(env, 'v1'));
 
     const reopened = runCli('intent new --yes', env.projectDir, env.homeDir);
     expect(reopened.exitCode).toBe(0);
@@ -277,12 +231,13 @@ describe('intent lock regression — no auto-supersede, no auto-cascade', () => 
     const locked = runCli('intent lock', env.projectDir, env.homeDir);
     expect(locked.exitCode).toBe(0);
 
-    const data = fs.readJsonSync(env.progressPath) as Record<string, any>;
-    expect(data.intent.versions.find((v: any) => v.version === 'v1').state).toBe('INACTIVE');
-    expect(data.intent.versions.find((v: any) => v.version === 'v2').state).toBe('LOCKED');
+    // The old chain file is byte-for-byte unchanged — no INACTIVE demotion,
+    // no touch of any kind. Isolation is structural now, not a state value.
+    const v1After = fs.readJsonSync(chainPath(env, 'v1'));
+    expect(v1After).toEqual(v1Before);
 
-    // The old DIR-CLOSE is left exactly as it was — no automatic cascade.
-    expect(data.close.versions[0].state).toBe('LOCKED');
-    expect(data.close.active_state).toBe('LOCKED');
+    const v2 = fs.readJsonSync(chainPath(env, 'v2')) as Record<string, any>;
+    expect(v2.intent.state).toBe('LOCKED');
+    expect(v2.gates.gate_1_open).toBe(true);
   });
 });

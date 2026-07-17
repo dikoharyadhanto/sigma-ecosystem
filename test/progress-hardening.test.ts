@@ -5,7 +5,10 @@ import {
   setupTestEnv,
   runCli,
   makeProgress,
-  makeProgressWithDraftIntentAfterLockedChain,
+  stubLegacyProgressJson,
+  writeChainFixture,
+  makeChainWithLockedExec,
+  chainPath,
   validIntentDoc,
   TestEnv,
 } from './helpers';
@@ -15,40 +18,63 @@ describe('Progress hardening', () => {
 
   afterEach(() => env?.cleanup());
 
-  it('blocks mutating commands when active_version has no matching version entry', () => {
+  // The old array-based corruption ("active_version points at nothing in
+  // versions[]", "active_state disagrees with the active entry") is
+  // structurally impossible for `intent` now — there is no separate
+  // active_version/versions pair to disagree with itself, just one object
+  // (PLAN-EVAL-01 §3.4). The analogous corruption for a single-object domain
+  // is "the stored version doesn't match the file it lives in" and "a gate
+  // flag claims something the domain state doesn't support" — both covered
+  // by validateChainSemantics() and exercised end-to-end here.
+
+  it('blocks mutating commands when intent.version does not match chain_version', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgress({
-      intent: { active_version: 'v9', active_state: 'DRAFT', versions: [] },
-    }));
+    stubLegacyProgressJson(env);
+    const now = new Date().toISOString();
+    writeChainFixture(env, 'v1', {
+      schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
+      lifecycle_state: 'DESIGN',
+      intent: { version: 'v9', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now },
+      roadmap: null,
+      plan: { active_version: null, active_state: null, versions: [], pending: [] },
+      exec: { active_version: null, active_state: null, versions: [] },
+      close: null,
+      gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false },
+    });
 
     const result = runCli('intent lock', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/Invalid progress\.json state/i);
+    expect(result.stderr).toMatch(/chain_version/i);
     expect(result.stderr).toMatch(/Recovery:/i);
     expect(result.stderr).toMatch(/sigma session bootstrap/i);
   });
 
-  it('blocks mutating commands when active_state disagrees with the active entry', () => {
+  it('blocks mutating commands when gate_1_open is true without a LOCKED intent', () => {
     env = setupTestEnv();
+    stubLegacyProgressJson(env);
     const now = new Date().toISOString();
-    fs.writeJsonSync(env.progressPath, makeProgress({
-      intent: {
-        active_version: 'v1',
-        active_state: 'DRAFT',
-        versions: [{ version: 'v1', state: 'LOCKED', created_at: now, updated_at: now, locked_at: now }],
-      },
+    writeChainFixture(env, 'v1', {
+      schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
+      lifecycle_state: 'DESIGN',
+      intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now },
+      roadmap: null,
+      plan: { active_version: null, active_state: null, versions: [], pending: [] },
+      exec: { active_version: null, active_state: null, versions: [] },
+      close: null,
       gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
-    }));
+    });
 
     const result = runCli('intent lock', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/active_state/i);
+    expect(result.stderr).toMatch(/gate_1_open/i);
     expect(result.stderr).toMatch(/Recovery:/i);
   });
 
   it('blocks impossible Gate 3 satisfaction without a clean locked chain', () => {
+    // `doctor` is not yet migrated to chain.ts (PLAN-EVAL-01 Fase 4) — this
+    // exercises the old progress.json path unchanged, on purpose.
     env = setupTestEnv();
     fs.writeJsonSync(env.progressPath, makeProgress({
       gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: true },
@@ -60,28 +86,41 @@ describe('Progress hardening', () => {
     expect(result.stdout).toMatch(/gates\.gate_3_satisfied repaired/i);
   });
 
-  it('allows a new draft intent while prior locked artifacts keep gates open', () => {
+  it('allows locking a brand-new chain while an older, fully independent chain keeps its own gates open — isolation is structural (separate files), not a demotion', () => {
     env = setupTestEnv();
-    fs.writeJsonSync(env.progressPath, makeProgressWithDraftIntentAfterLockedChain());
-    fs.ensureDirSync(path.join(env.projectDir, 'Sigma', 'design'));
+    stubLegacyProgressJson(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1'), { activate: false });
+    const v1Before = fs.readJsonSync(chainPath(env, 'v1'));
+
+    const now = new Date().toISOString();
+    writeChainFixture(env, 'v2', {
+      schema_version: '1.0.0', chain_version: 'v2', created_at: now, updated_at: now,
+      lifecycle_state: 'DESIGN',
+      intent: { version: 'v2', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v2.md', created_at: now, updated_at: now },
+      roadmap: null,
+      plan: { active_version: null, active_state: null, versions: [], pending: [] },
+      exec: { active_version: null, active_state: null, versions: [] },
+      close: null,
+      gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false },
+    }, { activate: true });
+
     fs.writeFileSync(
       path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v2.md'),
       validIntentDoc('v2')
     );
 
     const result = runCli('intent lock', env.projectDir, env.homeDir);
-
     expect(result.exitCode).toBe(0);
-    const updated = fs.readJsonSync(env.progressPath) as Record<string, any>;
 
-    // PLAN-EVAL-01: intent lock no longer cascades to descendants at all —
-    // the prior INTENT is demoted to INACTIVE, and its PLAN/EXEC are left
-    // completely untouched (no flag, no state change) until Director runs
-    // `sigma intent supersede` explicitly.
-    expect(updated.intent.versions.find((v: Record<string, unknown>) => v.version === 'v1').state).toBe('INACTIVE');
-    const planVersions = (updated as any).plan.versions as Array<Record<string, unknown>>;
-    const execVersions = (updated as any).exec.versions as Array<Record<string, unknown>>;
-    expect(planVersions[0].state).toBe('LOCKED');
-    expect(execVersions[0].state).toBe('LOCKED');
+    const v2 = fs.readJsonSync(chainPath(env, 'v2')) as Record<string, any>;
+    expect(v2.intent.state).toBe('LOCKED');
+    expect(v2.gates.gate_1_open).toBe(true);
+
+    // v1's file — its own LOCKED plan/exec and gates — is byte-for-byte
+    // unchanged. No INACTIVE demotion (that state no longer exists,
+    // PLAN-EVAL-01 §3.4); there is nothing in this file for v2's lock to
+    // touch in the first place.
+    const v1After = fs.readJsonSync(chainPath(env, 'v1'));
+    expect(v1After).toEqual(v1Before);
   });
 });

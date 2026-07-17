@@ -121,6 +121,20 @@ describe('resolveActiveChainVersion — invariant: exactly one ACTIVE chain (DIS
     expect(resolveActiveChainVersion(projectRoot)).toBe('v2');
   });
 
+  it('auto-defaults away from a stale active_chain pointer that now points at a SUPERSEDED chain', () => {
+    // Reachable case: `intent supersede` on the currently active chain never
+    // touches activate_status.json — the manifest is left pointing at a now
+    // dead chain until this fallback kicks in.
+    const v1 = createInitialChain('v1', 'x');
+    const v2 = createInitialChain('v2', 'x');
+    lockActiveIntent(v1);
+    supersedeIntentVersion(v1, 'superseded by v2');
+    writeChain(projectRoot, 'v1', v1);
+    writeChain(projectRoot, 'v2', v2);
+    writeActivateStatus(projectRoot, 'v1'); // stale — v1 is SUPERSEDED
+    expect(resolveActiveChainVersion(projectRoot)).toBe('v2');
+  });
+
   it('throws when every existing chain is SUPERSEDED', () => {
     const v1 = createInitialChain('v1', 'x');
     lockActiveIntent(v1);
