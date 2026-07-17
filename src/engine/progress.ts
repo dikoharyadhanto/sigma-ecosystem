@@ -727,8 +727,13 @@ export function getInactiveIntentWarnings(data: ProgressJson): InactiveIntentWar
 
     const hanging: string[] = [];
 
+    // ROADMAP has its own independent lifecycle (DRAFT → ACTIVE → INACTIVE →
+    // LOCKED, plus SUPERSEDED) where INACTIVE and LOCKED are already normal,
+    // resolved resting states — not "hanging". Only DRAFT/ACTIVE roadmap
+    // entries (not yet demoted via `roadmap activate`, nor closed) count as
+    // still needing attention here.
     for (const rv of data.roadmap.versions) {
-      if (rv.intent_version_ref === iv.version && rv.state !== 'SUPERSEDED') {
+      if (rv.intent_version_ref === iv.version && (rv.state === 'DRAFT' || rv.state === 'ACTIVE')) {
         hanging.push(`ROADMAP ${rv.version} (${rv.state})`);
       }
     }
