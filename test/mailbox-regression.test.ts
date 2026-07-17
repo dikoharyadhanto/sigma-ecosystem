@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { setupTestEnv, runCli, makeProgress, TestEnv } from './helpers';
+import { setupTestEnv, runCli, makeProgress, stubProjectRootAnchor, TestEnv } from './helpers';
 import {
   generateMessageId,
   generateFilename,
@@ -35,6 +35,7 @@ describe('Mailbox regression', () => {
   describe('sigma send — happy path', () => {
     it('creates a message file and index entry', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
 
       const r = runCli('send --from arc --to fmn --subject "Hello" --message "Body"', env.projectDir, env.homeDir);
@@ -56,6 +57,7 @@ describe('Mailbox regression', () => {
 
     it('does not modify progress.json', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       const before = JSON.stringify(fs.readJsonSync(env.progressPath));
 
@@ -70,6 +72,7 @@ describe('Mailbox regression', () => {
   describe('sigma send — unread gate', () => {
     it('is blocked when the sender has unread messages in their own inbox', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
 
       // ARC sends to FMN → FMN now has 1 unread
@@ -85,6 +88,7 @@ describe('Mailbox regression', () => {
 
     it('allows send after the sender reads their own unread messages', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
 
       // ARC sends to FMN → FMN has 1 unread
@@ -100,6 +104,7 @@ describe('Mailbox regression', () => {
 
     it('gate is per-sender — sender with no unread can send regardless of recipient unread state', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
 
       // ARC sends to FMN → FMN gets unread; ARC itself has no unread
@@ -112,6 +117,7 @@ describe('Mailbox regression', () => {
 
     it('sender can send multiple messages to same recipient when sender has no unread', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
 
       runCli('send --from arc --to fmn --subject "First" --message "A"', env.projectDir, env.homeDir);
@@ -153,6 +159,7 @@ describe('Mailbox regression', () => {
 
     it('two sequential CLI sends produce distinct IDs and file paths', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
 
       runCli('send --from arc --to fmn --subject "First" --message "A"', env.projectDir, env.homeDir);
@@ -174,6 +181,7 @@ describe('Mailbox regression', () => {
   describe('sigma send — attachments', () => {
     it('copies attachment with a filename derived from message ID', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
 
       const srcFile = path.join(env.projectDir, 'notes.txt');
@@ -199,6 +207,7 @@ describe('Mailbox regression', () => {
   describe('sigma inbox', () => {
     it('--role lists unread messages for the recipient', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       runCli('send --from arc --to fmn --subject "Task" --message "Do it"', env.projectDir, env.homeDir);
 
@@ -211,6 +220,7 @@ describe('Mailbox regression', () => {
 
     it('read <id> marks the message as READ', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       runCli('send --from arc --to fmn --subject "Task" --message "Do it"', env.projectDir, env.homeDir);
       const msgId = readMailboxIndex(env).messages[0].id;
@@ -224,6 +234,7 @@ describe('Mailbox regression', () => {
 
     it('read <id> touches only the targeted message', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       runCli('send --from arc --to fmn --subject "Msg1" --message "A"', env.projectDir, env.homeDir);
       const id1 = readMailboxIndex(env).messages[0].id;
@@ -240,6 +251,7 @@ describe('Mailbox regression', () => {
 
     it('archive <id> marks the message as ARCHIVED', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       runCli('send --from arc --to fmn --subject "Task" --message "Do it"', env.projectDir, env.homeDir);
       const msgId = readMailboxIndex(env).messages[0].id;
@@ -252,6 +264,7 @@ describe('Mailbox regression', () => {
 
     it('read on unknown ID fails with a clear error', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
 
       const r = runCli('inbox read MSG-99999999-000000000-ZZZZ-ARC-FMN', env.projectDir, env.homeDir);
@@ -265,6 +278,7 @@ describe('Mailbox regression', () => {
   describe('mailbox index corruption', () => {
     it('sigma send fails when index.json is not valid JSON', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       writeRawIndex(env, 'NOT_JSON{{{');
 
@@ -275,6 +289,7 @@ describe('Mailbox regression', () => {
 
     it('sigma inbox fails when index.json is not valid JSON', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       writeRawIndex(env, 'NOT_JSON{{{');
 
@@ -285,6 +300,7 @@ describe('Mailbox regression', () => {
 
     it('sigma send fails when messages field is missing', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       writeRawIndex(env, { version: 1 });
 
@@ -295,6 +311,7 @@ describe('Mailbox regression', () => {
 
     it('sigma send fails when index contains duplicate IDs', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       const now = new Date().toISOString();
       const base = {
@@ -319,6 +336,7 @@ describe('Mailbox regression', () => {
 
     it('malformed index is never auto-replaced with an empty mailbox', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       writeRawIndex(env, 'NOT_JSON{{{');
 
@@ -330,6 +348,7 @@ describe('Mailbox regression', () => {
 
     it('corruption error includes recovery guidance', () => {
       env = setupTestEnv();
+      stubProjectRootAnchor(env);
       fs.writeJsonSync(env.progressPath, makeProgress());
       writeRawIndex(env, { version: 1 });
 

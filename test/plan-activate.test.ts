@@ -4,7 +4,7 @@ import path from 'path';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   makeChain,
   chainPath,
@@ -62,7 +62,7 @@ describe('sigma plan new — gate ordering follows current CLI', () => {
 
   it('reports Gate 1.5 before any draft-queue concern when no ROADMAP exists', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
 
     const result = runCli('plan new --title "Test Stage" --focus "Test focus"', env.projectDir, env.homeDir);
@@ -74,7 +74,7 @@ describe('sigma plan new — gate ordering follows current CLI', () => {
 
   it('gate-first error points to the roadmap creation flow (no more "roadmap activate" — command removed, §3.5)', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
 
     const result = runCli('plan new --title "Test Stage" --focus "Test focus"', env.projectDir, env.homeDir);
@@ -91,7 +91,7 @@ describe('sigma plan activate', () => {
 
   it('activates an existing DRAFT version successfully', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
 
     const result = runCli('plan activate --v v1.2', env.projectDir, env.homeDir);
@@ -108,7 +108,7 @@ describe('sigma plan activate', () => {
 
   it('fails for a version that does not exist', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
 
     const result = runCli('plan activate --v v9.99', env.projectDir, env.homeDir);
@@ -119,7 +119,7 @@ describe('sigma plan activate', () => {
 
   it('fails for a LOCKED version', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
 
     const result = runCli('plan activate --v v1.1', env.projectDir, env.homeDir);
@@ -130,7 +130,7 @@ describe('sigma plan activate', () => {
 
   it('after activation, sigma plan lock locks the activated version', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
 
     // Activate v1.2 (not the current active v1.3)
@@ -156,7 +156,7 @@ describe('sigma plan activate', () => {
 
   it('sigma plan status reflects the newly activated version', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
 
     runCli('plan activate --v v1.2', env.projectDir, env.homeDir);
@@ -175,7 +175,7 @@ describe('AUD Advisory Verdict gate on plan lock', () => {
 
   it('plan lock fails when no verdict checkbox is checked', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
     const planFile = path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.1.md');
     fs.writeFileSync(planFile, validPlanDoc('v1.1').replace('- [x] PASS', ''));
@@ -188,7 +188,7 @@ describe('AUD Advisory Verdict gate on plan lock', () => {
 
   it('plan lock succeeds when SKIP_FOR_AUDIT is checked with a recorded Director Instruction', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
     const planFile = path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.1.md');
     fs.writeFileSync(

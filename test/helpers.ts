@@ -77,18 +77,19 @@ export function setupTestEnv(): TestEnv {
 
 // ── Chain fixtures (PLAN-EVAL-01 Opsi C — progress-v<N>.json) ───────────────
 
-// findProjectRoot() still anchors on Sigma/progress.json's existence until
-// Fase 5 (PLAN-EVAL-01 §3.6's ordering correction — the anchor can't move
-// until every path that creates a project, including `project start` and
-// this test harness, writes activate_status.json instead). Tests exercising
-// a chain.ts-backed command need *some* file at progressPath purely so
-// findProjectRoot() succeeds — content is irrelevant, migrated commands
-// never read it. NOT called from setupTestEnv() itself: doing that
-// unconditionally breaks every `project start`/`project register` test,
-// which checks for progress.json's *absence* to decide whether a project
-// already exists.
-export function stubLegacyProgressJson(env: TestEnv): void {
-  fs.writeJsonSync(env.progressPath, makeProgress());
+// findProjectRoot() anchors on Sigma/activate_status.json's existence
+// (PLAN-EVAL-01 Fase 5 — moved off progress.json now that every
+// project-creating path unconditionally writes this file). Tests that
+// fabricate a chain fixture directly (bypassing `sigma project start`, which
+// writes this file for real) need *some* activate_status.json present purely
+// so findProjectRoot() succeeds — writeChainFixture()'s default
+// (activate: true) already produces one, so this helper only matters for
+// tests with no chain fixture at all (guard/error-path tests). NOT called
+// from setupTestEnv() itself: doing that unconditionally breaks every
+// `project start`/`project register` test, which checks for the project's
+// *absence* to decide whether one already exists.
+export function stubProjectRootAnchor(env: TestEnv): void {
+  fs.writeJsonSync(env.activateStatusPath, { active_chain: null });
 }
 
 // PLAN-EVAL-01 Fase 4 — `session bootstrap`/`project status` now read

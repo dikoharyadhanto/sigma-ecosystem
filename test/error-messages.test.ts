@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
-import { setupTestEnv, runCli, makeProgress, TestEnv } from './helpers';
+import { setupTestEnv, runCli, makeProgress, stubProjectRootAnchor, TestEnv } from './helpers';
 
 describe('Error message readability', () => {
   let env: TestEnv;
@@ -9,6 +9,7 @@ describe('Error message readability', () => {
 
   it('gate block errors are human-readable, not raw stack traces', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const result = runCli('plan new', env.projectDir, env.homeDir);
@@ -24,6 +25,7 @@ describe('Error message readability', () => {
 
   it('unknown command error is human-readable', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const result = runCli('nonexistent-command', env.projectDir, env.homeDir);
@@ -35,9 +37,11 @@ describe('Error message readability', () => {
     expect(output).not.toMatch(/at Module\._compile/);
   });
 
-  it('missing progress.json produces a clear error, not a stack trace', () => {
+  it('missing activate_status.json produces a clear error, not a stack trace', () => {
     env = setupTestEnv();
-    // Do NOT write progress.json — simulate running outside a Sigma project
+    // Do NOT write activate_status.json — simulate running outside a Sigma
+    // project (PLAN-EVAL-01 Fase 5: findProjectRoot() anchors on this file
+    // now, not progress.json).
 
     const result = runCli('project status', env.projectDir, env.homeDir);
 

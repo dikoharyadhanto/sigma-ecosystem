@@ -4,7 +4,7 @@ import {
   setupTestEnv,
   runCli,
   makeProgress,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   chainPath,
   TestEnv,
@@ -21,6 +21,7 @@ describe('sigma project reset is removed', () => {
 
   it('rejects `sigma project reset` as an unknown subcommand', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const result = runCli('project reset --confirm', env.projectDir, env.homeDir);
@@ -37,7 +38,7 @@ describe('sigma doctor --recovery', () => {
 
   it('behaves identically to plain `sigma doctor`', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const now = new Date().toISOString();
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,

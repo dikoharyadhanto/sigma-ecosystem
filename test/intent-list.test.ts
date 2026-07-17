@@ -4,7 +4,7 @@ import path from 'path';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   makeChainWithDraftIntent,
   makeChainWithLockedIntent,
@@ -26,7 +26,7 @@ describe('sigma intent list', () => {
 
   it('reports none when no chain exists yet', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
 
     const result = runCli('intent list', env.projectDir, env.homeDir);
 
@@ -36,7 +36,7 @@ describe('sigma intent list', () => {
 
   it('lists every chain found on disk, ascending, marking exactly the active one', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithFullBuiltCycle('v1', 'v1.1'), { activate: false });
     writeChainFixture(env, 'v2', makeChainWithDraftIntent('v2'), { activate: true });
 
@@ -53,7 +53,7 @@ describe('sigma intent list', () => {
 
   it('still lists a non-active chain with a still-open gate — the replacement for the deleted getInactiveIntentWarnings()', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     // v1 has LOCKED plan/exec hanging (never closed) while v2 is the active chain.
     writeChainFixture(env, 'v1', makeChainWithFullBuiltCycle('v1', 'v1.1'), { activate: false });
     writeChainFixture(env, 'v2', makeChainWithLockedIntent('v2'), { activate: true });
@@ -69,7 +69,7 @@ describe('sigma intent list', () => {
 
   it('marks no chain as active when every chain is SUPERSEDED, without crashing', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const superseded = makeChainWithLockedIntent('v1') as Record<string, any>;
     superseded.intent.state = 'SUPERSEDED';
     superseded.intent.supersede_reason = 'abandoned';
@@ -91,7 +91,7 @@ describe('sigma intent check --v — cross-chain resolution (PLAN-EVAL-01 §3.7)
 
   it('checks a non-active chain by version, leaving activate_status.json untouched', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'), { activate: false });
     writeChainFixture(env, 'v2', makeChainWithDraftIntent('v2'), { activate: true });
 
@@ -108,10 +108,55 @@ describe('sigma intent check --v — cross-chain resolution (PLAN-EVAL-01 §3.7)
 
   it('fails clearly when the requested chain does not exist', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
 
     const result = runCli('intent check --v v9', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/not found/i);
+  });
+});
+
+describe('sigma intent activate — manual chain switch (git checkout analog)', () => {
+  let env: TestEnv;
+
+  afterEach(() => env?.cleanup());
+
+  it('switches the active chain without requiring --director-confirm', () => {
+    env = setupTestEnv();
+    stubProjectRootAnchor(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'), { activate: false });
+    writeChainFixture(env, 'v2', makeChainWithDraftIntent('v2'), { activate: true });
+
+    const result = runCli('intent activate --v v1', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(fs.readJsonSync(env.activateStatusPath).active_chain).toBe('v1');
+  });
+
+  it('refuses to activate a SUPERSEDED chain', () => {
+    env = setupTestEnv();
+    stubProjectRootAnchor(env);
+    const superseded = makeChainWithLockedIntent('v1') as Record<string, any>;
+    superseded.intent.state = 'SUPERSEDED';
+    superseded.intent.supersede_reason = 'abandoned';
+    writeChainFixture(env, 'v1', superseded, { activate: false });
+    writeChainFixture(env, 'v2', makeChainWithDraftIntent('v2'), { activate: true });
+
+    const result = runCli('intent activate --v v1', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/SUPERSEDED/);
+    expect(fs.readJsonSync(env.activateStatusPath).active_chain).toBe('v2');
+  });
+
+  it('fails clearly when the target chain does not exist', () => {
+    env = setupTestEnv();
+    stubProjectRootAnchor(env);
+    writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
+
+    const result = runCli('intent activate --v v9', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/not found/i);

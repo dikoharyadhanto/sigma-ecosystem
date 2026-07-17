@@ -4,7 +4,7 @@ import path from 'path';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   makeChainWithDraftIntent,
   validIntentDoc,
@@ -19,7 +19,7 @@ describe('Intent lock mutation', () => {
 
   it('sigma intent lock transitions INTENT from DRAFT to LOCKED in progress-v1.json', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
 
     // Create a stub intent file so the harvester does not fail
@@ -41,7 +41,7 @@ describe('Intent lock mutation', () => {
 
   it('sigma intent lock fails when no DRAFT intent exists', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     // No chain at all — resolveActiveChainVersion() has nothing to default to.
 
     const result = runCli('intent lock', env.projectDir, env.homeDir);

@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import { setupTestEnv, runCli, makeProgress, TestEnv } from './helpers';
+import { setupTestEnv, runCli, makeProgress, stubProjectRootAnchor, TestEnv } from './helpers';
 
 // Coverage for Implementation/planned_sigma_evaluation_2026_07_15/PLAN-EVAL-01
 // follow-up: `sigma report logs` reads Sigma/logs/operations.jsonl and
@@ -20,6 +20,7 @@ describe('sigma report logs', () => {
 
   it('prints formatted log lines with SUCCESS/ERROR labels', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
     writeRawLog(env.sigmaDir, [
       { operation: 'intent status', timestamp: '2026-07-15T10:00:00.000Z', status: 'success', exit_code: 0 },
@@ -34,6 +35,7 @@ describe('sigma report logs', () => {
 
   it('--status filters to only matching entries', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
     writeRawLog(env.sigmaDir, [
       { operation: 'intent status', timestamp: '2026-07-15T10:00:00.000Z', status: 'success', exit_code: 0 },
@@ -48,6 +50,7 @@ describe('sigma report logs', () => {
 
   it('--operation filters by substring match', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
     writeRawLog(env.sigmaDir, [
       { operation: 'intent status', timestamp: '2026-07-15T10:00:00.000Z', status: 'success', exit_code: 0 },
@@ -62,6 +65,7 @@ describe('sigma report logs', () => {
 
   it('--limit shows only the last N matching entries', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
     writeRawLog(env.sigmaDir, [
       { operation: 'a', timestamp: '2026-07-15T10:00:00.000Z', status: 'success', exit_code: 0 },
@@ -81,6 +85,7 @@ describe('sigma report logs', () => {
 
   it('--since/--until bound the time range', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
     writeRawLog(env.sigmaDir, [
       { operation: 'old-op', timestamp: '2000-01-01T00:00:00.000Z', status: 'success', exit_code: 0 },
@@ -98,6 +103,7 @@ describe('sigma report logs', () => {
 
   it('--json prints raw JSONL instead of formatted lines', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
     writeRawLog(env.sigmaDir, [
       { operation: 'intent status', timestamp: '2026-07-15T10:00:00.000Z', status: 'success', exit_code: 0 },
@@ -117,6 +123,7 @@ describe('sigma report logs', () => {
 
   it('rejects an invalid --status value with exit code 1', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const result = runCli('report logs --status bogus', env.projectDir, env.homeDir);
@@ -126,6 +133,7 @@ describe('sigma report logs', () => {
 
   it('rejects an invalid --limit value with exit code 1', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const result = runCli('report logs --limit abc', env.projectDir, env.homeDir);
@@ -135,6 +143,7 @@ describe('sigma report logs', () => {
 
   it('reports "No matching operations found." when the log is empty', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const result = runCli('report logs', env.projectDir, env.homeDir);

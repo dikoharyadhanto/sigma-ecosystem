@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   makeChainWithLockedIntent,
   chainPath,
@@ -31,7 +31,7 @@ describe('sigma override survives sigma doctor while still in force', () => {
 
   it('keeps gate_2_open true after doctor when the overridden plan is still DRAFT', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', chainWithDraftPlan());
 
     const overrideResult = runCli('override --reason "Director decision: unblock demo" --director-confirm', env.projectDir, env.homeDir);
@@ -55,7 +55,7 @@ describe('sigma override survives sigma doctor while still in force', () => {
 
   it('stops forcing the gate open once the overridden version is superseded by a real pivot', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', chainWithDraftPlan());
 
     runCli('override --reason "Director decision: unblock demo" --director-confirm', env.projectDir, env.homeDir);

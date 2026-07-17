@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, SCHEMA_VERSION } from '../config';
+import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, SCHEMA_VERSION } from '../config';
 import {
   LifecycleState,
   PlanTracker,
@@ -117,7 +117,7 @@ export function chainFilePath(projectRoot: string, chainVersion: string): string
 }
 
 export function activateStatusPath(projectRoot: string): string {
-  return path.join(projectRoot, PROJECT_SIGMA_DIR, 'activate_status.json');
+  return path.join(projectRoot, ACTIVATE_STATUS_FILE);
 }
 
 // ── Discovery ────────────────────────────────────────────────────────────────

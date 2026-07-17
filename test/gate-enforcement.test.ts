@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   makeChainWithDraftIntent,
   makeChainWithLockedIntent,
@@ -16,7 +16,7 @@ describe('Gate enforcement', () => {
 
   it('sigma plan new fails when Gate 1 is blocked (no locked INTENT)', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent());
 
     const result = runCli('plan new --title "Test Stage" --focus "Test focus"', env.projectDir, env.homeDir);
@@ -27,7 +27,7 @@ describe('Gate enforcement', () => {
 
   it('sigma plan new succeeds when Gate 1 is open (INTENT LOCKED)', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedIntent());
 
     // plan new also needs a template to copy — it will fail on missing template,
@@ -40,7 +40,7 @@ describe('Gate enforcement', () => {
 
   it('sigma exec new fails when Gate 2 is blocked (no locked PLAN)', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedIntent());
 
     const result = runCli('exec new', env.projectDir, env.homeDir);

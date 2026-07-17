@@ -2,7 +2,7 @@
 
 **Sumber**: [DISCUSSION-MULTI-FILE-PROGRESS-CHAIN-ARCHITECTURE.md](../planned_sigma_evaluation_2026_07_17/DISCUSSION-MULTI-FILE-PROGRESS-CHAIN-ARCHITECTURE.md)
 **Tanggal**: 2026-07-17 (draf awal) — didalami 2026-07-17 (Professional Mode, terhadap kode nyata `src/`) — kelima keputusan §8 DIKONFIRMASI Director 2026-07-17.
-**Status**: DRAFT — didalami, kelima keputusan skema di §8 sudah dikonfirmasi Director, belum LOCKED (bukan FMN-PLAN, tidak ada mekanisme lock Sigma untuk dokumen ini). Prioritas #1 (fondasi, blocking semua plan-eval lain di folder ini). Menunggu approval eksplisit Director untuk mulai Fase 0 implementasi (§6).
+**Status**: Fase 0–4 SELESAI, Fase 5 sebagian selesai (jangkar `findProjectRoot` pindah + `progress.ts` dirampingkan jadi legacy shim; penghapusan total tetap terblokir PLAN-EVAL-05), Fase 6 SELESAI. Plus satu koreksi command surface (`intent activate --v`, lihat Fase 2) ditemukan & diperbaiki saat audit cross-reference plan-eval lain. `npm run build` bersih, `npm test` 190/190 (25 file). Belum LOCKED (bukan FMN-PLAN, tidak ada mekanisme lock Sigma untuk dokumen ini) — implementasi berjalan atas otorisasi Director langsung per fase, bukan lewat lock formal.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma. Pendalaman di bawah ditulis dengan membaca langsung `src/engine/progress.ts` (1313 baris), `src/engine/reconstruct.ts`, `src/utils/fs.ts`, `src/utils/docCheck.ts`, `src/commands/{intent,doctor,session,plan,project}.ts`, dan `test/helpers.ts` — bukan cuma dari DISCUSSION doc. Beberapa temuan di bawah adalah konsekuensi struktural yang **belum eksplisit** ditulis di DISCUSSION doc; masing-masing ditandai dan dikumpulkan di §8, dan sudah **DIKONFIRMASI Director** — lihat §8 untuk status akhir tiap poin.
 
 ---
@@ -240,7 +240,7 @@ tapi karena ini secara teknis adalah keputusan skema (menghapus satu nilai
 enum) yang belum pernah diucapkan Director secara literal di DISCUSSION doc,
 sehingga tetap perlu sign-off eksplisit sebelum ditulis ke kode.
 
-### 3.5 Temuan baru — `RoadmapState` ACTIVE/INACTIVE mati struktural di sini juga, tapi jangan disamakan dengan redefinisi Gate 1.5 (itu tetap PLAN-EVAL-04)
+### 3.5 Temuan baru — `RoadmapState` ACTIVE/INACTIVE mati struktural, dan (KOREKSI) redefinisi Gate 1.5 + cascade auto-lock TERNYATA juga masuk PLAN-EVAL-01, bukan PLAN-EVAL-04
 
 DISCUSSION §"Konsolidasi Lanjutan" bagian 8 sudah memutuskan model
 `ACTIVE`/`INACTIVE` roadmap dihapus **karena** di dunia 1:1 per-chain tidak
@@ -263,9 +263,22 @@ tidak diam-diam menelan pekerjaan PLAN-EVAL-04:
   `lockActiveRoadmap()` sebagai efek samping **hari ini, sebelum migrasi
   apa pun disentuh**. Ini bukan fitur baru untuk didesain — ini perilaku
   existing yang wajib dipertahankan PLAN-EVAL-01 (§8 poin 4 di bawah
-  diperbarui sesuai ini juga). Sisa PLAN-EVAL-04 yang genuinely baru cuma
-  *definisi ulang* Gate 1.5 (baris berikutnya) dan pemakaian istilah "ada
-  dan belum SUPERSEDED" — bukan mekanisme cascade-nya sendiri.
+  diperbarui sesuai ini juga).
+- **KOREKSI KEDUA (ditemukan saat audit cross-reference plan-eval lain,
+  2026-07-17)**: draf ini SEBELUMNYA (di titik penulisan paragraf ini)
+  masih mengira *definisi ulang* Gate 1.5 adalah sisa pekerjaan genuine
+  PLAN-EVAL-04. Itu **juga** keliru — begitu ACTIVE/INACTIVE dihapus dari
+  enum (poin struktural di atas), definisi Gate 1.5 yang lama ("ROADMAP
+  harus `ACTIVE`") **tidak punya makna literal tersisa untuk dipertahankan**
+  — PLAN-EVAL-01 *terpaksa* menuliskan definisi pengganti supaya
+  `plan new`/`plan promote` tetap bisa jalan sama sekali, bukan menunda
+  keputusan itu. Definisi pengganti itu ("roadmap ada dan belum
+  SUPERSEDED") memang sudah **diimplementasikan langsung di sini**
+  (`plan.ts`'s `getRoadmapPathIfEligible()`, Fase 3) — lihat keputusan di
+  bawah. **PLAN-EVAL-04 tidak menyisakan pekerjaan behavioral apa pun** dari
+  bagian ini — satu-satunya sisa scope genuine PLAN-EVAL-04 adalah Isu
+  Terbuka #8 (tinjauan gate/hubungan lain di luar Gate 1.5), lihat dokumen
+  PLAN-EVAL-04 yang sudah diperbarui sesuai ini.
 
 **Keputusan untuk PLAN-EVAL-01**: `RoadmapState` per-chain jadi
 `'DRAFT' | 'LOCKED' | 'SUPERSEDED'` — 3 state, ACTIVE/INACTIVE dijatuhkan
@@ -548,6 +561,20 @@ sendiri sebelum lanjut ke fase berikutnya.
    nol). `npm run build` bersih, `npm test` **195/195 (27 file)**. Diverifikasi
    juga manual end-to-end di luar test harness (`intent new` → `status` →
    `list` menghasilkan `progress-v1.json` + `activate_status.json` yang benar).
+
+   **KOREKSI (ditemukan 2026-07-17, saat audit cross-reference plan-eval
+   lain)**: `sigma intent activate --v <chain>` — command command surface
+   yang sudah diputuskan DISCUSSION doc ("Konsolidasi Lanjutan" bagian 2:
+   "menggantikan `sigma progress activate`") — **ternyata tidak pernah
+   diimplementasikan** di Fase 2 ini. `writeActivateStatus()` (chain.ts,
+   Fase 0) sebelumnya cuma dipanggil dari `intent new` (auto-activate) dan
+   `project start` (reset ke null) — tidak ada jalur manual bagi Director
+   untuk berpindah chain aktif. Ditambahkan sekarang: `intent activate --v
+   <chain>` — tanpa `--director-confirm` (sesuai keputusan DISCUSSION
+   §"Konsolidasi Lanjutan" bagian 6), menolak chain `SUPERSEDED` (permanen,
+   §"Governance batch" #6). 3 test baru di `test/intent-list.test.ts`.
+   `npm test` **190/190 (25 file)** setelah penambahan ini (lihat §6/§7 untuk
+   riwayat total test count berubah karena penghapusan 2 file usang juga).
 4. **Fase 3 — `roadmap.ts`, `plan.ts`, `exec.ts`, `close.ts`. SELESAI
    (2026-07-17).**
 
@@ -633,23 +660,73 @@ sendiri sebelum lanjut ke fase berikutnya.
    harness: `project start` (mengonfirmasi `activate_status.json` dibuat),
    `session bootstrap`/`project status`/`doctor` sebelum dan sesudah
    `intent new` pertama, dan `override --dry-run`.
-6. **Fase 5 — Hapus `progress.ts` lama** (`ProgressJson`, `PROGRESS_FILE`
-   di `config.ts`, `readProgress`/`writeProgress`) setelah dipastikan tidak
-   ada satu pun call site tersisa (`grep -rn "readProgress\|writeProgress\|ProgressJson" src/`
-   harus nol hasil di luar `chain.ts`/`progress.ts` itu sendiri kalau
-   sebagian fungsi domain dipindah fisik ke sana, bukan file baru — keputusan
-   nama file final diserahkan ke saat coding, tidak material untuk plan ini).
-   **Fase ini juga tempat `findProjectRoot()` (§3.6) akhirnya diganti
-   jangkarnya ke `activate_status.json`** — ditunda dari Fase 0 (lihat
-   koreksi urutan kerja di §3.6), karena baru di titik ini setiap proyek
-   dan setiap fixture test dijamin sudah punya `activate_status.json`
-   (Fase 4 project.ts + Fase 6 test migration harus sudah berjalan lebih
-   dulu untuk itu — jadi urutan sebenarnya adalah Fase 4/6 selesai duluan,
-   baru Fase 5 mengganti jangkar dan menghapus jalur lama sekaligus).
-7. **Fase 6 — Migrasi `test/helpers.ts` + 25 file test** (lihat §7 §Strategi
-   Migrasi Test di bawah — dikerjakan paralel dengan Fase 2–5, bukan
-   menunggu semuanya selesai, supaya regresi ketahuan sedini mungkin, bukan
-   di akhir).
+6. **Fase 5 — SEBAGIAN SELESAI (2026-07-17).** Rencana awal ("hapus
+   `progress.ts` sepenuhnya + pindah jangkar `findProjectRoot`") ternyata
+   dua langkah dengan tingkat keterblokiran berbeda — dipisah begitu
+   ditemukan:
+   - **Pindah jangkar `findProjectRoot()` ke `activate_status.json`
+     (§3.6) — SELESAI.** Aman dilakukan sekarang karena Fase 4 sudah
+     membuat `project start`/`--reinit` menulis `activate_status.json`
+     tanpa syarat. `src/config.ts` mendapat konstanta baru
+     `ACTIVATE_STATUS_FILE` (mendampingi `PROGRESS_FILE`, tidak
+     menggantikannya). Efek pada test: 16 file test perlu menulis
+     `activate_status.json` (bukan lagi `progress.json`) supaya
+     `findProjectRoot()` berhasil — helper `stubLegacyProgressJson()`
+     di `test/helpers.ts` di-rename total jadi `stubProjectRootAnchor()`
+     dan reimplementasi menulis `activate_status.json`, lalu di-apply
+     lewat rename massal ke seluruh file yang memanggilnya (bukan
+     ditinggalkan sebagai nama yang menyesatkan).
+   - **Hapus `progress.ts` sepenuhnya — TETAP TERBLOKIR**, persis seperti
+     temuan Fase 4: `doctor --reconstruct` masih bergantung penuh
+     padanya (`ProgressJson`, `readOverrides`, `writeProgress`,
+     `createInitialProgress`, `hasActiveLockedIntent`/`hasCleanGate2Chain`/
+     `hasCleanGate3Chain`, `parseMajorVersion`/`parseMinorVersion`), dan
+     migrasi `--reconstruct` sendiri tetap PLAN-EVAL-05 (lihat Fase 4).
+     **Yang dilakukan sebagai gantinya**: `progress.ts` dirampingkan dari
+     1313 baris jadi ~250 baris — SEMUA fungsi yang sudah punya padanan
+     `chain.ts` dan tidak lagi punya pemanggil nyata di luar `progress.ts`
+     itu sendiri dihapus (dikonfirmasi lewat audit import per-file, bukan
+     tebakan): `readProgress`, `validateProgress`, `checkSchemaVersion`,
+     `assertProgressCanMutate`, `validateProgressSemantics` (dan seluruh
+     helper privatnya), `runDoctorReconciliation`+`hasInvalidRuntime`+
+     `isGateInvalid`+`getGateStatusLabel`+`getOperationalGate`+
+     `getInvalidWarningLines` versi lama, `getGateStatus`+`GateStatus`
+     versi lama, `getNextValidOperations` versi lama, dan **seluruh**
+     fungsi mutasi INTENT/PLAN/EXEC/CLOSE/ROADMAP (`registerIntentDraft`,
+     `lockActiveIntent`, `supersedeIntentVersion`, dst. — semuanya sudah
+     punya versi `chain.ts` yang benar-benar dipakai). Yang tersisa cuma
+     yang benar-benar masih dipanggil `reconstruct.ts`/`doctor.ts` hari
+     ini: types (`ProgressJson` dkk.), `hasActiveLockedIntent`/
+     `hasCleanGate2Chain`/`hasCleanGate3Chain`, `readOverrides`,
+     `getInvalidMarkers`, `writeProgress`, `createInitialProgress`,
+     `parseMajorVersion`/`parseMinorVersion`. File ini sekarang murni
+     "legacy shim untuk `--reconstruct`", didokumentasikan sebagai
+     demikian di komentar puncak file — dihapus total menunggu
+     PLAN-EVAL-05.
+   - **Konsekuensi backward-compat yang disengaja**: proyek Sigma dari
+     SEBELUM migrasi ini (hanya punya `Sigma/progress.json`, belum pernah
+     punya `Sigma/activate_status.json`) sekarang tidak lagi dikenali
+     `findProjectRoot()` sama sekali — dicek manual, pesan errornya jelas
+     ("No Sigma/activate_status.json found..."). Ini bukan bug — migrasi
+     data proyek lama adalah **PLAN-EVAL-03** (JLH cutover), eksplisit di
+     luar scope PLAN-EVAL-01 sejak draf pertama dokumen ini.
+7. **Fase 6 — SELESAI, sudah dikerjakan bertahap sepanjang Fase 2–5**
+   (bukan satu langkah terpisah di akhir, persis seperti rencana awal
+   "paralel, bukan menunggu semuanya selesai"). Pembersihan akhir yang
+   ditemukan saat audit Fase 5: 2 file test (`inactive-intent-warnings.test.ts`,
+   `intent-reopen-cycle.test.ts`) ternyata meng-import fungsi `progress.ts`
+   **langsung** (unit-level, bukan lewat CLI) — karena itu tidak pernah
+   muncul di hasil `npm test` manapun sepanjang Fase 2–4 sampai fungsi yang
+   mereka uji benar-benar dihapus dari `progress.ts` di Fase 5. Kedua file
+   menguji mekanisme yang memang sudah sengaja dihapus (`getInactiveIntentWarnings`,
+   demosi INACTIVE `lockActiveIntent`, heuristik "stranded reopen"
+   `runDoctorReconciliation`) dengan cakupan pengganti yang sudah ada
+   (`intent-list.test.ts`, `chain-engine.test.ts`, `intent-supersede.test.ts`)
+   — dihapus, bukan dimigrasikan, karena mekanisme yang mereka uji memang
+   tidak punya padanan baru untuk dimigrasikan ke. Juga dihapus:
+   `resolveSigmaDocPath()`/`resolveVersionedFile()` di `docCheck.ts` (dead
+   code sejak Fase 3 — setiap command sudah punya resolusi lokalnya
+   sendiri, tidak ada satu pun pemanggil tersisa).
 
 ---
 

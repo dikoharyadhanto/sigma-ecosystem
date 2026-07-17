@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   makeChainWithDraftIntent,
   makeChainWithLockedIntent,
@@ -17,7 +17,7 @@ describe('Chain gate: INTENT → PLAN → EXEC', () => {
 
   it('sigma plan new is blocked when INTENT is not locked (gate_1_open false)', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent());
 
     const result = runCli('plan new --title "Test Stage" --focus "Test focus"', env.projectDir, env.homeDir);
@@ -28,7 +28,7 @@ describe('Chain gate: INTENT → PLAN → EXEC', () => {
 
   it('sigma exec new is blocked when PLAN is not locked (gate_2_open false)', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedIntent());
 
     const result = runCli('exec new', env.projectDir, env.homeDir);
@@ -39,7 +39,7 @@ describe('Chain gate: INTENT → PLAN → EXEC', () => {
 
   it('sigma exec new is not blocked by Gate 2 when PLAN is locked', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedPlan());
 
     // exec new will fail on missing template, but must NOT produce a Gate 2 block
@@ -50,7 +50,7 @@ describe('Chain gate: INTENT → PLAN → EXEC', () => {
 
   it('gates are enforced in order: INTENT gate blocks before PLAN gate', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     // No intent locked
     writeChainFixture(env, 'v1', makeChainWithDraftIntent());
 

@@ -57,7 +57,7 @@ function chainFilePath(projectRoot, chainVersion) {
     return path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, `progress-${chainVersion}.json`);
 }
 function activateStatusPath(projectRoot) {
-    return path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'activate_status.json');
+    return path_1.default.join(projectRoot, config_1.ACTIVATE_STATUS_FILE);
 }
 // ── Discovery ────────────────────────────────────────────────────────────────
 // All progress-v<N>.json chain files present on disk, sorted ascending by

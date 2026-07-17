@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateSigmaDocFile = validateSigmaDocFile;
-exports.resolveSigmaDocPath = resolveSigmaDocPath;
 exports.printSigmaDocReport = printSigmaDocReport;
 exports.ensureSigmaDocEligible = ensureSigmaDocEligible;
 const fs_extra_1 = __importDefault(require("fs-extra"));
@@ -504,49 +503,6 @@ function validateSigmaDocFile(absPath, domain) {
         passes,
         requirements,
     };
-}
-function resolveVersionedFile(projectRoot, data, domain, version) {
-    if (domain === 'intent') {
-        const entry = version
-            ? data.intent.versions.find(item => item.version === version)
-            : data.intent.versions.find(item => item.version === data.intent.active_version);
-        if (!entry)
-            throw new Error(version ? `DIR-INTENT ${version} not found.` : 'No active DIR-INTENT found. Run: sigma intent new');
-        return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'design', `DIR-INTENT-${entry.version}.md`));
-    }
-    if (domain === 'roadmap') {
-        const entry = version
-            ? data.roadmap.versions.find(item => item.version === version)
-            : data.roadmap.versions.find(item => item.version === data.roadmap.active_version);
-        if (!entry)
-            throw new Error(version ? `ROADMAP ${version} not found.` : 'No active ROADMAP found. Run: sigma roadmap new');
-        return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${entry.version}.md`));
-    }
-    if (domain === 'plan') {
-        const entry = version
-            ? data.plan.versions.find(item => item.version === version)
-            : data.plan.versions.find(item => item.version === data.plan.active_version);
-        if (!entry)
-            throw new Error(version ? `FMN-PLAN ${version} not found.` : 'No active FMN-PLAN found. Run: sigma plan new');
-        return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'build', `FMN-PLAN-${entry.version}.md`));
-    }
-    if (domain === 'exec') {
-        const entry = version
-            ? data.exec.versions.find(item => item.version === version)
-            : data.exec.versions.find(item => item.version === data.exec.active_version);
-        if (!entry)
-            throw new Error(version ? `DEV-EXEC ${version} not found.` : 'No active DEV-EXEC found. Run: sigma exec new');
-        return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'build', `DEV-EXEC-${entry.version}.md`));
-    }
-    const entry = version
-        ? data.close.versions.find(item => item.version === version)
-        : data.close.versions.find(item => item.version === data.close.active_version);
-    if (!entry)
-        throw new Error(version ? `DIR-CLOSE ${version} not found.` : 'No active DIR-CLOSE found. Run: sigma close new');
-    return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'close', `DIR-CLOSE-${entry.version}.md`));
-}
-function resolveSigmaDocPath(projectRoot, data, domain, version) {
-    return resolveVersionedFile(projectRoot, data, domain, version);
 }
 function printSigmaDocReport(report, projectRoot) {
     const displayPath = projectRoot ? path_1.default.relative(projectRoot, report.file) || report.file : report.file;

@@ -35,16 +35,21 @@ function backupFile(filePath, backupDir) {
 function fileExists(filePath) {
     return fs_extra_1.default.existsSync(filePath);
 }
+// PLAN-EVAL-01 Fase 5 — anchors on Sigma/activate_status.json (written by
+// `sigma project start`/`--reinit`), not Sigma/progress.json. That file is
+// legacy/inert now (nothing reads its content, PLAN-EVAL-01 §3.6) and this
+// anchor could only move here once every project-creating path
+// unconditionally wrote activate_status.json too (done in Fase 4).
 function findProjectRoot(startDir = process.cwd()) {
     let current = path_1.default.resolve(startDir);
     while (true) {
-        const candidate = path_1.default.join(current, config_1.PROGRESS_FILE);
+        const candidate = path_1.default.join(current, config_1.ACTIVATE_STATUS_FILE);
         if (fs_extra_1.default.existsSync(candidate)) {
             return current;
         }
         const parent = path_1.default.dirname(current);
         if (parent === current) {
-            throw new Error('Not inside a Sigma project. No Sigma/progress.json found in this directory or any parent. ' +
+            throw new Error('Not inside a Sigma project. No Sigma/activate_status.json found in this directory or any parent. ' +
                 'Run: sigma project start');
         }
         current = parent;

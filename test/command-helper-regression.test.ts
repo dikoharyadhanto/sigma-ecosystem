@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { setupTestEnv, runCli, makeProgressWithDraftIntent, TestEnv } from './helpers';
+import { setupTestEnv, runCli, makeProgressWithDraftIntent, stubProjectRootAnchor, TestEnv } from './helpers';
 
 describe('Shared artifact command helpers', () => {
   let env: TestEnv;
@@ -10,6 +10,7 @@ describe('Shared artifact command helpers', () => {
 
   it('template helper preserves intent new output and artifact path', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, {
       ...makeProgressWithDraftIntent(),
       intent: { active_version: null, active_state: null, versions: [] },

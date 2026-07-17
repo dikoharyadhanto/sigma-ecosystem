@@ -177,6 +177,26 @@ export function intentCommand(): Command {
       }
     });
 
+  cmd.command('activate')
+    .description('Switch which chain is active (analog `git checkout <branch>`) — no --director-confirm required (DISCUSSION "Konsolidasi Lanjutan" bagian 6): default-to-latest + mandatory session bootstrap visibility are the compensating safety net')
+    .requiredOption('--v <version>', 'Chain version to activate (e.g. v2)')
+    .action((opts: { v: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const chain = readChain(projectRoot, opts.v); // throws a clear error if the chain doesn't exist
+        if (chain.intent.state === 'SUPERSEDED') {
+          throw new Error(
+            `INTENT ${opts.v} is SUPERSEDED — permanently ineligible to become active again. Run: sigma intent list`
+          );
+        }
+        writeActivateStatus(projectRoot, opts.v);
+        console.log(`Active chain switched to ${opts.v}.`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
   cmd.command('check')
     .description('Validate a DIR-INTENT structure and markers')
     .option('--v <version>', 'Check a specific chain instead of the active one')

@@ -84,71 +84,15 @@ export interface ProgressJson {
     gates: Gates;
     runtime_invalid?: RuntimeInvalidState;
 }
-export interface GateStatus {
-    gate_1_open: boolean;
-    gate_2_open: boolean;
-    gate_3_satisfied: boolean;
-}
 type ArtifactDomain = 'intent' | 'plan' | 'exec' | 'close' | 'roadmap';
-export declare function validateProgress(data: unknown): ProgressJson;
 export declare function hasActiveLockedIntent(data: ProgressJson): boolean;
 export declare function hasCleanGate2Chain(data: ProgressJson): boolean;
 export declare function hasCleanGate3Chain(data: ProgressJson): boolean;
 export declare function readOverrides(projectRoot: string): OverrideEntry[];
-export declare function hasInvalidRuntime(data: ProgressJson): boolean;
 export declare function getInvalidMarkers(data: ProgressJson): InvalidMarker[];
-export declare function isGateInvalid(data: ProgressJson, gate: InvalidGateKey): boolean;
-export declare function getGateStatusLabel(data: ProgressJson, gate: InvalidGateKey): 'OPEN' | 'BLOCKED' | 'SATISFIED' | 'INVALID';
-export declare function getOperationalGate(data: ProgressJson, gate: InvalidGateKey): boolean;
-export declare function getInvalidWarningLines(data: ProgressJson): string[];
-export interface DoctorReport {
-    repaired: string[];
-    invalidMarked: InvalidMarker[];
-    invalidCleared: InvalidMarker[];
-    remainingInvalid: InvalidMarker[];
-}
-export declare function runDoctorReconciliation(data: ProgressJson, overrides?: OverrideEntry[]): DoctorReport;
-export declare function validateProgressSemantics(data: ProgressJson): void;
-export declare function assertProgressCanMutate(data: ProgressJson): void;
-export declare function readProgress(projectRoot: string): ProgressJson;
 export declare function writeProgress(projectRoot: string, data: ProgressJson): void;
-export declare function checkSchemaVersion(data: ProgressJson): void;
 export declare function createInitialProgress(projectId: string, projectName: string): ProgressJson;
-export declare function getGateStatus(data: ProgressJson): GateStatus;
-export interface InactiveIntentWarning {
-    intentVersion: string;
-    hangingArtifacts: string[];
-}
-export declare function getInactiveIntentWarnings(data: ProgressJson): InactiveIntentWarning[];
 export declare function parseMajorVersion(version: string): number;
 export declare function parseMinorVersion(version: string): number;
-export declare function nextMajorVersion(versions: ArtifactVersion[]): string;
-export declare function nextPlanVersion(data: ProgressJson, intentVersionRef: string): string;
-export declare function nextExecVersion(data: ProgressJson, planVersionRef: string): string;
-export declare function registerIntentDraft(data: ProgressJson, version: string, filePath: string): void;
-export declare function lockActiveIntent(data: ProgressJson): void;
-interface IntentCascadeTargets {
-    roadmap: ArtifactVersion[];
-    plan: ArtifactVersion[];
-    exec: ArtifactVersion[];
-    close: ArtifactVersion[];
-}
-export declare function previewIntentSupersedeCascade(data: ProgressJson, version: string): IntentCascadeTargets;
-export declare function supersedeIntentVersion(data: ProgressJson, version: string, reason: string): void;
-export declare function registerPlanDraft(data: ProgressJson, version: string, filePath: string, intentVersionRef: string, title?: string, focus?: string): void;
-export declare function updatePlanMetadata(data: ProgressJson, version: string, title?: string, focus?: string): void;
-export declare function lockOldestPlanDraft(data: ProgressJson): string;
-export declare function registerPendingPlan(data: ProgressJson, id: string, filePath: string, title?: string, focus?: string): void;
-export declare function promotePendingPlan(data: ProgressJson, id: string, version: string, newFilePath: string, intentVersionRef: string, title?: string, focus?: string): void;
-export declare function supersedePlanVersion(data: ProgressJson, version: string, reason: string): void;
-export declare function activatePlanDraft(data: ProgressJson, version: string): void;
-export declare function registerExecDraft(data: ProgressJson, version: string, filePath: string, planVersionRef: string): void;
-export declare function lockActiveExec(data: ProgressJson): void;
-export declare function registerCloseDraft(data: ProgressJson, version: string, filePath: string, intentVersionRef: string): void;
-export declare function lockActiveClose(data: ProgressJson): void;
-export declare function registerRoadmapDraft(data: ProgressJson, version: string, filePath: string, intentVersionRef: string): void;
-export declare function activateRoadmap(data: ProgressJson, version: string): void;
-export declare function lockActiveRoadmap(data: ProgressJson): void;
-export declare function getNextValidOperations(data: ProgressJson): string[];
 export {};
 //# sourceMappingURL=progress.d.ts.map

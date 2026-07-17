@@ -17,7 +17,16 @@ export const PROJECT_IDENTITY_FILE = '.sigma-identity.json';
 
 // Bridge stub filenames — AI tool instruction files written at project root.
 export const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
+// PLAN-EVAL-01 — legacy single-file store. Nothing reads this file's content
+// anymore (chain.ts/progress-v<N>.json replaced it); project.ts's `start`
+// still writes it as inert legacy content only, pending PLAN-EVAL-05
+// migrating `doctor --reconstruct` off it. findProjectRoot() no longer
+// anchors on it — see ACTIVATE_STATUS_FILE below.
 export const PROGRESS_FILE = path.join(PROJECT_SIGMA_DIR, 'progress.json');
+// PLAN-EVAL-01 Fase 5 — the manifest findProjectRoot() anchors on. Written by
+// `sigma project start`/`--reinit` (active_chain: null) and by `sigma intent
+// new` (first real chain activation).
+export const ACTIVATE_STATUS_FILE = path.join(PROJECT_SIGMA_DIR, 'activate_status.json');
 export const OVERRIDES_FILE = path.join(PROJECT_SIGMA_DIR, 'memory', 'overrides.jsonl');
 export const OPERATIONS_LOG_FILE = path.join(PROJECT_SIGMA_DIR, 'logs', 'operations.jsonl');
 export const OPERATION_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-OPERATION-REGISTRY.json');

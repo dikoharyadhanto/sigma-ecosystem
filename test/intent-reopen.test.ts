@@ -4,7 +4,7 @@ import {
   makeChainWithLockedExec,
   runCli,
   setupTestEnv,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   chainPath,
   TestEnv,
@@ -23,7 +23,7 @@ describe('intent new on a CLOSED project', () => {
 
   it('shows the reopen preflight and cancels when not approved', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', closedChain());
 
     const result = runCli('intent new', env.projectDir, env.homeDir, 'n\n');
@@ -41,7 +41,7 @@ describe('intent new on a CLOSED project', () => {
 
   it('succeeds with --yes and reports the new work cycle', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', closedChain());
 
     const result = runCli('intent new --yes', env.projectDir, env.homeDir);

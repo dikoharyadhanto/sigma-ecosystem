@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   stubProjectIdentity,
   writeChainFixture,
   makeChainWithLockedIntent,
@@ -24,7 +24,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
     // tracker with a separate active_state mirror (PLAN-EVAL-01 §3.4). Gate
     // boolean drift is the chain-representable equivalent.
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const now = new Date().toISOString();
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
@@ -50,7 +50,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
 
   it('doctor marks a PLAN referencing a different chain\'s INTENT as INVALID', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const chain = makeChainWithLockedIntent('v1') as Record<string, any>;
     const now = new Date().toISOString();
     // Corruption: plan.intent_version_ref doesn't match this chain's own
@@ -76,7 +76,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
 
   it('project status surfaces INVALID warnings after doctor', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     stubProjectIdentity(env);
     const chain = makeChainWithLockedIntent('v1') as Record<string, any>;
     const now = new Date().toISOString();
@@ -102,7 +102,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
     // directly for determinism (no need to first provoke the exact
     // corruption pattern via a separate command sequence).
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const chain = makeChainWithLockedPlan() as Record<string, any>;
     chain.runtime_invalid = {
       markers: [{
@@ -129,7 +129,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
 
   it('doctor removes duplicate DRAFT exec when a LOCKED exec with the same version exists', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const now = new Date().toISOString();
     const chain = makeChainWithLockedExec('v1', 'v0.1') as Record<string, any>;
     chain.exec.versions.push({

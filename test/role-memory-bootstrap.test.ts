@@ -7,7 +7,7 @@ import {
   makeProgress,
   makeProgressWithLockedExec,
   makeProgressWithLockedPlan,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   stubProjectIdentity,
   writeChainFixture,
   makeChainWithDraftIntent,
@@ -44,6 +44,7 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('sigma memory prints authority note, general reminders, and role-specific reminders', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const result = runCli('memory --arc', env.projectDir, env.homeDir);
@@ -60,6 +61,7 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('sigma memory requires exactly one role flag', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const result = runCli('memory', env.projectDir, env.homeDir);
@@ -70,6 +72,7 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('sigma memory is read-only and does not mutate progress.json', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
     const before = JSON.stringify(fs.readJsonSync(env.progressPath));
 
@@ -81,7 +84,7 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('session bootstrap --role arc omits document-reading prompts by default', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent());
 
@@ -97,7 +100,7 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('session bootstrap --role aud stays passive and scope-bound', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent());
 
@@ -111,7 +114,7 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('session bootstrap --role fmn includes planning brief and stop guidance', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithLockedExec());
 
@@ -124,7 +127,7 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('session bootstrap --role dev includes locked-plan and Gate 2 guidance', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithLockedPlan());
 
@@ -138,7 +141,7 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('session bootstrap --role arc --show-docs prints role-specific reference documents', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent());
     copyDocumentRegistry(env);
@@ -153,7 +156,7 @@ describe('Role memory and bootstrap regressions', () => {
 
   it('project status keeps runtime state read-only and labels CLI-valid operations clearly', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithLockedExec());
     const before = JSON.stringify(fs.readJsonSync(chainPath(env, 'v1')));
@@ -181,7 +184,7 @@ describe('Read-only commands degrade gracefully before the first intent new', ()
 
   it('session bootstrap reports "no DIR-INTENT yet" instead of erroring', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     stubProjectIdentity(env);
     // Deliberately no chain fixture written — activate_status.json/chain
     // files are both absent, same as right after `project start`.
@@ -196,7 +199,7 @@ describe('Read-only commands degrade gracefully before the first intent new', ()
 
   it('project status reports "no DIR-INTENT yet" instead of erroring', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     stubProjectIdentity(env);
 
     const result = runCli('project status', env.projectDir, env.homeDir);
@@ -209,7 +212,7 @@ describe('Read-only commands degrade gracefully before the first intent new', ()
 
   it('doctor reports nothing to reconcile instead of erroring', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
 
     const result = runCli('doctor', env.projectDir, env.homeDir);
 

@@ -5,7 +5,7 @@ import {
   makeProgressWithDraftIntent,
   makeChainWithDraftIntent,
   makeChainWithLockedIntent,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   runCli,
   setupTestEnv,
@@ -20,6 +20,7 @@ describe('Document checks and auto-validation', () => {
 
   it('intent new auto-runs validation after file creation', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     const progress = makeProgressWithDraftIntent() as Record<string, unknown>;
     progress.intent = { active_version: null, active_state: null, versions: [] };
     progress.gates = { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false };
@@ -36,6 +37,7 @@ describe('Document checks and auto-validation', () => {
 
   it('intent check passes structurally for a template-generated draft, but reports it not yet lock-ready', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     const progress = makeProgressWithDraftIntent() as Record<string, unknown>;
     progress.intent = { active_version: null, active_state: null, versions: [] };
     progress.gates = { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false };
@@ -58,7 +60,7 @@ describe('Document checks and auto-validation', () => {
 
   it('intent lock is blocked when required markers are missing', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, '# DIR-INTENT\n\n## 1. Intent Core — Sovereign Layer\n');
@@ -73,7 +75,7 @@ describe('Document checks and auto-validation', () => {
 
   it('roadmap new auto-runs validation for created roadmap docs', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedIntent());
 
     const result = runCli('roadmap new', env.projectDir, env.homeDir);
@@ -92,7 +94,7 @@ describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
 
   it('intent lock fails when no verdict checkbox is checked', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, validIntentDoc('v1').replace('- [x] PASS', ''));
@@ -105,7 +107,7 @@ describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
 
   it('intent lock fails when more than one verdict checkbox is checked', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, validIntentDoc('v1').replace('- [x] PASS', '- [x] PASS\n- [x] REVISE'));
@@ -118,7 +120,7 @@ describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
 
   it('intent lock fails when SKIP_FOR_AUDIT is checked but Director Instruction is empty', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
@@ -134,7 +136,7 @@ describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
 
   it('intent lock succeeds when SKIP_FOR_AUDIT is checked with a recorded Director Instruction', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
@@ -158,7 +160,7 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
 
   it('intent lock fails when a Lock Requirement item is not checked', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
@@ -175,7 +177,7 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
 
   it('intent lock fails when a Quality Bar dimension in Section 4 is still a placeholder', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
@@ -195,7 +197,7 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
 
   it('intent lock succeeds when Lock Requirement is complete and Quality Bar has no placeholders, ignoring unchecked Conditional Requirement', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     // validIntentDoc() ships with Conditional Requirement items left unchecked by default.

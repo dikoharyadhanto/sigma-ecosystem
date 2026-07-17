@@ -4,7 +4,7 @@ import path from 'path';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   makeChainWithLockedExec,
   chainPath,
@@ -28,7 +28,7 @@ describe('Progress hardening', () => {
 
   it('blocks mutating commands when intent.version does not match chain_version', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const now = new Date().toISOString();
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
@@ -51,7 +51,7 @@ describe('Progress hardening', () => {
 
   it('blocks mutating commands when gate_1_open is true without a LOCKED intent', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const now = new Date().toISOString();
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
@@ -73,7 +73,7 @@ describe('Progress hardening', () => {
 
   it('blocks impossible Gate 3 satisfaction without a clean locked chain', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const now = new Date().toISOString();
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
@@ -94,7 +94,7 @@ describe('Progress hardening', () => {
 
   it('allows locking a brand-new chain while an older, fully independent chain keeps its own gates open — isolation is structural (separate files), not a demotion', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1'), { activate: false });
     const v1Before = fs.readJsonSync(chainPath(env, 'v1'));
 

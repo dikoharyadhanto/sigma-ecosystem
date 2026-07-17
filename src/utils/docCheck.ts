@@ -1,6 +1,5 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { ProgressJson } from '../engine/progress';
 
 export type SigmaDocDomain = 'intent' | 'roadmap' | 'plan' | 'exec' | 'close';
 
@@ -615,60 +614,6 @@ export function validateSigmaDocFile(
     passes,
     requirements,
   };
-}
-
-function resolveVersionedFile(
-  projectRoot: string,
-  data: ProgressJson,
-  domain: SigmaDocDomain,
-  version?: string,
-): string {
-  if (domain === 'intent') {
-    const entry = version
-      ? data.intent.versions.find(item => item.version === version)
-      : data.intent.versions.find(item => item.version === data.intent.active_version);
-    if (!entry) throw new Error(version ? `DIR-INTENT ${version} not found.` : 'No active DIR-INTENT found. Run: sigma intent new');
-    return path.join(projectRoot, entry.file ?? path.join('Sigma', 'design', `DIR-INTENT-${entry.version}.md`));
-  }
-
-  if (domain === 'roadmap') {
-    const entry = version
-      ? data.roadmap.versions.find(item => item.version === version)
-      : data.roadmap.versions.find(item => item.version === data.roadmap.active_version);
-    if (!entry) throw new Error(version ? `ROADMAP ${version} not found.` : 'No active ROADMAP found. Run: sigma roadmap new');
-    return path.join(projectRoot, entry.file ?? path.join('Sigma', 'build', `ROADMAP-${entry.version}.md`));
-  }
-
-  if (domain === 'plan') {
-    const entry = version
-      ? data.plan.versions.find(item => item.version === version)
-      : data.plan.versions.find(item => item.version === data.plan.active_version);
-    if (!entry) throw new Error(version ? `FMN-PLAN ${version} not found.` : 'No active FMN-PLAN found. Run: sigma plan new');
-    return path.join(projectRoot, entry.file ?? path.join('Sigma', 'build', `FMN-PLAN-${entry.version}.md`));
-  }
-
-  if (domain === 'exec') {
-    const entry = version
-      ? data.exec.versions.find(item => item.version === version)
-      : data.exec.versions.find(item => item.version === data.exec.active_version);
-    if (!entry) throw new Error(version ? `DEV-EXEC ${version} not found.` : 'No active DEV-EXEC found. Run: sigma exec new');
-    return path.join(projectRoot, entry.file ?? path.join('Sigma', 'build', `DEV-EXEC-${entry.version}.md`));
-  }
-
-  const entry = version
-    ? data.close.versions.find(item => item.version === version)
-    : data.close.versions.find(item => item.version === data.close.active_version);
-  if (!entry) throw new Error(version ? `DIR-CLOSE ${version} not found.` : 'No active DIR-CLOSE found. Run: sigma close new');
-  return path.join(projectRoot, entry.file ?? path.join('Sigma', 'close', `DIR-CLOSE-${entry.version}.md`));
-}
-
-export function resolveSigmaDocPath(
-  projectRoot: string,
-  data: ProgressJson,
-  domain: SigmaDocDomain,
-  version?: string,
-): string {
-  return resolveVersionedFile(projectRoot, data, domain, version);
 }
 
 export function printSigmaDocReport(report: SigmaDocCheckReport, projectRoot?: string): void {

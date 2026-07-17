@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.PROGRESS_FILE = exports.BRIDGE_STUBS = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
+exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.ACTIVATE_STATUS_FILE = exports.PROGRESS_FILE = exports.BRIDGE_STUBS = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 exports.SIGMA_VERSION = '0.9.0';
@@ -19,7 +19,16 @@ exports.PROJECT_SIGMA_DIR = 'Sigma';
 exports.PROJECT_IDENTITY_FILE = '.sigma-identity.json';
 // Bridge stub filenames — AI tool instruction files written at project root.
 exports.BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
+// PLAN-EVAL-01 — legacy single-file store. Nothing reads this file's content
+// anymore (chain.ts/progress-v<N>.json replaced it); project.ts's `start`
+// still writes it as inert legacy content only, pending PLAN-EVAL-05
+// migrating `doctor --reconstruct` off it. findProjectRoot() no longer
+// anchors on it — see ACTIVATE_STATUS_FILE below.
 exports.PROGRESS_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'progress.json');
+// PLAN-EVAL-01 Fase 5 — the manifest findProjectRoot() anchors on. Written by
+// `sigma project start`/`--reinit` (active_chain: null) and by `sigma intent
+// new` (first real chain activation).
+exports.ACTIVATE_STATUS_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'activate_status.json');
 exports.OVERRIDES_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'memory', 'overrides.jsonl');
 exports.OPERATIONS_LOG_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'logs', 'operations.jsonl');
 exports.OPERATION_REGISTRY_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'SIGMA-OPERATION-REGISTRY.json');

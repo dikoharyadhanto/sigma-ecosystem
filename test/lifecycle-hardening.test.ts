@@ -4,7 +4,7 @@ import path from 'path';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   stubProjectIdentity,
   writeChainFixture,
   makeChain,
@@ -31,7 +31,7 @@ describe('Lifecycle hardening coverage', () => {
 
   it('sigma session bootstrap reports gates and next operations from a locked chain', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithLockedExec());
 
@@ -45,7 +45,7 @@ describe('Lifecycle hardening coverage', () => {
 
   it('sigma close new creates a close draft for a clean locked chain', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedExec());
 
     const result = runCli('close new', env.projectDir, env.homeDir);
@@ -57,7 +57,7 @@ describe('Lifecycle hardening coverage', () => {
 
   it('sigma close new rejects a second draft for a chain that already has a non-superseded DIR-CLOSE', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedExec());
 
     const first = runCli('close new', env.projectDir, env.homeDir);
@@ -70,7 +70,7 @@ describe('Lifecycle hardening coverage', () => {
 
   it('sigma exec new skips exec version gaps caused by superseded plans', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const now = new Date().toISOString();
     const planVersions = [];
     const execVersions = [];
@@ -155,7 +155,7 @@ describe('Lifecycle hardening coverage', () => {
 
   it('sigma exec new refuses to overwrite an existing target artifact file', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedPlan());
     const target = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v1.1.md');
     fs.writeFileSync(target, 'locked evidence must survive');

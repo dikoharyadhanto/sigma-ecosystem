@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import { setupTestEnv, runCli, makeProgress, TestEnv } from './helpers';
+import { setupTestEnv, runCli, makeProgress, stubProjectRootAnchor, TestEnv } from './helpers';
 
 // Coverage for Implementation/planned_sigma_evaluation_2026_07_15/PLAN-EVAL-01:
 // Sigma/logs/operations.jsonl must record every CLI invocation at the local
@@ -23,6 +23,7 @@ describe('sigma operation history log', () => {
 
   it('records a successful operation with status success and exit_code 0', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const result = runCli('doctor', env.projectDir, env.homeDir);
@@ -38,6 +39,7 @@ describe('sigma operation history log', () => {
 
   it('records a failed operation (process.exit(1) inside the handler) with status error', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     // No --reason: runOverride() exits(1) directly, never throws — the exact
@@ -54,6 +56,7 @@ describe('sigma operation history log', () => {
 
   it('records nested subcommands with their full command path', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const result = runCli('intent status', env.projectDir, env.homeDir);
@@ -65,6 +68,7 @@ describe('sigma operation history log', () => {
 
   it('regenerates a missing log and stamps a fresh logs_created_at, preserving it across valid calls', () => {
     env = setupTestEnv();
+    stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
     const first = runCli('project register --id TEST --name "Test Project"', env.projectDir, env.homeDir);

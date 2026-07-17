@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   makeChain,
   chainPath,
@@ -97,7 +97,7 @@ describe('sigma plan supersede', () => {
 
   it('fails when the plan version does not exist', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExec());
 
     const result = runCli('plan supersede --v v9 --reason "no such plan"', env.projectDir, env.homeDir);
@@ -108,7 +108,7 @@ describe('sigma plan supersede', () => {
 
   it('fails when the plan version is DRAFT, not LOCKED', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeDraftPlanWithIntent());
 
     const result = runCli('plan supersede --v v1 --reason "testing"', env.projectDir, env.homeDir);
@@ -121,7 +121,7 @@ describe('sigma plan supersede', () => {
 
   it('sets plan version state to SUPERSEDED', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExec());
 
     const result = runCli('plan supersede --v v1 --reason "replaced by v2"', env.projectDir, env.homeDir);
@@ -138,7 +138,7 @@ describe('sigma plan supersede', () => {
 
   it('updates plan.active_state to SUPERSEDED when active version is superseded', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExec());
 
     runCli('plan supersede --v v1 --reason "replaced by v2"', env.projectDir, env.homeDir);
@@ -155,7 +155,7 @@ describe('sigma plan supersede', () => {
 
   it('auto-supersedes a LOCKED exec that references the superseded plan', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanWithExec({ execState: 'LOCKED' }));
 
     const result = runCli('plan supersede --v v1 --reason "replan"', env.projectDir, env.homeDir);
@@ -175,7 +175,7 @@ describe('sigma plan supersede', () => {
 
   it('auto-supersedes a DRAFT exec that references the superseded plan', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanWithExec({ execState: 'DRAFT' }));
 
     const result = runCli('plan supersede --v v1 --reason "replan"', env.projectDir, env.homeDir);
@@ -190,7 +190,7 @@ describe('sigma plan supersede', () => {
 
   it('skips exec versions that are already SUPERSEDED', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanWithMultipleExecs());
 
     const result = runCli('plan supersede --v v1 --reason "replaced"', env.projectDir, env.homeDir);
@@ -207,7 +207,7 @@ describe('sigma plan supersede', () => {
 
   it('updates exec.active_state to SUPERSEDED when the active exec is cascaded', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanWithExec({ execState: 'LOCKED' }));
 
     const result = runCli('plan supersede --v v1 --reason "replan"', env.projectDir, env.homeDir);
@@ -222,7 +222,7 @@ describe('sigma plan supersede', () => {
 
   it('does not crash when no exec versions reference the plan', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExec());
 
     const result = runCli('plan supersede --v v1 --reason "no exec"', env.projectDir, env.homeDir);
@@ -235,7 +235,7 @@ describe('sigma plan supersede', () => {
 
   it('subsequent sigma plan status does not fail after supersede', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExec());
 
     const supersedeResult = runCli('plan supersede --v v1 --reason "regression check"', env.projectDir, env.homeDir);
@@ -248,7 +248,7 @@ describe('sigma plan supersede', () => {
 
   it('validates that active_state and active entry state are consistent after supersede', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanWithExec({ execState: 'LOCKED' }));
 
     const result = runCli('plan supersede --v v1 --reason "consistency check"', env.projectDir, env.homeDir);

@@ -4,7 +4,7 @@ import path from 'path';
 import {
   setupTestEnv,
   runCli,
-  stubLegacyProgressJson,
+  stubProjectRootAnchor,
   writeChainFixture,
   makeChainWithFullBuiltCycle,
   makeChainWithLockedExec,
@@ -39,7 +39,7 @@ describe('sigma intent supersede', () => {
 
   it('fails when the intent version does not exist', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', fullLockedChain());
 
     const result = runCli('intent supersede --v v9 --reason "no such intent" --director-confirm', env.projectDir, env.homeDir);
@@ -50,7 +50,7 @@ describe('sigma intent supersede', () => {
 
   it('fails when the intent version is DRAFT, not LOCKED (INACTIVE no longer exists, PLAN-EVAL-01 §3.4)', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', { chain_version: 'v1', schema_version: '1.0.0', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), lifecycle_state: 'DESIGN', intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, roadmap: null, plan: { active_version: null, active_state: null, versions: [], pending: [] }, exec: { active_version: null, active_state: null, versions: [] }, close: null, gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false } });
 
     const result = runCli('intent supersede --v v1 --reason "testing" --director-confirm', env.projectDir, env.homeDir);
@@ -63,7 +63,7 @@ describe('sigma intent supersede', () => {
 
   it('refuses to execute without --director-confirm and leaves the chain file untouched', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', fullLockedChain());
 
     const result = runCli('intent supersede --v v1 --reason "pivot"', env.projectDir, env.homeDir);
@@ -81,7 +81,7 @@ describe('sigma intent supersede', () => {
 
   it('shows a preflight listing every artifact that will cascade, including LOCKED work, before requiring confirm', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', fullLockedChain());
 
     const result = runCli('intent supersede --v v1 --reason "pivot"', env.projectDir, env.homeDir);
@@ -97,7 +97,7 @@ describe('sigma intent supersede', () => {
 
   it('cascades SUPERSEDED to the full Roadmap/Plan/Exec/Close chain, including LOCKED entries', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', fullLockedChain());
 
     const result = runCli('intent supersede --v v1 --reason "scope pivot" --director-confirm', env.projectDir, env.homeDir);
@@ -122,7 +122,7 @@ describe('sigma intent supersede', () => {
 
   it('does not crash and reports no cascade when nothing references the target version', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const now = new Date().toISOString();
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
@@ -151,7 +151,7 @@ describe('sigma intent supersede', () => {
 
   it('does not touch an unrelated INTENT chain — a second chain file is read back completely unchanged', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', fullLockedChain(), { activate: false });
     const v2Chain = makeChainWithLockedExec('v2', 'v2.1');
     writeChainFixture(env, 'v2', v2Chain, { activate: true });
@@ -176,7 +176,7 @@ describe('sigma intent supersede', () => {
 
   it('sigma plan supersede does not change the state of the INTENT that governs it (downward-only)', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedPlan('v1', 'v1.1'));
 
     const result = runCli('plan supersede --v v1.1 --reason "replan"', env.projectDir, env.homeDir);
@@ -199,7 +199,7 @@ describe('intent lock regression — no auto-supersede, no auto-cascade', () => 
 
   it('reopen on a CLOSED project creates an isolated v2 chain and leaves the old CLOSED chain (with its LOCKED DIR-CLOSE) completely untouched', () => {
     env = setupTestEnv();
-    stubLegacyProgressJson(env);
+    stubProjectRootAnchor(env);
     const now = new Date().toISOString();
     const closedChain = makeChainWithFullBuiltCycle('v1', 'v1.1') as Record<string, any>;
     closedChain.close = { version: 'v1', state: 'LOCKED', file: 'Sigma/close/DIR-CLOSE-v1.md', created_at: now, updated_at: now, locked_at: now };
