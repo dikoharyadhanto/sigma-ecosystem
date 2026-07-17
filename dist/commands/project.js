@@ -92,15 +92,11 @@ async function runStart(opts) {
     const projectRoot = process.cwd();
     const sigmaDir = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR);
     const progressPath = path_1.default.join(sigmaDir, 'progress.json');
-    const logsDir = path_1.default.join(sigmaDir, 'logs');
     if ((0, fs_1.fileExists)(progressPath)) {
         if (!opts.reinit) {
             (0, output_1.error)('This directory is already a Sigma project. ' +
                 'Use `sigma project status` to inspect, or pass --reinit to re-initialize.');
         }
-        (0, fs_1.ensureDir)(logsDir);
-        const backed = (0, fs_1.backupFile)(progressPath, logsDir);
-        (0, output_1.warn)(`Existing progress.json backed up to: ${backed}`);
     }
     // Collect project_id and project_name
     let projectId;
@@ -310,7 +306,6 @@ function runStatus() {
 function runSync(opts) {
     const projectRoot = (0, fs_1.findProjectRoot)();
     const sigmaDir = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR);
-    const logsDir = path_1.default.join(sigmaDir, 'logs');
     const filesToSync = [
         { src: path_1.default.join(config_1.GLOBAL_GOVERNANCE_DIR, 'SIGMA_CONSTITUTION.md'), dest: path_1.default.join(sigmaDir, 'SIGMA_CONSTITUTION.md') },
         { src: path_1.default.join(config_1.GLOBAL_GOVERNANCE_DIR, 'SIGMA_PROTOCOL.md'), dest: path_1.default.join(sigmaDir, 'SIGMA_PROTOCOL.md') },
@@ -334,46 +329,29 @@ function runSync(opts) {
         (0, output_1.warn)('Pass --confirm to apply.');
         return;
     }
-    // Backup before sync
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupDir = path_1.default.join(logsDir, `sync-backup-${timestamp}`);
-    (0, fs_1.ensureDir)(backupDir);
     const updated = [];
     for (const f of filesToSync) {
-        if ((0, fs_1.fileExists)(f.dest)) {
-            fs_extra_1.default.copySync(f.dest, path_1.default.join(backupDir, path_1.default.basename(f.dest)));
-        }
         if ((0, fs_1.fileExists)(f.src)) {
             fs_extra_1.default.copySync(f.src, f.dest, { overwrite: true });
             updated.push(path_1.default.basename(f.dest));
         }
     }
     if ((0, fs_1.fileExists)(config_1.GLOBAL_RULES_DIR)) {
-        if ((0, fs_1.fileExists)(rulesDestDir)) {
-            fs_extra_1.default.copySync(rulesDestDir, path_1.default.join(backupDir, 'rules'));
-        }
         fs_extra_1.default.copySync(config_1.GLOBAL_RULES_DIR, rulesDestDir, { overwrite: true });
         updated.push('rules/');
     }
     if ((0, fs_1.fileExists)(BUNDLE_OP_REGISTRY)) {
         const dest = path_1.default.join(sigmaDir, 'SIGMA-OPERATION-REGISTRY.json');
-        if ((0, fs_1.fileExists)(dest))
-            fs_extra_1.default.copySync(dest, path_1.default.join(backupDir, 'SIGMA-OPERATION-REGISTRY.json'));
         fs_extra_1.default.copySync(BUNDLE_OP_REGISTRY, dest, { overwrite: true });
         updated.push('SIGMA-OPERATION-REGISTRY.json');
     }
     if ((0, fs_1.fileExists)(BUNDLE_DOC_REGISTRY)) {
         const dest = path_1.default.join(sigmaDir, 'SIGMA-REGISTRY.json');
-        if ((0, fs_1.fileExists)(dest))
-            fs_extra_1.default.copySync(dest, path_1.default.join(backupDir, 'SIGMA-REGISTRY.json'));
         fs_extra_1.default.copySync(BUNDLE_DOC_REGISTRY, dest, { overwrite: true });
         updated.push('SIGMA-REGISTRY.json');
     }
     if ((0, fs_1.fileExists)(BUNDLE_ROLE_MEMORY_DIR)) {
         const dest = path_1.default.join(sigmaDir, 'role-memory');
-        if ((0, fs_1.fileExists)(dest)) {
-            fs_extra_1.default.copySync(dest, path_1.default.join(backupDir, 'role-memory'));
-        }
         fs_extra_1.default.copySync(BUNDLE_ROLE_MEMORY_DIR, dest, { overwrite: true });
         updated.push('role-memory/');
     }
@@ -381,7 +359,6 @@ function runSync(opts) {
     for (const f of updated) {
         console.log(`  Updated: ${f}`);
     }
-    console.log(`  Backup saved to: ${backupDir}`);
 }
 // ── sigma project register ────────────────────────────────────────────────────
 //
@@ -431,7 +408,7 @@ function projectCommand() {
         .option('--name <name>', 'Project name (max 64 chars)')
         .option('--lang <name>', 'Language name applied to all language preferences in non-interactive mode (default: "English"). Free-form, e.g. "Indonesia".')
         .option('--confirm', 'Skip interactive prompts (requires --id and --name)')
-        .option('--reinit', 'Re-initialize an existing Sigma project (backs up progress.json)')
+        .option('--reinit', 'Re-initialize an existing Sigma project')
         .option('--overwrite-bridge', 'Overwrite existing bridge files (CLAUDE.md, GEMINI.md, AGENTS.md, DEEPSEEK.md, REASONIX.md)')
         .action((opts) => {
         runStart(opts).catch(err => {

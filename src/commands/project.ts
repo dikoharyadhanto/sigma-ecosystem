@@ -34,7 +34,7 @@ import {
 import { createDefaultProjectConfig, writeProjectConfig } from '../engine/projectConfig';
 import { promptLanguageWizard } from '../engine/languageWizard';
 import { success, info, warn, error } from '../utils/output';
-import { ensureDir, fileExists, findProjectRoot, backupFile } from '../utils/fs';
+import { ensureDir, fileExists, findProjectRoot } from '../utils/fs';
 import { ensureOperationsLog } from '../utils/operationLog';
 
 // ── Bundle paths ─────────────────────────────────────────────────────────────
@@ -143,7 +143,6 @@ async function runStart(opts: {
   const projectRoot = process.cwd();
   const sigmaDir = path.join(projectRoot, PROJECT_SIGMA_DIR);
   const progressPath = path.join(sigmaDir, 'progress.json');
-  const logsDir = path.join(sigmaDir, 'logs');
 
   if (fileExists(progressPath)) {
     if (!opts.reinit) {
@@ -152,9 +151,6 @@ async function runStart(opts: {
         'Use `sigma project status` to inspect, or pass --reinit to re-initialize.'
       );
     }
-    ensureDir(logsDir);
-    const backed = backupFile(progressPath, logsDir);
-    warn(`Existing progress.json backed up to: ${backed}`);
   }
 
   // Collect project_id and project_name
@@ -375,7 +371,6 @@ function runStatus(): void {
 function runSync(opts: { confirm?: boolean }): void {
   const projectRoot = findProjectRoot();
   const sigmaDir = path.join(projectRoot, PROJECT_SIGMA_DIR);
-  const logsDir = path.join(sigmaDir, 'logs');
 
   const filesToSync = [
     { src: path.join(GLOBAL_GOVERNANCE_DIR, 'SIGMA_CONSTITUTION.md'), dest: path.join(sigmaDir, 'SIGMA_CONSTITUTION.md') },
@@ -403,17 +398,9 @@ function runSync(opts: { confirm?: boolean }): void {
     return;
   }
 
-  // Backup before sync
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupDir = path.join(logsDir, `sync-backup-${timestamp}`);
-  ensureDir(backupDir);
-
   const updated: string[] = [];
 
   for (const f of filesToSync) {
-    if (fileExists(f.dest)) {
-      fs.copySync(f.dest, path.join(backupDir, path.basename(f.dest)));
-    }
     if (fileExists(f.src)) {
       fs.copySync(f.src, f.dest, { overwrite: true });
       updated.push(path.basename(f.dest));
@@ -421,32 +408,24 @@ function runSync(opts: { confirm?: boolean }): void {
   }
 
   if (fileExists(GLOBAL_RULES_DIR)) {
-    if (fileExists(rulesDestDir)) {
-      fs.copySync(rulesDestDir, path.join(backupDir, 'rules'));
-    }
     fs.copySync(GLOBAL_RULES_DIR, rulesDestDir, { overwrite: true });
     updated.push('rules/');
   }
 
   if (fileExists(BUNDLE_OP_REGISTRY)) {
     const dest = path.join(sigmaDir, 'SIGMA-OPERATION-REGISTRY.json');
-    if (fileExists(dest)) fs.copySync(dest, path.join(backupDir, 'SIGMA-OPERATION-REGISTRY.json'));
     fs.copySync(BUNDLE_OP_REGISTRY, dest, { overwrite: true });
     updated.push('SIGMA-OPERATION-REGISTRY.json');
   }
 
   if (fileExists(BUNDLE_DOC_REGISTRY)) {
     const dest = path.join(sigmaDir, 'SIGMA-REGISTRY.json');
-    if (fileExists(dest)) fs.copySync(dest, path.join(backupDir, 'SIGMA-REGISTRY.json'));
     fs.copySync(BUNDLE_DOC_REGISTRY, dest, { overwrite: true });
     updated.push('SIGMA-REGISTRY.json');
   }
 
   if (fileExists(BUNDLE_ROLE_MEMORY_DIR)) {
     const dest = path.join(sigmaDir, 'role-memory');
-    if (fileExists(dest)) {
-      fs.copySync(dest, path.join(backupDir, 'role-memory'));
-    }
     fs.copySync(BUNDLE_ROLE_MEMORY_DIR, dest, { overwrite: true });
     updated.push('role-memory/');
   }
@@ -455,7 +434,6 @@ function runSync(opts: { confirm?: boolean }): void {
   for (const f of updated) {
     console.log(`  Updated: ${f}`);
   }
-  console.log(`  Backup saved to: ${backupDir}`);
 }
 
 // ── sigma project register ────────────────────────────────────────────────────
@@ -518,7 +496,7 @@ export function projectCommand(): Command {
     .option('--name <name>', 'Project name (max 64 chars)')
     .option('--lang <name>', 'Language name applied to all language preferences in non-interactive mode (default: "English"). Free-form, e.g. "Indonesia".')
     .option('--confirm', 'Skip interactive prompts (requires --id and --name)')
-    .option('--reinit', 'Re-initialize an existing Sigma project (backs up progress.json)')
+    .option('--reinit', 'Re-initialize an existing Sigma project')
     .option('--overwrite-bridge', 'Overwrite existing bridge files (CLAUDE.md, GEMINI.md, AGENTS.md, DEEPSEEK.md, REASONIX.md)')
     .action((opts: { id?: string; name?: string; lang?: string; confirm?: boolean; reinit?: boolean; overwriteBridge?: boolean }) => {
       runStart(opts).catch(err => {

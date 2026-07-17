@@ -15,17 +15,6 @@ export function copyDir(src: string, dest: string): void {
   fs.copySync(src, dest, { overwrite: true });
 }
 
-export function backupFile(filePath: string, backupDir: string): string {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const basename = path.basename(filePath, path.extname(filePath));
-  const ext = path.extname(filePath);
-  const backupName = `${basename}-backup-${timestamp}${ext}`;
-  const backupPath = path.join(backupDir, backupName);
-  fs.ensureDirSync(backupDir);
-  fs.copySync(filePath, backupPath);
-  return backupPath;
-}
-
 export function fileExists(filePath: string): boolean {
   return fs.existsSync(filePath);
 }

@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureDir = ensureDir;
 exports.copyFile = copyFile;
 exports.copyDir = copyDir;
-exports.backupFile = backupFile;
 exports.fileExists = fileExists;
 exports.findProjectRoot = findProjectRoot;
 const fs_extra_1 = __importDefault(require("fs-extra"));
@@ -21,16 +20,6 @@ function copyFile(src, dest) {
 }
 function copyDir(src, dest) {
     fs_extra_1.default.copySync(src, dest, { overwrite: true });
-}
-function backupFile(filePath, backupDir) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const basename = path_1.default.basename(filePath, path_1.default.extname(filePath));
-    const ext = path_1.default.extname(filePath);
-    const backupName = `${basename}-backup-${timestamp}${ext}`;
-    const backupPath = path_1.default.join(backupDir, backupName);
-    fs_extra_1.default.ensureDirSync(backupDir);
-    fs_extra_1.default.copySync(filePath, backupPath);
-    return backupPath;
 }
 function fileExists(filePath) {
     return fs_extra_1.default.existsSync(filePath);

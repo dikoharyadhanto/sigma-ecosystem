@@ -108,15 +108,6 @@ function resolveProjectIdentity(projectRoot, opts) {
 function runReconstruct(opts) {
     const projectRoot = (0, reconstruct_1.findSigmaProjectRoot)();
     const identity = resolveProjectIdentity(projectRoot, opts);
-    const progressPath = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'progress.json');
-    if (fs_extra_1.default.existsSync(progressPath)) {
-        const logsDir = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'logs');
-        (0, fs_1.ensureDir)(logsDir);
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const backupPath = path_1.default.join(logsDir, `reconstruct-backup-${timestamp}.json`);
-        fs_extra_1.default.copySync(progressPath, backupPath);
-        console.log(`Existing progress.json backed up to: ${path_1.default.relative(projectRoot, backupPath)}`);
-    }
     const { data, notes } = (0, reconstruct_1.reconstructProgress)(projectRoot, identity.id, identity.name);
     (0, progress_1.writeProgress)(projectRoot, data);
     console.log('\n=== Sigma Doctor — Reconstruct ===\n');

@@ -80,7 +80,7 @@ describe('sigma doctor --reconstruct', () => {
     expect(data.runtime_invalid.markers.some((m: any) => /cannot safely pair/.test(m.reason))).toBe(true);
   });
 
-  it('recovers project identity from --id/--name and backs up an unreadable progress.json', () => {
+  it('recovers project identity from --id/--name for an unreadable progress.json, without creating any backup file', () => {
     env = setupTestEnv();
     fs.writeFileSync(env.progressPath, '{ not valid json');
     writeArtifact(env.sigmaDir, 'design', 'DIR-INTENT-v1.md', 'DIR_INTENT');
@@ -88,14 +88,14 @@ describe('sigma doctor --reconstruct', () => {
     const result = runCli('doctor --reconstruct --id RECOV --name "Recovered Project"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/backed up to/i);
+    expect(result.stdout).not.toMatch(/backed up to/i);
 
     const data = fs.readJsonSync(env.progressPath) as Record<string, any>;
     expect(data.project_id).toBe('RECOV');
     expect(data.project_name).toBe('Recovered Project');
 
     const logsDir = path.join(env.sigmaDir, 'logs');
-    const backups = fs.readdirSync(logsDir).filter(f => f.startsWith('reconstruct-backup-'));
-    expect(backups.length).toBe(1);
+    const backups = fs.readdirSync(logsDir).filter(f => f.includes('-backup-'));
+    expect(backups.length).toBe(0);
   });
 });

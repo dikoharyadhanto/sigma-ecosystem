@@ -4,7 +4,7 @@ import path from 'path';
 import { readOverrides, writeProgress, getInvalidMarkers as getInvalidMarkersLegacy, ProgressJson } from '../engine/progress';
 import { readActiveChain, writeChain, runDoctorReconciliation, getInvalidMarkers, listChainVersions } from '../engine/chain';
 import { reconstructProgress, findSigmaProjectRoot } from '../engine/reconstruct';
-import { findProjectRoot, ensureDir } from '../utils/fs';
+import { findProjectRoot } from '../utils/fs';
 import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE } from '../config';
 import { validateProjectId, validateProjectName } from './project';
 
@@ -117,16 +117,6 @@ function resolveProjectIdentity(projectRoot: string, opts: { id?: string; name?:
 function runReconstruct(opts: { id?: string; name?: string }): void {
   const projectRoot = findSigmaProjectRoot();
   const identity = resolveProjectIdentity(projectRoot, opts);
-
-  const progressPath = path.join(projectRoot, PROJECT_SIGMA_DIR, 'progress.json');
-  if (fs.existsSync(progressPath)) {
-    const logsDir = path.join(projectRoot, PROJECT_SIGMA_DIR, 'logs');
-    ensureDir(logsDir);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(logsDir, `reconstruct-backup-${timestamp}.json`);
-    fs.copySync(progressPath, backupPath);
-    console.log(`Existing progress.json backed up to: ${path.relative(projectRoot, backupPath)}`);
-  }
 
   const { data, notes } = reconstructProgress(projectRoot, identity.id, identity.name);
   writeProgress(projectRoot, data);
