@@ -7,7 +7,6 @@ import {
   nextExecVersion,
   registerExecDraft,
   lockActiveExec,
-  supersedeExecVersion,
   assertProgressCanMutate,
   getOperationalGate,
 } from '../engine/progress';
@@ -151,24 +150,6 @@ export function execCommand(): Command {
       }
     });
 
-  cmd.command('supersede')
-    .description('Supersede a locked DEV-EXEC version')
-    .requiredOption('--v <version>', 'Version to supersede (e.g. v0.1)')
-    .requiredOption('--reason <reason>', 'Reason for superseding')
-    .action((opts: { v: string; reason: string }) => {
-      try {
-        const projectRoot = findProjectRoot();
-        const data = readProgress(projectRoot);
-        assertProgressCanMutate(data);
-        supersedeExecVersion(data, opts.v, opts.reason);
-        writeProgress(projectRoot, data);
-        console.log(`DEV-EXEC ${opts.v} superseded. Reason: ${opts.reason}`);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
   cmd.command('status')
     .description('Show active DEV-EXEC status')
     .action(() => {
@@ -183,7 +164,6 @@ export function execCommand(): Command {
           console.log(`Version:          ${data.exec.active_version}`);
           console.log(`State:            ${data.exec.active_state}`);
           if (active?.plan_version_ref) console.log(`PLAN Ref:         ${active.plan_version_ref}`);
-          if (active?.stale_intent) console.log(`Stale Intent:     YES`);
           if (active?.locked_at) console.log(`Locked at:        ${active.locked_at}`);
           if (active?.file) console.log(`File:             ${active.file}`);
         }
@@ -205,14 +185,13 @@ export function execCommand(): Command {
         if (data.exec.versions.length === 0) {
           console.log('None. Run: sigma exec new');
         } else {
-          console.log('Version    State        PLAN Ref    Stale  Created');
+          console.log('Version    State        PLAN Ref    Created');
           console.log('-'.repeat(75));
           for (const v of data.exec.versions) {
             const ver = v.version.padEnd(10);
             const st = v.state.padEnd(12);
             const pr = (v.plan_version_ref ?? '—').padEnd(11);
-            const stale = (v.stale_intent ? 'YES' : 'no').padEnd(6);
-            console.log(`${ver} ${st} ${pr} ${stale} ${v.created_at}`);
+            console.log(`${ver} ${st} ${pr} ${v.created_at}`);
           }
         }
         console.log('');

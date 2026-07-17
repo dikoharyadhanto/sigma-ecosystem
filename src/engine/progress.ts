@@ -5,7 +5,7 @@ import { PROGRESS_FILE, OVERRIDES_FILE, SCHEMA_VERSION } from '../config';
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export type LifecycleState = 'DESIGN' | 'BUILD' | 'CLOSE' | 'CLOSED';
-export type IntentState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
+export type IntentState = 'DRAFT' | 'LOCKED' | 'INACTIVE' | 'SUPERSEDED';
 export type PlanState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type ExecState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type CloseState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
@@ -20,7 +20,6 @@ export interface ArtifactVersion {
   locked_at?: string;
   superseded_by?: string;
   supersede_reason?: string;
-  stale_intent?: boolean;
   intent_version_ref?: string;
   plan_version_ref?: string;
   title?: string;
@@ -111,15 +110,10 @@ export interface GateStatus {
   gate_3_satisfied: boolean;
 }
 
-export interface StaleIntentWarning {
-  domain: string;
-  version: string;
-}
-
 type ArtifactDomain = 'intent' | 'plan' | 'exec' | 'close' | 'roadmap';
 
 const TRACKER_STATES: Record<ArtifactDomain, string[]> = {
-  intent: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
+  intent: ['DRAFT', 'LOCKED', 'INACTIVE', 'SUPERSEDED'],
   plan: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
   exec: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
   close: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
@@ -265,7 +259,6 @@ function hasActiveLockedPlan(data: ProgressJson): boolean {
 export function hasCleanGate2Chain(data: ProgressJson): boolean {
   return data.plan.versions.some(
     v => v.state === 'LOCKED' &&
-      !v.stale_intent &&
       !!v.intent_version_ref &&
       data.intent.versions.some(
         iv => iv.version === v.intent_version_ref && iv.state === 'LOCKED'
@@ -281,8 +274,7 @@ export function hasCleanGate3Chain(data: ProgressJson): boolean {
 
   const referencedPlan = data.plan.versions.find(
     v => v.version === activeExec.plan_version_ref &&
-      v.state === 'LOCKED' &&
-      !v.stale_intent
+      v.state === 'LOCKED'
   );
   if (!referencedPlan?.intent_version_ref) return false;
 
@@ -478,16 +470,18 @@ export function runDoctorReconciliation(data: ProgressJson, overrides: OverrideE
   }
 
   // Recover a stranded half-completed reopen: a new major INTENT was locked on
-  // top of a CLOSED project (superseding the prior intent) but lifecycle was
-  // left in CLOSED with no clean build chain of its own. This is narrow on
-  // purpose — it never touches a genuinely closed cycle (which keeps a clean
-  // gate_3 chain) nor a close that acknowledged a stale chain (no superseded
-  // intent behind it).
+  // top of a CLOSED project (displacing the prior intent) but lifecycle was
+  // left in CLOSED with no clean build chain of its own. A normal reopen
+  // demotes the prior LOCKED intent to INACTIVE (see lockActiveIntent); older
+  // data written before this fix — or a chain an explicit `intent supersede`
+  // has since touched — may still carry SUPERSEDED instead. This is narrow on
+  // purpose — it never touches a genuinely closed cycle, which keeps a clean
+  // gate_3 chain.
   if (
     data.lifecycle_state === 'CLOSED' &&
     hasActiveLockedIntent(data) &&
     !hasCleanGate3Chain(data) &&
-    data.intent.versions.some(v => v.state === 'SUPERSEDED')
+    data.intent.versions.some(v => v.state === 'SUPERSEDED' || v.state === 'INACTIVE')
   ) {
     repaired.push('lifecycle_state repaired from "CLOSED" to "BUILD" (stranded reopen of a new locked INTENT)');
     data.lifecycle_state = 'BUILD';
@@ -715,14 +709,50 @@ export function getGateStatus(data: ProgressJson): GateStatus {
   };
 }
 
-export function isStaleIntentPresent(data: ProgressJson): StaleIntentWarning[] {
-  const warnings: StaleIntentWarning[] = [];
+export interface InactiveIntentWarning {
+  intentVersion: string;
+  hangingArtifacts: string[];
+}
 
-  for (const domain of ['plan', 'exec'] as const) {
-    for (const v of data[domain].versions) {
-      if ((v as ArtifactVersion & { stale_intent?: boolean }).stale_intent) {
-        warnings.push({ domain, version: v.version });
+// Non-blocking nudge (PLAN-EVAL-01 Isu Terbuka #1): since `intent lock` no
+// longer cascades automatically, an INACTIVE intent can leave Roadmap/Plan/
+// Exec/Close descendants sitting LOCKED or DRAFT indefinitely unless Director
+// explicitly runs `intent supersede`. This surfaces that situation without
+// blocking anything — INACTIVE is deliberately not treated as "dead".
+export function getInactiveIntentWarnings(data: ProgressJson): InactiveIntentWarning[] {
+  const warnings: InactiveIntentWarning[] = [];
+
+  for (const iv of data.intent.versions) {
+    if (iv.state !== 'INACTIVE') continue;
+
+    const hanging: string[] = [];
+
+    for (const rv of data.roadmap.versions) {
+      if (rv.intent_version_ref === iv.version && rv.state !== 'SUPERSEDED') {
+        hanging.push(`ROADMAP ${rv.version} (${rv.state})`);
       }
+    }
+
+    const relatedPlans = data.plan.versions.filter(pv => pv.intent_version_ref === iv.version);
+    for (const pv of relatedPlans) {
+      if (pv.state !== 'SUPERSEDED') hanging.push(`PLAN ${pv.version} (${pv.state})`);
+    }
+
+    const relatedPlanVersions = new Set(relatedPlans.map(pv => pv.version));
+    for (const ev of data.exec.versions) {
+      if (ev.plan_version_ref && relatedPlanVersions.has(ev.plan_version_ref) && ev.state !== 'SUPERSEDED') {
+        hanging.push(`EXEC ${ev.version} (${ev.state})`);
+      }
+    }
+
+    for (const cv of data.close.versions) {
+      if (cv.intent_version_ref === iv.version && cv.state !== 'SUPERSEDED') {
+        hanging.push(`CLOSE ${cv.version} (${cv.state})`);
+      }
+    }
+
+    if (hanging.length > 0) {
+      warnings.push({ intentVersion: iv.version, hangingArtifacts: hanging });
     }
   }
 
@@ -780,35 +810,19 @@ export function registerIntentDraft(
   data.intent.active_state = 'DRAFT';
 }
 
-function propagateStaleIntent(data: ProgressJson, newLockedVersion: string): void {
-  const now = new Date().toISOString();
-  const stalePlanVersions = new Set<string>();
-
-  for (const pv of data.plan.versions) {
-    if (pv.intent_version_ref && pv.intent_version_ref !== newLockedVersion) {
-      pv.stale_intent = true;
-      pv.updated_at = now;
-      stalePlanVersions.add(pv.version);
-    }
-  }
-
-  for (const ev of data.exec.versions) {
-    if (ev.plan_version_ref && stalePlanVersions.has(ev.plan_version_ref)) {
-      ev.stale_intent = true;
-      ev.updated_at = now;
-    }
-  }
-}
-
 export function lockActiveIntent(data: ProgressJson): void {
   const now = new Date().toISOString();
   const activeVersion = data.intent.active_version;
   if (!activeVersion) throw new Error('No active INTENT version to lock');
 
+  // PLAN-EVAL-01: locking a new INTENT no longer supersedes the prior LOCKED
+  // INTENT automatically — SUPERSEDED is a strong, cascading claim that now
+  // requires explicit `sigma intent supersede --director-confirm`. A prior
+  // LOCKED INTENT is demoted to INACTIVE ("not the current focus"), which
+  // does not imply cancellation and does not touch any descendant artifact.
   for (const v of data.intent.versions) {
     if (v.state === 'LOCKED') {
-      v.state = 'SUPERSEDED';
-      v.superseded_by = activeVersion;
+      v.state = 'INACTIVE';
       v.updated_at = now;
     }
   }
@@ -828,14 +842,101 @@ export function lockActiveIntent(data: ProgressJson): void {
   // Guarding on DESIGN left reopened CLOSED projects stranded in CLOSED.
   data.lifecycle_state = 'BUILD';
 
-  propagateStaleIntent(data, activeVersion);
-
   // gate_2/gate_3 belong to the *previous* intent's chain until new PLAN/EXEC
   // artifacts are locked under the newly active intent. Recompute against the
-  // current chain so a reopen or pivot cannot inherit a stale-but-open gate
-  // from the superseded cycle.
+  // current chain so a reopen or pivot cannot inherit an open gate from the
+  // now-INACTIVE cycle (its PLAN/EXEC no longer reference a LOCKED INTENT).
   data.gates.gate_2_open = hasCleanGate2Chain(data);
   data.gates.gate_3_satisfied = hasCleanGate3Chain(data);
+}
+
+// PLAN-EVAL-01 Prinsip C: cascade is strictly downward and chain-scoped. Every
+// match below is keyed on *_version_ref pointing at the exact target version —
+// never a blanket sweep — so an unrelated INTENT chain (e.g. a "complementary"
+// v2 sitting LOCKED beside a superseded v1) is never touched.
+interface IntentCascadeTargets {
+  roadmap: ArtifactVersion[];
+  plan: ArtifactVersion[];
+  exec: ArtifactVersion[];
+  close: ArtifactVersion[];
+}
+
+function collectIntentCascadeTargets(data: ProgressJson, version: string): IntentCascadeTargets {
+  const roadmap = data.roadmap.versions.filter(
+    v => v.intent_version_ref === version && v.state !== 'SUPERSEDED'
+  );
+  const plan = data.plan.versions.filter(
+    v => v.intent_version_ref === version && v.state !== 'SUPERSEDED'
+  );
+  const planVersionSet = new Set(plan.map(v => v.version));
+  const exec = data.exec.versions.filter(
+    v => !!v.plan_version_ref && planVersionSet.has(v.plan_version_ref) && v.state !== 'SUPERSEDED'
+  );
+  const close = data.close.versions.filter(
+    v => v.intent_version_ref === version && v.state !== 'SUPERSEDED'
+  );
+  return { roadmap, plan, exec, close };
+}
+
+// Read-only preflight for `sigma intent supersede` — lets the CLI show the
+// Director everything that will cascade (including already-LOCKED work)
+// before requiring --director-confirm.
+export function previewIntentSupersedeCascade(data: ProgressJson, version: string): IntentCascadeTargets {
+  return collectIntentCascadeTargets(data, version);
+}
+
+export function supersedeIntentVersion(data: ProgressJson, version: string, reason: string): void {
+  const now = new Date().toISOString();
+  const target = data.intent.versions.find(v => v.version === version);
+  if (!target) throw new Error(`INTENT version ${version} not found`);
+  if (target.state !== 'LOCKED' && target.state !== 'INACTIVE') {
+    throw new Error(`INTENT ${version} is in state "${target.state}"; supersede requires LOCKED or INACTIVE`);
+  }
+
+  const { roadmap, plan, exec, close } = collectIntentCascadeTargets(data, version);
+
+  target.state = 'SUPERSEDED';
+  target.supersede_reason = reason;
+  target.updated_at = now;
+
+  // superseded_by is optional by design — only filled when another INTENT is
+  // clearly the successor at the moment of supersession (Director may cancel
+  // an INTENT with no replacement yet).
+  const successor = data.intent.versions.find(
+    v => v.version !== version && (v.state === 'LOCKED' || v.state === 'DRAFT')
+  );
+  if (successor) target.superseded_by = successor.version;
+
+  if (data.intent.active_version === version) {
+    data.intent.active_state = 'SUPERSEDED';
+  }
+
+  const cascadeReason = `Cascade: DIR-INTENT ${version} superseded — ${reason}`;
+
+  for (const rv of roadmap) {
+    rv.state = 'SUPERSEDED';
+    rv.supersede_reason = cascadeReason;
+    rv.updated_at = now;
+    if (data.roadmap.active_version === rv.version) data.roadmap.active_state = 'SUPERSEDED';
+  }
+  for (const pv of plan) {
+    pv.state = 'SUPERSEDED';
+    pv.supersede_reason = cascadeReason;
+    pv.updated_at = now;
+    if (data.plan.active_version === pv.version) data.plan.active_state = 'SUPERSEDED';
+  }
+  for (const ev of exec) {
+    ev.state = 'SUPERSEDED';
+    ev.supersede_reason = cascadeReason;
+    ev.updated_at = now;
+    if (data.exec.active_version === ev.version) data.exec.active_state = 'SUPERSEDED';
+  }
+  for (const cv of close) {
+    cv.state = 'SUPERSEDED';
+    cv.supersede_reason = cascadeReason;
+    cv.updated_at = now;
+    if (data.close.active_version === cv.version) data.close.active_state = 'SUPERSEDED';
+  }
 }
 
 // ── PLAN Mutations ────────────────────────────────────────────────────────────
@@ -1014,24 +1115,6 @@ export function registerExecDraft(
   data.gates.gate_3_satisfied = false;
 }
 
-function evaluateGate3(data: ProgressJson): boolean {
-  const activeExec = data.exec.versions.find(
-    v => v.version === data.exec.active_version && v.state === 'LOCKED'
-  );
-  if (!activeExec?.plan_version_ref) return false;
-
-  const referencedPlan = data.plan.versions.find(
-    v => v.version === activeExec.plan_version_ref &&
-      v.state === 'LOCKED' &&
-      !v.stale_intent
-  );
-  if (!referencedPlan?.intent_version_ref) return false;
-
-  return data.intent.versions.some(
-    v => v.version === referencedPlan.intent_version_ref && v.state === 'LOCKED'
-  );
-}
-
 export function lockActiveExec(data: ProgressJson): void {
   const now = new Date().toISOString();
   const activeVersion = data.exec.active_version;
@@ -1044,17 +1127,7 @@ export function lockActiveExec(data: ProgressJson): void {
   active.updated_at = now;
 
   data.exec.active_state = 'LOCKED';
-  data.gates.gate_3_satisfied = evaluateGate3(data);
-}
-
-export function supersedeExecVersion(data: ProgressJson, version: string, reason: string): void {
-  const now = new Date().toISOString();
-  const target = data.exec.versions.find(v => v.version === version);
-  if (!target) throw new Error(`EXEC version ${version} not found`);
-  if (target.state !== 'LOCKED') throw new Error(`EXEC ${version} is not LOCKED; cannot supersede`);
-  target.state = 'SUPERSEDED';
-  target.supersede_reason = reason;
-  target.updated_at = now;
+  data.gates.gate_3_satisfied = hasCleanGate3Chain(data);
 }
 
 // ── CLOSE Mutations ───────────────────────────────────────────────────────────
@@ -1063,15 +1136,31 @@ export function registerCloseDraft(
   data: ProgressJson,
   version: string,
   filePath: string,
-  staleAcknowledged: boolean
+  intentVersionRef: string,
 ): void {
+  // 1:1 guard, mirroring registerRoadmapDraft(): CLOSE is 1:1 to INTENT, so it
+  // must never need its own SUPERSEDED mechanism — only the intent-supersede
+  // cascade may retire one. Without this guard, a second DIR-CLOSE draft for
+  // the same INTENT had no way to become the "current" one except an
+  // unconditional auto-supersede loop in lockActiveClose (removed — see
+  // PLAN-EVAL-01, "Temuan Tambahan").
+  const conflict = data.close.versions.find(
+    v => v.intent_version_ref === intentVersionRef && v.state !== 'SUPERSEDED'
+  );
+  if (conflict) {
+    throw new Error(
+      `DIR-CLOSE already exists for INTENT ${intentVersionRef} (${conflict.version}, ${conflict.state}). ` +
+      `Resolve or lock the existing DIR-CLOSE, or run \`sigma intent supersede\` to retire that INTENT chain first.`
+    );
+  }
+
   const now = new Date().toISOString();
-  const entry: ArtifactVersion & { stale_acknowledged?: boolean } = {
+  const entry: ArtifactVersion = {
     version, state: 'DRAFT', file: filePath,
     created_at: now, updated_at: now,
+    intent_version_ref: intentVersionRef,
   };
-  if (staleAcknowledged) entry.stale_acknowledged = true;
-  data.close.versions.push(entry as ArtifactVersion);
+  data.close.versions.push(entry);
   data.close.active_version = version;
   data.close.active_state = 'DRAFT';
   data.lifecycle_state = 'CLOSE';
@@ -1081,14 +1170,6 @@ export function lockActiveClose(data: ProgressJson): void {
   const now = new Date().toISOString();
   const activeVersion = data.close.active_version;
   if (!activeVersion) throw new Error('No active CLOSE version to lock');
-
-  for (const v of data.close.versions) {
-    if (v.state === 'LOCKED') {
-      v.state = 'SUPERSEDED';
-      v.superseded_by = activeVersion;
-      v.updated_at = now;
-    }
-  }
 
   const active = data.close.versions.find(v => v.version === activeVersion);
   if (!active) throw new Error(`CLOSE version ${activeVersion} not found`);

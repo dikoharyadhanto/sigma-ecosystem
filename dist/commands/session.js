@@ -99,7 +99,7 @@ function runBootstrap(opts) {
     const projectRoot = (0, fs_1.findProjectRoot)();
     const data = (0, progress_1.readProgress)(projectRoot);
     const gates = (0, progress_1.getGateStatus)(data);
-    const stale = (0, progress_1.isStaleIntentPresent)(data);
+    const inactiveIntentWarnings = (0, progress_1.getInactiveIntentWarnings)(data);
     const nextOps = (0, progress_1.getNextValidOperations)(data);
     const role = opts.role?.toUpperCase();
     const roleGuidance = getRoleGuidance(role, gates.gate_2_open);
@@ -149,10 +149,10 @@ function runBootstrap(opts) {
             console.log(`  [INVALID] ${line}`);
         }
     }
-    console.log('\n--- STALE_INTENT Warnings ---');
-    if (stale.length > 0) {
-        for (const w of stale) {
-            console.log(`  [STALE] ${w.domain} ${w.version}`);
+    console.log('\n--- INACTIVE Intent Warnings (non-blocking) ---');
+    if (inactiveIntentWarnings.length > 0) {
+        for (const w of inactiveIntentWarnings) {
+            console.log(`  [INACTIVE] DIR-INTENT ${w.intentVersion} still has: ${w.hangingArtifacts.join(', ')}`);
         }
     }
     else {

@@ -451,7 +451,7 @@ Read-only and draft commands are capability, not blanket authorization to expand
 | `sigma exec lock` | Approval |
 | `sigma close lock` | Approval |
 | `sigma plan supersede` | Risk/Supersession |
-| `sigma exec supersede` | Risk/Supersession |
+| `sigma intent supersede` | Risk/Supersession |
 
 FMN MUST NOT run any of these commands until the Director gives explicit approval.
 

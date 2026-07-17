@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.closeCommand = closeCommand;
 const commander_1 = require("commander");
-const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const readline_1 = __importDefault(require("readline"));
 const progress_1 = require("../engine/progress");
@@ -24,23 +23,21 @@ function promptApprove(message) {
 function evaluateCloseChain(data) {
     const lockedIntent = data.intent.versions.find(v => v.state === 'LOCKED');
     if (!lockedIntent)
-        return { hasChain: false, isStale: false };
+        return { hasChain: false };
     const qualifyingPlan = data.plan.versions.find(v => v.state === 'LOCKED' && v.intent_version_ref === lockedIntent.version);
     if (!qualifyingPlan)
-        return { hasChain: false, isStale: false };
+        return { hasChain: false };
     const qualifyingExec = data.exec.versions.find(v => v.state === 'LOCKED' && v.plan_version_ref === qualifyingPlan.version);
     if (!qualifyingExec)
-        return { hasChain: false, isStale: false };
-    const isStale = !!(qualifyingPlan.stale_intent || qualifyingExec.stale_intent);
-    return { hasChain: true, isStale };
+        return { hasChain: false };
+    return { hasChain: true, intentVersionRef: lockedIntent.version };
 }
 function closeCommand() {
     const cmd = new commander_1.Command('close');
     cmd.description('Manage DIR-CLOSE artifact');
     cmd.command('new')
         .description('Create a new DIR-CLOSE draft (requires INTENT → PLAN → EXEC locked chain)')
-        .option('--ack-stale-intent', 'Acknowledge that the qualifying chain has stale intent')
-        .action((opts) => {
+        .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const data = (0, progress_1.readProgress)(projectRoot);
@@ -49,19 +46,11 @@ function closeCommand() {
             if (!chain.hasChain) {
                 throw new Error('GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain). Run: sigma exec lock');
             }
-            if (chain.isStale && !opts.ackStaleIntent) {
-                throw new Error('GATE 3 STALE: Qualifying chain has stale intent. Add --ack-stale-intent to acknowledge.');
-            }
             const version = (0, progress_1.nextMajorVersion)(data.close.versions);
             const relPath = path_1.default.join('Sigma', 'close', `DIR-CLOSE-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
             (0, artifacts_1.copyTemplateToArtifact)('DIR-CLOSE-TEMPLATE.md', absPath);
-            if (opts.ackStaleIntent) {
-                const ackNote = `> **STALE INTENT ACKNOWLEDGED**: This closure document was created with --ack-stale-intent. The qualifying INTENT → PLAN → EXEC chain contains stale intent.\n\n`;
-                const existing = fs_extra_1.default.readFileSync(absPath, 'utf8');
-                fs_extra_1.default.writeFileSync(absPath, ackNote + existing);
-            }
-            (0, progress_1.registerCloseDraft)(data, version, relPath, !!opts.ackStaleIntent);
+            (0, progress_1.registerCloseDraft)(data, version, relPath, chain.intentVersionRef);
             (0, progress_1.writeProgress)(projectRoot, data);
             console.log(`Created: ${relPath}`);
             console.log('Running automatic validation...\n');

@@ -198,9 +198,20 @@ Sigma uses six artifact types: five governance artifacts (DIR-INTENT, ROADMAP, F
 | Phase | DESIGN |
 | Storage | `Sigma/design/` |
 | Versioning | Tier 1 |
-| Auto-supersede | Yes (single-active) |
+| Auto-supersede | No — locking a new DIR-INTENT demotes the prior LOCKED version to `INACTIVE`, never `SUPERSEDED`. `SUPERSEDED` only via explicit `sigma intent supersede --director-confirm` (see Gate 3 section). |
 
 Foundational intent document capturing Director's vision, constraints, technical preferences, scope boundary, risk assessment, and evidence requirements. Includes an optional AUD findings section.
+
+**State machine**: `DRAFT → LOCKED → INACTIVE → SUPERSEDED` (a LOCKED intent may also go straight `LOCKED → SUPERSEDED` via `intent supersede`).
+
+| State | Meaning |
+| :--- | :--- |
+| `DRAFT` | Created; not yet the governing intent |
+| `LOCKED` | The current, active intent — opens Gate 1 |
+| `INACTIVE` | Displaced by a newer LOCKED intent; not cancelled, just not the current focus. Descendants (ROADMAP/FMN-PLAN/DEV-EXEC/DIR-CLOSE) are untouched. |
+| `SUPERSEDED` | Explicitly retired by Director via `sigma intent supersede --director-confirm`. Cascades `SUPERSEDED` to every ROADMAP/FMN-PLAN/DEV-EXEC/DIR-CLOSE version that references this INTENT — including already-`LOCKED` ones. |
+
+`INACTIVE` never implies cancellation and never triggers a cascade — a new INTENT may be complementary rather than a replacement. Only `sigma intent supersede` makes the explicit, Director-confirmed claim that this INTENT chain is retired.
 
 DIR-INTENT has two layers: **Intent Core** (sovereign — goals, vision, purpose; not AUD-challengeable) and **Challengeable sublayers** (route, assumptions, constraints, risk — all auditable).
 
@@ -249,7 +260,7 @@ State machine: DRAFT → LOCKED.
 | Phase | CLOSE |
 | Storage | `Sigma/close/` |
 | Versioning | Tier 1 |
-| Auto-supersede | Yes (single-active) |
+| Auto-supersede | No — 1:1 with DIR-INTENT (only one non-`SUPERSEDED` DIR-CLOSE per INTENT version; a second draft for the same INTENT is rejected). `SUPERSEDED` only as a cascade from `sigma intent supersede`, never on its own. |
 
 Closure document authored by the Director. Must explicitly reference the FMN-PLAN and DEV-EXEC versions that support the closure claim. Revision = new version.
 
@@ -366,13 +377,13 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 | Blocks | `sigma close new` |
 | Pre-condition | Full INTENT → PLAN → EXEC chain: active INTENT LOCKED; at least one DEV-EXEC LOCKED whose `plan_version_ref` points to a LOCKED FMN-PLAN whose `intent_version_ref` points to that INTENT |
 | CLI error (no chain) | `Gate 3 blocked: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain).` |
-| CLI error (stale) | `Gate 3 stale: Qualifying chain has stale_intent=true. Add --ack-stale-intent to acknowledge and proceed.` |
 
-**STALE_INTENT**: A FMN-PLAN or DEV-EXEC produced against a DIR-INTENT version that has since been SUPERSEDED is flagged `stale_intent: true` in `progress.json`. The artifact remains LOCKED — STALE_INTENT does not revoke lock status. However, a stale chain cannot satisfy Gate 3 without Director acknowledgment:
+**INTENT SUPERSEDE cascade (PLAN-EVAL-01)**: `sigma intent supersede --v <version> --reason <reason> --director-confirm` is the *only* path to a `SUPERSEDED` DIR-INTENT — locking a new DIR-INTENT never supersedes the prior one automatically (it demotes it to `INACTIVE`; see Section 5.1). Because the claim is explicit and Director-confirmed, its effect is a full downward cascade rather than a soft flag:
 
-- `sigma close new` blocks if the qualifying chain carries `stale_intent: true`
-- Director must pass `--ack-stale-intent` to proceed; this is recorded in DIR-CLOSE metadata
-- Director decides: is the stale evidence sufficient, or should fresh artifacts be produced against the new intent?
+- Supersedes the target DIR-INTENT, then cascades `SUPERSEDED` to every ROADMAP, FMN-PLAN, DEV-EXEC, and DIR-CLOSE version whose `intent_version_ref`/`plan_version_ref` chains back to it — **including already-`LOCKED` entries**. LOCKED status is not revoked; the version simply also becomes `SUPERSEDED`.
+- The cascade is strictly downward and chain-scoped: it never touches an unrelated INTENT chain (e.g. a complementary `INACTIVE` or `LOCKED` INTENT sitting beside the one being superseded), and superseding a PLAN (`sigma plan supersede`) never reaches back up to change INTENT state.
+- The command shows a mandatory preflight — every artifact that will cascade, flagged if already `LOCKED` — before requiring `--director-confirm`. This is the second code-enforced `--director-confirm` gate in Sigma (after `sigma override`), because the blast radius can span four artifact domains including completed work.
+- Without an explicit `intent supersede`, a DIR-CLOSE (or any other descendant) tied to an `INACTIVE` INTENT remains exactly as it was — still lockable, still valid. `INACTIVE` is deliberately not treated as "dead".
 
 ---
 
@@ -473,7 +484,7 @@ Run `sigma --help` or `sigma {domain} --help` for current command syntax. The CL
 
 Sigma CLI is designed to be operated primarily by AI roles under Director authority.
 
-**Sigma is an AI-operated governance runtime under Director authority.** The Director is not expected to manually execute every lifecycle command. However, **AI roles must not infer Director approval.** Any command representing approval, closure, accepted risk, stale-intent acknowledgment, supersession, or artifact lock requires explicit Director authorization.
+**Sigma is an AI-operated governance runtime under Director authority.** The Director is not expected to manually execute every lifecycle command. However, **AI roles must not infer Director approval.** Any command representing approval, closure, accepted risk, supersession, or artifact lock requires explicit Director authorization.
 
 ### Authority Architecture
 
@@ -492,11 +503,11 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 | Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check` | Yes | No |
 | Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `reference update`, `send` | Yes, within role boundary | Usually no |
 | Approval | `intent lock`, `roadmap activate`, `plan lock`, `exec lock`, `close lock` | Only after Director approval | Yes |
-| Risk / Supersession | `close new --ack-stale-intent`, `plan supersede`, `exec supersede`, destructive/reset | Only after Director approval | Yes |
+| Risk / Supersession | `intent supersede --director-confirm`, `plan supersede`, destructive/reset | Only after Director approval | Yes |
 
 ### Explicit Approval Rule
 
-Clear authorization: `approved`, `lock this`, `lanjut lock`, `accept risk`, `ack stale intent`, `supersede this version`, or equivalent unambiguous instruction.
+Clear authorization: `approved`, `lock this`, `lanjut lock`, `accept risk`, `supersede this version`, or equivalent unambiguous instruction.
 
 Ambiguous — not sufficient: `looks good`, `menarik`, `sepertinya oke`, `lanjut bahas`, `apa pendapatmu?`, `okay`, `noted`, `interesting`.
 
@@ -555,7 +566,7 @@ AI roles must interpret clear Director authorization as permission to execute th
 
 ### Clear Approval Signals
 
-`approved`, `I approve this`, `lock it`, `go ahead and lock`, `run it`, `yes run it`, `accept risk`, `ack stale intent`, `supersede this version`, Indonesian equivalents: `dikunci`, `ya approved`, `oke dikunci`, `iya approved`, `lanjut lock`.
+`approved`, `I approve this`, `lock it`, `go ahead and lock`, `run it`, `yes run it`, `accept risk`, `supersede this version`, Indonesian equivalents: `dikunci`, `ya approved`, `oke dikunci`, `iya approved`, `lanjut lock`.
 
 ### Rejection Signals
 

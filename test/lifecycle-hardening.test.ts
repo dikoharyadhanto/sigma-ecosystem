@@ -47,22 +47,16 @@ describe('Lifecycle hardening coverage', () => {
     expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md'))).toBe(true);
   });
 
-  it('sigma close new requires stale-chain acknowledgement when the qualifying chain is stale', () => {
+  it('sigma close new rejects a second draft for an INTENT that already has a non-superseded DIR-CLOSE', () => {
     env = setupTestEnv();
-    const progress = makeProgressWithLockedExec() as Record<string, any>;
-    progress.plan.versions[0].stale_intent = true;
-    progress.exec.versions[0].stale_intent = true;
-    progress.gates.gate_3_satisfied = false;
-    fs.writeJsonSync(env.progressPath, progress);
+    fs.writeJsonSync(env.progressPath, makeProgressWithLockedExec());
 
-    const blocked = runCli('close new', env.projectDir, env.homeDir);
-    expect(blocked.exitCode).toBe(1);
-    expect(blocked.stderr).toMatch(/GATE 3 STALE/i);
+    const first = runCli('close new', env.projectDir, env.homeDir);
+    expect(first.exitCode).toBe(0);
 
-    const acknowledged = runCli('close new --ack-stale-intent', env.projectDir, env.homeDir);
-    expect(acknowledged.exitCode).toBe(0);
-    const closeFile = fs.readFileSync(path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md'), 'utf8');
-    expect(closeFile).toMatch(/STALE INTENT ACKNOWLEDGED/);
+    const second = runCli('close new', env.projectDir, env.homeDir);
+    expect(second.exitCode).toBe(1);
+    expect(second.stderr).toMatch(/DIR-CLOSE already exists for INTENT/i);
   });
 
   it('sigma exec new skips exec version gaps caused by superseded plans', () => {

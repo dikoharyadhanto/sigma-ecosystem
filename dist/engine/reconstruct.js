@@ -96,8 +96,10 @@ function buildReconstructedProgress(found, projectId, projectName) {
         const isHighest = i === intents.length - 1;
         const version = { version: entry.version, file: entry.file, created_at: now, updated_at: now, state: 'DRAFT' };
         if (!isHighest) {
-            version.state = 'SUPERSEDED';
-            version.superseded_by = intents[i + 1].version;
+            // Mirrors the default lockActiveIntent() outcome (PLAN-EVAL-01): a prior
+            // LOCKED intent is demoted to INACTIVE, never guessed as SUPERSEDED —
+            // that is now a strong, explicit claim only `intent supersede` can make.
+            version.state = 'INACTIVE';
         }
         else if (planMajors.has(major - 1) || roadmapMajors.has(major)) {
             version.state = 'LOCKED';
@@ -113,7 +115,6 @@ function buildReconstructedProgress(found, projectId, projectName) {
         data.intent.active_version = last.version;
         data.intent.active_state = last.state;
     }
-    const activeIntentVersion = data.intent.active_version;
     // ── ROADMAP ─────────────────────────────────────────────────────────────────
     const roadmaps = sortByMajor(found.roadmap);
     roadmaps.forEach((entry, i) => {
@@ -143,7 +144,6 @@ function buildReconstructedProgress(found, projectId, projectName) {
         const execs = execGroups.get(major) ?? [];
         const intentRef = `v${major + 1}`;
         const intentExists = intents.some(iv => iv.version === intentRef);
-        const staleIntent = intentRef !== activeIntentVersion;
         if (plans.length === 1 && execs.length <= 1) {
             const plan = plans[0];
             const planLocked = execs.length === 1;
@@ -154,8 +154,6 @@ function buildReconstructedProgress(found, projectId, projectName) {
             };
             if (planLocked)
                 planEntry.locked_at = now;
-            if (staleIntent)
-                planEntry.stale_intent = true;
             if (!intentExists) {
                 markers.push(makeMarker('plan', 'gate_2_open', `FMN-PLAN ${plan.version} references missing INTENT ${intentRef}.`, { intent_version: intentRef, plan_version: plan.version, exec_version: null }, now));
             }
@@ -169,8 +167,6 @@ function buildReconstructedProgress(found, projectId, projectName) {
                     version: exec.version, file: exec.file, created_at: now, updated_at: now,
                     state: 'LOCKED', locked_at: now, plan_version_ref: plan.version,
                 };
-                if (staleIntent)
-                    execEntry.stale_intent = true;
                 data.exec.versions.push(execEntry);
             }
         }
@@ -184,16 +180,12 @@ function buildReconstructedProgress(found, projectId, projectName) {
                     version: plan.version, file: plan.file, created_at: now, updated_at: now,
                     state: 'DRAFT', intent_version_ref: intentRef,
                 };
-                if (staleIntent)
-                    planEntry.stale_intent = true;
                 data.plan.versions.push(planEntry);
             }
             for (const exec of execs) {
                 const execEntry = {
                     version: exec.version, file: exec.file, created_at: now, updated_at: now, state: 'DRAFT',
                 };
-                if (staleIntent)
-                    execEntry.stale_intent = true;
                 data.exec.versions.push(execEntry);
             }
             markers.push(makeMarker('plan', 'gate_2_open', `Multiple FMN-PLAN/DEV-EXEC versions found under major v${major} (${plans.map(p => p.version).join(', ') || 'none'} / ${execs.map(e => e.version).join(', ') || 'none'}). Automatic reconstruct cannot safely pair them — verify manually and use \`sigma plan lock\` / \`sigma exec lock\` / \`sigma plan supersede\` as needed.`, { intent_version: intentRef, plan_version: null, exec_version: null }, now));

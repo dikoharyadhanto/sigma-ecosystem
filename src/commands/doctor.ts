@@ -6,6 +6,7 @@ import {
   writeProgress,
   runDoctorReconciliation,
   getInvalidMarkers,
+  getInactiveIntentWarnings,
   readOverrides,
   ProgressJson,
 } from '../engine/progress';
@@ -54,6 +55,15 @@ function runDefaultDoctor(): void {
       console.log(`  - ${marker.id}: ${marker.reason}`);
     }
     console.log('\n  Gate enforcement is temporarily relaxed for affected chains while INVALID markers remain.');
+  }
+
+  const inactiveIntentWarnings = getInactiveIntentWarnings(data);
+  if (inactiveIntentWarnings.length > 0) {
+    console.log('\n--- INACTIVE Intent Warnings (non-blocking) ---');
+    for (const w of inactiveIntentWarnings) {
+      console.log(`  - DIR-INTENT ${w.intentVersion} is INACTIVE but still has: ${w.hangingArtifacts.join(', ')}`);
+    }
+    console.log('  Run `sigma intent supersede --v <version> --reason ... --director-confirm` if this INTENT is truly retired.');
   }
 
   console.log('');

@@ -1037,7 +1037,7 @@ AUD MUST NOT execute any of the following, regardless of context:
 - `sigma exec lock`
 - `sigma close lock`
 - `sigma plan supersede`
-- `sigma exec supersede`
+- `sigma intent supersede`
 - Any destructive or reset operation
 
 AUD's role is critique and verification, not execution. A lock command

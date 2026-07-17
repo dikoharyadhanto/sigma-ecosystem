@@ -49,6 +49,14 @@ function runDefaultDoctor() {
         }
         console.log('\n  Gate enforcement is temporarily relaxed for affected chains while INVALID markers remain.');
     }
+    const inactiveIntentWarnings = (0, progress_1.getInactiveIntentWarnings)(data);
+    if (inactiveIntentWarnings.length > 0) {
+        console.log('\n--- INACTIVE Intent Warnings (non-blocking) ---');
+        for (const w of inactiveIntentWarnings) {
+            console.log(`  - DIR-INTENT ${w.intentVersion} is INACTIVE but still has: ${w.hangingArtifacts.join(', ')}`);
+        }
+        console.log('  Run `sigma intent supersede --v <version> --reason ... --director-confirm` if this INTENT is truly retired.');
+    }
     console.log('');
 }
 // ── --reconstruct ────────────────────────────────────────────────────────────

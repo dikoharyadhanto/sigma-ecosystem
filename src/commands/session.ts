@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import {
   readProgress,
   getGateStatus,
-  isStaleIntentPresent,
+  getInactiveIntentWarnings,
   getNextValidOperations,
   getGateStatusLabel,
   getInvalidWarningLines,
@@ -123,7 +123,7 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
   const projectRoot = findProjectRoot();
   const data = readProgress(projectRoot);
   const gates = getGateStatus(data);
-  const stale = isStaleIntentPresent(data);
+  const inactiveIntentWarnings = getInactiveIntentWarnings(data);
   const nextOps = getNextValidOperations(data);
   const role = opts.role?.toUpperCase() as SigmaRole | undefined;
   const roleGuidance = getRoleGuidance(role, gates.gate_2_open);
@@ -182,10 +182,10 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
     }
   }
 
-  console.log('\n--- STALE_INTENT Warnings ---');
-  if (stale.length > 0) {
-    for (const w of stale) {
-      console.log(`  [STALE] ${w.domain} ${w.version}`);
+  console.log('\n--- INACTIVE Intent Warnings (non-blocking) ---');
+  if (inactiveIntentWarnings.length > 0) {
+    for (const w of inactiveIntentWarnings) {
+      console.log(`  [INACTIVE] DIR-INTENT ${w.intentVersion} still has: ${w.hangingArtifacts.join(', ')}`);
     }
   } else {
     console.log('  none');

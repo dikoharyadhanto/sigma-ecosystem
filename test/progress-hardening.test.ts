@@ -73,9 +73,15 @@ describe('Progress hardening', () => {
 
     expect(result.exitCode).toBe(0);
     const updated = fs.readJsonSync(env.progressPath) as Record<string, any>;
+
+    // PLAN-EVAL-01: intent lock no longer cascades to descendants at all —
+    // the prior INTENT is demoted to INACTIVE, and its PLAN/EXEC are left
+    // completely untouched (no flag, no state change) until Director runs
+    // `sigma intent supersede` explicitly.
+    expect(updated.intent.versions.find((v: Record<string, unknown>) => v.version === 'v1').state).toBe('INACTIVE');
     const planVersions = (updated as any).plan.versions as Array<Record<string, unknown>>;
     const execVersions = (updated as any).exec.versions as Array<Record<string, unknown>>;
-    expect(planVersions[0].stale_intent).toBe(true);
-    expect(execVersions[0].stale_intent).toBe(true);
+    expect(planVersions[0].state).toBe('LOCKED');
+    expect(execVersions[0].state).toBe('LOCKED');
   });
 });

@@ -340,8 +340,6 @@ function planCommand() {
                 console.log(`State:            ${data.plan.active_state}`);
                 if (active?.intent_version_ref)
                     console.log(`INTENT Ref:       ${active.intent_version_ref}`);
-                if (active?.stale_intent)
-                    console.log(`Stale Intent:     YES`);
                 if (active?.locked_at)
                     console.log(`Locked at:        ${active.locked_at}`);
                 if (active?.file)
@@ -411,14 +409,13 @@ function planCommand() {
             }
             else {
                 if (data.plan.versions.length > 0) {
-                    console.log('Version    State        INTENT Ref  Stale  Created');
+                    console.log('Version    State        INTENT Ref  Created');
                     console.log('-'.repeat(75));
                     for (const v of data.plan.versions) {
                         const ver = v.version.padEnd(10);
                         const st = v.state.padEnd(12);
                         const ir = (v.intent_version_ref ?? '—').padEnd(11);
-                        const stale = (v.stale_intent ? 'YES' : 'no').padEnd(6);
-                        console.log(`${ver} ${st} ${ir} ${stale} ${v.created_at}`);
+                        console.log(`${ver} ${st} ${ir} ${v.created_at}`);
                     }
                 }
                 if (data.plan.pending.length > 0) {

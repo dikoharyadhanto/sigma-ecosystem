@@ -95,13 +95,14 @@ describe('intent lock completes a reopen of a CLOSED project', () => {
     expect(data.gates.gate_2_open).toBe(false);
     expect(data.gates.gate_3_satisfied).toBe(false);
 
-    // v1 superseded, v2 now the locked active intent
-    expect(data.intent.versions.find(v => v.version === 'v1')!.state).toBe('SUPERSEDED');
+    // v1 demoted to INACTIVE (not SUPERSEDED — PLAN-EVAL-01: supersession is
+    // now an explicit, separate Director action), v2 now the locked active intent
+    expect(data.intent.versions.find(v => v.version === 'v1')!.state).toBe('INACTIVE');
     expect(data.intent.versions.find(v => v.version === 'v2')!.state).toBe('LOCKED');
 
-    // prior-cycle plan/exec flagged stale rather than deleted (kept as history)
-    expect((data.plan.versions[0] as any).stale_intent).toBe(true);
-    expect((data.exec.versions[0] as any).stale_intent).toBe(true);
+    // prior-cycle plan/exec are left completely untouched — no cascade, no flag
+    expect(data.plan.versions[0].state).toBe('LOCKED');
+    expect(data.exec.versions[0].state).toBe('LOCKED');
 
     // The state is now clean enough for `sigma roadmap new` (assertProgressCanMutate).
     expect(() => validateProgressSemantics(data)).not.toThrow();

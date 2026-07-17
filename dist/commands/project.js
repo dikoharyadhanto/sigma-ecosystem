@@ -248,7 +248,7 @@ function runStatus() {
     const projectRoot = (0, fs_1.findProjectRoot)();
     const data = (0, progress_1.readProgress)(projectRoot);
     const gates = (0, progress_1.getGateStatus)(data);
-    const stale = (0, progress_1.isStaleIntentPresent)(data);
+    const inactiveIntentWarnings = (0, progress_1.getInactiveIntentWarnings)(data);
     console.log('\n=== Sigma Project Status ===\n');
     console.log(`Project:          ${data.project_name} (${data.project_id})`);
     console.log(`Lifecycle Phase:  ${data.lifecycle_state}`);
@@ -281,11 +281,12 @@ function runStatus() {
             console.log(`  [INVALID] ${line}`);
         }
     }
-    if (stale.length > 0) {
-        console.log('\n--- STALE_INTENT Warnings ---');
-        for (const w of stale) {
-            (0, output_1.warn)(`  ${w.domain} ${w.version} has stale_intent=true`);
+    if (inactiveIntentWarnings.length > 0) {
+        console.log('\n--- INACTIVE Intent Warnings (non-blocking) ---');
+        for (const w of inactiveIntentWarnings) {
+            (0, output_1.warn)(`  DIR-INTENT ${w.intentVersion} is INACTIVE but still has: ${w.hangingArtifacts.join(', ')}`);
         }
+        console.log('  Run `sigma intent supersede --v <version> --reason ... --director-confirm` if this INTENT is truly retired.');
     }
     const nextOps = (0, progress_1.getNextValidOperations)(data);
     console.log('\n--- CLI-Valid Runtime Operations ---');

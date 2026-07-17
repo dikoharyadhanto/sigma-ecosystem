@@ -589,7 +589,6 @@ DEV operates primarily in the **Draft/Operational** command authority class.
 | Command | Class |
 | :--- | :--- |
 | `sigma exec lock` | Approval |
-| `sigma exec supersede` | Risk/Supersession |
 | Any destructive or reset operation | Risk/Supersession |
 
 DEV MUST NOT run these commands until the Director gives explicit approval.

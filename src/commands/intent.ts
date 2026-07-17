@@ -7,6 +7,8 @@ import {
   nextMajorVersion,
   registerIntentDraft,
   lockActiveIntent,
+  previewIntentSupersedeCascade,
+  supersedeIntentVersion,
   assertProgressCanMutate,
 } from '../engine/progress';
 import { findProjectRoot } from '../utils/fs';
@@ -91,6 +93,63 @@ export function intentCommand(): Command {
         lockActiveIntent(data);
         writeProgress(projectRoot, data);
         console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma plan new`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  cmd.command('supersede')
+    .description('Supersede a LOCKED or INACTIVE DIR-INTENT — cascades SUPERSEDED to its Roadmap/Plan/Exec/Close (requires --director-confirm)')
+    .requiredOption('--v <version>', 'Version to supersede (e.g. v1)')
+    .requiredOption('--reason <reason>', 'Reason for superseding')
+    .option('--director-confirm', 'Required. Explicit Director authorization to execute the supersede.')
+    .action((opts: { v: string; reason: string; directorConfirm?: boolean }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const data = readProgress(projectRoot);
+        assertProgressCanMutate(data);
+
+        const target = data.intent.versions.find(v => v.version === opts.v);
+        if (!target) {
+          throw new Error(`INTENT version ${opts.v} not found. Run: sigma intent list`);
+        }
+        if (target.state !== 'LOCKED' && target.state !== 'INACTIVE') {
+          throw new Error(`INTENT ${opts.v} is in state "${target.state}"; supersede requires LOCKED or INACTIVE.`);
+        }
+
+        const cascade = previewIntentSupersedeCascade(data, opts.v);
+        const total = cascade.roadmap.length + cascade.plan.length + cascade.exec.length + cascade.close.length;
+
+        console.log('\nIntent Supersede Preflight\n');
+        console.log(`Target:  DIR-INTENT ${opts.v} (${target.state})`);
+        console.log(`Reason:  ${opts.reason}\n`);
+
+        if (total === 0) {
+          console.log('No downstream Roadmap/Plan/Exec/Close artifacts reference this INTENT version.');
+        } else {
+          console.log('The following artifacts will cascade to SUPERSEDED:');
+          for (const v of cascade.roadmap) console.log(`  - ROADMAP ${v.version} [${v.state}]${v.state === 'LOCKED' ? '  (LOCKED work)' : ''}`);
+          for (const v of cascade.plan) console.log(`  - PLAN ${v.version} [${v.state}]${v.state === 'LOCKED' ? '  (LOCKED work)' : ''}`);
+          for (const v of cascade.exec) console.log(`  - EXEC ${v.version} [${v.state}]${v.state === 'LOCKED' ? '  (LOCKED work)' : ''}`);
+          for (const v of cascade.close) console.log(`  - CLOSE ${v.version} [${v.state}]${v.state === 'LOCKED' ? '  (LOCKED work)' : ''}`);
+        }
+        console.log('');
+
+        if (!opts.directorConfirm) {
+          console.error('Error: --director-confirm is required to execute an intent supersede.');
+          console.error('This command retires an entire INTENT chain and everything under it — Director authority only.');
+          console.error('Add --director-confirm to proceed.');
+          process.exit(1);
+        }
+
+        supersedeIntentVersion(data, opts.v, opts.reason);
+        writeProgress(projectRoot, data);
+
+        console.log(`DIR-INTENT ${opts.v} superseded. Reason: ${opts.reason}`);
+        if (total > 0) {
+          console.log(`Cascaded to SUPERSEDED: ${cascade.roadmap.length} roadmap, ${cascade.plan.length} plan, ${cascade.exec.length} exec, ${cascade.close.length} close.`);
+        }
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

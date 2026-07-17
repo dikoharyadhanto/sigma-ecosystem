@@ -25,7 +25,7 @@ import {
   writeProgress,
   createInitialProgress,
   getGateStatus,
-  isStaleIntentPresent,
+  getInactiveIntentWarnings,
   getNextValidOperations,
   getGateStatusLabel,
   getInvalidWarningLines,
@@ -306,7 +306,7 @@ function runStatus(): void {
   const projectRoot = findProjectRoot();
   const data = readProgress(projectRoot);
   const gates = getGateStatus(data);
-  const stale = isStaleIntentPresent(data);
+  const inactiveIntentWarnings = getInactiveIntentWarnings(data);
 
   console.log('\n=== Sigma Project Status ===\n');
   console.log(`Project:          ${data.project_name} (${data.project_id})`);
@@ -345,11 +345,12 @@ function runStatus(): void {
     }
   }
 
-  if (stale.length > 0) {
-    console.log('\n--- STALE_INTENT Warnings ---');
-    for (const w of stale) {
-      warn(`  ${w.domain} ${w.version} has stale_intent=true`);
+  if (inactiveIntentWarnings.length > 0) {
+    console.log('\n--- INACTIVE Intent Warnings (non-blocking) ---');
+    for (const w of inactiveIntentWarnings) {
+      warn(`  DIR-INTENT ${w.intentVersion} is INACTIVE but still has: ${w.hangingArtifacts.join(', ')}`);
     }
+    console.log('  Run `sigma intent supersede --v <version> --reason ... --director-confirm` if this INTENT is truly retired.');
   }
 
   const nextOps = getNextValidOperations(data);
