@@ -23,6 +23,7 @@ import {
   printSigmaDocReport,
   validateSigmaDocFile,
 } from '../utils/docCheck';
+import { renderIntentHistoryFile } from '../utils/intentHistory';
 
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
 // onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
@@ -43,15 +44,32 @@ function intentDocPath(projectRoot: string, chain: ChainState): string {
   return path.join(projectRoot, chain.intent.file ?? path.join('Sigma', 'design', `DIR-INTENT-${chain.intent.version}.md`));
 }
 
+// PLAN-EVAL-06 §6.2 — intent-history.md is a plain pipe-split table, and
+// doctor --reconstruct parses it back to recover title/focus. "|"/newlines would
+// corrupt both the render and the recovery parser.
+function assertRequiredIntentMetadata(title: string | undefined, focus: string | undefined): void {
+  if (!title?.trim()) throw new Error('sigma intent new requires --title <title>');
+  if (!focus?.trim()) throw new Error('sigma intent new requires --focus <focus>');
+  if (/[|\n\r]/.test(title)) {
+    throw new Error('--title cannot contain "|" or a newline (breaks the intent-history.md table and its recovery parser)');
+  }
+  if (/[|\n\r]/.test(focus)) {
+    throw new Error('--focus cannot contain "|" or a newline (breaks the intent-history.md table and its recovery parser)');
+  }
+}
+
 export function intentCommand(): Command {
   const cmd = new Command('intent');
   cmd.description('Manage DIR-INTENT artifact');
 
   cmd.command('new')
     .description('Create a new DIR-INTENT draft (auto-creates and auto-activates a new chain)')
+    .requiredOption('--title <title>', 'Intent title written into Sigma/design/intent-history.md')
+    .requiredOption('--focus <focus>', 'Intent focus summary written into Sigma/design/intent-history.md')
     .option('--yes', 'Skip interactive APPROVE prompt when reopening a CLOSED project')
-    .action(async (opts: { yes?: boolean }) => {
+    .action(async (opts: { title?: string; focus?: string; yes?: boolean }) => {
       try {
+        assertRequiredIntentMetadata(opts.title, opts.focus);
         const projectRoot = findProjectRoot();
 
         // Preflight is read-only and best-effort — a brand-new project with
@@ -84,9 +102,10 @@ export function intentCommand(): Command {
         const absPath = path.join(projectRoot, relPath);
         copyTemplateToArtifact('DIR-INTENT-TEMPLATE.md', absPath);
 
-        const chain = createInitialChain(chainVersion, relPath);
+        const chain = createInitialChain(chainVersion, relPath, opts.title, opts.focus);
         writeChain(projectRoot, chainVersion, chain); // chain file first
         writeActivateStatus(projectRoot, chainVersion); // manifest last — PLAN-EVAL-01 §5.9 write order
+        renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — trigger 1/4
 
         console.log(`Created: ${relPath} — open this file and fill in the intent.`);
         console.log(`Chain ${chainVersion} is now active.`);
@@ -117,6 +136,7 @@ export function intentCommand(): Command {
         const version = chain.intent.version;
         lockActiveIntent(chain);
         writeChain(projectRoot, chainVersion, chain);
+        renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — trigger 2/4
         console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma roadmap new`);
       } catch (e) {
         console.error((e as Error).message);
@@ -166,6 +186,7 @@ export function intentCommand(): Command {
 
         supersedeIntentVersion(chain, opts.reason);
         writeChain(projectRoot, opts.v, chain);
+        renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — trigger 3/4
 
         console.log(`DIR-INTENT ${opts.v} superseded. Reason: ${opts.reason}`);
         if (total > 0) {
@@ -190,6 +211,7 @@ export function intentCommand(): Command {
           );
         }
         writeActivateStatus(projectRoot, opts.v);
+        renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — trigger 4/4 (no-op on content: see plan §3.4)
         console.log(`Active chain switched to ${opts.v}.`);
       } catch (e) {
         console.error((e as Error).message);

@@ -153,7 +153,37 @@ export interface MultiReconstructResult {
   skipped: string[];
 }
 
-export function buildReconstructedChains(found: DiscoveredArtifacts): MultiReconstructResult {
+// PLAN-EVAL-06 §6 — Sigma/design/intent-history.md is the only place `title`/`focus`
+// persist outside progress-v<N>.json (DIR-INTENT templates never carry them). If it
+// survived whatever wiped/corrupted the chain file, read it back instead of losing
+// the data. Deliberately a plain pipe-split, not a markdown table parser — this is
+// why `sigma intent new --title/--focus` rejects literal "|" and newlines (see
+// intent.ts): keeping the row format this simple is what makes lossless parse-back
+// cheap. Keep in sync with generateIntentHistoryContent() in utils/intentHistory.ts
+// if the column shape ever changes — deliberately not shared code, so engine/ does
+// not depend on utils/ (see PLAN-EVAL-06 §6.1).
+function readIntentHistoryMetadata(projectRoot: string): Map<string, { title?: string; focus?: string }> {
+  const filePath = path.join(projectRoot, PROJECT_SIGMA_DIR, 'design', 'intent-history.md');
+  const result = new Map<string, { title?: string; focus?: string }>();
+  if (!fs.existsSync(filePath)) return result;
+
+  for (const line of fs.readFileSync(filePath, 'utf8').split('\n')) {
+    const cells = line.split('|').map(c => c.trim());
+    if (cells.length < 6) continue; // not a `| vN | Title | Focus | Status | Reason |` row
+    const [, version, title, focus] = cells;
+    if (!/^v\d+$/.test(version)) continue; // skips header row + the `:---` separator row
+    result.set(version, {
+      title: title && title !== 'TBD' ? title : undefined,
+      focus: focus && focus !== 'TBD' ? focus : undefined,
+    });
+  }
+  return result;
+}
+
+export function buildReconstructedChains(
+  found: DiscoveredArtifacts,
+  recoveredMetadata: Map<string, { title?: string; focus?: string }> = new Map(),
+): MultiReconstructResult {
   const now = new Date().toISOString();
   markerSeq = 0;
 
@@ -201,7 +231,8 @@ export function buildReconstructedChains(found: DiscoveredArtifacts): MultiRecon
 
     const chainVersion = `v${major}`;
     const markers: InvalidMarker[] = [];
-    const chain = createInitialChain(chainVersion, intentEntry.file);
+    const recovered = recoveredMetadata.get(chainVersion) ?? {};
+    const chain = createInitialChain(chainVersion, intentEntry.file, recovered.title, recovered.focus);
     chain.created_at = now;
     chain.updated_at = now;
 
@@ -330,7 +361,8 @@ export function buildReconstructedChains(found: DiscoveredArtifacts): MultiRecon
 
 export function reconstructAllChains(projectRoot: string): MultiReconstructResult {
   const found = discoverArtifacts(projectRoot);
-  return buildReconstructedChains(found);
+  const recoveredMetadata = readIntentHistoryMetadata(projectRoot);
+  return buildReconstructedChains(found, recoveredMetadata);
 }
 
 // `findProjectRoot()` (utils/fs.ts) anchors on Sigma/activate_status.json

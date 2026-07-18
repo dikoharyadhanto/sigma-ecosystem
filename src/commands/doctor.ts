@@ -13,6 +13,7 @@ import {
 } from '../engine/chain';
 import { reconstructAllChains, findSigmaProjectRoot, MultiReconstructResult } from '../engine/reconstruct';
 import { findProjectRoot } from '../utils/fs';
+import { renderIntentHistoryFile } from '../utils/intentHistory';
 
 // PLAN-EVAL-01 Fase 4 / PLAN-EVAL-05 — every mode below now targets
 // Sigma/progress-v<N>.json via chain.ts. `--reconstruct` (3 modes) and
@@ -35,6 +36,7 @@ function runDefaultDoctor(): void {
   const overrides = readOverrides(projectRoot);
   const report = runDoctorReconciliation(chain, overrides);
   writeChain(projectRoot, chainVersion, chain);
+  renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — self-heal net
 
   console.log('\n=== Sigma Doctor ===\n');
 
@@ -115,6 +117,8 @@ function runAllVersionsDoctor(): void {
     console.log(`  Runtime state: ${remaining.length === 0 ? 'VALID' : 'INVALID recovery mode active'}`);
     console.log('');
   }
+
+  renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — self-heal net
 }
 
 // ── --reconstruct (3 modes: default/active, --v, --all-versions) ───────────
@@ -224,6 +228,8 @@ function runReconstruct(opts: { v?: string; allVersions?: boolean }): void {
     console.log('\n--- Skipped (SIGMA:DOC marker mismatch) ---');
     for (const note of result.skipped) console.log(`  - ${note}`);
   }
+
+  renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — self-heal net
 
   console.log('');
 }

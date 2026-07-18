@@ -5,6 +5,7 @@ const commander_1 = require("commander");
 const chain_1 = require("../engine/chain");
 const reconstruct_1 = require("../engine/reconstruct");
 const fs_1 = require("../utils/fs");
+const intentHistory_1 = require("../utils/intentHistory");
 // PLAN-EVAL-01 Fase 4 / PLAN-EVAL-05 — every mode below now targets
 // Sigma/progress-v<N>.json via chain.ts. `--reconstruct` (3 modes) and
 // `--all-versions` are PLAN-EVAL-05 additions; the default mode is
@@ -23,6 +24,7 @@ function runDefaultDoctor() {
     const overrides = (0, chain_1.readOverrides)(projectRoot);
     const report = (0, chain_1.runDoctorReconciliation)(chain, overrides);
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+    (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — self-heal net
     console.log('\n=== Sigma Doctor ===\n');
     if (report.repaired.length > 0) {
         console.log('--- Repaired ---');
@@ -94,6 +96,7 @@ function runAllVersionsDoctor() {
         console.log(`  Runtime state: ${remaining.length === 0 ? 'VALID' : 'INVALID recovery mode active'}`);
         console.log('');
     }
+    (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — self-heal net
 }
 // ── --reconstruct (3 modes: default/active, --v, --all-versions) ───────────
 // PLAN-EVAL-05 §5.2/§5.4 — migrated off progress.ts/reconstruct.ts's old
@@ -119,9 +122,16 @@ function resolveReconstructTargets(projectRoot, result, opts) {
     try {
         activeVersion = (0, chain_1.resolveActiveChainVersion)(projectRoot);
     }
-    catch {
-        throw new Error('No chain files exist yet and no --v/--all-versions was given — cannot determine which chain to reconstruct. ' +
-            'Use --v <version> to target one chain, or --all-versions to reconstruct every chain found on disk.');
+    catch (e) {
+        // Only the "no chain files at all" case gets rewritten into --v/--all-versions
+        // guidance — any other failure (e.g. an existing chain file that's
+        // corrupted) is a distinct, more specific problem and should surface with
+        // its own message rather than being masked by a generic one.
+        if (e.message.includes('No DIR-INTENT exists yet')) {
+            throw new Error('No chain files exist yet and no --v/--all-versions was given — cannot determine which chain to reconstruct. ' +
+                'Use --v <version> to target one chain, or --all-versions to reconstruct every chain found on disk.');
+        }
+        throw e;
     }
     const major = (0, chain_1.parseMajorVersion)(activeVersion);
     if (!result.chains.has(major)) {
@@ -177,6 +187,7 @@ function runReconstruct(opts) {
         for (const note of result.skipped)
             console.log(`  - ${note}`);
     }
+    (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — self-heal net
     console.log('');
 }
 // ── Command ───────────────────────────────────────────────────────────────────

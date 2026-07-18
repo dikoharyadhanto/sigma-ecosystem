@@ -26,7 +26,7 @@ describe('intent new on a CLOSED project', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', closedChain());
 
-    const result = runCli('intent new', env.projectDir, env.homeDir, 'n\n');
+    const result = runCli('intent new --title "Reopen Attempt" --focus "Reopen focus"', env.projectDir, env.homeDir, 'n\n');
 
     expect(result.stdout).toMatch(/Reopen Preflight/);
     expect(result.stdout).toMatch(/CLOSED/);
@@ -44,7 +44,7 @@ describe('intent new on a CLOSED project', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', closedChain());
 
-    const result = runCli('intent new --yes', env.projectDir, env.homeDir);
+    const result = runCli('intent new --title "Reopen v2" --focus "Reopen focus" --yes', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Reopen Preflight/);

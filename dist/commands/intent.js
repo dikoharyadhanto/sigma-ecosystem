@@ -11,6 +11,7 @@ const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const docCheck_1 = require("../utils/docCheck");
+const intentHistory_1 = require("../utils/intentHistory");
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
 // onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
 // (a different progress-v<N>.json), not an array entry within one file —
@@ -27,14 +28,32 @@ function promptApprove(message) {
 function intentDocPath(projectRoot, chain) {
     return path_1.default.join(projectRoot, chain.intent.file ?? path_1.default.join('Sigma', 'design', `DIR-INTENT-${chain.intent.version}.md`));
 }
+// PLAN-EVAL-06 §6.2 — intent-history.md is a plain pipe-split table, and
+// doctor --reconstruct parses it back to recover title/focus. "|"/newlines would
+// corrupt both the render and the recovery parser.
+function assertRequiredIntentMetadata(title, focus) {
+    if (!title?.trim())
+        throw new Error('sigma intent new requires --title <title>');
+    if (!focus?.trim())
+        throw new Error('sigma intent new requires --focus <focus>');
+    if (/[|\n\r]/.test(title)) {
+        throw new Error('--title cannot contain "|" or a newline (breaks the intent-history.md table and its recovery parser)');
+    }
+    if (/[|\n\r]/.test(focus)) {
+        throw new Error('--focus cannot contain "|" or a newline (breaks the intent-history.md table and its recovery parser)');
+    }
+}
 function intentCommand() {
     const cmd = new commander_1.Command('intent');
     cmd.description('Manage DIR-INTENT artifact');
     cmd.command('new')
         .description('Create a new DIR-INTENT draft (auto-creates and auto-activates a new chain)')
+        .requiredOption('--title <title>', 'Intent title written into Sigma/design/intent-history.md')
+        .requiredOption('--focus <focus>', 'Intent focus summary written into Sigma/design/intent-history.md')
         .option('--yes', 'Skip interactive APPROVE prompt when reopening a CLOSED project')
         .action(async (opts) => {
         try {
+            assertRequiredIntentMetadata(opts.title, opts.focus);
             const projectRoot = (0, fs_1.findProjectRoot)();
             // Preflight is read-only and best-effort — a brand-new project with
             // no chain yet has nothing to check CLOSED-ness against (PLAN-EVAL-01
@@ -62,9 +81,10 @@ function intentCommand() {
             const relPath = path_1.default.join('Sigma', 'design', `DIR-INTENT-${chainVersion}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
             (0, artifacts_1.copyTemplateToArtifact)('DIR-INTENT-TEMPLATE.md', absPath);
-            const chain = (0, chain_1.createInitialChain)(chainVersion, relPath);
+            const chain = (0, chain_1.createInitialChain)(chainVersion, relPath, opts.title, opts.focus);
             (0, chain_1.writeChain)(projectRoot, chainVersion, chain); // chain file first
             (0, chain_1.writeActivateStatus)(projectRoot, chainVersion); // manifest last — PLAN-EVAL-01 §5.9 write order
+            (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — trigger 1/4
             console.log(`Created: ${relPath} — open this file and fill in the intent.`);
             console.log(`Chain ${chainVersion} is now active.`);
             console.log('Running automatic validation...\n');
@@ -95,6 +115,7 @@ function intentCommand() {
             const version = chain.intent.version;
             (0, chain_1.lockActiveIntent)(chain);
             (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+            (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — trigger 2/4
             console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma roadmap new`);
         }
         catch (e) {
@@ -143,6 +164,7 @@ function intentCommand() {
             }
             (0, chain_1.supersedeIntentVersion)(chain, opts.reason);
             (0, chain_1.writeChain)(projectRoot, opts.v, chain);
+            (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — trigger 3/4
             console.log(`DIR-INTENT ${opts.v} superseded. Reason: ${opts.reason}`);
             if (total > 0) {
                 console.log(`Cascaded to SUPERSEDED: ${cascade.roadmap ? 1 : 0} roadmap, ${cascade.plan.length} plan, ${cascade.exec.length} exec, ${cascade.close ? 1 : 0} close.`);
@@ -164,6 +186,7 @@ function intentCommand() {
                 throw new Error(`INTENT ${opts.v} is SUPERSEDED — permanently ineligible to become active again. Run: sigma intent list`);
             }
             (0, chain_1.writeActivateStatus)(projectRoot, opts.v);
+            (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — trigger 4/4 (no-op on content: see plan §3.4)
             console.log(`Active chain switched to ${opts.v}.`);
         }
         catch (e) {

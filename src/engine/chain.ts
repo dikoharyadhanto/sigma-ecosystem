@@ -152,6 +152,8 @@ export interface SingleIntentState {
   updated_at: string;
   locked_at?: string;
   supersede_reason?: string;
+  title?: string; // PLAN-EVAL-06 — rendered into Sigma/design/intent-history.md
+  focus?: string; // PLAN-EVAL-06 — rendered into Sigma/design/intent-history.md
   // superseded_by intentionally omitted — PLAN-EVAL-01 §3.4: cross-chain
   // succession would require a chain-file mutation to know about another
   // chain's file, which breaks total isolation. `intent list` (projection
@@ -394,7 +396,12 @@ export function readProjectIdentity(projectRoot: string): ProjectIdentity {
 // than creating an empty shell and registering the intent as a second step
 // (intent is non-nullable on ChainState, so there is no valid intermediate
 // "shell with no intent" state).
-export function createInitialChain(chainVersion: string, intentFilePath: string): ChainState {
+export function createInitialChain(
+  chainVersion: string,
+  intentFilePath: string,
+  title?: string,
+  focus?: string,
+): ChainState {
   const now = new Date().toISOString();
   return {
     schema_version: SCHEMA_VERSION,
@@ -408,6 +415,8 @@ export function createInitialChain(chainVersion: string, intentFilePath: string)
       file: intentFilePath,
       created_at: now,
       updated_at: now,
+      ...(title ? { title } : {}),
+      ...(focus ? { focus } : {}),
     },
     roadmap: null,
     plan: { active_version: null, active_state: null, versions: [], pending: [] },

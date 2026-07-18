@@ -26,7 +26,7 @@ describe('Document checks and auto-validation', () => {
     progress.gates = { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false };
     fs.writeJsonSync(env.progressPath, progress);
 
-    const result = runCli('intent new', env.projectDir, env.homeDir);
+    const result = runCli('intent new --title "Test Intent" --focus "Test focus"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Running automatic validation/);
@@ -43,7 +43,7 @@ describe('Document checks and auto-validation', () => {
     progress.gates = { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false };
     fs.writeJsonSync(env.progressPath, progress);
 
-    const created = runCli('intent new', env.projectDir, env.homeDir);
+    const created = runCli('intent new --title "Test Intent" --focus "Test focus"', env.projectDir, env.homeDir);
     expect(created.exitCode).toBe(0);
 
     // check exit code reflects structural validity only (PLAN-EVAL-11 Isu Terbuka #1) —

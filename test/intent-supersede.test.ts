@@ -207,7 +207,7 @@ describe('intent lock regression — no auto-supersede, no auto-cascade', () => 
     writeChainFixture(env, 'v1', closedChain);
     const v1Before = fs.readJsonSync(chainPath(env, 'v1'));
 
-    const reopened = runCli('intent new --yes', env.projectDir, env.homeDir);
+    const reopened = runCli('intent new --title "Reopen v2" --focus "Reopen focus" --yes', env.projectDir, env.homeDir);
     expect(reopened.exitCode).toBe(0);
 
     fs.writeFileSync(

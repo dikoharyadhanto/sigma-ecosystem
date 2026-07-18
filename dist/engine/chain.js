@@ -245,7 +245,7 @@ function readProjectIdentity(projectRoot) {
 // than creating an empty shell and registering the intent as a second step
 // (intent is non-nullable on ChainState, so there is no valid intermediate
 // "shell with no intent" state).
-function createInitialChain(chainVersion, intentFilePath) {
+function createInitialChain(chainVersion, intentFilePath, title, focus) {
     const now = new Date().toISOString();
     return {
         schema_version: config_1.SCHEMA_VERSION,
@@ -259,6 +259,8 @@ function createInitialChain(chainVersion, intentFilePath) {
             file: intentFilePath,
             created_at: now,
             updated_at: now,
+            ...(title ? { title } : {}),
+            ...(focus ? { focus } : {}),
         },
         roadmap: null,
         plan: { active_version: null, active_state: null, versions: [], pending: [] },

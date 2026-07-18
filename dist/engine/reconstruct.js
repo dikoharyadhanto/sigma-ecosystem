@@ -78,7 +78,35 @@ function makeMarker(domain, gate, reason, chain, now) {
         last_detected_at: now,
     };
 }
-function buildReconstructedChains(found) {
+// PLAN-EVAL-06 §6 — Sigma/design/intent-history.md is the only place `title`/`focus`
+// persist outside progress-v<N>.json (DIR-INTENT templates never carry them). If it
+// survived whatever wiped/corrupted the chain file, read it back instead of losing
+// the data. Deliberately a plain pipe-split, not a markdown table parser — this is
+// why `sigma intent new --title/--focus` rejects literal "|" and newlines (see
+// intent.ts): keeping the row format this simple is what makes lossless parse-back
+// cheap. Keep in sync with generateIntentHistoryContent() in utils/intentHistory.ts
+// if the column shape ever changes — deliberately not shared code, so engine/ does
+// not depend on utils/ (see PLAN-EVAL-06 §6.1).
+function readIntentHistoryMetadata(projectRoot) {
+    const filePath = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'design', 'intent-history.md');
+    const result = new Map();
+    if (!fs_extra_1.default.existsSync(filePath))
+        return result;
+    for (const line of fs_extra_1.default.readFileSync(filePath, 'utf8').split('\n')) {
+        const cells = line.split('|').map(c => c.trim());
+        if (cells.length < 6)
+            continue; // not a `| vN | Title | Focus | Status | Reason |` row
+        const [, version, title, focus] = cells;
+        if (!/^v\d+$/.test(version))
+            continue; // skips header row + the `:---` separator row
+        result.set(version, {
+            title: title && title !== 'TBD' ? title : undefined,
+            focus: focus && focus !== 'TBD' ? focus : undefined,
+        });
+    }
+    return result;
+}
+function buildReconstructedChains(found, recoveredMetadata = new Map()) {
     const now = new Date().toISOString();
     markerSeq = 0;
     const intentsByMajor = new Map();
@@ -129,7 +157,8 @@ function buildReconstructedChains(found) {
         }
         const chainVersion = `v${major}`;
         const markers = [];
-        const chain = (0, chain_1.createInitialChain)(chainVersion, intentEntry.file);
+        const recovered = recoveredMetadata.get(chainVersion) ?? {};
+        const chain = (0, chain_1.createInitialChain)(chainVersion, intentEntry.file, recovered.title, recovered.focus);
         chain.created_at = now;
         chain.updated_at = now;
         // ── INTENT ──────────────────────────────────────────────────────────────
@@ -231,7 +260,8 @@ function buildReconstructedChains(found) {
 }
 function reconstructAllChains(projectRoot) {
     const found = discoverArtifacts(projectRoot);
-    return buildReconstructedChains(found);
+    const recoveredMetadata = readIntentHistoryMetadata(projectRoot);
+    return buildReconstructedChains(found, recoveredMetadata);
 }
 // `findProjectRoot()` (utils/fs.ts) anchors on Sigma/activate_status.json
 // existing — which is exactly what may be missing in the scenario

@@ -79,6 +79,8 @@ export interface SingleIntentState {
     updated_at: string;
     locked_at?: string;
     supersede_reason?: string;
+    title?: string;
+    focus?: string;
 }
 export interface SingleRoadmapState {
     version: string;
@@ -136,7 +138,7 @@ export declare function readActiveChain(projectRoot: string): {
     data: ChainState;
 };
 export declare function readProjectIdentity(projectRoot: string): ProjectIdentity;
-export declare function createInitialChain(chainVersion: string, intentFilePath: string): ChainState;
+export declare function createInitialChain(chainVersion: string, intentFilePath: string, title?: string, focus?: string): ChainState;
 export declare function hasActiveLockedIntent(chain: ChainState): boolean;
 export declare function hasCleanGate2Chain(chain: ChainState): boolean;
 export declare function hasCleanGate3Chain(chain: ChainState): boolean;

@@ -25,7 +25,10 @@ export interface MultiReconstructResult {
     unresolved: UnresolvedGroup[];
     skipped: string[];
 }
-export declare function buildReconstructedChains(found: DiscoveredArtifacts): MultiReconstructResult;
+export declare function buildReconstructedChains(found: DiscoveredArtifacts, recoveredMetadata?: Map<string, {
+    title?: string;
+    focus?: string;
+}>): MultiReconstructResult;
 export declare function reconstructAllChains(projectRoot: string): MultiReconstructResult;
 export declare function findSigmaProjectRoot(startDir?: string): string;
 export {};

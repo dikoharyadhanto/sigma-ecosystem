@@ -17,7 +17,7 @@ describe('Shared artifact command helpers', () => {
       gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false },
     });
 
-    const result = runCli('intent new', env.projectDir, env.homeDir);
+    const result = runCli('intent new --title "Test Intent" --focus "Test focus"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Created: Sigma[\\/]design[\\/]DIR-INTENT-v1\.md/);
