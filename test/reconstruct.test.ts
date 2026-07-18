@@ -6,7 +6,9 @@ import {
   runCli,
   chainPath,
   writeChainFixture,
+  makeChain,
   makeChainWithDraftIntent,
+  makeChainWithFullBuiltCycle,
   stubProjectRootAnchor,
   TestEnv,
 } from './helpers';
@@ -185,6 +187,105 @@ describe('sigma doctor --reconstruct', () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/--v is only valid combined with --reconstruct/);
+  });
+});
+
+// PLAN-EVAL-07 — reconstruct must not silently discard real LOCKED history
+// or PLAN title/focus when the progress-v<N>.json it's about to rebuild is
+// actually still valid and unchanged on disk. Root cause: `--reconstruct`
+// used to trust only artifact filenames, never the file it was overwriting.
+describe('sigma doctor --reconstruct — PLAN-EVAL-07 metadata preservation', () => {
+  let env: TestEnv;
+
+  afterEach(() => env?.cleanup());
+
+  it('trusts the existing chain wholesale (state + title/focus) when its artifact set is unchanged on disk', () => {
+    env = setupTestEnv();
+    writeArtifact(env.sigmaDir, 'design', 'DIR-INTENT-v1.md', 'DIR_INTENT');
+    writeArtifact(env.sigmaDir, 'build', 'ROADMAP-v1.md', 'ROADMAP');
+    writeArtifact(env.sigmaDir, 'build', 'FMN-PLAN-v0.1.md', 'FMN_PLAN');
+    writeArtifact(env.sigmaDir, 'build', 'DEV-EXEC-v0.1.md', 'DEV_EXEC');
+    writeArtifact(env.sigmaDir, 'close', 'DIR-CLOSE-v1.md', 'DIR_CLOSE');
+
+    const existing = makeChainWithFullBuiltCycle('v1', 'v0.1') as any;
+    existing.plan.versions[0].title = 'Fondasi Template';
+    existing.plan.versions[0].focus = 'Riset awal';
+    writeChainFixture(env, 'v1', existing, { activate: false });
+
+    const result = runCli('doctor --reconstruct --v v1', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/No ambiguous state/);
+
+    const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
+    expect(data.roadmap).toMatchObject({ version: 'v1', state: 'LOCKED' });
+    expect(data.plan.versions[0]).toMatchObject({
+      version: 'v0.1', state: 'LOCKED', title: 'Fondasi Template', focus: 'Riset awal',
+    });
+    expect(data.exec.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED' });
+    expect(data.close).toMatchObject({ version: 'v1', state: 'DRAFT' });
+  });
+
+  it('recovers PLAN title/focus even when falling back to the ambiguous-pairing DRAFT reset', () => {
+    env = setupTestEnv();
+    writeArtifact(env.sigmaDir, 'design', 'DIR-INTENT-v1.md', 'DIR_INTENT');
+    writeArtifact(env.sigmaDir, 'build', 'ROADMAP-v1.md', 'ROADMAP');
+    writeArtifact(env.sigmaDir, 'build', 'FMN-PLAN-v0.1.md', 'FMN_PLAN');
+    writeArtifact(env.sigmaDir, 'build', 'FMN-PLAN-v0.2.md', 'FMN_PLAN');
+    // Deliberately no DEV-EXEC-v0.2.md written to disk, even though the
+    // existing chain file below references one — this makes the artifact
+    // set disagree with the existing file, so wholesale trust must NOT
+    // apply and today's ambiguous-pairing DRAFT reset must still fire.
+    const now = new Date().toISOString();
+    const existing = makeChain('v1', {
+      lifecycle_state: 'BUILD',
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
+      plan: {
+        active_version: 'v0.2', active_state: 'LOCKED', pending: [],
+        versions: [
+          { version: 'v0.1', state: 'SUPERSEDED', file: 'Sigma/build/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, supersede_reason: 'superseded by v0.2', intent_version_ref: 'v1', title: 'Draft awal', focus: 'Draf pertama' },
+          { version: 'v0.2', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v0.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1', title: 'Versi final', focus: 'Revisi akhir' },
+        ],
+      },
+      exec: {
+        active_version: 'v0.2', active_state: 'LOCKED',
+        versions: [{ version: 'v0.2', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.2.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v0.2' }],
+      },
+      gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
+    });
+    writeChainFixture(env, 'v1', existing, { activate: false });
+
+    const result = runCli('doctor --reconstruct --v v1', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Marked INVALID/);
+
+    const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
+    expect(data.plan.versions).toEqual([
+      expect.objectContaining({ version: 'v0.1', state: 'DRAFT', title: 'Draft awal', focus: 'Draf pertama' }),
+      expect.objectContaining({ version: 'v0.2', state: 'DRAFT', title: 'Versi final', focus: 'Revisi akhir' }),
+    ]);
+  });
+
+  it('still falls back to a blind rebuild when the existing chain file is corrupted', () => {
+    env = setupTestEnv();
+    writeArtifact(env.sigmaDir, 'design', 'DIR-INTENT-v1.md', 'DIR_INTENT');
+    writeArtifact(env.sigmaDir, 'build', 'ROADMAP-v1.md', 'ROADMAP');
+    writeArtifact(env.sigmaDir, 'build', 'FMN-PLAN-v0.1.md', 'FMN_PLAN');
+    writeArtifact(env.sigmaDir, 'build', 'DEV-EXEC-v0.1.md', 'DEV_EXEC');
+    fs.ensureFileSync(chainPath(env, 'v1'));
+    fs.writeFileSync(chainPath(env, 'v1'), '{ this is not valid JSON');
+
+    const result = runCli('doctor --reconstruct --v v1', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/No ambiguous state/);
+
+    const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
+    expect(data.intent).toMatchObject({ version: 'v1', state: 'LOCKED' });
+    expect(data.plan.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED' });
+    expect(data.exec.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED' });
   });
 });
 

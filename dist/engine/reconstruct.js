@@ -106,7 +106,75 @@ function readIntentHistoryMetadata(projectRoot) {
     }
     return result;
 }
-function buildReconstructedChains(found, recoveredMetadata = new Map()) {
+// PLAN-EVAL-07 — before treating a chain as "missing/corrupted, rebuild
+// blind from disk" (the scenario --reconstruct exists for), check whether
+// its progress-v<N>.json is actually still there and valid. A blind rebuild
+// cannot prove LOCKED history for plan/exec (filenames alone are not
+// enough — see the "ambiguous group" branch below) and never carries PLAN
+// title/focus at all; a chain file that's still valid is strictly more
+// trustworthy for both than guessing from disk. Corrupted/missing files
+// fall through to `null` here, which keeps today's blind-reconstruct
+// behavior exactly as before — this only ever adds trust, never removes it.
+function readExistingChain(projectRoot, chainVersion) {
+    const filePath = (0, chain_1.chainFilePath)(projectRoot, chainVersion);
+    if (!fs_extra_1.default.existsSync(filePath))
+        return null;
+    try {
+        const raw = fs_extra_1.default.readJsonSync(filePath);
+        (0, chain_1.validateChainSemantics)(raw);
+        return raw;
+    }
+    catch {
+        return null;
+    }
+}
+// Wholesale-trust the existing chain's plan/exec/roadmap/close only when the
+// artifact file set discovered on disk for this chain is *exactly* the same
+// as what the existing chain already references — nothing added, nothing
+// removed since it was last written. If a new artifact appeared (e.g. a
+// fresh `plan new`) or one vanished, the safer choice is to fall back to
+// today's blind rebuild for this chain rather than risk mixing stale and
+// fresh state — title/focus recovery (extractPlanMetadata below) still
+// applies independently in that fallback path.
+// `file` fields are written with path.join(), so they carry native OS
+// separators — normalize before comparing so a chain file written on one
+// separator convention still compares equal (defensive; also keeps the
+// comparison stable regardless of how a given `file` string was produced).
+function normalizeSlashes(p) {
+    return p.replace(/\\/g, '/');
+}
+function referencedFileSet(chain) {
+    const files = [
+        chain.roadmap?.file,
+        chain.close?.file,
+        ...chain.plan.versions.map(v => v.file),
+        ...chain.exec.versions.map(v => v.file),
+    ];
+    return new Set(files.filter((f) => !!f).map(normalizeSlashes));
+}
+function sameFileSet(a, b) {
+    if (a.size !== b.size)
+        return false;
+    for (const f of a)
+        if (!b.has(f))
+            return false;
+    return true;
+}
+// PLAN title/focus recovery — independent of the wholesale-trust fast path
+// above, applies even when this chain still needs a blind rebuild (e.g. an
+// ambiguous PLAN/EXEC pairing). Keyed by PLAN version since that's the only
+// domain that ever carries title/focus in practice (EXEC never sets them).
+function extractPlanMetadata(chain) {
+    const result = new Map();
+    if (!chain)
+        return result;
+    for (const v of chain.plan.versions) {
+        if (v.title || v.focus)
+            result.set(v.version, { title: v.title, focus: v.focus });
+    }
+    return result;
+}
+function buildReconstructedChains(projectRoot, found, recoveredMetadata = new Map()) {
     const now = new Date().toISOString();
     markerSeq = 0;
     const intentsByMajor = new Map();
@@ -161,6 +229,25 @@ function buildReconstructedChains(found, recoveredMetadata = new Map()) {
         const chain = (0, chain_1.createInitialChain)(chainVersion, intentEntry.file, recovered.title, recovered.focus);
         chain.created_at = now;
         chain.updated_at = now;
+        // PLAN-EVAL-07 — trust an existing, still-valid progress-v<N>.json's
+        // plan/exec/roadmap/close wholesale instead of rebuilding them blind,
+        // but only when the artifact file set on disk for this chain exactly
+        // matches what it already references (nothing added/removed since it
+        // was last written). See readExistingChain()/sameFileSet() above for
+        // why: filenames alone cannot prove LOCKED history or carry PLAN
+        // title/focus, but a still-valid existing file already proved both
+        // once — rebuilding from scratch anyway just discards that. INTENT
+        // state is deliberately excluded from this trust (stays computed fresh
+        // below) — it's already provable from downstream evidence either way.
+        const existingChain = readExistingChain(projectRoot, chainVersion);
+        const discoveredFiles = new Set([
+            ...(roadmapEntry ? [roadmapEntry.file] : []),
+            ...(closeEntry ? [closeEntry.file] : []),
+            ...plans.map(p => p.file),
+            ...execs.map(e => e.file),
+        ].map(normalizeSlashes));
+        const useExistingWholesale = !!existingChain && sameFileSet(referencedFileSet(existingChain), discoveredFiles);
+        const existingPlanMetadata = extractPlanMetadata(existingChain);
         // ── INTENT ──────────────────────────────────────────────────────────────
         const hasDownstreamEvidence = plans.length > 0 || !!roadmapEntry;
         if (hasDownstreamEvidence) {
@@ -170,77 +257,104 @@ function buildReconstructedChains(found, recoveredMetadata = new Map()) {
         else {
             markers.push(makeMarker('intent', 'gate_1_open', `DIR-INTENT ${chainVersion} found on disk but no downstream FMN-PLAN or ROADMAP confirms it was ever LOCKED. Re-run \`sigma intent lock\` if it should be, or leave as DRAFT.`, { intent_version: chainVersion, plan_version: null, exec_version: null }, now));
         }
-        // ── ROADMAP ─────────────────────────────────────────────────────────────
-        if (roadmapEntry) {
-            const roadmap = {
-                version: chainVersion, state: closeEntry ? 'LOCKED' : 'DRAFT',
-                file: roadmapEntry.file, created_at: now, updated_at: now,
-            };
-            if (closeEntry)
-                roadmap.locked_at = now;
-            chain.roadmap = roadmap;
+        if (useExistingWholesale) {
+            // PLAN-EVAL-07 — nothing changed on disk since this chain's existing
+            // file was last written and it's still valid: reuse its roadmap/plan/
+            // exec/close as-is rather than rebuilding (and potentially discarding
+            // real LOCKED history / title/focus) from filenames alone.
+            chain.roadmap = existingChain.roadmap;
+            chain.plan = existingChain.plan;
+            chain.exec = existingChain.exec;
+            chain.close = existingChain.close;
         }
-        // ── PLAN + EXEC ─────────────────────────────────────────────────────────
-        if (plans.length === 1 && execs.length <= 1) {
-            const plan = plans[0];
-            const planLocked = execs.length === 1;
-            const planEntry = {
-                version: plan.version, file: plan.file, created_at: now, updated_at: now,
-                state: planLocked ? 'LOCKED' : 'DRAFT',
-                intent_version_ref: chainVersion,
-            };
-            if (planLocked)
-                planEntry.locked_at = now;
-            if (!planLocked) {
-                markers.push(makeMarker('plan', 'gate_2_open', `FMN-PLAN ${plan.version} found on disk but no downstream DEV-EXEC confirms it was ever LOCKED. Re-run \`sigma plan lock\` if it should be, or leave as DRAFT.`, { intent_version: chainVersion, plan_version: plan.version, exec_version: null }, now));
+        else {
+            // ── ROADMAP ───────────────────────────────────────────────────────────
+            if (roadmapEntry) {
+                const roadmap = {
+                    version: chainVersion, state: closeEntry ? 'LOCKED' : 'DRAFT',
+                    file: roadmapEntry.file, created_at: now, updated_at: now,
+                };
+                if (closeEntry)
+                    roadmap.locked_at = now;
+                chain.roadmap = roadmap;
             }
-            chain.plan.versions.push(planEntry);
-            if (execs.length === 1) {
-                const exec = execs[0];
-                chain.exec.versions.push({
-                    version: exec.version, file: exec.file, created_at: now, updated_at: now,
-                    state: 'LOCKED', locked_at: now, plan_version_ref: plan.version,
-                });
-            }
-        }
-        else if (plans.length > 0 || execs.length > 0) {
-            // Ambiguous group: multiple PLAN drafts and/or multiple EXEC versions
-            // under the same major. Filenames alone cannot prove which PLAN a
-            // given EXEC targets, so nothing here is guessed — everything is left
-            // DRAFT and flagged for Director review.
-            for (const plan of plans) {
-                chain.plan.versions.push({
+            // ── PLAN + EXEC ───────────────────────────────────────────────────────
+            if (plans.length === 1 && execs.length <= 1) {
+                const plan = plans[0];
+                const planLocked = execs.length === 1;
+                const planEntry = {
                     version: plan.version, file: plan.file, created_at: now, updated_at: now,
-                    state: 'DRAFT', intent_version_ref: chainVersion,
-                });
+                    state: planLocked ? 'LOCKED' : 'DRAFT',
+                    intent_version_ref: chainVersion,
+                };
+                if (planLocked)
+                    planEntry.locked_at = now;
+                // PLAN-EVAL-07 — recover title/focus from the existing chain file
+                // (if any) even on this blind-rebuild path; state/pairing logic
+                // above is unchanged, this only plugs the metadata that filenames
+                // alone could never carry in the first place.
+                const recoveredPlanMeta = existingPlanMetadata.get(plan.version);
+                if (recoveredPlanMeta?.title)
+                    planEntry.title = recoveredPlanMeta.title;
+                if (recoveredPlanMeta?.focus)
+                    planEntry.focus = recoveredPlanMeta.focus;
+                if (!planLocked) {
+                    markers.push(makeMarker('plan', 'gate_2_open', `FMN-PLAN ${plan.version} found on disk but no downstream DEV-EXEC confirms it was ever LOCKED. Re-run \`sigma plan lock\` if it should be, or leave as DRAFT.`, { intent_version: chainVersion, plan_version: plan.version, exec_version: null }, now));
+                }
+                chain.plan.versions.push(planEntry);
+                if (execs.length === 1) {
+                    const exec = execs[0];
+                    chain.exec.versions.push({
+                        version: exec.version, file: exec.file, created_at: now, updated_at: now,
+                        state: 'LOCKED', locked_at: now, plan_version_ref: plan.version,
+                    });
+                }
             }
-            for (const exec of execs) {
-                chain.exec.versions.push({
-                    version: exec.version, file: exec.file, created_at: now, updated_at: now, state: 'DRAFT',
-                });
+            else if (plans.length > 0 || execs.length > 0) {
+                // Ambiguous group: multiple PLAN drafts and/or multiple EXEC versions
+                // under the same major. Filenames alone cannot prove which PLAN a
+                // given EXEC targets, so nothing here is guessed — everything is left
+                // DRAFT and flagged for Director review.
+                for (const plan of plans) {
+                    const entry = {
+                        version: plan.version, file: plan.file, created_at: now, updated_at: now,
+                        state: 'DRAFT', intent_version_ref: chainVersion,
+                    };
+                    const recoveredPlanMeta = existingPlanMetadata.get(plan.version);
+                    if (recoveredPlanMeta?.title)
+                        entry.title = recoveredPlanMeta.title;
+                    if (recoveredPlanMeta?.focus)
+                        entry.focus = recoveredPlanMeta.focus;
+                    chain.plan.versions.push(entry);
+                }
+                for (const exec of execs) {
+                    chain.exec.versions.push({
+                        version: exec.version, file: exec.file, created_at: now, updated_at: now, state: 'DRAFT',
+                    });
+                }
+                markers.push(makeMarker('plan', 'gate_2_open', `Multiple FMN-PLAN/DEV-EXEC versions found under major v${planMajor} (${plans.map(p => p.version).join(', ') || 'none'} / ${execs.map(e => e.version).join(', ') || 'none'}). Automatic reconstruct cannot safely pair them — verify manually and use \`sigma plan lock\` / \`sigma exec lock\` / \`sigma plan supersede\` as needed.`, { intent_version: chainVersion, plan_version: null, exec_version: null }, now));
             }
-            markers.push(makeMarker('plan', 'gate_2_open', `Multiple FMN-PLAN/DEV-EXEC versions found under major v${planMajor} (${plans.map(p => p.version).join(', ') || 'none'} / ${execs.map(e => e.version).join(', ') || 'none'}). Automatic reconstruct cannot safely pair them — verify manually and use \`sigma plan lock\` / \`sigma exec lock\` / \`sigma plan supersede\` as needed.`, { intent_version: chainVersion, plan_version: null, exec_version: null }, now));
-        }
-        if (chain.plan.versions.length > 0) {
-            const last = sortByMajorMinor(chain.plan.versions).pop();
-            chain.plan.active_version = last.version;
-            chain.plan.active_state = last.state;
-        }
-        if (chain.exec.versions.length > 0) {
-            const last = sortByMajorMinor(chain.exec.versions).pop();
-            chain.exec.active_version = last.version;
-            chain.exec.active_state = last.state;
-        }
-        // ── CLOSE ───────────────────────────────────────────────────────────────
-        if (closeEntry) {
-            const close = {
-                version: chainVersion, state: 'DRAFT', file: closeEntry.file, created_at: now, updated_at: now,
-            };
-            chain.close = close;
-            // Closing is a terminal step with no further downstream artifact — its
-            // LOCKED state can never be proven from disk alone. Default to DRAFT
-            // (project stays open) rather than risk a false CLOSED claim.
-            markers.push(makeMarker('close', undefined, `DIR-CLOSE ${chainVersion} found on disk but closure cannot be confirmed as LOCKED from artifact files alone. Re-run \`sigma close lock\` if this project should be CLOSED.`, { intent_version: null, plan_version: null, exec_version: null }, now));
+            if (chain.plan.versions.length > 0) {
+                const last = sortByMajorMinor(chain.plan.versions).pop();
+                chain.plan.active_version = last.version;
+                chain.plan.active_state = last.state;
+            }
+            if (chain.exec.versions.length > 0) {
+                const last = sortByMajorMinor(chain.exec.versions).pop();
+                chain.exec.active_version = last.version;
+                chain.exec.active_state = last.state;
+            }
+            // ── CLOSE ─────────────────────────────────────────────────────────────
+            if (closeEntry) {
+                const close = {
+                    version: chainVersion, state: 'DRAFT', file: closeEntry.file, created_at: now, updated_at: now,
+                };
+                chain.close = close;
+                // Closing is a terminal step with no further downstream artifact — its
+                // LOCKED state can never be proven from disk alone. Default to DRAFT
+                // (project stays open) rather than risk a false CLOSED claim.
+                markers.push(makeMarker('close', undefined, `DIR-CLOSE ${chainVersion} found on disk but closure cannot be confirmed as LOCKED from artifact files alone. Re-run \`sigma close lock\` if this project should be CLOSED.`, { intent_version: null, plan_version: null, exec_version: null }, now));
+            }
         }
         // ── Lifecycle ─────────────────────────────────────────────────────────────
         const hasAnyBuildArtifact = chain.roadmap !== null || chain.plan.versions.length > 0 || chain.exec.versions.length > 0 || chain.close !== null;
@@ -261,7 +375,7 @@ function buildReconstructedChains(found, recoveredMetadata = new Map()) {
 function reconstructAllChains(projectRoot) {
     const found = discoverArtifacts(projectRoot);
     const recoveredMetadata = readIntentHistoryMetadata(projectRoot);
-    return buildReconstructedChains(found, recoveredMetadata);
+    return buildReconstructedChains(projectRoot, found, recoveredMetadata);
 }
 // `findProjectRoot()` (utils/fs.ts) anchors on Sigma/activate_status.json
 // existing — which is exactly what may be missing in the scenario

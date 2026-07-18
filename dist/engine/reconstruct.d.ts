@@ -25,7 +25,7 @@ export interface MultiReconstructResult {
     unresolved: UnresolvedGroup[];
     skipped: string[];
 }
-export declare function buildReconstructedChains(found: DiscoveredArtifacts, recoveredMetadata?: Map<string, {
+export declare function buildReconstructedChains(projectRoot: string, found: DiscoveredArtifacts, recoveredMetadata?: Map<string, {
     title?: string;
     focus?: string;
 }>): MultiReconstructResult;
