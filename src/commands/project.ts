@@ -9,6 +9,7 @@ import {
   GLOBAL_BRIDGE_DIR,
   PROJECT_SIGMA_DIR,
   PROJECT_IDENTITY_FILE,
+  ACTIVATE_STATUS_FILE,
   SCHEMA_VERSION,
   BRIDGE_STUBS,
   SUBFOLDERS,
@@ -20,7 +21,6 @@ import {
 import { getBundledRoleMemoryDir } from '../engine/roleMemory';
 import { findSigmaProjectRoot } from '../engine/reconstruct';
 import { copyTemplateToArtifact } from '../utils/artifacts';
-import { createInitialProgress } from '../engine/progress';
 import {
   readActiveChain,
   readProjectIdentity,
@@ -80,8 +80,10 @@ export function validateProjectName(name: string): string {
 // ── .sigma-identity.json helpers ─────────────────────────────────────────────
 //
 // Root-level (sibling to Sigma/), not inside it, so it survives even if the
-// Sigma/ folder itself needs to be reconstructed. Read by doctor.ts as a
-// fallback identity source when progress.json is unreadable.
+// Sigma/ folder itself needs to be reconstructed. This is the sole identity
+// source for `sigma doctor --reconstruct` (PLAN-EVAL-05 — ChainState never
+// carried project_id/project_name to begin with, so there is no
+// progress.json fallback to fall back to).
 
 interface ProjectIdentity {
   schema_version: string;
@@ -142,9 +144,13 @@ async function runStart(opts: {
 
   const projectRoot = process.cwd();
   const sigmaDir = path.join(projectRoot, PROJECT_SIGMA_DIR);
-  const progressPath = path.join(sigmaDir, 'progress.json');
+  // PLAN-EVAL-05 — anchor moved to activate_status.json now that
+  // Sigma/progress.json is no longer written at all (findProjectRoot()
+  // already anchored here since PLAN-EVAL-01 Fase 5; this reinit guard had
+  // been left behind pointing at the old file).
+  const activateStatusPath = path.join(projectRoot, ACTIVATE_STATUS_FILE);
 
-  if (fileExists(progressPath)) {
+  if (fileExists(activateStatusPath)) {
     if (!opts.reinit) {
       error(
         'This directory is already a Sigma project. ' +
@@ -243,22 +249,16 @@ async function runStart(opts: {
     warn('SIGMA-REGISTRY.json not found in bundle — skipping');
   }
 
-  // Create progress.json — PLAN-EVAL-01: this file is legacy/inert now.
-  // Nothing reads its content anymore (only findProjectRoot() checks it
-  // exists, until Fase 5 moves that anchor to activate_status.json). Kept
-  // exactly as before to avoid unrelated churn before that fase lands.
-  const initial = createInitialProgress(projectId, projectName);
-  fs.writeJsonSync(progressPath, initial, { spaces: 2 });
-
-  // PLAN-EVAL-01 §5.9 — the real per-chain state lives in
-  // Sigma/progress-v<N>.json files, created lazily by `sigma intent new`.
-  // The manifest is created here, upfront, with no chain active yet, so
-  // findProjectRoot() (post-Fase-5) and `sigma intent list` always have
-  // something to read even before the first `intent new`.
+  // PLAN-EVAL-05 — Sigma/progress.json is no longer written at all. The
+  // real per-chain state lives in Sigma/progress-v<N>.json files, created
+  // lazily by `sigma intent new`. The manifest below is created here,
+  // upfront, with no chain active yet, so findProjectRoot() and
+  // `sigma intent list` always have something to read even before the first
+  // `intent new`.
   writeActivateStatus(projectRoot, null);
 
   // Write .sigma-identity.json (root-level, used by `sigma doctor --reconstruct`
-  // as a fallback if progress.json is ever lost or corrupted)
+  // as a fallback if identity can't otherwise be determined)
   writeProjectIdentity(projectRoot, projectId, projectName, resolveLogsCreatedAt(projectRoot, logsReinitialized));
   console.log('  Identity: .sigma-identity.json written.');
 
@@ -442,36 +442,23 @@ function runSync(opts: { confirm?: boolean }): void {
 // already writes it once, so this command exists for: (a) restoring a
 // missing/corrupted identity file, (b) backfilling projects created before this
 // file existed. Uses findSigmaProjectRoot() (Sigma/ folder only) rather than
-// findProjectRoot() (requires progress.json) so it still works when progress.json
-// itself is the thing that's broken.
+// findProjectRoot() (requires activate_status.json) so it still works when
+// that file itself is the thing that's broken.
 
-function resolveRegisterIdentity(projectRoot: string, opts: { id?: string; name?: string }): { id: string; name: string } {
-  const progressPath = path.join(projectRoot, PROJECT_SIGMA_DIR, 'progress.json');
-
-  if (fileExists(progressPath)) {
-    try {
-      const data = fs.readJsonSync(progressPath) as { project_id?: string; project_name?: string };
-      if (data.project_id && data.project_name) {
-        return { id: data.project_id, name: data.project_name };
-      }
-    } catch {
-      // progress.json is unreadable — fall through to manual flags
-    }
-  }
-
+function resolveRegisterIdentity(opts: { id?: string; name?: string }): { id: string; name: string } {
   if (opts.id && opts.name) {
     return { id: validateProjectId(opts.id), name: validateProjectName(opts.name) };
   }
 
   throw new Error(
-    'Sigma/progress.json is missing, unreadable, or incomplete — cannot determine project identity ' +
+    '.sigma-identity.json is missing, unreadable, or incomplete — cannot determine project identity ' +
     'automatically. Pass --id <PROJECT_ID> --name <name> to proceed.'
   );
 }
 
 function runRegister(opts: { id?: string; name?: string }): void {
   const projectRoot = findSigmaProjectRoot();
-  const identity = resolveRegisterIdentity(projectRoot, opts);
+  const identity = resolveRegisterIdentity(opts);
 
   // Recreates Sigma/logs/operations.jsonl if it was lost or corrupted since
   // the last register/start. A still-valid log is left untouched.
@@ -523,8 +510,8 @@ export function projectCommand(): Command {
   cmd
     .command('register')
     .description('(Re)generate .sigma-identity.json for this project — repairs a missing/corrupted identity file, or backfills a project created before it existed')
-    .option('--id <PROJECT_ID>', 'Project ID, used only if progress.json is unreadable')
-    .option('--name <name>', 'Project name, used only if progress.json is unreadable')
+    .requiredOption('--id <PROJECT_ID>', 'Project ID')
+    .requiredOption('--name <name>', 'Project name')
     .action((opts: { id?: string; name?: string }) => {
       try { runRegister(opts); } catch (e) { error((e as Error).message); }
     });

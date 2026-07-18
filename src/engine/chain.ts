@@ -1,31 +1,138 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, SCHEMA_VERSION } from '../config';
-import {
-  LifecycleState,
-  PlanTracker,
-  ArtifactTracker,
-  ArtifactVersion,
-  PendingPlanEntry,
-  Gates,
-  RuntimeInvalidState,
-  InvalidGateKey,
-  InvalidMarkerDomain,
-  InvalidChainRef,
-  InvalidMarker,
-  OverrideEntry,
-  parseMajorVersion,
-  parseMinorVersion,
-} from './progress';
+import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, OVERRIDES_FILE, SCHEMA_VERSION } from '../config';
 
 // PLAN-EVAL-01 (Core Storage & Schema Migration, Opsi C) — foundation module.
-// Not wired into any command yet. `intent`/`roadmap`/`close` are single
-// objects per chain file here (not arrays) — see
+// `intent`/`roadmap`/`close` are single objects per chain file here (not
+// arrays) — see
 // Implementation/planned_sigma_multichain_progress_2026_07_17/PLAN-EVAL-01-CORE-STORAGE-SCHEMA-MIGRATION.md
 // §3 for the schema decisions and their rationale. `plan`/`exec` keep the
-// exact `PlanTracker`/`ArtifactTracker` shape from progress.ts — unchanged.
+// exact `PlanTracker`/`ArtifactTracker` shape — unchanged.
+//
+// PLAN-EVAL-05 — the shared types/helpers below (through "Shared Types —
+// relocated from progress.ts") used to live in `src/engine/progress.ts`.
+// They were relocated here verbatim once `progress.ts` had no remaining
+// reason to exist (its only other job, backing `sigma doctor --reconstruct`,
+// was migrated to `chain.ts`/`reconstruct.ts` in the same change) — nothing
+// about their shape or behavior changed, only their location.
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Shared Types — relocated from progress.ts ───────────────────────────────
+
+export type LifecycleState = 'DESIGN' | 'BUILD' | 'CLOSE' | 'CLOSED';
+
+export interface ArtifactVersion {
+  version: string;
+  state: string;
+  file?: string;
+  created_at: string;
+  updated_at: string;
+  locked_at?: string;
+  superseded_by?: string;
+  supersede_reason?: string;
+  intent_version_ref?: string;
+  plan_version_ref?: string;
+  title?: string;
+  focus?: string;
+}
+
+export interface ArtifactTracker {
+  active_version: string | null;
+  active_state: string | null;
+  versions: ArtifactVersion[];
+}
+
+export interface PendingPlanEntry {
+  id: string;
+  file: string;
+  created_at: string;
+  title?: string;
+  focus?: string;
+}
+
+export interface PlanTracker extends ArtifactTracker {
+  pending: PendingPlanEntry[];
+}
+
+export interface Gates {
+  gate_1_open: boolean;
+  gate_2_open: boolean;
+  gate_3_satisfied: boolean;
+}
+
+type ArtifactDomain = 'intent' | 'plan' | 'exec' | 'close' | 'roadmap';
+
+export type InvalidGateKey = 'gate_1_open' | 'gate_2_open' | 'gate_3_satisfied';
+export type InvalidMarkerDomain = ArtifactDomain | 'gates';
+
+export interface InvalidChainRef {
+  intent_version: string | null;
+  plan_version: string | null;
+  exec_version: string | null;
+}
+
+export interface InvalidMarker {
+  id: string;
+  domain: InvalidMarkerDomain;
+  status: 'INVALID';
+  reason: string;
+  gate?: InvalidGateKey;
+  chain: InvalidChainRef;
+  first_detected_at: string;
+  last_detected_at: string;
+}
+
+export interface RuntimeInvalidState {
+  markers: InvalidMarker[];
+  last_doctor_run_at: string | null;
+}
+
+export interface OverrideEntry {
+  type: 'override';
+  timestamp: string;
+  artifact: string;
+  phase: string;
+  gate_bypassed: string;
+  reason: string;
+  authorized_by: 'Director';
+  // Version of the tracker's active entry at the time the gate was bypassed.
+  // Missing/null on entries written before this field existed.
+  version?: string | null;
+}
+
+// ── Overrides (read by doctor.ts / override.ts) ─────────────────────────────
+
+export function readOverrides(projectRoot: string): OverrideEntry[] {
+  const filePath = path.join(projectRoot, OVERRIDES_FILE);
+  if (!fs.existsSync(filePath)) return [];
+
+  const entries: OverrideEntry[] = [];
+  for (const line of fs.readFileSync(filePath, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      entries.push(JSON.parse(trimmed) as OverrideEntry);
+    } catch {
+      // Skip malformed lines — the log is append-only and best-effort.
+    }
+  }
+  return entries;
+}
+
+// ── Version Helpers ──────────────────────────────────────────────────────────
+
+export function parseMajorVersion(version: string): number {
+  const match = version.match(/^v(\d+)/);
+  if (!match) throw new Error(`Cannot parse major version from "${version}"`);
+  return parseInt(match[1], 10);
+}
+
+export function parseMinorVersion(version: string): number {
+  const match = version.match(/^v\d+(?:\.(\d+))?/);
+  if (!match) throw new Error(`Cannot parse minor version from "${version}"`);
+  return match[1] ? parseInt(match[1], 10) : 0;
+}
+
+// ── Chain Types ──────────────────────────────────────────────────────────────
 
 // PLAN-EVAL-01 §3.4 — INACTIVE dropped: structurally dead once each chain
 // file holds exactly one intent (nothing left in the same file to demote).
@@ -764,10 +871,11 @@ export function runDoctorReconciliation(chain: ChainState, overrides: OverrideEn
   return { repaired, invalidMarked, invalidCleared, remainingInvalid: nextMarkers };
 }
 
-// ── Version Helpers ───────────────────────────────────────────────────────────
-// PLAN-EVAL-01 §5 — unchanged logic from progress.ts, retyped for ChainState.
-// parseMajorVersion/parseMinorVersion are reused directly (imported above),
-// not duplicated — they never touched ProgressJson/ChainState shape at all.
+// ── Chain/Plan/Exec Version Helpers ─────────────────────────────────────────
+// PLAN-EVAL-01 §5 — unchanged logic, retyped for ChainState.
+// parseMajorVersion/parseMinorVersion themselves live near the top of this
+// file (relocated from progress.ts, PLAN-EVAL-05) — they never touched
+// ProgressJson/ChainState shape at all.
 
 // PLAN major = INTENT major − 1; minor starts at 1
 export function nextPlanVersion(chain: ChainState, intentVersionRef: string): string {

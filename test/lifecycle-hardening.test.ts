@@ -25,7 +25,8 @@ describe('Lifecycle hardening coverage', () => {
     const result = runCli('project start --id TEST --name "Test Project" --confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(fs.existsSync(env.progressPath)).toBe(true);
+    expect(fs.existsSync(env.activateStatusPath)).toBe(true);
+    expect(fs.existsSync(env.progressPath)).toBe(false);
     expect(fs.existsSync(path.join(env.sigmaDir, 'messages', 'index.json'))).toBe(true);
   });
 

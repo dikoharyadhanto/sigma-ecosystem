@@ -1,8 +1,7 @@
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
-import { OverrideEntry } from '../engine/progress';
-import { ChainState, readActiveChain, writeChain } from '../engine/chain';
+import { ChainState, OverrideEntry, readActiveChain, writeChain } from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { OVERRIDES_FILE } from '../config';
 

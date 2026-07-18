@@ -1,31 +1,29 @@
 import { Command } from 'commander';
-import fs from 'fs-extra';
-import path from 'path';
-import { readOverrides, writeProgress, getInvalidMarkers as getInvalidMarkersLegacy, ProgressJson } from '../engine/progress';
-import { readActiveChain, writeChain, runDoctorReconciliation, getInvalidMarkers, listChainVersions } from '../engine/chain';
-import { reconstructProgress, findSigmaProjectRoot } from '../engine/reconstruct';
+import {
+  ChainState,
+  readActiveChain,
+  readChain,
+  writeChain,
+  runDoctorReconciliation,
+  getInvalidMarkers,
+  listChainVersions,
+  readOverrides,
+  resolveActiveChainVersion,
+  parseMajorVersion,
+} from '../engine/chain';
+import { reconstructAllChains, findSigmaProjectRoot, MultiReconstructResult } from '../engine/reconstruct';
 import { findProjectRoot } from '../utils/fs';
-import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE } from '../config';
-import { validateProjectId, validateProjectName } from './project';
 
-// PLAN-EVAL-01 Fase 4 — only the default reconciliation mode is migrated to
-// chain.ts here (targets the active chain only, matching today's
-// single-target behavior). `--reconstruct` is deliberately left on the
-// legacy progress.ts/reconstruct.ts path below, untouched: its actual job
-// (`discoverArtifacts` scanning every DIR-INTENT-v*.md on disk, potentially
-// spanning multiple chains) already *is* the multi-chain grouping work that
-// belongs to PLAN-EVAL-05 (`--all-versions`/3-mode `--reconstruct`) — there
-// is no smaller "single-chain-only" slice of it to carve out safely here.
-// This does mean Fase 5 (deleting progress.ts) has a hidden prerequisite:
-// `--reconstruct` needs its own chain.ts port (PLAN-EVAL-05 or a dedicated
-// step) before the legacy path it depends on can be removed.
+// PLAN-EVAL-01 Fase 4 / PLAN-EVAL-05 — every mode below now targets
+// Sigma/progress-v<N>.json via chain.ts. `--reconstruct` (3 modes) and
+// `--all-versions` are PLAN-EVAL-05 additions; the default mode is
+// unchanged since PLAN-EVAL-01.
 
 function runDefaultDoctor(): void {
   const projectRoot = findProjectRoot();
 
   // No chain yet (fresh project, before the first `intent new`) is a valid,
-  // doctor-able state — nothing to reconcile, not an error. Matches today's
-  // behavior of running cleanly against an empty progress.json.
+  // doctor-able state — nothing to reconcile, not an error.
   if (listChainVersions(projectRoot).length === 0) {
     console.log('\n=== Sigma Doctor ===\n');
     console.log('No chain exists yet. Nothing to reconcile. Run: sigma intent new');
@@ -76,84 +74,155 @@ function runDefaultDoctor(): void {
   console.log('');
 }
 
-// ── --reconstruct ────────────────────────────────────────────────────────────
+// ── --all-versions (without --reconstruct) ─────────────────────────────────
+// PLAN-EVAL-05 §5.5 — pure loop over runDoctorReconciliation(), no new
+// reconciliation logic. Targets chain files already on disk (not a
+// disaster-recovery scan), so it anchors like the default mode.
 
-function resolveProjectIdentity(projectRoot: string, opts: { id?: string; name?: string }): { id: string; name: string } {
-  const progressPath = path.join(projectRoot, PROJECT_SIGMA_DIR, 'progress.json');
-  if (fs.existsSync(progressPath)) {
-    try {
-      const raw = fs.readJsonSync(progressPath) as Partial<ProgressJson>;
-      if (raw.project_id && raw.project_name) {
-        return { id: raw.project_id, name: raw.project_name };
-      }
-    } catch {
-      // progress.json is unreadable — fall through to other identity sources
+function runAllVersionsDoctor(): void {
+  const projectRoot = findProjectRoot();
+  const versions = listChainVersions(projectRoot);
+
+  console.log('\n=== Sigma Doctor — All Versions ===\n');
+
+  if (versions.length === 0) {
+    console.log('No chain exists yet. Nothing to reconcile. Run: sigma intent new');
+    console.log('');
+    return;
+  }
+
+  const overrides = readOverrides(projectRoot);
+
+  for (const chainVersion of versions) {
+    const chain = readChain(projectRoot, chainVersion);
+    const report = runDoctorReconciliation(chain, overrides);
+    writeChain(projectRoot, chainVersion, chain);
+
+    console.log(`--- Chain ${chainVersion} ---`);
+    if (report.repaired.length > 0) {
+      console.log('  Repaired:');
+      for (const line of report.repaired) console.log(`    - ${line}`);
     }
-  }
-
-  const identityPath = path.join(projectRoot, PROJECT_IDENTITY_FILE);
-  if (fs.existsSync(identityPath)) {
-    try {
-      const identity = fs.readJsonSync(identityPath) as { project_id?: string; project_name?: string };
-      if (identity.project_id && identity.project_name) {
-        return { id: identity.project_id, name: identity.project_name };
-      }
-    } catch {
-      // identity file is unreadable — fall through
+    if (report.invalidMarked.length > 0) {
+      console.log('  Marked INVALID:');
+      for (const marker of report.invalidMarked) console.log(`    - ${marker.id}: ${marker.reason}`);
     }
+    if (report.invalidCleared.length > 0) {
+      console.log('  Cleared INVALID:');
+      for (const marker of report.invalidCleared) console.log(`    - ${marker.id}`);
+    }
+    const remaining = getInvalidMarkers(chain);
+    console.log(`  Runtime state: ${remaining.length === 0 ? 'VALID' : 'INVALID recovery mode active'}`);
+    console.log('');
   }
-
-  if (opts.id && opts.name) {
-    return { id: validateProjectId(opts.id), name: validateProjectName(opts.name) };
-  }
-
-  throw new Error(
-    'Cannot determine project identity (project_id/project_name) — progress.json is unreadable and ' +
-    '.sigma-identity.json is missing or unreadable. Pass --id <PROJECT_ID> --name <name> to proceed, ' +
-    'or run `sigma project register` first if progress.json can still be read.'
-  );
 }
 
-function runReconstruct(opts: { id?: string; name?: string }): void {
-  const projectRoot = findSigmaProjectRoot();
-  const identity = resolveProjectIdentity(projectRoot, opts);
+// ── --reconstruct (3 modes: default/active, --v, --all-versions) ───────────
+// PLAN-EVAL-05 §5.2/§5.4 — migrated off progress.ts/reconstruct.ts's old
+// single-ProgressJson algorithm onto per-chain ChainState reconstruction.
+// Project identity (--id/--name on the pre-PLAN-EVAL-05 version of this
+// command) is no longer needed here: ChainState never carried
+// project_id/project_name (PLAN-EVAL-01 §3.3 — that lives only in
+// .sigma-identity.json), so there is nothing left for --id/--name to recover
+// into. Both flags and the resolveProjectIdentity() fallback chain that used
+// to read Sigma/progress.json are removed entirely, not just updated.
 
-  const { data, notes } = reconstructProgress(projectRoot, identity.id, identity.name);
-  writeProgress(projectRoot, data);
+function resolveReconstructTargets(
+  projectRoot: string,
+  result: MultiReconstructResult,
+  opts: { v?: string; allVersions?: boolean },
+): number[] {
+  if (opts.allVersions) {
+    return [...result.chains.keys()].sort((a, b) => a - b);
+  }
+  if (opts.v) {
+    const major = parseMajorVersion(opts.v);
+    if (!result.chains.has(major)) {
+      throw new Error(`No DIR-INTENT-${opts.v}.md found on disk — nothing to reconstruct for chain ${opts.v}.`);
+    }
+    return [major];
+  }
 
-  console.log('\n=== Sigma Doctor — Reconstruct ===\n');
-  console.log(`Project:    ${data.project_name} (${data.project_id})`);
-  console.log(`Lifecycle:  ${data.lifecycle_state}`);
+  let activeVersion: string;
+  try {
+    activeVersion = resolveActiveChainVersion(projectRoot);
+  } catch (e) {
+    // Only the "no chain files at all" case gets rewritten into --v/--all-versions
+    // guidance — any other failure (e.g. an existing chain file that's
+    // corrupted) is a distinct, more specific problem and should surface with
+    // its own message rather than being masked by a generic one.
+    if ((e as Error).message.includes('No DIR-INTENT exists yet')) {
+      throw new Error(
+        'No chain files exist yet and no --v/--all-versions was given — cannot determine which chain to reconstruct. ' +
+        'Use --v <version> to target one chain, or --all-versions to reconstruct every chain found on disk.'
+      );
+    }
+    throw e;
+  }
+  const major = parseMajorVersion(activeVersion);
+  if (!result.chains.has(major)) {
+    throw new Error(`No DIR-INTENT-${activeVersion}.md found on disk for the active chain (${activeVersion}) — nothing to reconstruct.`);
+  }
+  return [major];
+}
+
+function printChainReconstructReport(chainVersion: string, chain: ChainState): void {
+  console.log(`\n--- Chain ${chainVersion} ---\n`);
+  console.log(`Lifecycle:  ${chain.lifecycle_state}`);
   console.log(
-    `Gates:      gate_1_open=${data.gates.gate_1_open} gate_2_open=${data.gates.gate_2_open} ` +
-    `gate_3_satisfied=${data.gates.gate_3_satisfied}`
+    `Gates:      gate_1_open=${chain.gates.gate_1_open} gate_2_open=${chain.gates.gate_2_open} ` +
+    `gate_3_satisfied=${chain.gates.gate_3_satisfied}`
   );
 
-  for (const domain of ['intent', 'roadmap', 'plan', 'exec', 'close'] as const) {
-    const tracker = data[domain];
-    console.log(`\n${domain.toUpperCase()}: ${tracker.versions.length} version(s) found`);
-    for (const v of tracker.versions) {
-      console.log(`  - ${v.version} (${v.state})${v.file ? ` — ${v.file}` : ''}`);
-    }
-  }
+  console.log(`\nINTENT:  ${chain.intent.version} (${chain.intent.state})${chain.intent.file ? ` — ${chain.intent.file}` : ''}`);
+  console.log(`ROADMAP: ${chain.roadmap ? `${chain.roadmap.version} (${chain.roadmap.state})${chain.roadmap.file ? ` — ${chain.roadmap.file}` : ''}` : 'none'}`);
 
-  if (notes.length > 0) {
-    console.log('\n--- Notes ---');
-    for (const note of notes) console.log(`  - ${note}`);
-  }
+  console.log(`PLAN:    ${chain.plan.versions.length} version(s) found`);
+  for (const v of chain.plan.versions) console.log(`  - ${v.version} (${v.state})${v.file ? ` — ${v.file}` : ''}`);
 
-  const markers = getInvalidMarkersLegacy(data);
+  console.log(`EXEC:    ${chain.exec.versions.length} version(s) found`);
+  for (const v of chain.exec.versions) console.log(`  - ${v.version} (${v.state})${v.file ? ` — ${v.file}` : ''}`);
+
+  console.log(`CLOSE:   ${chain.close ? `${chain.close.version} (${chain.close.state})${chain.close.file ? ` — ${chain.close.file}` : ''}` : 'none'}`);
+
+  const markers = getInvalidMarkers(chain);
   if (markers.length > 0) {
     console.log('\n--- Marked INVALID (needs Director review) ---');
     for (const marker of markers) {
       console.log(`  - ${marker.id}: ${marker.reason}`);
     }
-    console.log(
-      '\nGate enforcement is relaxed for affected chains until these are resolved. ' +
-      'Run the appropriate lock/supersede command, then `sigma doctor` again.'
-    );
   } else {
     console.log('\nNo ambiguous state — reconstruct is confident in the result above.');
+  }
+}
+
+function runReconstruct(opts: { v?: string; allVersions?: boolean }): void {
+  const projectRoot = findSigmaProjectRoot();
+  const result = reconstructAllChains(projectRoot);
+  const targets = resolveReconstructTargets(projectRoot, result, opts);
+
+  console.log('\n=== Sigma Doctor — Reconstruct ===');
+
+  for (const major of targets) {
+    const { chainVersion, data } = result.chains.get(major)!;
+    writeChain(projectRoot, chainVersion, data);
+    printChainReconstructReport(chainVersion, data);
+  }
+
+  if (result.unresolved.length > 0) {
+    console.log('\n--- Unresolved Artifact Groups (no matching DIR-INTENT found) ---');
+    for (const group of result.unresolved) {
+      console.log(`  - v${group.major}: ${group.artifacts.join(', ')}`);
+    }
+    console.log(
+      '\nThese cannot be reconstructed without a DIR-INTENT-v<N>.md — restore it from git history if this ' +
+      'chain should exist, or ignore if these are stray artifacts.'
+    );
+  }
+
+  if (result.skipped.length > 0) {
+    console.log('\n--- Skipped (SIGMA:DOC marker mismatch) ---');
+    for (const note of result.skipped) console.log(`  - ${note}`);
   }
 
   console.log('');
@@ -166,13 +235,22 @@ export function doctorCommand(): Command {
   cmd
     .description('Diagnose and reconcile Sigma runtime state')
     .option('--recovery', 'Explicit alias for the default reconciliation behavior (same as running with no flag)')
-    .option('--reconstruct', 'Rebuild progress.json from artifact files on disk (use when progress.json is missing or corrupted)')
-    .option('--id <PROJECT_ID>', 'Project ID, only used with --reconstruct if it cannot be recovered automatically')
-    .option('--name <name>', 'Project name, only used with --reconstruct if it cannot be recovered automatically')
-    .action((opts: { recovery?: boolean; reconstruct?: boolean; id?: string; name?: string }) => {
+    .option('--all-versions', 'Apply to every chain found on disk instead of just the active one')
+    .option('--reconstruct', 'Rebuild chain file(s) from artifact files on disk (use when a progress-v<N>.json is missing or corrupted)')
+    .option('--v <version>', 'With --reconstruct, target one specific chain instead of the active one (e.g. v2)')
+    .action((opts: { recovery?: boolean; allVersions?: boolean; reconstruct?: boolean; v?: string }) => {
       try {
+        if (opts.v && !opts.reconstruct) {
+          throw new Error('--v is only valid combined with --reconstruct.');
+        }
+        if (opts.v && opts.allVersions) {
+          throw new Error('--v and --all-versions are mutually exclusive.');
+        }
+
         if (opts.reconstruct) {
-          runReconstruct({ id: opts.id, name: opts.name });
+          runReconstruct({ v: opts.v, allVersions: opts.allVersions });
+        } else if (opts.allVersions) {
+          runAllVersionsDoctor();
         } else {
           runDefaultDoctor();
         }

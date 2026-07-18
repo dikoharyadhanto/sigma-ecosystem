@@ -9,7 +9,7 @@ exports.replaceSection = replaceSection;
 exports.removeSectionIfPresent = removeSectionIfPresent;
 exports.renderRoadmapFile = renderRoadmapFile;
 const fs_extra_1 = __importDefault(require("fs-extra"));
-const progress_1 = require("../engine/progress");
+const chain_1 = require("../engine/chain");
 // PLAN-EVAL-01 Fase 3 — every entry in chain.plan.versions already belongs
 // to this chain's own INTENT by construction (registerPlanDraft() validates
 // planMajor === intentMajor - 1 against this chain's own intent at write
@@ -19,7 +19,7 @@ const progress_1 = require("../engine/progress");
 function getStagePlansForRoadmap(chain) {
     return chain.plan.versions
         .filter(v => v.intent_version_ref === chain.intent.version)
-        .sort((a, b) => (0, progress_1.parseMinorVersion)(a.version) - (0, progress_1.parseMinorVersion)(b.version));
+        .sort((a, b) => (0, chain_1.parseMinorVersion)(a.version) - (0, chain_1.parseMinorVersion)(b.version));
 }
 function generateStageOverview(chain) {
     const header = [

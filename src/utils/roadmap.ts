@@ -1,6 +1,5 @@
 import fs from 'fs-extra';
-import { ArtifactVersion, parseMinorVersion } from '../engine/progress';
-import { ChainState } from '../engine/chain';
+import { ArtifactVersion, parseMinorVersion, ChainState } from '../engine/chain';
 
 // PLAN-EVAL-01 Fase 3 — every entry in chain.plan.versions already belongs
 // to this chain's own INTENT by construction (registerPlanDraft() validates

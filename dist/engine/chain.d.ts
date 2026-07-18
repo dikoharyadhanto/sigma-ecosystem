@@ -1,4 +1,73 @@
-import { LifecycleState, PlanTracker, ArtifactTracker, ArtifactVersion, Gates, RuntimeInvalidState, InvalidGateKey, InvalidMarker, OverrideEntry } from './progress';
+export type LifecycleState = 'DESIGN' | 'BUILD' | 'CLOSE' | 'CLOSED';
+export interface ArtifactVersion {
+    version: string;
+    state: string;
+    file?: string;
+    created_at: string;
+    updated_at: string;
+    locked_at?: string;
+    superseded_by?: string;
+    supersede_reason?: string;
+    intent_version_ref?: string;
+    plan_version_ref?: string;
+    title?: string;
+    focus?: string;
+}
+export interface ArtifactTracker {
+    active_version: string | null;
+    active_state: string | null;
+    versions: ArtifactVersion[];
+}
+export interface PendingPlanEntry {
+    id: string;
+    file: string;
+    created_at: string;
+    title?: string;
+    focus?: string;
+}
+export interface PlanTracker extends ArtifactTracker {
+    pending: PendingPlanEntry[];
+}
+export interface Gates {
+    gate_1_open: boolean;
+    gate_2_open: boolean;
+    gate_3_satisfied: boolean;
+}
+type ArtifactDomain = 'intent' | 'plan' | 'exec' | 'close' | 'roadmap';
+export type InvalidGateKey = 'gate_1_open' | 'gate_2_open' | 'gate_3_satisfied';
+export type InvalidMarkerDomain = ArtifactDomain | 'gates';
+export interface InvalidChainRef {
+    intent_version: string | null;
+    plan_version: string | null;
+    exec_version: string | null;
+}
+export interface InvalidMarker {
+    id: string;
+    domain: InvalidMarkerDomain;
+    status: 'INVALID';
+    reason: string;
+    gate?: InvalidGateKey;
+    chain: InvalidChainRef;
+    first_detected_at: string;
+    last_detected_at: string;
+}
+export interface RuntimeInvalidState {
+    markers: InvalidMarker[];
+    last_doctor_run_at: string | null;
+}
+export interface OverrideEntry {
+    type: 'override';
+    timestamp: string;
+    artifact: string;
+    phase: string;
+    gate_bypassed: string;
+    reason: string;
+    authorized_by: 'Director';
+    version?: string | null;
+}
+export declare function readOverrides(projectRoot: string): OverrideEntry[];
+export declare function parseMajorVersion(version: string): number;
+export declare function parseMinorVersion(version: string): number;
 export type IntentState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type RoadmapState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type CloseState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
@@ -112,4 +181,5 @@ export declare function lockActiveExec(chain: ChainState): void;
 export declare function registerCloseDraft(chain: ChainState, filePath: string): void;
 export declare function lockActiveClose(chain: ChainState): void;
 export declare function getNextValidOperations(chain: ChainState): string[];
+export {};
 //# sourceMappingURL=chain.d.ts.map

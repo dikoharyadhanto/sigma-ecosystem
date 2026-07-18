@@ -1,5 +1,4 @@
-import { ArtifactVersion } from '../engine/progress';
-import { ChainState } from '../engine/chain';
+import { ArtifactVersion, ChainState } from '../engine/chain';
 export declare function getStagePlansForRoadmap(chain: ChainState): ArtifactVersion[];
 export declare function generateStageOverview(chain: ChainState): string;
 export declare function replaceSection(content: string, name: string, replacement: string): string;

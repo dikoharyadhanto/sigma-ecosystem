@@ -9,7 +9,6 @@ export declare const GLOBAL_CONFIG_FILE: string;
 export declare const PROJECT_SIGMA_DIR = "Sigma";
 export declare const PROJECT_IDENTITY_FILE = ".sigma-identity.json";
 export declare const BRIDGE_STUBS: string[];
-export declare const PROGRESS_FILE: string;
 export declare const ACTIVATE_STATUS_FILE: string;
 export declare const OVERRIDES_FILE: string;
 export declare const OPERATIONS_LOG_FILE: string;

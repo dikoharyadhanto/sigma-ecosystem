@@ -3,6 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.readOverrides = readOverrides;
+exports.parseMajorVersion = parseMajorVersion;
+exports.parseMinorVersion = parseMinorVersion;
 exports.chainFilePath = chainFilePath;
 exports.activateStatusPath = activateStatusPath;
 exports.listChainVersions = listChainVersions;
@@ -50,7 +53,38 @@ exports.getNextValidOperations = getNextValidOperations;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
-const progress_1 = require("./progress");
+// ── Overrides (read by doctor.ts / override.ts) ─────────────────────────────
+function readOverrides(projectRoot) {
+    const filePath = path_1.default.join(projectRoot, config_1.OVERRIDES_FILE);
+    if (!fs_extra_1.default.existsSync(filePath))
+        return [];
+    const entries = [];
+    for (const line of fs_extra_1.default.readFileSync(filePath, 'utf8').split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed)
+            continue;
+        try {
+            entries.push(JSON.parse(trimmed));
+        }
+        catch {
+            // Skip malformed lines — the log is append-only and best-effort.
+        }
+    }
+    return entries;
+}
+// ── Version Helpers ──────────────────────────────────────────────────────────
+function parseMajorVersion(version) {
+    const match = version.match(/^v(\d+)/);
+    if (!match)
+        throw new Error(`Cannot parse major version from "${version}"`);
+    return parseInt(match[1], 10);
+}
+function parseMinorVersion(version) {
+    const match = version.match(/^v\d+(?:\.(\d+))?/);
+    if (!match)
+        throw new Error(`Cannot parse minor version from "${version}"`);
+    return match[1] ? parseInt(match[1], 10) : 0;
+}
 // ── Path helpers ─────────────────────────────────────────────────────────────
 const CHAIN_FILE_PATTERN = /^progress-v(\d+)\.json$/;
 function chainFilePath(projectRoot, chainVersion) {
@@ -80,7 +114,7 @@ function nextChainVersion(projectRoot) {
     const existing = listChainVersions(projectRoot);
     if (existing.length === 0)
         return 'v1';
-    const highest = Math.max(...existing.map(v => (0, progress_1.parseMajorVersion)(v)));
+    const highest = Math.max(...existing.map(v => parseMajorVersion(v)));
     return `v${highest + 1}`;
 }
 // ── Manifest (activate_status.json) ─────────────────────────────────────────
@@ -149,7 +183,7 @@ function resolveActiveChainVersion(projectRoot) {
     // "Konsolidasi Lanjutan" bagian 6) — reading each chain file just to check
     // its intent.state is unavoidable here since eligibility depends on content,
     // not just the filename.
-    const sorted = [...existing].sort((a, b) => (0, progress_1.parseMajorVersion)(b) - (0, progress_1.parseMajorVersion)(a));
+    const sorted = [...existing].sort((a, b) => parseMajorVersion(b) - parseMajorVersion(a));
     for (const version of sorted) {
         const chain = readChain(projectRoot, version);
         if (chain.intent.state !== 'SUPERSEDED')
@@ -598,23 +632,24 @@ function runDoctorReconciliation(chain, overrides = []) {
     const invalidCleared = [...previous.values()].filter(marker => !nextIds.has(marker.id));
     return { repaired, invalidMarked, invalidCleared, remainingInvalid: nextMarkers };
 }
-// ── Version Helpers ───────────────────────────────────────────────────────────
-// PLAN-EVAL-01 §5 — unchanged logic from progress.ts, retyped for ChainState.
-// parseMajorVersion/parseMinorVersion are reused directly (imported above),
-// not duplicated — they never touched ProgressJson/ChainState shape at all.
+// ── Chain/Plan/Exec Version Helpers ─────────────────────────────────────────
+// PLAN-EVAL-01 §5 — unchanged logic, retyped for ChainState.
+// parseMajorVersion/parseMinorVersion themselves live near the top of this
+// file (relocated from progress.ts, PLAN-EVAL-05) — they never touched
+// ProgressJson/ChainState shape at all.
 // PLAN major = INTENT major − 1; minor starts at 1
 function nextPlanVersion(chain, intentVersionRef) {
-    const planMajor = (0, progress_1.parseMajorVersion)(intentVersionRef) - 1;
-    const existingUnderMajor = chain.plan.versions.filter(v => (0, progress_1.parseMajorVersion)(v.version) === planMajor);
+    const planMajor = parseMajorVersion(intentVersionRef) - 1;
+    const existingUnderMajor = chain.plan.versions.filter(v => parseMajorVersion(v.version) === planMajor);
     return `v${planMajor}.${existingUnderMajor.length + 1}`;
 }
 // EXEC major must equal PLAN major; minor starts at 1
 function nextExecVersion(chain, planVersionRef) {
-    const execMajor = (0, progress_1.parseMajorVersion)(planVersionRef);
+    const execMajor = parseMajorVersion(planVersionRef);
     const highestExecMinor = chain.exec.versions
-        .filter(v => (0, progress_1.parseMajorVersion)(v.version) === execMajor)
-        .reduce((highest, v) => Math.max(highest, (0, progress_1.parseMinorVersion)(v.version)), 0);
-    const planMinorFloor = (0, progress_1.parseMinorVersion)(planVersionRef) - 1;
+        .filter(v => parseMajorVersion(v.version) === execMajor)
+        .reduce((highest, v) => Math.max(highest, parseMinorVersion(v.version)), 0);
+    const planMinorFloor = parseMinorVersion(planVersionRef) - 1;
     const nextMinor = Math.max(highestExecMinor, planMinorFloor, 0) + 1;
     return `v${execMajor}.${nextMinor}`;
 }
@@ -718,11 +753,11 @@ function lockActiveRoadmap(chain) {
 // Unchanged logic from progress.ts — plan stays an array tracker, retyped
 // for ChainState.
 function registerPlanDraft(chain, version, filePath, intentVersionRef, title, focus) {
-    const planMajor = (0, progress_1.parseMajorVersion)(version);
-    const expectedPlanMajor = (0, progress_1.parseMajorVersion)(intentVersionRef) - 1;
+    const planMajor = parseMajorVersion(version);
+    const expectedPlanMajor = parseMajorVersion(intentVersionRef) - 1;
     if (planMajor !== expectedPlanMajor) {
         throw new Error(`Version sync error: FMN-PLAN ${version} (major ${planMajor}) is not valid under DIR-INTENT ${intentVersionRef}. ` +
-            `Expected PLAN major: ${expectedPlanMajor} (INTENT major ${(0, progress_1.parseMajorVersion)(intentVersionRef)} − 1). ` +
+            `Expected PLAN major: ${expectedPlanMajor} (INTENT major ${parseMajorVersion(intentVersionRef)} − 1). ` +
             `Valid PLAN versions: v${expectedPlanMajor}.1, v${expectedPlanMajor}.2, ...`);
     }
     const now = new Date().toISOString();
@@ -833,8 +868,8 @@ function activatePlanDraft(chain, version) {
 // Unchanged logic from progress.ts — exec stays an array tracker, retyped
 // for ChainState.
 function registerExecDraft(chain, version, filePath, planVersionRef) {
-    const execMajor = (0, progress_1.parseMajorVersion)(version);
-    const planMajor = (0, progress_1.parseMajorVersion)(planVersionRef);
+    const execMajor = parseMajorVersion(version);
+    const planMajor = parseMajorVersion(planVersionRef);
     if (chain.exec.versions.some(v => v.version === version)) {
         throw new Error(`Duplicate DEV-EXEC version "${version}" already exists in progress-${chain.chain_version}.json`);
     }

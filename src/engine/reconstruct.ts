@@ -2,28 +2,36 @@ import fs from 'fs-extra';
 import path from 'path';
 import { PROJECT_SIGMA_DIR } from '../config';
 import {
-  ProgressJson,
+  ChainState,
   ArtifactVersion,
   InvalidMarker,
-  createInitialProgress,
-  hasActiveLockedIntent,
-  hasCleanGate2Chain,
-  hasCleanGate3Chain,
+  SingleRoadmapState,
+  SingleCloseState,
+  createInitialChain,
+  runDoctorReconciliation,
   parseMajorVersion,
   parseMinorVersion,
-} from './progress';
+} from './chain';
 
-// `sigma doctor --reconstruct` rebuilds progress.json from the artifact files
-// still on disk. Lock state is never written into those files (see the "Lock
-// State: Managed by Sigma CLI via progress.json" banner in every template) —
-// only the CLI's own gate checks ever proved a version was genuinely LOCKED,
-// and those checks are enforced at artifact-creation time. So the one thing
-// reconstruct can trust is: a downstream artifact could only have been
-// created if its prerequisite was really LOCKED at that moment (creation is
-// gated on tracker state, not just the gate flag — see plan.ts/exec.ts/close.ts).
-// Whatever cannot be proven this way is left DRAFT and flagged INVALID rather
-// than guessed, matching the existing INVALID-recovery philosophy already
-// used by `sigma doctor`.
+// PLAN-EVAL-05 — `sigma doctor --reconstruct` rebuilds progress-v<N>.json
+// chain files from the artifact files still on disk. Lock state is never
+// written into those files (see the "Lock State: Managed by Sigma CLI via
+// progress.json" banner in every template) — only the CLI's own gate checks
+// ever proved a version was genuinely LOCKED, and those checks are enforced
+// at artifact-creation time. So the one thing reconstruct can trust is: a
+// downstream artifact could only have been created if its prerequisite was
+// really LOCKED at that moment (creation is gated on tracker state, not just
+// the gate flag — see plan.ts/exec.ts/close.ts). Whatever cannot be proven
+// this way is left DRAFT and flagged INVALID rather than guessed, matching
+// the existing INVALID-recovery philosophy already used by `sigma doctor`.
+//
+// Each major version found on disk (one DIR-INTENT-vN.md) is evaluated
+// independently — there is no "highest version wins" demotion anymore
+// (unlike the pre-PLAN-EVAL-05 single-ProgressJson algorithm). Under Opsi C,
+// `intent new` may be run at any time regardless of whether the previous
+// chain is LOCKED/DRAFT (DISCUSSION "Konsolidasi Lanjutan" bagian 3), so two
+// LOCKED intents living side by side in separate chain files is a normal,
+// valid state — not corruption to arbitrate between.
 
 interface FoundArtifact {
   version: string;
@@ -82,10 +90,6 @@ export function discoverArtifacts(projectRoot: string): DiscoveredArtifacts {
   return found;
 }
 
-function sortByMajor<T extends { version: string }>(entries: T[]): T[] {
-  return [...entries].sort((a, b) => parseMajorVersion(a.version) - parseMajorVersion(b.version));
-}
-
 function sortByMajorMinor<T extends { version: string }>(entries: T[]): T[] {
   return [...entries].sort((a, b) => {
     const majorDiff = parseMajorVersion(a.version) - parseMajorVersion(b.version);
@@ -126,218 +130,213 @@ function makeMarker(
   };
 }
 
-export interface ReconstructResult {
-  data: ProgressJson;
-  notes: string[];
+// ── Multi-chain grouping + build ────────────────────────────────────────────
+
+export interface ReconstructedChain {
+  chainVersion: string;
+  data: ChainState;
 }
 
-export function buildReconstructedProgress(
-  found: DiscoveredArtifacts,
-  projectId: string,
-  projectName: string,
-): ReconstructResult {
-  const now = new Date().toISOString();
-  const notes: string[] = found.skipped.map(f => `Skipped ${f} — filename matched a known artifact pattern but the SIGMA:DOC marker did not match.`);
-  const markers: InvalidMarker[] = [];
+// A major version with build artifacts (roadmap/plan/exec/close) on disk but
+// no matching DIR-INTENT-vN.md. Cannot be represented as a ChainState at all
+// — `ChainState.intent` is non-nullable by construction (a chain file only
+// ever exists because `intent new` created it, PLAN-EVAL-01 §3.2). Reported,
+// never guessed into existence.
+export interface UnresolvedGroup {
+  major: number;
+  artifacts: string[];
+}
 
-  const data = createInitialProgress(projectId, projectName);
+export interface MultiReconstructResult {
+  chains: Map<number, ReconstructedChain>;
+  unresolved: UnresolvedGroup[];
+  skipped: string[];
+}
+
+export function buildReconstructedChains(found: DiscoveredArtifacts): MultiReconstructResult {
+  const now = new Date().toISOString();
   markerSeq = 0;
 
-  // ── INTENT ──────────────────────────────────────────────────────────────────
-  const intents = sortByMajor(found.intent);
-  const planMajors = new Set(found.plan.map(p => parseMajorVersion(p.version)));
-  const roadmapMajors = new Set(found.roadmap.map(r => parseMajorVersion(r.version)));
+  const intentsByMajor = new Map<number, FoundArtifact>();
+  for (const entry of found.intent) intentsByMajor.set(parseMajorVersion(entry.version), entry);
 
-  intents.forEach((entry, i) => {
-    const major = parseMajorVersion(entry.version);
-    const isHighest = i === intents.length - 1;
-    const version: ArtifactVersion = { version: entry.version, file: entry.file, created_at: now, updated_at: now, state: 'DRAFT' };
+  const roadmapsByMajor = new Map<number, FoundArtifact>();
+  for (const entry of found.roadmap) roadmapsByMajor.set(parseMajorVersion(entry.version), entry);
 
-    if (!isHighest) {
-      // Mirrors the default lockActiveIntent() outcome (PLAN-EVAL-01): a prior
-      // LOCKED intent is demoted to INACTIVE, never guessed as SUPERSEDED —
-      // that is now a strong, explicit claim only `intent supersede` can make.
-      version.state = 'INACTIVE';
-    } else if (planMajors.has(major - 1) || roadmapMajors.has(major)) {
-      version.state = 'LOCKED';
-      version.locked_at = now;
+  const closesByMajor = new Map<number, FoundArtifact>();
+  for (const entry of found.close) closesByMajor.set(parseMajorVersion(entry.version), entry);
+
+  // Plan/exec major = intent major − 1 (invariant confirmed never to
+  // collide across chains — DISCUSSION "Konsolidasi Lanjutan" bagian 7).
+  const planGroups = groupByMajor(found.plan);
+  const execGroups = groupByMajor(found.exec);
+
+  const allMajors = new Set<number>();
+  for (const m of intentsByMajor.keys()) allMajors.add(m);
+  for (const m of roadmapsByMajor.keys()) allMajors.add(m);
+  for (const m of closesByMajor.keys()) allMajors.add(m);
+  for (const planMajor of planGroups.keys()) allMajors.add(planMajor + 1);
+  for (const execMajor of execGroups.keys()) allMajors.add(execMajor + 1);
+
+  const chains = new Map<number, ReconstructedChain>();
+  const unresolved: UnresolvedGroup[] = [];
+
+  for (const major of [...allMajors].sort((a, b) => a - b)) {
+    const intentEntry = intentsByMajor.get(major);
+    const planMajor = major - 1;
+    const plans = planGroups.get(planMajor) ?? [];
+    const execs = execGroups.get(planMajor) ?? [];
+    const roadmapEntry = roadmapsByMajor.get(major);
+    const closeEntry = closesByMajor.get(major);
+
+    if (!intentEntry) {
+      const artifacts: string[] = [];
+      if (roadmapEntry) artifacts.push(roadmapEntry.file);
+      if (closeEntry) artifacts.push(closeEntry.file);
+      for (const p of plans) artifacts.push(p.file);
+      for (const e of execs) artifacts.push(e.file);
+      unresolved.push({ major, artifacts });
+      continue;
+    }
+
+    const chainVersion = `v${major}`;
+    const markers: InvalidMarker[] = [];
+    const chain = createInitialChain(chainVersion, intentEntry.file);
+    chain.created_at = now;
+    chain.updated_at = now;
+
+    // ── INTENT ──────────────────────────────────────────────────────────────
+    const hasDownstreamEvidence = plans.length > 0 || !!roadmapEntry;
+    if (hasDownstreamEvidence) {
+      chain.intent.state = 'LOCKED';
+      chain.intent.locked_at = now;
     } else {
       markers.push(makeMarker(
         'intent', 'gate_1_open',
-        `DIR-INTENT ${entry.version} found on disk but no downstream FMN-PLAN or ROADMAP confirms it was ever LOCKED. Re-run \`sigma intent lock\` if it should be, or leave as DRAFT.`,
-        { intent_version: entry.version, plan_version: null, exec_version: null },
+        `DIR-INTENT ${chainVersion} found on disk but no downstream FMN-PLAN or ROADMAP confirms it was ever LOCKED. Re-run \`sigma intent lock\` if it should be, or leave as DRAFT.`,
+        { intent_version: chainVersion, plan_version: null, exec_version: null },
         now,
       ));
     }
-    data.intent.versions.push(version);
-  });
 
-  if (intents.length > 0) {
-    const last = data.intent.versions[data.intent.versions.length - 1];
-    data.intent.active_version = last.version;
-    data.intent.active_state = last.state;
-  }
-
-  // ── ROADMAP ─────────────────────────────────────────────────────────────────
-  const roadmaps = sortByMajor(found.roadmap);
-  roadmaps.forEach((entry, i) => {
-    const major = parseMajorVersion(entry.version);
-    const isHighest = i === roadmaps.length - 1;
-    const version: ArtifactVersion = {
-      version: entry.version, file: entry.file, created_at: now, updated_at: now,
-      state: isHighest ? 'ACTIVE' : 'INACTIVE',
-      intent_version_ref: entry.version,
-    };
-    if (!intents.some(iv => parseMajorVersion(iv.version) === major)) {
-      markers.push(makeMarker(
-        'roadmap', undefined,
-        `ROADMAP ${entry.version} references INTENT ${entry.version} which was not found on disk.`,
-        { intent_version: entry.version, plan_version: null, exec_version: null },
-        now,
-      ));
+    // ── ROADMAP ─────────────────────────────────────────────────────────────
+    if (roadmapEntry) {
+      const roadmap: SingleRoadmapState = {
+        version: chainVersion, state: closeEntry ? 'LOCKED' : 'DRAFT',
+        file: roadmapEntry.file, created_at: now, updated_at: now,
+      };
+      if (closeEntry) roadmap.locked_at = now;
+      chain.roadmap = roadmap;
     }
-    data.roadmap.versions.push(version);
-  });
-  if (roadmaps.length > 0) {
-    const activeRoadmap = data.roadmap.versions.find(v => v.state === 'ACTIVE');
-    data.roadmap.active_version = activeRoadmap!.version;
-    data.roadmap.active_state = activeRoadmap!.state;
-  }
 
-  // ── PLAN + EXEC ─────────────────────────────────────────────────────────────
-  const planGroups = groupByMajor(found.plan);
-  const execGroups = groupByMajor(found.exec);
-  const allMajors = new Set([...planGroups.keys(), ...execGroups.keys()]);
-
-  for (const major of allMajors) {
-    const plans = planGroups.get(major) ?? [];
-    const execs = execGroups.get(major) ?? [];
-    const intentRef = `v${major + 1}`;
-    const intentExists = intents.some(iv => iv.version === intentRef);
-
+    // ── PLAN + EXEC ─────────────────────────────────────────────────────────
     if (plans.length === 1 && execs.length <= 1) {
       const plan = plans[0];
       const planLocked = execs.length === 1;
       const planEntry: ArtifactVersion = {
         version: plan.version, file: plan.file, created_at: now, updated_at: now,
         state: planLocked ? 'LOCKED' : 'DRAFT',
-        intent_version_ref: intentRef,
+        intent_version_ref: chainVersion,
       };
       if (planLocked) planEntry.locked_at = now;
-      if (!intentExists) {
-        markers.push(makeMarker(
-          'plan', 'gate_2_open',
-          `FMN-PLAN ${plan.version} references missing INTENT ${intentRef}.`,
-          { intent_version: intentRef, plan_version: plan.version, exec_version: null },
-          now,
-        ));
-      }
       if (!planLocked) {
         markers.push(makeMarker(
           'plan', 'gate_2_open',
           `FMN-PLAN ${plan.version} found on disk but no downstream DEV-EXEC confirms it was ever LOCKED. Re-run \`sigma plan lock\` if it should be, or leave as DRAFT.`,
-          { intent_version: intentRef, plan_version: plan.version, exec_version: null },
+          { intent_version: chainVersion, plan_version: plan.version, exec_version: null },
           now,
         ));
       }
-      data.plan.versions.push(planEntry);
+      chain.plan.versions.push(planEntry);
 
       if (execs.length === 1) {
         const exec = execs[0];
-        const execEntry: ArtifactVersion = {
+        chain.exec.versions.push({
           version: exec.version, file: exec.file, created_at: now, updated_at: now,
           state: 'LOCKED', locked_at: now, plan_version_ref: plan.version,
-        };
-        data.exec.versions.push(execEntry);
+        });
       }
-    } else {
+    } else if (plans.length > 0 || execs.length > 0) {
       // Ambiguous group: multiple PLAN drafts and/or multiple EXEC versions
       // under the same major. Filenames alone cannot prove which PLAN a
       // given EXEC targets, so nothing here is guessed — everything is left
       // DRAFT and flagged for Director review.
       for (const plan of plans) {
-        const planEntry: ArtifactVersion = {
+        chain.plan.versions.push({
           version: plan.version, file: plan.file, created_at: now, updated_at: now,
-          state: 'DRAFT', intent_version_ref: intentRef,
-        };
-        data.plan.versions.push(planEntry);
+          state: 'DRAFT', intent_version_ref: chainVersion,
+        });
       }
       for (const exec of execs) {
-        const execEntry: ArtifactVersion = {
+        chain.exec.versions.push({
           version: exec.version, file: exec.file, created_at: now, updated_at: now, state: 'DRAFT',
-        };
-        data.exec.versions.push(execEntry);
+        });
       }
       markers.push(makeMarker(
         'plan', 'gate_2_open',
-        `Multiple FMN-PLAN/DEV-EXEC versions found under major v${major} (${plans.map(p => p.version).join(', ') || 'none'} / ${execs.map(e => e.version).join(', ') || 'none'}). Automatic reconstruct cannot safely pair them — verify manually and use \`sigma plan lock\` / \`sigma exec lock\` / \`sigma plan supersede\` as needed.`,
-        { intent_version: intentRef, plan_version: null, exec_version: null },
+        `Multiple FMN-PLAN/DEV-EXEC versions found under major v${planMajor} (${plans.map(p => p.version).join(', ') || 'none'} / ${execs.map(e => e.version).join(', ') || 'none'}). Automatic reconstruct cannot safely pair them — verify manually and use \`sigma plan lock\` / \`sigma exec lock\` / \`sigma plan supersede\` as needed.`,
+        { intent_version: chainVersion, plan_version: null, exec_version: null },
         now,
       ));
     }
-  }
 
-  if (data.plan.versions.length > 0) {
-    const last = sortByMajorMinor(data.plan.versions).pop()!;
-    const active = data.plan.versions.find(v => v.version === last.version)!;
-    data.plan.active_version = active.version;
-    data.plan.active_state = active.state;
-  }
-  if (data.exec.versions.length > 0) {
-    const last = sortByMajorMinor(data.exec.versions).pop()!;
-    const active = data.exec.versions.find(v => v.version === last.version)!;
-    data.exec.active_version = active.version;
-    data.exec.active_state = active.state;
-  }
+    if (chain.plan.versions.length > 0) {
+      const last = sortByMajorMinor(chain.plan.versions).pop()!;
+      chain.plan.active_version = last.version;
+      chain.plan.active_state = last.state;
+    }
+    if (chain.exec.versions.length > 0) {
+      const last = sortByMajorMinor(chain.exec.versions).pop()!;
+      chain.exec.active_version = last.version;
+      chain.exec.active_state = last.state;
+    }
 
-  // ── CLOSE ───────────────────────────────────────────────────────────────────
-  const closes = sortByMajor(found.close);
-  closes.forEach((entry, i) => {
-    const isHighest = i === closes.length - 1;
-    const version: ArtifactVersion = { version: entry.version, file: entry.file, created_at: now, updated_at: now, state: 'DRAFT' };
-    if (!isHighest) {
-      version.state = 'SUPERSEDED';
-      version.superseded_by = closes[i + 1].version;
-    } else {
-      // Closing is a terminal step with no further downstream artifact —
-      // its LOCKED state can never be proven from disk alone. Default to
-      // DRAFT (project stays open) rather than risk a false CLOSED claim.
+    // ── CLOSE ───────────────────────────────────────────────────────────────
+    if (closeEntry) {
+      const close: SingleCloseState = {
+        version: chainVersion, state: 'DRAFT', file: closeEntry.file, created_at: now, updated_at: now,
+      };
+      chain.close = close;
+      // Closing is a terminal step with no further downstream artifact — its
+      // LOCKED state can never be proven from disk alone. Default to DRAFT
+      // (project stays open) rather than risk a false CLOSED claim.
       markers.push(makeMarker(
         'close', undefined,
-        `DIR-CLOSE ${entry.version} found on disk but closure cannot be confirmed as LOCKED from artifact files alone. Re-run \`sigma close lock\` if this project should be CLOSED.`,
+        `DIR-CLOSE ${chainVersion} found on disk but closure cannot be confirmed as LOCKED from artifact files alone. Re-run \`sigma close lock\` if this project should be CLOSED.`,
         { intent_version: null, plan_version: null, exec_version: null },
         now,
       ));
     }
-    data.close.versions.push(version);
-  });
-  if (closes.length > 0) {
-    const last = data.close.versions[data.close.versions.length - 1];
-    data.close.active_version = last.version;
-    data.close.active_state = last.state;
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    const hasAnyBuildArtifact = chain.roadmap !== null || chain.plan.versions.length > 0 || chain.exec.versions.length > 0 || chain.close !== null;
+    chain.lifecycle_state = hasAnyBuildArtifact || chain.intent.state === 'LOCKED' ? 'BUILD' : 'DESIGN';
+
+    // Gates + structural consistency markers are computed by the exact same
+    // function `sigma doctor` (default mode) already uses — avoids
+    // duplicating gate logic in two places that would need to stay in sync.
+    // It fully replaces runtime_invalid.markers with its own structural
+    // findings, so the "unprovable-lock" markers collected above are merged
+    // back in afterward rather than overwritten.
+    chain.runtime_invalid = { markers: [], last_doctor_run_at: null };
+    runDoctorReconciliation(chain, []);
+    chain.runtime_invalid!.markers = [...markers, ...chain.runtime_invalid!.markers];
+
+    chains.set(major, { chainVersion, data: chain });
   }
 
-  // ── Lifecycle + gates ─────────────────────────────────────────────────────────
-  const hasAnyBuildArtifact = data.plan.versions.length > 0 || data.exec.versions.length > 0 || data.roadmap.versions.length > 0 || data.close.versions.length > 0;
-  data.lifecycle_state = hasAnyBuildArtifact || hasActiveLockedIntent(data) ? 'BUILD' : 'DESIGN';
-
-  data.gates.gate_1_open = hasActiveLockedIntent(data);
-  data.gates.gate_2_open = hasCleanGate2Chain(data);
-  data.gates.gate_3_satisfied = hasCleanGate3Chain(data);
-
-  data.runtime_invalid = { markers, last_doctor_run_at: now };
-
-  return { data, notes };
+  return { chains, unresolved, skipped: [...found.skipped] };
 }
 
-export function reconstructProgress(projectRoot: string, projectId: string, projectName: string): ReconstructResult {
+export function reconstructAllChains(projectRoot: string): MultiReconstructResult {
   const found = discoverArtifacts(projectRoot);
-  return buildReconstructedProgress(found, projectId, projectName);
+  return buildReconstructedChains(found);
 }
 
-// `findProjectRoot()` (utils/fs.ts) anchors on Sigma/progress.json existing —
-// which is exactly what may be missing in the scenario --reconstruct exists
-// for. This anchors on the Sigma/ directory itself instead.
+// `findProjectRoot()` (utils/fs.ts) anchors on Sigma/activate_status.json
+// existing — which is exactly what may be missing in the scenario
+// --reconstruct exists for. This anchors on the Sigma/ directory itself
+// instead.
 export function findSigmaProjectRoot(startDir: string = process.cwd()): string {
   let current = path.resolve(startDir);
 
