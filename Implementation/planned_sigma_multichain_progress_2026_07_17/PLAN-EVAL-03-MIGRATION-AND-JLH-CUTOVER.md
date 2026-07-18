@@ -2,7 +2,47 @@
 
 **Sumber**: [DISCUSSION-MULTI-FILE-PROGRESS-CHAIN-ARCHITECTURE.md](../planned_sigma_evaluation_2026_07_17/DISCUSSION-MULTI-FILE-PROGRESS-CHAIN-ARCHITECTURE.md) (Konsolidasi Lanjutan bagian 13, "Implikasi ke migrasi JLH"; "Langkah Berikutnya")
 **Tanggal**: 2026-07-17 (draf awal) — didetailkan 2026-07-18, Professional Mode, terhadap kode nyata `src/engine/chain.ts` **dan** data produksi nyata `i:\Works\Project\KLHK_JasaLingkunganHidup\Sigma\progress.json` (dibaca langsung, bukan asumsi).
-**Status**: DRAFT — rencana implementasi detail sudah disusun di bawah (§10), dan seluruh titik keputusan terbuka sudah dikonfirmasi Director langsung 2026-07-18 (lihat §10.8 — termasuk koreksi besar: chain v1 JLH adalah chain `LOCKED`/selesai berdiri sendiri, bukan `SUPERSEDED`). Semua dependency (PLAN-EVAL-01, 02, 05, 06) sekarang **selesai** di kode nyata (dicek langsung 2026-07-18, lihat §6 Dependency). Satu temuan terkait (bug `sigma doctor --reconstruct` yang merusak riwayat LOCKED plan/exec JLH) didetailkan terpisah di [PLAN-EVAL-07](./PLAN-EVAL-07-RECONSTRUCT-METADATA-PRESERVATION.md), tidak memblokir plan-eval ini. **Belum diimplementasikan — menunggu approval eksplisit Director untuk mulai coding.**
+**Status**: **SELESAI (2026-07-18)** — diimplementasikan dan dijalankan terhadap project JLH nyata atas approval eksplisit Director. `scripts/migrate-legacy-progress.js` ditulis sesuai §10.4, di-dry-run lalu dijalankan `--confirm` terhadap `i:\Works\Project\KLHK_JasaLingkunganHidup`. Satu penyesuaian ditemukan saat review dry-run (di luar §10.2 awal): Director mengoreksi `exec v1.1` (chain v2) semestinya `DRAFT`, bukan `LOCKED` seperti tercatat di data lama — ditangani lewat flag baru `--force-exec-state`/`--force-plan-state` (§10.4, ditambahkan saat implementasi). Hasil akhir diverifikasi penuh terhadap JLH lewat `sigma project status`, `session bootstrap`, `intent list`, `plan check`, `close status`/`close check --v v1`, `doctor --all-versions` — semua sesuai ekspektasi §10.6 (lihat "Ringkasan eksekusi" di bawah). Dependency (PLAN-EVAL-01, 02, 05, 06) sudah selesai sebelumnya; [PLAN-EVAL-07](./PLAN-EVAL-07-RECONSTRUCT-METADATA-PRESERVATION.md) (temuan terkait, root cause exec/plan v1 ter-DRAFT di data lama) sudah selesai diimplementasikan lebih dulu. **`git add`/`git commit` di project JLH tetap wewenang Director** — skrip migrasi ini sengaja tidak pernah men-commit apa pun (lihat §10.4).
+
+### Ringkasan eksekusi (2026-07-18)
+
+- `scripts/migrate-legacy-progress.js` (baru) — membaca `Sigma/progress.json`
+  lama, membangun `ChainState` per major version, menulis
+  `progress-v<N>.json` + `activate_status.json` lewat `writeChain()`/
+  `writeActivateStatus()` dari `dist/engine/chain.js` (bukan menulis JSON
+  manual). Flag final: `--dry-run` (default)/`--confirm`,
+  `--treat-locked=<versions>`/`--treat-superseded=<versions>` (wajib untuk
+  setiap entry `SUPERSEDED`/`INACTIVE` di data lama — skrip menolak jalan
+  tanpa itu, tidak ada default otomatis), dan **baru ditambahkan saat
+  implementasi** (tidak ada di draf §10.4 awal): `--force-plan-state=`/
+  `--force-exec-state=<version>=<STATE>` — override state satu entry
+  spesifik yang tidak sesuai kenyataan (dipakai untuk `exec v1.1` JLH, lihat
+  di bawah). `package.json` mendapat script `migrate-legacy`.
+- Dijalankan: `node scripts/migrate-legacy-progress.js
+  "i:\Works\Project\KLHK_JasaLingkunganHidup" --treat-locked=v1
+  --force-exec-state=v1.1=DRAFT --dry-run`, direview Director (cocok persis
+  §10.2), lalu diulang dengan `--confirm`.
+- Hasil ditulis: `Sigma/progress-v1.json` (intent/roadmap/plan/exec/close
+  semua `LOCKED`, gates `true/true/true`, lifecycle `CLOSED`),
+  `Sigma/progress-v2.json` (intent `LOCKED`, roadmap `DRAFT`, plan `v1.1`
+  `LOCKED`, **exec `v1.1` `DRAFT`** — koreksi Director, gate_3 karenanya
+  `false`, lifecycle `BUILD`), `Sigma/activate_status.json` (`active_chain:
+  "v2"`). `Sigma/progress.json` lama dibiarkan utuh, tidak disentuh.
+- Verifikasi end-to-end terhadap JLH nyata: `sigma project status` (chain
+  v2, BUILD, tidak lagi error "Not inside a Sigma project"), `sigma session
+  bootstrap` (Active Chain: v2 tampil menonjol), `sigma intent list` (v1
+  LOCKED/CLOSED, v2 LOCKED/BUILD), `sigma close check --v v1` (**"Lock
+  readiness: Eligible with warnings"** — dokumen `DIR-CLOSE-v1.md` memang
+  genuinely siap di-lock, verdict `CLOSE_ACCEPTED`, mengonfirmasi ulang
+  independen bahwa keputusan Director soal v1 "genuinely closed" akurat,
+  bukan cuma klaim verbal), `sigma close status` (chain v2 — "No active
+  CLOSE", benar), `sigma doctor --all-versions` (kedua chain "Runtime
+  state: VALID", nol marker invalid), `Sigma/design/intent-history.md`
+  ter-regenerasi otomatis oleh `doctor` (2 baris, v1 LOCKED, v2 LOCKED,
+  title/focus level-intent "TBD" — memang tidak pernah tercatat, sesuai
+  ekspektasi §10.2). `git status` di JLH menunjukkan 4 file baru
+  (`activate_status.json`, `progress-v1.json`, `progress-v2.json`,
+  `intent-history.md`) — belum di-commit, menunggu Director.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma.
 
 ---

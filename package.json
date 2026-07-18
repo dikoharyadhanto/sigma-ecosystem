@@ -26,7 +26,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "refresh-registries": "node scripts/refresh-registries.js",
-    "refresh-registries:dry": "node scripts/refresh-registries.js --dry-run"
+    "refresh-registries:dry": "node scripts/refresh-registries.js --dry-run",
+    "migrate-legacy": "node scripts/migrate-legacy-progress.js"
   },
   "dependencies": {
     "commander": "^12.0.0",
