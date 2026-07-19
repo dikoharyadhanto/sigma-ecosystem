@@ -42,7 +42,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   claudeCode:  'Claude Code  (~/.claude/commands/)',
   codex:       'Codex CLI    (~/.codex/skills/)',
   reasonix:    'Reasonix     (~/.reasonix/skills/)',
-  antigravity: 'Antigravity  (~/.gemini/config/plugins/)',
+  antigravity: 'Antigravity  (~/.gemini/config/skills/)',
   cursor:      'Cursor       (~/.cursor/rules/)',
 };
 
@@ -176,7 +176,7 @@ async function deploySkillsAndHook(selectedPlatforms: string[]): Promise<void> {
     claudeCode:  paths.claudeCommands,
     codex:       paths.codexSkills,
     reasonix:    paths.reasonixSkills,
-    antigravity: paths.antigravityAgents,
+    antigravity: paths.antigravitySkills,
     cursor:      paths.cursorRules,
   };
 
@@ -222,6 +222,34 @@ async function deploySkillsAndHook(selectedPlatforms: string[]): Promise<void> {
       console.log(`  OK  ${label} (${ok} skills)`);
     } else {
       console.log(`  PARTIAL ${label} (${ok} OK, ${failed} ERR)`);
+    }
+
+    if (platform === 'antigravity') {
+      const manifestPath = path.join(targetDir, 'manifest.json');
+      let manifest: any = { skills: {} };
+      if (fileExists(manifestPath)) {
+        try {
+          manifest = fs.readJsonSync(manifestPath);
+        } catch {
+          warn(`  WARN: Could not parse ${manifestPath} — recreating manifest`);
+        }
+      }
+      if (!manifest.skills) manifest.skills = {};
+      
+      for (const [, fileName] of Object.entries(roles)) {
+        manifest.skills[fileName] = {
+          ...(manifest.skills[fileName] || {}),
+          status: 'installed',
+          disabled: false,
+        };
+      }
+      
+      try {
+        fs.writeJsonSync(manifestPath, manifest, { spaces: 2 });
+        console.log(`  OK  Antigravity manifest.json updated`);
+      } catch (e) {
+        warn(`  ERR: Could not write ${manifestPath}`);
+      }
     }
   }
 
@@ -439,7 +467,7 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
     claudeCode:  paths.claudeCommands,
     codex:       paths.codexSkills,
     reasonix:    paths.reasonixSkills,
-    antigravity: paths.antigravityAgents,
+    antigravity: paths.antigravitySkills,
     cursor:      paths.cursorRules,
   };
 
@@ -479,6 +507,22 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
   if (skillFilesToRemove.length > 0) {
     for (const f of skillFilesToRemove) fs.removeSync(f);
     console.log(`  Removed: ${skillFilesToRemove.length} skill file(s) from AI tool directories`);
+    
+    const manifestPath = path.join(paths.antigravitySkills, 'manifest.json');
+    if (fileExists(manifestPath)) {
+      try {
+        const manifest = fs.readJsonSync(manifestPath) as any;
+        if (manifest.skills) {
+          for (const fileName of Object.values(ROLE_FILES.antigravity)) {
+            delete manifest.skills[fileName];
+          }
+          fs.writeJsonSync(manifestPath, manifest, { spaces: 2 });
+          console.log(`  Removed: Sigma entries from ${manifestPath}`);
+        }
+      } catch {
+        // ignore errors on uninstall
+      }
+    }
   }
 
   if (hasHookEntry) {

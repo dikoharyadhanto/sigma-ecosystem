@@ -10,7 +10,7 @@ export interface ToolTargetPaths {
     codexSkills: string;
     reasonixSkills: string;
     reasonixConfig: string;
-    antigravityAgents: string;
+    antigravitySkills: string;
     cursorRules: string;
 }
 export declare function targetPaths(): ToolTargetPaths;

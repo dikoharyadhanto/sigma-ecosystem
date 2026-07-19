@@ -34,7 +34,7 @@ const PLATFORM_LABELS = {
     claudeCode: 'Claude Code  (~/.claude/commands/)',
     codex: 'Codex CLI    (~/.codex/skills/)',
     reasonix: 'Reasonix     (~/.reasonix/skills/)',
-    antigravity: 'Antigravity  (~/.gemini/config/plugins/)',
+    antigravity: 'Antigravity  (~/.gemini/config/skills/)',
     cursor: 'Cursor       (~/.cursor/rules/)',
 };
 const PLATFORM_SOURCE_DIR = {
@@ -156,7 +156,7 @@ async function deploySkillsAndHook(selectedPlatforms) {
         claudeCode: paths.claudeCommands,
         codex: paths.codexSkills,
         reasonix: paths.reasonixSkills,
-        antigravity: paths.antigravityAgents,
+        antigravity: paths.antigravitySkills,
         cursor: paths.cursorRules,
     };
     for (const platform of selectedPlatforms) {
@@ -199,6 +199,34 @@ async function deploySkillsAndHook(selectedPlatforms) {
         }
         else {
             console.log(`  PARTIAL ${label} (${ok} OK, ${failed} ERR)`);
+        }
+        if (platform === 'antigravity') {
+            const manifestPath = path_1.default.join(targetDir, 'manifest.json');
+            let manifest = { skills: {} };
+            if ((0, fs_1.fileExists)(manifestPath)) {
+                try {
+                    manifest = fs_extra_1.default.readJsonSync(manifestPath);
+                }
+                catch {
+                    (0, output_1.warn)(`  WARN: Could not parse ${manifestPath} — recreating manifest`);
+                }
+            }
+            if (!manifest.skills)
+                manifest.skills = {};
+            for (const [, fileName] of Object.entries(roles)) {
+                manifest.skills[fileName] = {
+                    ...(manifest.skills[fileName] || {}),
+                    status: 'installed',
+                    disabled: false,
+                };
+            }
+            try {
+                fs_extra_1.default.writeJsonSync(manifestPath, manifest, { spaces: 2 });
+                console.log(`  OK  Antigravity manifest.json updated`);
+            }
+            catch (e) {
+                (0, output_1.warn)(`  ERR: Could not write ${manifestPath}`);
+            }
         }
     }
     // Hook deployment (Claude Code only)
@@ -384,7 +412,7 @@ async function runUninstall(opts) {
         claudeCode: paths.claudeCommands,
         codex: paths.codexSkills,
         reasonix: paths.reasonixSkills,
-        antigravity: paths.antigravityAgents,
+        antigravity: paths.antigravitySkills,
         cursor: paths.cursorRules,
     };
     const skillFilesToRemove = [];
@@ -422,6 +450,22 @@ async function runUninstall(opts) {
         for (const f of skillFilesToRemove)
             fs_extra_1.default.removeSync(f);
         console.log(`  Removed: ${skillFilesToRemove.length} skill file(s) from AI tool directories`);
+        const manifestPath = path_1.default.join(paths.antigravitySkills, 'manifest.json');
+        if ((0, fs_1.fileExists)(manifestPath)) {
+            try {
+                const manifest = fs_extra_1.default.readJsonSync(manifestPath);
+                if (manifest.skills) {
+                    for (const fileName of Object.values(ROLE_FILES.antigravity)) {
+                        delete manifest.skills[fileName];
+                    }
+                    fs_extra_1.default.writeJsonSync(manifestPath, manifest, { spaces: 2 });
+                    console.log(`  Removed: Sigma entries from ${manifestPath}`);
+                }
+            }
+            catch {
+                // ignore errors on uninstall
+            }
+        }
     }
     if (hasHookEntry) {
         removeHookEntry(settingsPath);

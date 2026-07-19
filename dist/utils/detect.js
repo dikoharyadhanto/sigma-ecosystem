@@ -15,17 +15,18 @@ function targetPaths() {
         codexSkills: path_1.default.join(home, '.codex', 'skills'),
         reasonixSkills: path_1.default.join(home, '.reasonix', 'skills'),
         reasonixConfig: path_1.default.join(home, '.reasonix', 'config.json'),
-        antigravityAgents: path_1.default.join(home, '.gemini', 'config', 'plugins'),
+        antigravitySkills: path_1.default.join(home, '.gemini', 'config', 'skills'),
         cursorRules: path_1.default.join(home, '.cursor', 'rules'),
     };
 }
 function detectTools() {
     const t = targetPaths();
+    const home = os_1.default.homedir();
     return {
         claudeCode: fs_extra_1.default.existsSync(t.claudeCommands),
         codex: fs_extra_1.default.existsSync(t.codexSkills),
         reasonix: fs_extra_1.default.existsSync(t.reasonixSkills),
-        antigravity: fs_extra_1.default.existsSync(t.antigravityAgents),
+        antigravity: fs_extra_1.default.existsSync(path_1.default.join(home, '.gemini')),
         cursor: fs_extra_1.default.existsSync(t.cursorRules),
     };
 }

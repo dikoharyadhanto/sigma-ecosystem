@@ -15,7 +15,7 @@ export interface ToolTargetPaths {
   codexSkills: string;       // ~/.codex/skills/
   reasonixSkills: string;    // ~/.reasonix/skills/
   reasonixConfig: string;    // ~/.reasonix/config.json
-  antigravityAgents: string; // ~/.gemini/config/plugins/
+  antigravitySkills: string; // ~/.gemini/config/skills/
   cursorRules: string;       // ~/.cursor/rules/
 }
 
@@ -26,18 +26,19 @@ export function targetPaths(): ToolTargetPaths {
     codexSkills: path.join(home, '.codex', 'skills'),
     reasonixSkills: path.join(home, '.reasonix', 'skills'),
     reasonixConfig: path.join(home, '.reasonix', 'config.json'),
-    antigravityAgents: path.join(home, '.gemini', 'config', 'plugins'),
+    antigravitySkills: path.join(home, '.gemini', 'config', 'skills'),
     cursorRules: path.join(home, '.cursor', 'rules'),
   };
 }
 
 export function detectTools(): DetectedTools {
   const t = targetPaths();
+  const home = os.homedir();
   return {
     claudeCode: fs.existsSync(t.claudeCommands),
     codex: fs.existsSync(t.codexSkills),
     reasonix: fs.existsSync(t.reasonixSkills),
-    antigravity: fs.existsSync(t.antigravityAgents),
+    antigravity: fs.existsSync(path.join(home, '.gemini')),
     cursor: fs.existsSync(t.cursorRules),
   };
 }
