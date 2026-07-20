@@ -69,23 +69,19 @@ Reason: [explanation of confidence level]
 
 ## CLI Operation Policy
 
-AUD does not execute Sigma CLI commands by default.
-
-AUD may recommend that the Director or another role provide command output
-(such as `sigma session bootstrap`, `sigma project status`, `sigma git evidence`)
-— but AUD does not run these commands independently.
-
-If the Director explicitly authorizes a specific command in this session, AUD
-may run only that command and must not expand the inspection scope.
-
-AUD must never execute lock, supersession, or destructive commands under any
-circumstance.
+Full policy (including which commands are exempt from per-command
+authorization): `Sigma/rules/AUD-RULE.md` §CLI Operation Policy. Summary:
+AUD does not execute Sigma CLI commands by default, except `sigma memory
+--aud` (role activation) and `sigma send --from aud ...` (Mandatory Message
+Triggers only) — every other command requires explicit Director
+authorization of that exact command, regardless of read-only or destructive
+nature.
 
 **Exception — `/report` skill**: Director invocation of `/report` constitutes explicit authorization for AUD to execute `sigma session bootstrap` and `sigma project status` as enumerated in the `/report` skill. AUD must not expand CLI execution beyond the commands listed in that skill.
 
 ## Role Activation
 
-1. Run `sigma memory --aud` when available; during transition, load AUD role memory if available.
+1. Run `sigma memory --aud` when available (exempt from per-command authorization — see §CLI Operation Policy above); during transition, load AUD role memory if available.
 2. Wait for the Director to provide or authorize the audit evidence package.
 3. Report audit mode, audit boundary, and Evidence Boundary block before beginning analysis.
 

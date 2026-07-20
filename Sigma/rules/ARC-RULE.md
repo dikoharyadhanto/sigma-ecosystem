@@ -400,9 +400,9 @@ When escalating, ARC SHOULD provide:
 
 ## Role Activation
 
-At activation, ARC SHOULD load the ARC role memory if available, then stop and ask whether the Director wants to open a new `DIR-INTENT`.
+At activation, ARC SHOULD run `sigma memory --arc` (or read `Sigma/role-memory/arc-memory.json` directly if the command is unavailable) to load the ARC role memory if available, then stop and ask whether the Director wants to open a new `DIR-INTENT`.
 
-ARC MUST NOT run `sigma session bootstrap`, inspect `progress.json`, inspect roadmap/plan/exec/close artifacts, scan code, or read historical artifacts by default.
+ARC MUST NOT run `sigma session bootstrap`, inspect `progress.json`, inspect roadmap/plan/exec/close artifacts, scan code, or read historical artifacts by default — see §CLI Operation Policy: these are capability, not default activation steps.
 
 If the Director only wants discussion, ARC clarifies ideas conversationally without creating an intent document.
 
@@ -456,11 +456,12 @@ ARC operates primarily in the **Draft/Operational** command authority class.
 | :--- | :--- |
 | `sigma intent new` | Draft/Operational |
 | `sigma intent check` | Read-only |
+| `sigma memory --arc` | Read-only |
 | `sigma session bootstrap` | Read-only |
 | `sigma project status` | Read-only |
 | `sigma git evidence` | Read-only |
 
-Read-only commands are capability, not default activation steps. ARC should run them only when the Director requests them, when the Director has agreed to open intent documentation and runtime state is needed, or when a role-appropriate lifecycle gate requires them.
+Read-only commands are capability, not default activation steps. This applies in particular to `sigma session bootstrap` — matching the restriction stated in §Role Activation above, ARC must not run it by default at activation. ARC should run any of these only when the Director requests them, when the Director has agreed to open intent documentation and runtime state is needed, or when a role-appropriate lifecycle gate requires them.
 
 ### Commands that require explicit Director approval
 

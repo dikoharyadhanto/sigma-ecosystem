@@ -90,9 +90,11 @@ const DOC_SPECS = {
             'WORK_ORDER_TASK_PLAN',
             'ACCEPTANCE_CRITERIA',
             'IMPLEMENTATION_CONSTRAINTS',
+            'PROTOCOL_OVERRIDES_EXPANSIONS',
             'PRE_BUILD_TEST_CONTRACT',
             'DEV_HANDOFF_INSTRUCTIONS',
             'AUD_FINDINGS',
+            'DIRECTORS_SUMMARY',
         ],
     },
     exec: {
@@ -116,6 +118,7 @@ const DOC_SPECS = {
             'DEV_COMPLETION_STATEMENT',
             'FMN_POST_BUILD_REVIEW',
             'DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS',
+            'DIRECTORS_SUMMARY',
         ],
     },
     close: {

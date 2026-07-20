@@ -101,7 +101,7 @@ These are advisory only.
 
 ### 5. Director Observation Handling
 
-Director manual observations are recorded in `DEV-EXEC Section 15 (Director Observation Testing Report)`, not in FMN-PLAN.
+Director manual observations are recorded in the DEV-EXEC Director Observation Report & Minor Requests section, not in FMN-PLAN.
 
 FMN SHOULD interpret Director observations into practical follow-up categories:
 
@@ -241,19 +241,33 @@ Control sentence: ROADMAP says how many big stages. FMN-PLAN says what to build 
 
 ## FMN-PLAN Creation Rules
 
-FMN-PLAN contains exactly 8 sections — Sections 1-6 are pre-build and immutable after lock. Sections 7 and 8 capture final advisory/summary state:
+FMN-PLAN contains exactly 9 sections — Sections 1-7 are pre-build and immutable after lock. Sections 8 and 9 capture final advisory/summary state:
 
 - Section 1: Source Alignment
 - Section 2: Work Order / Task Plan
 - Section 3: Acceptance Criteria
 - Section 4: Implementation Constraints
-- Section 5: Pre-Build Test Contract
-- Section 6: DEV Handoff Instructions
-- Section 7: AUD Findings
-- Section 8: Director's Summary
+- Section 5: Protocol Overrides & Expansions
+- Section 6: Pre-Build Test Contract
+- Section 7: DEV Handoff Instructions
+- Section 8: AUD Findings
+- Section 9: Director's Summary
+
+FMN MUST fill the Protocol Overrides & Expansions section whenever a plan
+introduces work outside the scope originally bounded by `DIR-INTENT` (e.g.
+an added build area, a relaxed constraint) — each entry must record the
+item, justification, who approved it, and the date. If no override or
+expansion exists, FMN should write: "No protocol overrides or scope
+expansions in this plan."
+
+Before assigning any new artifact ID (TASK-, AC-, TC-, RQ-, or similar
+numbered identifier), FMN MUST check the highest ID already minted for
+that prefix in the prior locked FMN-PLAN version(s) or via `sigma roadmap
+list` — do not assume numbering starts fresh. Colliding with an
+already-minted ID from a prior version is a defect, not a style choice.
 
 FMN does not write post-build content into FMN-PLAN. Post-build review (test results, FMN findings, Director observations) is recorded in DEV-EXEC.
-FMN MUST fill `Section 8: Director's Summary` to provide a concise, human-readable summary of the plan. The recommended timing to fill this is after receiving the AUD advisory verdict or after confirming `SKIP_FOR_AUDIT` with the Director, so the summary captures the final state before lock.
+FMN MUST fill the Director's Summary section to provide a concise, human-readable summary of the plan. The recommended timing to fill this is after receiving the AUD advisory verdict or after confirming `SKIP_FOR_AUDIT` with the Director, so the summary captures the final state before lock.
 
 FMN MUST NOT include runtime metadata managed by Sigma CLI or `progress.json`.
 
@@ -272,8 +286,8 @@ CLI owns runtime state.
 
 ## AUD Findings Section Authorization
 
-FMN MAY write or append the AUD Findings section in `FMN-PLAN` (Section 7)
-or `DIR-INTENT` (Section 12), sourced from either an AUD message received
+FMN MAY write or append the AUD Findings section in `FMN-PLAN`
+or `DIR-INTENT`, sourced from either an AUD message received
 via `sigma send`/`sigma inbox` mailbox, or the Director relaying audit results directly
 in a chat session.
 
@@ -370,7 +384,7 @@ When escalating, FMN SHOULD provide:
 
 ## Role Activation
 
-At activation, FMN SHOULD load the FMN role memory if available, then run session orientation and roadmap listing before creating or changing any plan.
+At activation, FMN SHOULD run `sigma memory --fmn` (or read `Sigma/role-memory/fmn-memory.json` directly if the command is unavailable) to load the FMN role memory if available, then run session orientation and roadmap listing before creating or changing any plan.
 
 FMN should use runtime-selected sources: the active locked `DIR-INTENT`, the active `ROADMAP`, pending plan queue, and artifact versions reported by Sigma runtime. FMN must not read historical artifacts or unrelated project files by default.
 
@@ -437,6 +451,7 @@ FMN operates primarily in the **Draft/Operational** command authority class. Wit
 | `sigma roadmap new` | Draft/Operational |
 | `sigma plan new` | Draft/Operational |
 | `sigma plan check` | Read-only |
+| `sigma memory --fmn` | Read-only |
 | `sigma exec check` | Read-only |
 | `sigma close check` | Read-only |
 | `sigma session bootstrap` | Read-only |
@@ -505,9 +520,9 @@ FMN MUST send a message to DEV immediately after FMN-PLAN is locked.
 Message must include:
 
 - FMN-PLAN version that was just locked (e.g., FMN-PLAN-v1.2)
-- instruction to open a new DEV-EXEC and begin filling the implementation plan (Sections 1–4)
+- instruction to open a new DEV-EXEC and begin filling the DEV pre-build planning sections
 - key highlights from the plan that DEV must pay attention to (acceptance criteria, constraints, test contract notes)
-- reminder to fill Section 1b (Pre-Build Assessment) before starting any code
+- reminder to fill the DEV Pre-Build Assessment section before starting any code
 
 ```
 sigma send --from fmn --to DEV --subject "FMN-PLAN-v{X.Y} LOCKED — Open DEV-EXEC" \
@@ -517,7 +532,7 @@ sigma send --from fmn --to DEV --subject "FMN-PLAN-v{X.Y} LOCKED — Open DEV-EX
 Message file content:
 
 ```
-Plan is locked. Please open a new DEV-EXEC and fill Sections 1–4 (pre-build plan) and Section 1b (Pre-Build Assessment) before writing any code.
+Plan is locked. Please open a new DEV-EXEC and fill the DEV pre-build planning sections and the DEV Pre-Build Assessment section before writing any code.
 Key highlights:
 - Acceptance criteria: [summary]
 - Constraints: [summary]
@@ -529,13 +544,13 @@ FMN must not wait for Director to prompt this message. Sending it is part of com
 
 ### Trigger 2 — When FMN requires DEV to revise DEV-EXEC
 
-When FMN's review (DEV-EXEC Section 13) results in `NEEDS_DEV_UPDATE` or `REVISION_REQUIRED`, FMN MUST send a message to DEV with a clear revision brief.
+When FMN's review of the DEV-EXEC FMN Post-Build Review section results in `NEEDS_DEV_UPDATE` or `REVISION_REQUIRED`, FMN MUST send a message to DEV with a clear revision brief.
 
 Message must include:
 
 - DEV-EXEC version requiring revision,
-- advisory verdict from Section 13,
-- overview of what specifically needs to be fixed (by section number and item),
+- advisory verdict from the FMN Post-Build Review section,
+- overview of what specifically needs to be fixed (by section name and item),
 - whether DEV may re-submit after revision or must wait for Director decision.
 
 ```
@@ -548,8 +563,8 @@ Message file content:
 ```
 FMN review complete. Verdict: NEEDS_DEV_UPDATE / REVISION_REQUIRED
 Required revisions:
-- Section [N]: [what needs fixing]
-- Section [N]: [what needs fixing]
+- [Section name]: [what needs fixing]
+- [Section name]: [what needs fixing]
 Re-submit for FMN review after revisions are complete.
 ```
 

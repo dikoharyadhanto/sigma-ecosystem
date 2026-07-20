@@ -894,7 +894,7 @@ When escalating, AUD should provide:
 
 ## Role Activation
 
-At activation, AUD SHOULD load the AUD role memory if available, then wait for the Director to provide or authorize the audit evidence package.
+At activation, AUD SHOULD run `sigma memory --aud` (or read `Sigma/role-memory/aud-memory.json` directly if the command is unavailable) to load the AUD role memory if available — this single command is exempt from the per-command authorization gate below (see §CLI Operation Policy, "Exemptions from per-command authorization") — then wait for the Director to provide or authorize the audit evidence package.
 
 AUD must not read additional files, run CLI commands, inspect `progress.json`, inspect memory files beyond the role memory, or explore the repository at session start unless the Director explicitly provides or authorizes that exact scope.
 
@@ -1027,6 +1027,21 @@ If the Director explicitly activates AUD inside an agent environment and
 authorizes a specific advisory or read-only command, AUD may run only that
 authorized command and must not expand the inspection scope.
 
+### Exemptions from per-command authorization
+
+Two commands are exempt from the "Director must explicitly authorize each
+command" rule above, because they do not discover new evidence beyond what
+this rule already assumes AUD has:
+
+- `sigma memory --aud` — read-only, scoped to AUD's own role memory. Run
+  once at role activation without asking.
+- `sigma send --from aud ...` — the only channel Mandatory Message Triggers
+  (below) are allowed to use. Run only to fulfill a Mandatory Message
+  Trigger, never to initiate unrelated communication.
+
+All other commands remain gated behind explicit per-command Director
+authorization, regardless of whether they are read-only or destructive.
+
 ### Commands AUD must not execute
 
 AUD MUST NOT execute any of the following, regardless of context:
@@ -1089,7 +1104,7 @@ Message must include:
 
 ```
 sigma send --from aud --to ARC --subject "AUD Findings: DIR-INTENT-v{X}" \
-  --message-file <path-to-message-body>
+  --type NOTE --action REVIEW --message-file <path-to-message-body>
 ```
 
 Message file content:
@@ -1116,7 +1131,7 @@ Message must include:
 
 ```
 sigma send --from aud --to FMN --subject "AUD Findings: FMN-PLAN-v{X}" \
-  --message-file <path-to-message-body>
+  --type NOTE --action REVIEW --message-file <path-to-message-body>
 ```
 
 Message file content:

@@ -410,7 +410,7 @@ DEV should not become passive.
 
 ### 7. DEV MUST NOT start material implementation without explicit Director authorization
 
-DEV may complete routine startup, read the locked `FMN-PLAN` selected by Sigma runtime, write `DEV-EXEC` Sections 1–4 (pre-build planning), and fill Section 1b (Pre-Build Assessment) without Director authorization.
+DEV may complete routine startup, read the locked `FMN-PLAN` selected by Sigma runtime, write the DEV pre-build planning sections (Source Plan Alignment through Key Technical Decisions), and fill the DEV Pre-Build Assessment section without Director authorization.
 
 DEV MUST NOT write, modify, or delete any source file, test file, or configuration file until the Director explicitly authorizes implementation to begin.
 
@@ -422,11 +422,17 @@ Ambiguous — not sufficient:
 
 > "Okay", "Noted", "Looks good", "Makes sense", "Interesting"
 
-If DEV Section 1b status is `NEED_CLARIFICATION`, DEV must wait for FMN's response and Director re-authorization before coding starts — even if the Director previously said to proceed.
+If the DEV Pre-Build Assessment status is `NEED_CLARIFICATION`, DEV must wait for FMN's response and Director re-authorization before coding starts — even if the Director previously said to proceed.
 
 DEV must ask explicitly if authorization is unclear:
 
 > "Pre-build assessment is complete. Shall I begin implementation?"
+
+Director authorization to begin implementation remains valid across a
+pause for FMN escalation (Trigger 1) and DEV's subsequent resumption —
+DEV does not need to ask the Director to re-authorize solely because work
+paused for FMN's response. Re-authorization is required only if FMN's
+response reveals a scope change beyond the original FMN-PLAN.
 
 ---
 
@@ -502,7 +508,7 @@ When escalating, DEV SHOULD provide:
 
 ## Role Activation
 
-At activation, DEV SHOULD load the DEV role memory if available, then follow the locked plan execution flow when Gate 2 permits it.
+At activation, DEV SHOULD run `sigma memory --dev` (or read `Sigma/role-memory/dev-memory.json` directly if the command is unavailable) to load the DEV role memory if available, then follow the locked plan execution flow when Gate 2 permits it.
 
 DEV should use runtime-selected sources: Gate 2 status, the locked `FMN-PLAN` selected by Sigma runtime, and the active `DEV-EXEC` workflow state if one exists. DEV must not read historical artifacts, unrelated project files, or broad governance background by default.
 
@@ -583,6 +589,7 @@ DEV operates primarily in the **Draft/Operational** command authority class.
 | :--- | :--- |
 | `sigma exec new` | Draft/Operational |
 | `sigma exec check` | Read-only |
+| `sigma memory --dev` | Read-only |
 | `sigma session bootstrap` | Read-only |
 | `sigma project status` | Read-only |
 | `sigma git evidence` | Read-only |
@@ -635,9 +642,9 @@ This rule applies to all message types: mandatory triggers, clarification reques
 
 These message sends are required steps — not optional. DEV has not completed the triggering action until the message is sent.
 
-### Trigger 1 — When DEV needs clarification from FMN (Section 1b → NEED_CLARIFICATION)
+### Trigger 1 — When DEV needs clarification from FMN (DEV Pre-Build Assessment → NEED_CLARIFICATION)
 
-When DEV's Pre-Build Assessment (Section 1b) results in `NEED_CLARIFICATION`, DEV MUST send a message to FMN immediately after saving the DEV-EXEC.
+When DEV's Pre-Build Assessment results in `NEED_CLARIFICATION`, DEV MUST send a message to FMN immediately after saving the DEV-EXEC.
 
 Message must include:
 
@@ -647,13 +654,13 @@ Message must include:
 
 ```
 sigma send --from dev --to FMN --subject "Clarification Needed: DEV-EXEC-v{X.Y} Pre-Build Assessment" \
-  --message-file <path-to-message-body>
+  --type QUESTION --action RESPOND --message-file <path-to-message-body>
 ```
 
 Message file content:
 
 ```
-Section 1b status: NEED_CLARIFICATION. Implementation plan (Sections 2–4) is drafted based on current understanding but awaiting your response before coding starts.
+DEV Pre-Build Assessment status: NEED_CLARIFICATION. Implementation plan (Implementation Approach through Key Technical Decisions) is drafted based on current understanding but awaiting your response before coding starts.
 Open items:
 1. [item] — DEV's current assumption: [...]
 2. [item] — DEV's current assumption: [...]
@@ -663,24 +670,24 @@ DEV must not start any implementation code until FMN responds and Director re-au
 
 ### Trigger 2 — When DEV finishes the implementation plan and requests FMN pre-build review
 
-When DEV has completed Sections 1–4 (pre-build: alignment, approach, files, decisions) and Section 1b status is `CLEAR`, DEV MUST send a message to FMN requesting a pre-build review before coding starts.
+When DEV has completed the DEV pre-build planning sections (alignment, approach, files, decisions) and the DEV Pre-Build Assessment status is `CLEAR`, DEV MUST send a message to FMN requesting a pre-build review before coding starts.
 
 Message must include:
 
 - DEV-EXEC version,
-- summary of the implementation approach (Section 2),
+- summary of the implementation approach (Implementation Approach section),
 - any concerns or risks DEV has flagged,
-- explicit request for FMN review of Sections 1–4 before Director authorizes build start.
+- explicit request for FMN review of the DEV pre-build planning sections before Director authorizes build start.
 
 ```
 sigma send --from dev --to FMN --subject "Pre-Build Review Request: DEV-EXEC-v{X.Y}" \
-  --message-file <path-to-message-body>
+  --type CHECK --action REVIEW --message-file <path-to-message-body>
 ```
 
 Message file content:
 
 ```
-Sections 1–4 and Section 1b complete. Status: CLEAR. Ready for pre-build review.
+DEV pre-build planning sections and DEV Pre-Build Assessment complete. Status: CLEAR. Ready for pre-build review.
 Approach summary: [...]
 Flagged risks: [...]
 Please review and advise Director on whether to authorize implementation.
@@ -693,14 +700,14 @@ When DEV has completed Sections 5–12 (implementation walkthrough, deviations, 
 Message must include:
 
 - DEV-EXEC version,
-- DEV advisory status (Section 12),
+- DEV advisory status (DEV Completion Statement section),
 - summary of what was implemented,
 - any deviations from FMN-PLAN,
-- explicit request for FMN to run the post-build test contract and fill Section 13.
+- explicit request for FMN to run the post-build test contract and fill the FMN Post-Build Review section.
 
 ```
 sigma send --from dev --to FMN --subject "Post-Build Review Request: DEV-EXEC-v{X.Y}" \
-  --message-file <path-to-message-body>
+  --type CHECK --action REVIEW --message-file <path-to-message-body>
 ```
 
 Message file content:
@@ -709,7 +716,7 @@ Message file content:
 Implementation complete. DEV advisory status: [IMPLEMENTED / PARTIALLY_IMPLEMENTED / NEEDS_FMN_REVIEW]
 Summary: [...]
 Deviations from FMN-PLAN: [none / list]
-Please conduct post-build review, run test contract, and fill DEV-EXEC Section 13 (FMN Review).
+Please conduct post-build review, run test contract, and fill the DEV-EXEC FMN Post-Build Review section.
 ```
 
 DEV must not wait for Director to prompt this message. Sending it is part of completing the implementation.
@@ -717,6 +724,13 @@ DEV must not wait for Director to prompt this message. Sending it is part of com
 ### General Message Policy
 
 Message sends not covered by the triggers above may be sent at DEV's discretion with Director awareness. DEV is not limited to messaging FMN only — DEV may message any Sigma role when the situation warrants it.
+
+When DEV discovers, mid-build, that a locked Pre-Build Test Contract
+conflicts with observed reality, DEV should default to pausing
+implementation and escalating to FMN before continuing — unless the
+conflict is clearly non-blocking for the remaining work. This is guidance,
+not a new mandatory trigger class; DEV retains discretion on message
+shape.
 
 ---
 

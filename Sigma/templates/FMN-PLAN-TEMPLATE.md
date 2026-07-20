@@ -65,8 +65,27 @@ Summarize how this plan serves the locked Director Intent.
 
 ---
 
+<!-- SIGMA:FMN_PLAN:SECTION:PROTOCOL_OVERRIDES_EXPANSIONS -->
+## 5. Protocol Overrides & Expansions
+
+> Filled by FMN — Before lock.
+> Record any work in this plan that falls outside the scope originally
+> bounded by the locked Director Intent (e.g. an added build area, a
+> relaxed constraint). This is the explicit place for scope
+> deviations/expansions — do not fold them into Implementation Constraints.
+
+| Item | Justification | Approved By | Date |
+| :--- | :---          | :---        | :--- |
+| [...] | [...]        | [...]       | [...] |
+
+If no override or expansion exists, write:
+
+> No protocol overrides or scope expansions in this plan.
+
+---
+
 <!-- SIGMA:FMN_PLAN:SECTION:PRE_BUILD_TEST_CONTRACT -->
-## 5. Pre-Build Test Contract
+## 6. Pre-Build Test Contract
 
 > Filled by FMN — Before lock. Must be defined before DEV starts implementation.
 
@@ -78,7 +97,7 @@ Summarize how this plan serves the locked Director Intent.
 ---
 
 <!-- SIGMA:FMN_PLAN:SECTION:DEV_HANDOFF_INSTRUCTIONS -->
-## 6. DEV Handoff Instructions
+## 7. DEV Handoff Instructions
 
 > Filled by FMN — Before lock.
 
@@ -103,7 +122,7 @@ DEV should report in DEV-EXEC:
 ---
 
 <!-- SIGMA:FMN_PLAN:SECTION:AUD_FINDINGS -->
-## 7. AUD Findings
+## 8. AUD Findings
 
 > **Advisory only. AUD findings do not approve, reject, or block lock state.**
 > This section may be appended after the plan is locked.
@@ -119,7 +138,7 @@ DEV should report in DEV-EXEC:
 > ARC/FMN's interpretation of the audit — verbatim copy-paste is not
 > required.
 
-### 7.1 AUD Advisory Verdict
+### 8.1 AUD Advisory Verdict
 
 **Verdict**:
 
@@ -148,7 +167,7 @@ DEV should report in DEV-EXEC:
 ---
 
 <!-- SIGMA:FMN_PLAN:SECTION:DIRECTORS_SUMMARY -->
-## 8. Director's Summary
+## 9. Director's Summary
 
 > **Filled by FMN — Before lock.**
 > This is a concise, human-readable summary specifically for the Director.

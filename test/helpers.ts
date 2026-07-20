@@ -472,22 +472,32 @@ Test acceptance criteria.
 
 Test constraints.
 
+<!-- SIGMA:FMN_PLAN:SECTION:PROTOCOL_OVERRIDES_EXPANSIONS -->
+## 5. Protocol Overrides & Expansions
+
+No protocol overrides or scope expansions in this plan.
+
 <!-- SIGMA:FMN_PLAN:SECTION:PRE_BUILD_TEST_CONTRACT -->
-## 5. Pre-Build Test Contract
+## 6. Pre-Build Test Contract
 
 Test contract.
 
 <!-- SIGMA:FMN_PLAN:SECTION:DEV_HANDOFF_INSTRUCTIONS -->
-## 6. DEV Handoff Instructions
+## 7. DEV Handoff Instructions
 
 Test handoff.
 
 <!-- SIGMA:FMN_PLAN:SECTION:AUD_FINDINGS -->
-## 7. AUD Findings
+## 8. AUD Findings
 
 Test AUD findings.
 
 - [x] PASS
+
+<!-- SIGMA:FMN_PLAN:SECTION:DIRECTORS_SUMMARY -->
+## 9. Director's Summary
+
+Test director's summary.
 `;
 }
 
@@ -578,6 +588,11 @@ Test post-build review.
 ## 16. Director Observation Report & Minor Requests
 
 Test observation report.
+
+<!-- SIGMA:DEV_EXEC:SECTION:DIRECTORS_SUMMARY -->
+## 17. Director's Summary
+
+Test director's summary.
 `;
 }
 
