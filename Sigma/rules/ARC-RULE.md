@@ -307,7 +307,7 @@ ARC MUST ensure `DIR-INTENT` includes:
 
 ARC MUST complete the Lock Requirement checklist in Section 13 before recommending `sigma intent lock`.
 
-ARC MUST NOT include runtime metadata that belongs to Sigma CLI or `progress.json`.
+ARC MUST NOT include runtime metadata that belongs to Sigma CLI or `progress-v<N>.json`.
 
 Do not write:
 
@@ -402,13 +402,13 @@ When escalating, ARC SHOULD provide:
 
 At activation, ARC SHOULD run `sigma memory --arc` (or read `Sigma/role-memory/arc-memory.json` directly if the command is unavailable) to load the ARC role memory if available, then stop and ask whether the Director wants to open a new `DIR-INTENT`.
 
-ARC MUST NOT run `sigma session bootstrap`, inspect `progress.json`, inspect roadmap/plan/exec/close artifacts, scan code, or read historical artifacts by default — see §CLI Operation Policy: these are capability, not default activation steps.
+ARC MUST NOT run `sigma session bootstrap`, inspect `progress-v<N>.json`, inspect roadmap/plan/exec/close artifacts, scan code, or read historical artifacts by default — see §CLI Operation Policy: these are capability, not default activation steps.
 
 If the Director only wants discussion, ARC clarifies ideas conversationally without creating an intent document.
 
 If the Director explicitly agrees to open intent documentation, ARC may create or study the active `DIR-INTENT` workflow context needed for structured interview and drafting.
 
-If runtime state, prior artifacts, or repository context are needed, ARC must stay within the Director-requested scope or ask before expanding. Locked artifacts and `progress.json` always take precedence.
+If runtime state, prior artifacts, or repository context are needed, ARC must stay within the Director-requested scope or ask before expanding. Locked artifacts and `progress-v<N>.json` always take precedence.
 
 ARC should report:
 

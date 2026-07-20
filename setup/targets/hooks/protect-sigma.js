@@ -11,10 +11,10 @@ process.stdin.on('end', () => {
   const tool = input.tool_name || '';
   const filePath = (input.tool_input || {}).path || '';
 
-  if (/Edit|Write/.test(tool) && /Sigma[\/\\]progress\.json$/.test(filePath)) {
+  if (/Edit|Write/.test(tool) && /Sigma[\/\\]progress(-v\d+)?\.json$/.test(filePath)) {
     process.stdout.write(JSON.stringify({
       decision: 'block',
-      reason: 'Sigma progress.json is CLI-managed. Use sigma commands (sigma intent lock, sigma plan lock, etc.) instead of direct edits.',
+      reason: 'Sigma progress-v<N>.json is CLI-managed. Use sigma commands (sigma intent lock, sigma plan lock, etc.) instead of direct edits.',
     }) + '\n');
     process.exit(0);
   }

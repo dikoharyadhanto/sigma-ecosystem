@@ -4,7 +4,7 @@
 > Implementation approach, execution report, verification evidence, and developer walkthrough.
 > FMN reviews are recorded in FMN Pre-Build Review and FMN Post-Build Review. Director observations and minor requests are recorded in Director Observation Report & Minor Requests.
 >
-> **Lock State**: Managed by Sigma CLI via `progress.json`. Do not edit lock state here.
+> **Lock State**: Managed by Sigma CLI via `progress-v<N>.json`. Do not edit lock state here.
 > **Section Ownership**: Source Plan Alignment through Key Technical Decisions are DEV pre-build. FMN Pre-Build Review is FMN pre-build. Implementation Walkthrough through DEV Completion Statement are DEV post-build. FMN Post-Build Review is FMN post-build. Director Observation Report & Minor Requests is DEV-authored — transcribed from Director's direct chat report.
 
 ---

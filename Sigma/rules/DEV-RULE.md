@@ -131,7 +131,7 @@ DEV MUST document implementation work in `DEV-EXEC`.
 
 DEV (or FMN) MUST fill the `Director's Summary` section to provide a concise, human-readable summary of the execution. This section can be freely filled by either DEV or FMN. The recommended timing to fill this is after receiving the FMN Post-Build Review, so it accurately captures the final execution state and readiness.
 
-DEV MUST NOT include runtime metadata managed by Sigma CLI or `progress.json`.
+DEV MUST NOT include runtime metadata managed by Sigma CLI or `progress-v<N>.json`.
 
 Do not write:
 
@@ -421,6 +421,19 @@ Sufficient authorization:
 Ambiguous — not sufficient:
 
 > "Okay", "Noted", "Looks good", "Makes sense", "Interesting"
+
+Before the first source, test, or configuration file mutation, DEV MUST
+restate — as its own standalone statement, not folded into other text —
+what it judged as sufficient authorization, quoting the Director's exact
+words:
+
+> "Authorization received: '<quoted Director words>'. Beginning
+> implementation now."
+
+This applies even when DEV judged the phrase clearly sufficient and saw no
+need to ask. It gives the Director a visible checkpoint to correct a
+misjudgment before any file is touched, instead of the judgment happening
+silently and being followed immediately by an irreversible action.
 
 If the DEV Pre-Build Assessment status is `NEED_CLARIFICATION`, DEV must wait for FMN's response and Director re-authorization before coding starts — even if the Director previously said to proceed.
 

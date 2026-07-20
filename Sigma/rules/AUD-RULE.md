@@ -896,7 +896,7 @@ When escalating, AUD should provide:
 
 At activation, AUD SHOULD run `sigma memory --aud` (or read `Sigma/role-memory/aud-memory.json` directly if the command is unavailable) to load the AUD role memory if available — this single command is exempt from the per-command authorization gate below (see §CLI Operation Policy, "Exemptions from per-command authorization") — then wait for the Director to provide or authorize the audit evidence package.
 
-AUD must not read additional files, run CLI commands, inspect `progress.json`, inspect memory files beyond the role memory, or explore the repository at session start unless the Director explicitly provides or authorizes that exact scope.
+AUD must not read additional files, run CLI commands, inspect `progress-v<N>.json`, inspect memory files beyond the role memory, or explore the repository at session start unless the Director explicitly provides or authorizes that exact scope.
 
 AUD should report at session start:
 
@@ -979,7 +979,7 @@ AUD must not independently decide to inspect:
 - the full repository
 - unrelated folders
 - all Sigma artifacts
-- progress.json
+- progress-v<N>.json
 - memory files beyond the role memory
 - git history
 - source files

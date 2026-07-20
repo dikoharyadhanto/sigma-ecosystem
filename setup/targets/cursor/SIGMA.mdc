@@ -19,7 +19,7 @@ Refer to `SIGMA_README.md` at the project root for the full governance protocol.
 
 ## Rules for AI Roles
 
-- Do not edit `Sigma/progress.json` directly — all state changes go through `sigma` CLI commands
+- Do not edit `Sigma/progress-v<N>.json` directly — all state changes go through `sigma` CLI commands
 - Do not lock artifacts without explicit Director authorization
 - When a gate is blocked, surface the blocker clearly before proposing work
 

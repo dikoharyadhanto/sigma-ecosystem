@@ -44,7 +44,7 @@ Sigma is governed by **SIGMA_CONSTITUTION.md**. All constitutional principles ar
 - Traceability — decisions must be traceable to their authorizing artifact
 - Single source of truth per concern
 - Lifecycle governance — all artifacts carry explicit lifecycle state
-- Runtime state authority — `progress.json` is the operational truth for what is permitted
+- Runtime state authority — `progress-v<N>.json` is the operational truth for what is permitted
 
 **What Sigma makes flexible** (within constitutional bounds): artifact count, role count, gate count, memory architecture, skill routing.
 
@@ -280,7 +280,7 @@ Closure document authored by the Director. Must explicitly reference the FMN-PLA
 
 **Mandatory governance artifact.** ROADMAP is required before FMN-PLAN can be created — `plan new` is blocked unless an ACTIVE ROADMAP exists (Gate 1.5).
 
-ROADMAP breaks a locked DIR-INTENT into large build stages. Each Stage Overview row maps to an FMN-PLAN version. ROADMAP is partially CLI-managed — stage title/focus/status are supplied via `--title`/`--focus` on `sigma plan new` and `sigma plan promote`, stored in `progress.json`, and rendered into the Stage Overview table by `sigma roadmap render`; the Core Process Flow section remains manual.
+ROADMAP breaks a locked DIR-INTENT into large build stages. Each Stage Overview row maps to an FMN-PLAN version. ROADMAP is partially CLI-managed — stage title/focus/status are supplied via `--title`/`--focus` on `sigma plan new` and `sigma plan promote`, stored in `progress-v<N>.json`, and rendered into the Stage Overview table by `sigma roadmap render`; the Core Process Flow section remains manual.
 
 **State machine**: `DRAFT → ACTIVE → INACTIVE → LOCKED`
 
@@ -293,7 +293,7 @@ ROADMAP breaks a locked DIR-INTENT into large build stages. Each Stage Overview 
 
 **Core invariant**: Only one ROADMAP may be ACTIVE at a time. `sigma roadmap activate --v <ver>` atomically demotes the current ACTIVE to INACTIVE and promotes the target DRAFT to ACTIVE.
 
-The Stage Overview table is generated directly from `progress.json` on every `sigma roadmap render` — there is no separate reconciliation step, since the table has no independent copy of stage data that could drift out of sync.
+The Stage Overview table is generated directly from `progress-v<N>.json` on every `sigma roadmap render` — there is no separate reconciliation step, since the table has no independent copy of stage data that could drift out of sync.
 
 If ROADMAP conflicts with DIR-INTENT, DIR-INTENT wins.
 
@@ -315,7 +315,7 @@ Project-wide source index supporting DIR-INTENT's Comprehensive Research section
 
 **Scaffolding**: created once by `sigma project start`, not per DIR-INTENT version — a project only starts once, but intent gets drafted and revised repeatedly. `sigma reference update` self-heals a missing file on older projects.
 
-**Not tracked in `progress.json`** — no lifecycle state, no lock, no gate. Existence is guaranteed by construction at `project start`, with a self-healing fallback in `sigma reference update`.
+**Not tracked in `progress-v<N>.json`** — no lifecycle state, no lock, no gate. Existence is guaranteed by construction at `project start`, with a self-healing fallback in `sigma reference update`.
 
 If Comprehensive Research status is NEEDED, AUD Verificator Mode must review source-tier compliance for cited IDs before `sigma intent lock` (see Section 14).
 
@@ -334,13 +334,13 @@ If Comprehensive Research status is NEEDED, AUD Verificator Mode must review sou
 | Roadmap Doc | `ROADMAP` | Mandatory staging map |
 | Reference List | `reference-list.md` | Comprehensive Research source index |
 
-**Presentation rule**: Show meaning first, artifact code second. Artifact codes remain the authority for filenames, `progress.json` field values, registry files, and CLI arguments.
+**Presentation rule**: Show meaning first, artifact code second. Artifact codes remain the authority for filenames, `progress-v<N>.json` field values, registry files, and CLI arguments.
 
 ---
 
 ## 7. Gate Rules
 
-Sigma has gates. A gate blocks an operation until its pre-condition is satisfied. Gate enforcement is performed by the CLI at runtime against `progress.json`. No agent action may bypass a gate — only a Director can unlock a gate by satisfying its pre-condition.
+Sigma has gates. A gate blocks an operation until its pre-condition is satisfied. Gate enforcement is performed by the CLI at runtime against `progress-v<N>.json`. No agent action may bypass a gate — only a Director can unlock a gate by satisfying its pre-condition.
 
 ### Gate 1 — DESIGN Complete
 
@@ -441,7 +441,7 @@ AUD is **optional by default.**
 
 ### Mandatory
 
-AUD becomes mandatory only when the Director explicitly marks the project as **risk-sensitive** in `progress.json`. The CLI does not auto-assign risk sensitivity.
+AUD becomes mandatory only when the Director explicitly marks the project as **risk-sensitive** in `progress-v<N>.json`. The CLI does not auto-assign risk sensitivity.
 
 ### Recording AUD Findings
 
@@ -495,7 +495,7 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 | Director | Human | Sole approval authority |
 | AI Roles | DEV, FMN, AUD, ARC | Command operators within role boundary |
 | CLI | `sigma` binary | Gate enforcer — validates prerequisites before permitting commands |
-| `progress.json` | Runtime file | Single source of truth for what is currently permitted |
+| `progress-v<N>.json` | Runtime file | Single source of truth for what is currently permitted |
 | Artifacts | Markdown files | Permanent record of decisions and approvals |
 
 ### Command Authority Classes
@@ -550,7 +550,7 @@ These documents MUST be written for Director comprehension.
 
 ### AI-Operational Artifacts
 
-ROADMAP, FMN-PLAN, DEV-EXEC, AUD findings, `progress.json`, role rule files, protocol and registry files. Dense formatting and technical fields are acceptable.
+ROADMAP, FMN-PLAN, DEV-EXEC, AUD findings, `progress-v<N>.json`, role rule files, protocol and registry files. Dense formatting and technical fields are acceptable.
 
 ### Director Interaction Model
 

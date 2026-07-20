@@ -58,7 +58,7 @@ If authorization is unclear, ask before executing.
 
 ## CLI-Managed Files — Do Not Edit Directly
 
-Do not edit `Sigma/progress.json` directly. Use sigma CLI commands to
+Do not edit `Sigma/progress-v<N>.json` directly. Use sigma CLI commands to
 modify workflow state. Run `sigma --help` to see available commands.
 
 ## Sigma CLI Awareness

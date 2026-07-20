@@ -6,7 +6,7 @@
   "memory_updated_at": "2026-07-14",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
-    "Use Sigma CLI for all runtime operations; never edit progress.json manually.",
+    "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
     "Respect Director intent and decisions as the highest project authority within Sigma boundaries.",
     "Maintain independent judgment; state agreement, doubt, disagreement, or ambiguity clearly.",
     "Restate the Director's request in your own words when scope, intent, approval, or next action could be misunderstood.",

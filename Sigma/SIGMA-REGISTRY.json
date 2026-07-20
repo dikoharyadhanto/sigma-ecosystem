@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_at": "2026-07-03T17:44:56.000Z",
-  "description": "Sigma Document Registry — permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE) are tracked in progress.json, not here.",
+  "description": "Sigma Document Registry — permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE) are tracked in progress-v<N>.json, not here.",
   "total_documents": 17,
   "authority_model": {
     "description": "Two separate, non-conflatable authority axes.",
@@ -18,8 +18,8 @@
     "runtime_authority": {
       "description": "Governs current lifecycle state and CLI operation gating.",
       "tier": "runtime_state",
-      "holder": "progress.json",
-      "note": "progress.json does not override constitutional doctrine. It governs operational state: which artifacts exist, what their lifecycle states are, and which CLI operations are permitted right now. In any conflict between a semantic claim in a markdown document and the runtime state in progress.json, the CLI uses progress.json for gate decisions."
+      "holder": "progress-v<N>.json",
+      "note": "progress-v<N>.json does not override constitutional doctrine. It governs operational state: which artifacts exist, what their lifecycle states are, and which CLI operations are permitted right now. In any conflict between a semantic claim in a markdown document and the runtime state in progress-v<N>.json, the CLI uses progress-v<N>.json for gate decisions."
     }
   },
   "documents": [
@@ -207,7 +207,7 @@
     },
     {
       "document_id": "progress_json",
-      "file": "progress.json",
+      "file": "progress-v<N>.json",
       "location": "Sigma/",
       "authority_tier": "runtime_state",
       "owner": "CLI (Director-gated writes)",
@@ -215,7 +215,7 @@
       "mandatory_when": [
         "every_cli_operation"
       ],
-      "description": "Single source of runtime truth. Tracks lifecycle state, artifact versions and states, gate flags, and STALE_INTENT markers. The CLI reads this before every operation (to check gates) and writes it after every state-mutating operation. Runtime authority: in any conflict between a semantic markdown claim and progress.json, the CLI uses progress.json for gate decisions.",
+      "description": "Single source of runtime truth. Tracks lifecycle state, artifact versions and states, gate flags, and STALE_INTENT markers. The CLI reads this before every operation (to check gates) and writes it after every state-mutating operation. Runtime authority: in any conflict between a semantic markdown claim and progress-v<N>.json, the CLI uses progress-v<N>.json for gate decisions.",
       "tolerate_missing": false,
       "missing_behavior": "All CLI operations error with: 'No Sigma project found. Run: sigma project start'"
     },
@@ -314,7 +314,7 @@
         "comprehensive_research_needed",
         "artifact_creation"
       ],
-      "description": "Project-wide source index for DIR-INTENT's Comprehensive Research section. Three tables (Local Artifact, Website Link, Online Source Data), each row carrying an ID (LA/WL/OS + sequential number) that DIR-INTENT cites by ID only. Local Artifact rows are synced from Sigma/reference/data/ via sigma reference update, which also auto-assigns the next LA id; Website Link and Online Source Data rows are always manual. Not tracked in progress.json — no lifecycle state, no lock, no gate.",
+      "description": "Project-wide source index for DIR-INTENT's Comprehensive Research section. Three tables (Local Artifact, Website Link, Online Source Data), each row carrying an ID (LA/WL/OS + sequential number) that DIR-INTENT cites by ID only. Local Artifact rows are synced from Sigma/reference/data/ via sigma reference update, which also auto-assigns the next LA id; Website Link and Online Source Data rows are always manual. Not tracked in progress-v<N>.json — no lifecycle state, no lock, no gate.",
       "tolerate_missing": true,
       "missing_behavior": "sigma reference update self-heals a missing file by scaffolding it from REFERENCE-LIST-TEMPLATE.md before syncing."
     }

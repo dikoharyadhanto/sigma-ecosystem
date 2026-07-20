@@ -109,9 +109,9 @@ If authorization is unclear, ask before executing.
 
 | File | Command |
 | :--- | :--- |
-| `Sigma/progress.json` | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
-| `Sigma/SIGMA-REGISTRY.json` | `sigma refresh` |
-| `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma refresh` |
+| `Sigma/progress-v<N>.json` | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
+| `Sigma/SIGMA-REGISTRY.json` | `sigma project sync --confirm` |
+| `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma project sync --confirm` |
 
 ## Governance Role Activation
 
@@ -132,7 +132,7 @@ evidence chain requires project state.
   by the Director.
 
 Hard prohibitions:
-- Never manually edit `Sigma/progress.json`
+- Never manually edit `Sigma/progress-v<N>.json`
 - Never assume command syntax without verification
 
 ## Inter-Role Context Handoff

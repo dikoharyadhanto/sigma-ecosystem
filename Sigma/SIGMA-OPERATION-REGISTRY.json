@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-07-14T00:00:00.000Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 56,
+  "total_operations": 51,
   "domains": [
     "close",
     "config",
@@ -23,8 +23,8 @@
     "sync"
   ],
   "level_definitions": {
-    "semantic": "Mutates project artifacts or runtime state (progress.json, Sigma/ files).",
-    "read_only": "Reads existing state only — no writes to progress.json or artifact files.",
+    "semantic": "Mutates project artifacts or runtime state (progress-v<N>.json, Sigma/ files).",
+    "read_only": "Reads existing state only — no writes to progress-v<N>.json or artifact files.",
     "system": "Install-level operation — affects global ~/.sigma/ or host system, not project-specific state."
   },
   "role_definitions": {
@@ -38,7 +38,7 @@
       "action": "start",
       "level": "semantic",
       "role": "any",
-      "description": "Initialize a Sigma project in the current directory. Creates Sigma/ folder structure (rules/, design/, build/, close/, logs/, memory/), seeds progress.json, writes .sigma-identity.json at project root, and copies doctrine files from ~/.sigma/templates/. Lifecycle state set to DESIGN.",
+      "description": "Initialize a Sigma project in the current directory. Creates Sigma/ folder structure (rules/, design/, build/, close/, logs/, memory/), seeds the first chain file (progress-v1.json), writes .sigma-identity.json at project root, and copies doctrine files from ~/.sigma/templates/. Lifecycle state set to DESIGN.",
       "inputs": [],
       "outputs": [
         {
@@ -47,11 +47,11 @@
         },
         {
           "type": "file",
-          "description": "Sigma/progress.json (seed state)"
+          "description": "Sigma/progress-v1.json (seed state)"
         },
         {
           "type": "file",
-          "description": ".sigma-identity.json at project root (project_id, project_name, registered) — fallback identity source for sigma doctor --reconstruct if progress.json is ever lost or corrupted"
+          "description": ".sigma-identity.json at project root (project_id, project_name, registered) — fallback identity source for sigma doctor --reconstruct if progress-v<N>.json is ever lost or corrupted"
         },
         {
           "type": "file",
@@ -79,7 +79,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Read progress.json and display current lifecycle phase, active artifact versions and states, gate status (gate_1, gate_2, gate_3), STALE_INTENT warnings, and CLI-valid runtime operations.",
+      "description": "Read progress-v<N>.json and display current lifecycle phase, active artifact versions and states, gate status (gate_1, gate_2, gate_3), STALE_INTENT warnings, and CLI-valid runtime operations.",
       "inputs": [],
       "outputs": [
         {
@@ -90,12 +90,12 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
+          "condition": "Sigma/progress-v<N>.json must exist",
           "error_message": "No Sigma project found. Run: sigma project start"
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
+        "pre_condition": "Sigma/progress-v<N>.json exists",
         "post_condition": "none (read-only)"
       },
       "error_messages": {
@@ -149,80 +149,24 @@
       }
     },
     {
-      "operation_id": "project_reset",
-      "domain": "project",
-      "action": "reset",
-      "level": "semantic",
-      "role": "director",
-      "description": "Reset progress.json to initial seed state. Requires --confirm. Backs up current progress.json to Sigma/logs/progress-backup-{timestamp}.json before reset. Artifact files in design/, build/, close/ are untouched by default. Add --wipe to also archive artifact files into Sigma/logs/reset-archive-{timestamp}/ — never permanent delete.",
-      "inputs": [
-        {
-          "name": "--confirm",
-          "type": "flag",
-          "required": true,
-          "description": "Required for any reset mode"
-        },
-        {
-          "name": "--wipe",
-          "type": "flag",
-          "required": false,
-          "description": "When combined with --confirm, archives artifact files. Both flags required for archive mode."
-        }
-      ],
-      "outputs": [
-        {
-          "type": "file",
-          "description": "Sigma/logs/progress-backup-{timestamp}.json (backup of pre-reset state)"
-        },
-        {
-          "type": "file",
-          "description": "Sigma/progress.json (reset to initial seed)"
-        },
-        {
-          "type": "folder",
-          "description": "Sigma/logs/reset-archive-{timestamp}/ (only when --wipe is also passed)"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "flag",
-          "condition": "--confirm flag must be present",
-          "error_message": "sigma project reset requires --confirm."
-        },
-        {
-          "type": "flag",
-          "condition": "--wipe requires --confirm to also be present",
-          "error_message": "sigma project reset --wipe requires --confirm as well."
-        }
-      ],
-      "gating": {
-        "pre_condition": "--confirm present",
-        "post_condition": "progress.json at initial DESIGN seed state; backup written"
-      },
-      "error_messages": {
-        "missing_confirm": "sigma project reset requires --confirm.",
-        "wipe_without_confirm": "sigma project reset --wipe requires --confirm as well."
-      }
-    },
-    {
       "operation_id": "project_register",
       "domain": "project",
       "action": "register",
       "level": "semantic",
       "role": "any",
-      "description": "Repair/harvest tool for .sigma-identity.json at project root — not a cross-project registry operation. project_start already writes this file once; this command exists to restore it if it is missing or corrupted, or to backfill it into a project created before the file existed. Reads project_id and project_name from Sigma/progress.json when readable; otherwise requires --id and --name.",
+      "description": "Repair/harvest tool for .sigma-identity.json at project root — not a cross-project registry operation. project_start already writes this file once; this command exists to restore it if it is missing or corrupted, or to backfill it into a project created before the file existed. --id and --name are both required; there is no fallback source to read them from.",
       "inputs": [
         {
           "name": "--id",
           "type": "string",
-          "required": false,
-          "description": "Project ID, used only if Sigma/progress.json is unreadable"
+          "required": true,
+          "description": "Project ID"
         },
         {
           "name": "--name",
           "type": "string",
-          "required": false,
-          "description": "Project name, used only if Sigma/progress.json is unreadable"
+          "required": true,
+          "description": "Project name"
         }
       ],
       "outputs": [
@@ -234,22 +178,16 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/ folder must exist (does not require progress.json to be readable)",
+          "condition": "Sigma/ folder must exist",
           "error_message": "Not inside a Sigma project. No Sigma/ directory found in this directory or any parent."
-        },
-        {
-          "type": "fallback",
-          "condition": "If Sigma/progress.json is missing, unreadable, or incomplete, --id and --name are required",
-          "error_message": "Sigma/progress.json is missing, unreadable, or incomplete — cannot determine project identity automatically. Pass --id <PROJECT_ID> --name <name> to proceed."
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/ folder exists; progress.json readable OR --id/--name provided",
+        "pre_condition": "Sigma/ folder exists; --id and --name provided",
         "post_condition": ".sigma-identity.json written at project root"
       },
       "error_messages": {
-        "not_found": "Not inside a Sigma project. No Sigma/ directory found in this directory or any parent.",
-        "no_identity_source": "Sigma/progress.json is missing, unreadable, or incomplete — cannot determine project identity automatically. Pass --id <PROJECT_ID> --name <name> to proceed."
+        "not_found": "Not inside a Sigma project. No Sigma/ directory found in this directory or any parent."
       }
     },
     {
@@ -269,7 +207,7 @@
       "constraints": [
         "Only the Local Artifact table is synced; Website Link and Online Source Data rows are always manual",
         "Category and Notes are never auto-filled — left as [...] placeholders on new rows",
-        "Not tracked in progress.json — no gate, no lock state"
+        "Not tracked in progress-v<N>.json — no gate, no lock state"
       ],
       "gating": {
         "pre_condition": "none",
@@ -296,12 +234,12 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
+          "condition": "Sigma/progress-v<N>.json must exist",
           "error_message": "No Sigma project found. Run: sigma project start"
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
+        "pre_condition": "Sigma/progress-v<N>.json exists",
         "post_condition": "none (read-only)"
       },
       "error_messages": {
@@ -314,7 +252,7 @@
       "action": "show",
       "level": "read_only",
       "role": "any",
-      "description": "Display the short role activation memory for ARC, FMN, DEV, or AUD. Reads Sigma/role-memory/{role}-memory.json from the project when available, otherwise falls back to the bundled package copy. Does not read progress.json or mutate filesystem state.",
+      "description": "Display the short role activation memory for ARC, FMN, DEV, or AUD. Reads Sigma/role-memory/{role}-memory.json from the project when available, otherwise falls back to the bundled package copy. Does not read progress-v<N>.json or mutate filesystem state.",
       "inputs": [
         {
           "name": "--arc|--fmn|--dev|--aud",
@@ -350,7 +288,7 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create a DIR-INTENT DRAFT from the template. No gate — DIR-INTENT is the first artifact in the Sigma lifecycle. Auto-names the file using the naming convention: design/DIR-INTENT-v{next_version}.md. Sets intent.active_version and active_state = DRAFT in progress.json.",
+      "description": "Create a DIR-INTENT DRAFT from the template. No gate — DIR-INTENT is the first artifact in the Sigma lifecycle. Auto-names the file using the naming convention: design/DIR-INTENT-v{next_version}.md. Sets intent.state = DRAFT in the new chain's progress-v<N>.json.",
       "inputs": [],
       "outputs": [
         {
@@ -375,7 +313,7 @@
       "action": "review",
       "level": "semantic",
       "role": "any",
-      "description": "AUD advisory review of the active DIR-INTENT. Named 'review' not 'audit' — Intent Core is sovereign (clarity-only, not auditable). Outputs advisory findings section written to the document file. Director retains sole lock authority. Does NOT change progress.json runtime state — INTENT remains DRAFT after review.",
+      "description": "AUD advisory review of the active DIR-INTENT. Named 'review' not 'audit' — Intent Core is sovereign (clarity-only, not auditable). Outputs advisory findings section written to the document file. Director retains sole lock authority. Does NOT change progress-v<N>.json runtime state — INTENT remains DRAFT after review.",
       "inputs": [],
       "outputs": [
         {
@@ -456,12 +394,12 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
+          "condition": "Sigma/progress-v<N>.json must exist",
           "error_message": "No Sigma project found. Run: sigma project start"
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
+        "pre_condition": "Sigma/progress-v<N>.json exists",
         "post_condition": "none (read-only)"
       },
       "error_messages": {}
@@ -483,12 +421,12 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
+          "condition": "Sigma/progress-v<N>.json must exist",
           "error_message": "No Sigma project found. Run: sigma project start"
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
+        "pre_condition": "Sigma/progress-v<N>.json exists",
         "post_condition": "none (read-only)"
       },
       "error_messages": {}
@@ -524,35 +462,6 @@
       },
       "error_messages": {
         "gate_1_blocked": "GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock"
-      }
-    },
-    {
-      "operation_id": "plan_audit",
-      "domain": "plan",
-      "action": "audit",
-      "level": "semantic",
-      "role": "any",
-      "description": "AUD advisory audit of the active FMN-PLAN. Fully auditable (not sovereign). Outputs advisory findings section written to the document file. Does NOT lock, approve, or change runtime state.",
-      "inputs": [],
-      "outputs": [
-        {
-          "type": "file_section",
-          "description": "Advisory findings section appended to active FMN-PLAN document"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "existence",
-          "condition": "plan.active_version must not be null",
-          "error_message": "No active FMN-PLAN. Run: sigma plan new"
-        }
-      ],
-      "gating": {
-        "pre_condition": "plan.active_version != null",
-        "post_condition": "none — document-only, no runtime state change"
-      },
-      "error_messages": {
-        "no_active_plan": "No active FMN-PLAN. Run: sigma plan new"
       }
     },
     {
@@ -657,12 +566,12 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
+          "condition": "Sigma/progress-v<N>.json must exist",
           "error_message": "No Sigma project found. Run: sigma project start"
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
+        "pre_condition": "Sigma/progress-v<N>.json exists",
         "post_condition": "none (read-only)"
       },
       "error_messages": {}
@@ -684,12 +593,12 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
+          "condition": "Sigma/progress-v<N>.json must exist",
           "error_message": "No Sigma project found. Run: sigma project start"
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
+        "pre_condition": "Sigma/progress-v<N>.json exists",
         "post_condition": "none (read-only)"
       },
       "error_messages": {}
@@ -725,35 +634,6 @@
       },
       "error_messages": {
         "gate_2_blocked": "GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock"
-      }
-    },
-    {
-      "operation_id": "exec_audit",
-      "domain": "exec",
-      "action": "audit",
-      "level": "semantic",
-      "role": "any",
-      "description": "AUD advisory audit of the active DEV-EXEC. Fully auditable. Audit can occur at any pre-lock state (DRAFT, BUILDING, TESTING, COMPLETED). Outputs advisory findings section written to the document file. Does NOT change runtime state.",
-      "inputs": [],
-      "outputs": [
-        {
-          "type": "file_section",
-          "description": "Advisory findings section appended to active DEV-EXEC document"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "existence",
-          "condition": "exec.active_version must not be null",
-          "error_message": "No active DEV-EXEC. Run: sigma exec new"
-        }
-      ],
-      "gating": {
-        "pre_condition": "exec.active_version != null",
-        "post_condition": "none — document-only, no runtime state change"
-      },
-      "error_messages": {
-        "no_active_exec": "No active DEV-EXEC. Run: sigma exec new"
       }
     },
     {
@@ -858,12 +738,12 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
+          "condition": "Sigma/progress-v<N>.json must exist",
           "error_message": "No Sigma project found. Run: sigma project start"
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
+        "pre_condition": "Sigma/progress-v<N>.json exists",
         "post_condition": "none (read-only)"
       },
       "error_messages": {}
@@ -885,12 +765,12 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
+          "condition": "Sigma/progress-v<N>.json must exist",
           "error_message": "No Sigma project found. Run: sigma project start"
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
+        "pre_condition": "Sigma/progress-v<N>.json exists",
         "post_condition": "none (read-only)"
       },
       "error_messages": {}
@@ -943,35 +823,6 @@
       "error_messages": {
         "gate_3_blocked": "GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain)",
         "gate_3_stale": "GATE 3 STALE: Qualifying chain has stale intent. Add --ack-stale-intent to acknowledge."
-      }
-    },
-    {
-      "operation_id": "close_audit",
-      "domain": "close",
-      "action": "audit",
-      "level": "semantic",
-      "role": "any",
-      "description": "AUD advisory audit of the active DIR-CLOSE. Fully auditable. Writes advisory findings section to the document file. Does NOT change runtime state.",
-      "inputs": [],
-      "outputs": [
-        {
-          "type": "file_section",
-          "description": "Advisory findings section appended to active DIR-CLOSE document"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "existence",
-          "condition": "close.active_version must not be null",
-          "error_message": "No active DIR-CLOSE. Run: sigma close new"
-        }
-      ],
-      "gating": {
-        "pre_condition": "close.active_version != null",
-        "post_condition": "none — document-only, no runtime state change"
-      },
-      "error_messages": {
-        "no_active_close": "No active DIR-CLOSE. Run: sigma close new"
       }
     },
     {
@@ -1028,12 +879,12 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
+          "condition": "Sigma/progress-v<N>.json must exist",
           "error_message": "No Sigma project found. Run: sigma project start"
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
+        "pre_condition": "Sigma/progress-v<N>.json exists",
         "post_condition": "none (read-only)"
       },
       "error_messages": {}
@@ -1186,7 +1037,7 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create a new ROADMAP from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/build/ and registers the new version in progress.json; it is ACTIVE when no ACTIVE ROADMAP exists, otherwise DRAFT.",
+      "description": "Create the ROADMAP for the active chain from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/build/ and registers it in progress-v<N>.json as DRAFT — one ROADMAP per chain; `sigma roadmap lock` promotes it to LOCKED.",
       "inputs": [],
       "outputs": [
         {
@@ -1195,7 +1046,7 @@
         },
         {
           "type": "state_change",
-          "description": "progress.json: roadmap version added with state ACTIVE or DRAFT"
+          "description": "progress-v<N>.json: roadmap registered with state DRAFT"
         }
       ],
       "constraints": [
@@ -1212,7 +1063,7 @@
       ],
       "gating": {
         "pre_condition": "progress.intent.active_state == 'LOCKED'; no ROADMAP version already exists for the locked INTENT major",
-        "post_condition": "ROADMAP-v{N}.md exists in Sigma/build/; progress.json records new roadmap version with state ACTIVE or DRAFT"
+        "post_condition": "ROADMAP-v{N}.md exists in Sigma/build/; progress-v<N>.json records the roadmap with state DRAFT"
       },
       "error_messages": {
         "no_locked_intent": "No locked DIR-INTENT found. ROADMAP requires a locked intent. Run: sigma intent lock",
@@ -1236,12 +1087,12 @@
       "constraints": [
         {
           "type": "existence",
-          "condition": "Sigma/progress.json must exist",
+          "condition": "Sigma/progress-v<N>.json must exist",
           "error_message": "No Sigma project found. Run: sigma project start"
         }
       ],
       "gating": {
-        "pre_condition": "Sigma/progress.json exists",
+        "pre_condition": "Sigma/progress-v<N>.json exists",
         "post_condition": "none (read-only)"
       },
       "error_messages": {
@@ -1482,35 +1333,6 @@
       "role": "any",
       "description": "Show the FIFO draft lock queue and pending plans (read-only diagnostic)",
       "inputs": [],
-      "outputs": [
-        {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
-        }
-      ],
-      "constraints": [],
-      "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
-      },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
-    },
-    {
-      "operation_id": "roadmap_activate",
-      "domain": "roadmap",
-      "action": "activate",
-      "level": "semantic",
-      "role": "any",
-      "description": "Activate a DRAFT ROADMAP (demotes current ACTIVE to INACTIVE if one exists)",
-      "inputs": [
-        {
-          "name": "--v",
-          "type": "string",
-          "required": true,
-          "description": "--v <version>"
-        }
-      ],
       "outputs": [
         {
           "type": "NEEDS_REVIEW",

@@ -269,7 +269,7 @@ already-minted ID from a prior version is a defect, not a style choice.
 FMN does not write post-build content into FMN-PLAN. Post-build review (test results, FMN findings, Director observations) is recorded in DEV-EXEC.
 FMN MUST fill the Director's Summary section to provide a concise, human-readable summary of the plan. The recommended timing to fill this is after receiving the AUD advisory verdict or after confirming `SKIP_FOR_AUDIT` with the Director, so the summary captures the final state before lock.
 
-FMN MUST NOT include runtime metadata managed by Sigma CLI or `progress.json`.
+FMN MUST NOT include runtime metadata managed by Sigma CLI or `progress-v<N>.json`.
 
 Do not write:
 

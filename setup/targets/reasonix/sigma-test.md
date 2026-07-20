@@ -37,7 +37,7 @@ Run: `sigma --help`
 Run: `sigma session bootstrap`
 
 - PASS if output reports lifecycle phase and gate status
-- WARN if not in a Sigma project (no `Sigma/progress.json` found) — mark all Project checks as N/A
+- WARN if not in a Sigma project (no `Sigma/progress-v<N>.json` found) — mark all Project checks as N/A
 - FAIL if command errors out unexpectedly
 
 ### 2. Skill Files Check
@@ -71,7 +71,7 @@ Check that the following paths exist:
 
 ### 4. Project Structure Check
 
-Only run if inside a Sigma project (`Sigma/progress.json` exists).
+Only run if inside a Sigma project (`Sigma/progress-v<N>.json` exists).
 
 Check that the following paths exist relative to the project root:
 

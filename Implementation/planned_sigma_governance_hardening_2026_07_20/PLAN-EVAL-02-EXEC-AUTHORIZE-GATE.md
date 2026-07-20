@@ -2,7 +2,7 @@
 
 **Sumber**: [../../Discussion/sigma-bug-report-20260720-131540.md](../../Discussion/sigma-bug-report-20260720-131540.md) §7.4/§8.4 (DEV menilai sendiri apakah frasa Director cukup untuk mulai implementasi), diperkuat diskusi soal soft vs hard invariant.
 **Tanggal**: 2026-07-20
-**Status**: DRAFT — **ringkas, belum final**. Ini pemecahan pertama dari diskusi, bukan rencana implementasi detail. Perlu ronde desain terpisah (skema data, interaksi dengan test suite chain yang sudah ada) sebelum eksekusi kode — beda dengan PLAN-EVAL-01 yang sudah cukup detail untuk langsung dieksekusi.
+**Status**: REJECTED (2026-07-20) — Director memutuskan tidak membangun command CLI baru. Lihat "Resolusi" di bawah.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma.
 
 ---
@@ -117,3 +117,31 @@ Bukan untuk dieksekusi langsung. Diskusikan dulu dengan Director: (1) level
 `ArtifactVersion` vs `ArtifactTracker` untuk field baru, (2) apakah re-run
 `authorize` diperlukan pasca-eskalasi mid-build, sebelum dokumen ini
 didetailkan ke level PLAN-EVAL-01 (rencana implementasi baris-per-baris).
+
+## Resolusi (2026-07-20)
+
+Diskusi dengan Director (Professional Mode) menyimpulkan command CLI baru
+**tidak diperlukan**. Alasan utama:
+
+- Command ini tidak menegakkan apa pun secara teknis — Sigma CLI tidak
+  bisa mencegah penulisan file source (itu terjadi lewat Edit/Write
+  langsung, di luar CLI). Nilainya murni self-report, sama seperti gerbang
+  frasa yang sudah ada.
+- Nilai (b) di §Inti ("mencetak balik ucapan Director sebelum lanjut")
+  tercapai dengan biaya nol lewat perubahan teks murni di
+  `Sigma/rules/DEV-RULE.md` §7 — DEV sekarang wajib mengutip balik ucapan
+  Director sebagai pernyataan berdiri sendiri sebelum mutasi file pertama,
+  bahkan saat DEV menilai frasa itu jelas cukup. Ini sudah diterapkan
+  (2026-07-20), tanpa menyentuh `chain.ts`/`exec.ts`/`session.ts`.
+- Nilai (a) ("ter-log, bukan langkah diam-diam") hanya benar-benar unggul
+  dibanding fix teks kalau Director butuh status otorisasi bertahan lintas
+  sesi (crash / context compaction / CSO resume) — Director menilai ini
+  belum jadi kebutuhan nyata sekarang, jadi belum cukup untuk menjustifikasi
+  biaya perubahan skema (`ArtifactVersion.implementation_authorized_at`),
+  command baru, dan langkah manual tambahan per siklus build.
+
+Tiga pertanyaan desain (level field, interaksi Trigger 1, idempotency vs
+re-authorize) tidak jadi relevan karena command tidak dibangun. Dokumen ini
+disimpan sebagai referensi kalau kebutuhan ketahanan lintas-sesi muncul
+nyata di kemudian hari — bukan dihapus, karena analisis tradeoff-nya masih
+valid untuk direvisit.

@@ -55,7 +55,7 @@ The role may use any reasonable read-only source to compose the report:
 - `sigma session bootstrap` — current state summary, if available
 - `sigma project status` — lifecycle phase and gate status, if available
 - `sigma git evidence` — Git branch, working tree state, and changed files, if available
-- `Sigma/progress.json` — lifecycle phase and gate status
+- `Sigma/progress-v<N>.json` — lifecycle phase and gate status
 - `Sigma/design/` — active DIR-INTENT version and state
 - `Sigma/build/` — ROADMAP, FMN-PLAN, and DEV-EXEC versions and states
 - `Sigma/close/` — DIR-CLOSE state if applicable
@@ -110,7 +110,7 @@ During or after `/report` execution, the following are forbidden:
 - Any stale-intent acknowledgment command
 - Any artifact creation command
 - Any state advance command
-- Any command that writes to `Sigma/progress.json`
+- Any command that writes to `Sigma/progress-v<N>.json`
 - Any Git write operation (`git add`, `git commit`, `git reset`, `git checkout`)
 - Any file modification
 

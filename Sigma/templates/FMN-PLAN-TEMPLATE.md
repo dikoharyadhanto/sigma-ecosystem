@@ -4,7 +4,7 @@
 > Build contract and test contract for DEV implementation.
 > AUD findings on the plan are recorded in AUD Findings.
 >
-> **Lock State**: Managed by Sigma CLI via `progress.json`. Do not edit lock state here.
+> **Lock State**: Managed by Sigma CLI via `progress-v<N>.json`. Do not edit lock state here.
 > **Post-Lock Rule**: Source Alignment through DEV Handoff Instructions are immutable after lock. AUD Findings may be appended post-lock.
 
 ---

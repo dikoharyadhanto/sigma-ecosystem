@@ -5,7 +5,7 @@
 > 
 > **Authority Rule**: Director owns the destination. ARC, AUD, FMN, and DEV may advise, challenge, and interpret — but only the Director approves runtime state changes.
 > 
-> **Lock State**: Managed by Sigma CLI via `progress.json`. Do not edit lock state here.
+> **Lock State**: Managed by Sigma CLI via `progress-v<N>.json`. Do not edit lock state here.
 
 ---
 

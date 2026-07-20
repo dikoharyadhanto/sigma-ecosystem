@@ -2,7 +2,7 @@
 
 **Sumber**: Diflag langsung oleh Director (2026-07-20) — arsitektur sudah pindah dari `progress.json` tunggal ke multi-file `progress-v<N>.json` (lihat `Implementation/planned_sigma_multichain_progress_2026_07_17/PLAN-EVAL-01-CORE-STORAGE-SCHEMA-MIGRATION.md`), tapi banyak dokumen kemungkinan belum diperbarui mengikuti istilah baru.
 **Tanggal**: 2026-07-20
-**Status**: DRAFT — **belum diaudit per-file**. Ini pencatatan scope + metode audit, bukan daftar perbaikan siap eksekusi. Director eksplisit meminta ini jadi prioritas **paling rendah/terakhir**.
+**Status**: **EXECUTED** (2026-07-20, atas otorisasi eksplisit Director). Semua 46 file diaudit dan diperbaiki, plus 3 temuan tambahan di luar scope asli (lihat "Hasil eksekusi" di bawah). `npm run build && npm test` hijau penuh (214/214 test, 26/26 file).
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma.
 
 ---
@@ -80,3 +80,59 @@ AI role (bukan sekadar kosmetik), ini tetap di urutan terakhir.
 
 Menunggu giliran. Saat dikerjakan: mulai dari audit klasifikasi di atas
 sebelum menulis rencana perbaikan baris-per-baris seperti PLAN-EVAL-01.
+
+---
+
+## Hasil eksekusi (2026-07-20)
+
+**Klasifikasi**: dari 46 file, 45 genuine drift (diperbaiki), 1 historical-legit
+(`SIGMA_PROTOCOL.md:668`, entri changelog v0.5 — dibiarkan, sama seperti
+`scripts/migrate-legacy-progress.js`/`PANDUAN-MIGRASI-LEGACY-PROGRESS.md` yang
+sudah dikecualikan di draft awal). Tidak ada template bersama di `setup/` (per
+`src/commands/setup.ts` — tiap (tool × role) file adalah salinan berdiri
+sendiri, `deploySkillsAndHook()` cuma `fs.copySync` mentah) — jadi tidak ada
+cara "perbaiki satu sumber, otomatis nyebar ke 30 file", tiap file diedit
+manual. Konvensi pengganti: `progress.json` → `progress-v<N>.json` (kadang
+`progress-v1.json` spesifik kalau konteksnya jelas-jelas seed/first-chain).
+
+**SIGMA-REGISTRY.json / SIGMA-OPERATION-REGISTRY.json** — Director
+mengonfirmasi boleh diedit langsung (bukan lewat `sigma project sync
+--confirm`) karena repo ini adalah sumber kanonik yang di-*copy* KELUAR ke
+`~/.sigma`, bukan sebaliknya — histori git (`11a61e3`) menunjukkan praktik
+edit-langsung ini sudah ada sebelumnya.
+
+### Temuan di luar scope asli (ditemukan saat eksekusi, disetujui Director untuk sekalian diperbaiki)
+
+1. **`setup/targets/hooks/protect-sigma.js` — hook proteksi tidak berfungsi.**
+   Regex `/Sigma[\/\\]progress\.json$/` tidak pernah cocok dengan nama file
+   aktif pasca-migrasi multichain (`progress-v<N>.json`) — hook ini secara
+   efektif tidak memblokir apa pun sejak migrasi. Diperbaiki jadi
+   `/Sigma[\/\\]progress(-v\d+)?\.json$/`, konsisten dengan
+   `CHAIN_FILE_PATTERN` di `chain.ts:222`. Bug fungsional, bukan kosmetik —
+   lebih serius dari framing "prioritas rendah" plan ini.
+2. **5 entri `operation_id` hantu di `SIGMA-OPERATION-REGISTRY.json`** —
+   mendokumentasikan command yang sudah tidak ada di kode sama sekali:
+   `project_reset`, `plan_audit`, `exec_audit`, `close_audit`,
+   `roadmap_activate` (yang terakhir malah sudah pernah ditandai
+   `"NEEDS_REVIEW": true`, tidak pernah diselesaikan sebelum command-nya
+   dihapus). Dihapus semua atas persetujuan Director. `total_operations`
+   diperbarui dari 56 → 51.
+3. **2 deskripsi operasi yang salah total (bukan cuma nama file), ditemukan
+   saat memperbaiki wording `progress.json` di sekitarnya**:
+   - `project_register` — deskripsi lama bilang command ini fallback baca
+     `progress.json` untuk `project_id`/`project_name` kalau `--id`/`--name`
+     tidak diberikan. Kode aktual (`project.ts:448-456,513-514`) sudah tidak
+     punya fallback sama sekali — `--id`/`--name` keduanya
+     `.requiredOption()`. Deskripsi, inputs, constraints, dan
+     error_messages diperbaiki mengikuti perilaku nyata.
+   - `roadmap_new` — deskripsi lama bilang ROADMAP baru "ACTIVE kalau belum
+     ada ROADMAP ACTIVE, selain itu DRAFT" — model arbitrase ACTIVE/DRAFT
+     ini sudah dihapus (PLAN-EVAL-01 §3.5 di folder multichain, komentar
+     eksplisit di `chain.ts:994-998`). Kode aktual (`roadmap.ts:39-68`)
+     selalu membuat DRAFT, satu ROADMAP per chain. Diperbaiki.
+
+`scripts/refresh-registries.js` yang ada cuma mendeteksi command BARU yang
+belum terdaftar di registry — tidak mendeteksi entri LAMA yang sudah tidak
+berlaku (seperti 5 entri hantu di atas) atau deskripsi yang jadi salah
+karena perilaku command berubah. Drift jenis ini tidak akan tertangkap
+otomatis di masa depan tanpa audit manual serupa.
