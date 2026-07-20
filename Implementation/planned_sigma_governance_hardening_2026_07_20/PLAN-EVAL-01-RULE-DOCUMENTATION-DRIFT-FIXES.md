@@ -106,9 +106,22 @@ sempat diperbaiki secara sadar.
 `sigma-ecosystem`, tidak bisa "diimplementasikan" lewat plan proyek ini)
 **sudah diperbaiki** (2026-07-20, atas otorisasi eksplisit Director saat
 review plan ini, dieksekusi terpisah dari eksekusi plan repo). Perubahan
-persis mengikuti diff di atas. Bagian `setup/targets/bridge/CLAUDE.md`
-(sumber kanonik/shipped) masih menunggu eksekusi bersama item lain di
-plan ini.
+persis mengikuti diff di atas. `setup/targets/bridge/CLAUDE.md` (sumber
+kanonik/shipped) juga sudah diperbaiki.
+
+**Perluasan (2026-07-20, atas permintaan Director untuk memverifikasi
+bridge stub lain)**: audit awal hanya memeriksa `CLAUDE.md` — ternyata
+`GEMINI.md` dan `AGENTS.md` punya frasa usang yang **identik**, baik versi
+kanonik/shipped (`setup/targets/bridge/GEMINI.md`,
+`setup/targets/bridge/AGENTS.md`) maupun instance di root project ini
+(`GEMINI.md`, `AGENTS.md`). Keempatnya sudah diperbaiki dengan diff yang
+sama persis. `setup/targets/bridge/DEEPSEEK.md` dan
+`setup/targets/bridge/REASONIX.md` **sengaja tidak disentuh** — ditulis
+dengan gaya berbeda dan tidak pernah membuat klaim "belum tersedia" soal
+`sigma memory --<role>` sama sekali, jadi tidak mengandung bug yang sama.
+Diverifikasi ulang dengan `grep -r "after CLI support lands"` ke seluruh
+repo: nol kemunculan di file operatif, sisa kemunculan hanya di dokumen
+Discussion/Implementation (catatan historis, bukan instruksi aktif).
 
 ---
 

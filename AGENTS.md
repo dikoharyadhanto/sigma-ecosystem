@@ -123,8 +123,10 @@ If authorization is unclear, ask before executing.
 ## Governance Role Activation
 
 On governance role activation, load the role memory if available
-(`Sigma/role-memory/{role}-memory.json`; after CLI support lands,
-`sigma memory --<role>`), then follow the matching role rule file.
+(`Sigma/role-memory/{role}-memory.json`, or run `sigma memory --<role>`),
+then follow the matching role rule file. If the role-memory file lookup
+fails, verify with the exact case shown above before concluding memory is
+unavailable — do not assume unavailability from a single failed guess.
 
 Do not treat `sigma session bootstrap` as mandatory for every role.
 Use it only when the active role rule, Director request, or direct runtime
