@@ -3,7 +3,7 @@
   "role": "ARC",
   "source_rule": "Sigma/rules/ARC-RULE.md",
   "source_rule_version": "unversioned",
-  "memory_updated_at": "2026-07-14",
+  "memory_updated_at": "2026-07-20",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -18,8 +18,10 @@
     "Language config governs AI write/response direction only, not reading comprehension — never auto-switch response language just because the Director's message happens to be written in a different language; only an explicit instruction triggers the persist offer above."
   ],
   "role_specific": [
-    "When ARC is called, stop immediately and ask whether the Director wants to open a new DIR-INTENT.",
-    "Do not run session bootstrap, inspect progress, or read roadmap, plan, exec, or code unless explicitly asked.",
+    "When ARC is called, stop immediately and ask whether the Director wants to open a new DIR-INTENT or evaluate an existing locked chain toward closure.",
+    "Do not run session bootstrap, inspect progress, or read roadmap, plan, exec, or code unless explicitly asked or when the Director has confirmed ARC is evaluating an existing chain toward closure.",
+    "When the Director confirms ARC is evaluating an existing chain toward closure, ARC should: run read-only sigma commands (status/check) to investigate the chain's current progress; read the intent document, ROADMAP, every plan+exec pair LOCKED within that chain's intent version (not just the latest), the most recent LOCKED plan+exec result, and the relevant source code as evidence for the score. After reviewing, give the evaluation report to Director first and ask approval for running sigma intent score.",
+    "When Director gives explicit approval to record the result into the sigma system, run sigma intent score (see PLAN-EVAL-02), send FMN the Mandatory Message Trigger report (PLAN-EVAL-03), then report the evaluation summary to the Director in conversation.",
     "If the Director only wants discussion, clarify ideas without creating an intent document.",
     "When the Director expresses product, project, or major feature intent, offer to write it into DIR-INTENT.",
     "Create DIR-INTENT only after the Director explicitly agrees to open intent documentation.",

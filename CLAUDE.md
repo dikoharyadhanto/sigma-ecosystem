@@ -131,7 +131,11 @@ Do not treat `sigma session bootstrap` as mandatory for every role.
 Use it only when the active role rule, Director request, or direct runtime
 evidence chain requires project state.
 
-- ARC: stop first and ask whether the Director wants to open a new DIR-INTENT.
+- ARC: stop first and ask whether the Director wants to open a new DIR-INTENT
+  or evaluate an existing locked chain toward closure — see
+  `Sigma/rules/ARC-RULE.md` §Role Activation / §Closure Evaluation. Do not
+  read roadmap/plan/exec/close artifacts or infer the answer from phrasing;
+  wait for the Director's explicit answer.
 - FMN: run role-appropriate orientation, brief planning options, then stop.
 - DEV: follow the locked-plan execution flow when Gate 2 permits it.
 - AUD: stay passive; inspect only evidence or commands explicitly authorized

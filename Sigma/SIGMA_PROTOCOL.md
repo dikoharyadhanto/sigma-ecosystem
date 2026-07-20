@@ -111,15 +111,15 @@ AI roles follow position response limits, revision limits, and decision cycle ru
 
 | Property | Value |
 | :--- | :--- |
-| Phase | DESIGN |
+| Phase | DESIGN and CLOSE (two-phase bookend role) |
 | Authors | DIR-INTENT (draft) |
 | Lock authority | None — Director only |
 
-Interviews the Director to surface and structure intent. Drafts DIR-INTENT including intent core, constraints, technical direction, assumptions, risk, scope boundary, and evidence requirements. ARC's work ends when DIR-INTENT is LOCKED.
+Interviews the Director to surface and structure intent. Drafts DIR-INTENT including intent core, constraints, technical direction, assumptions, risk, scope boundary, and evidence requirements. In DESIGN, ARC's active drafting work ends when DIR-INTENT is LOCKED — but ARC's role does not end there: at CLOSE, only when the Director confirms it, ARC returns to evaluate whether BUILD delivered against that same DIR-INTENT (see `Sigma/rules/ARC-RULE.md` §Closure Evaluation).
 
 When DIR-INTENT's Comprehensive Research status is NEEDED, ARC investigates using a bounded Research Mode and records sources in `Sigma/reference/reference-list.md` (see Section 5.7). Research must be reviewed by AUD and completed before `sigma intent lock`.
 
-Cannot lock any artifact. Cannot author FMN-PLAN, DEV-EXEC, or DIR-CLOSE. Cannot operate in BUILD or CLOSE phase.
+Cannot lock any artifact. Cannot author FMN-PLAN, DEV-EXEC, or DIR-CLOSE content — DIR-CLOSE content authorship remains exclusively the Director's, even though ARC may operate the `sigma close` CLI lifecycle (see `Sigma/rules/ARC-RULE.md` §CLI Operation Policy). Cannot operate in BUILD phase.
 
 > Detailed role rules: `Sigma/rules/ARC-RULE.md`
 
@@ -666,3 +666,5 @@ Not every governance role has the same activation bootstrap. ARC starts as stop-
 *v0.4 (2026-07-14): Removed `gitignore` and `sync` domains from CLI Command Surface (Section 16) — `gitignore generate`, `sync progress`, and `sync roadmap` were removed as trivial/redundant (PLAN-EVAL-02). No functional doctrine change; no automatic legacy schema/ROADMAP migration path remains for pre-current-schema projects.*
 
 *v0.5 (2026-07-14): ROADMAP restructured from 6 sections to 3 (Overview, Core Process Flow, Stage Overview) and the `roadmap` command family consolidated from 7 to 5 subcommands — `reconcile` and `migrate-core-flow` removed as redundant once the Stage Overview table reads directly from `progress.json` (PLAN-EVAL-03). Stage title/focus/status no longer live in per-stage document sections; they are supplied via `--title`/`--focus` on `plan new`/`plan promote` and stored in `progress.json` only.*
+
+*v0.6 (2026-07-20): §4.1 ARC redefined as a two-phase DESIGN+CLOSE bookend role — ARC may now operate the `sigma close check`/`new`/`lock` CLI lifecycle during Closure Evaluation, moved from FMN (see `Sigma/rules/ARC-RULE.md` §Closure Evaluation, §CLI Operation Policy; `Implementation/planned_sigma_closure_authority_2026_07_20/PLAN-EVAL-01-ARC-CLOSE-CLI-AUTHORITY-MIGRATION.md`). DIR-CLOSE content authorship is unchanged — remains exclusively the Director's. FMN no longer operates `sigma close check`/`lock`.*

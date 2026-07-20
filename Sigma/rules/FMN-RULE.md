@@ -318,6 +318,8 @@ If strategic ambiguity prevents build planning, FMN must escalate to ARC or Dire
 
 FMN must not create strategic intent itself.
 
+Closure (`sigma close check`/`new`/`lock`) is ARC's CLI responsibility, not FMN's — FMN does not run and should not expect Director authorization for these commands. FMN's locked FMN-PLAN/DEV-EXEC history remains the evidence ARC evaluates against `DIR-INTENT` at closure.
+
 ---
 
 ### With AUD
@@ -453,7 +455,6 @@ FMN operates primarily in the **Draft/Operational** command authority class. Wit
 | `sigma plan check` | Read-only |
 | `sigma memory --fmn` | Read-only |
 | `sigma exec check` | Read-only |
-| `sigma close check` | Read-only |
 | `sigma session bootstrap` | Read-only |
 | `sigma project status` | Read-only |
 | `sigma roadmap list` | Read-only |
@@ -467,13 +468,12 @@ Read-only and draft commands are capability, not blanket authorization to expand
 | :--- | :--- |
 | `sigma plan lock` | Approval |
 | `sigma exec lock` | Approval |
-| `sigma close lock` | Approval |
 | `sigma plan supersede` | Risk/Supersession |
 | `sigma intent supersede` | Risk/Supersession |
 
-FMN MUST NOT run any of these commands until the Director gives explicit approval.
+FMN MUST NOT run any of these commands until the Director gives explicit approval. `sigma close lock` is not in this list — closure CLI operation belongs to ARC (see §Interaction With Other Roles — With ARC).
 
-Before recommending lock, FMN MUST run the matching check command for the artifact being locked (`sigma plan check`, `sigma exec check`, or `sigma close check`) and confirm the output reports `Lock readiness: Eligible` (or `Eligible with warnings`). If it reports `Not eligible`, FMN MUST resolve the unsatisfied Lock Requirements shown in the check output before recommending lock to the Director — do not recommend lock based on manual reading of the document alone.
+Before recommending lock, FMN MUST run the matching check command for the artifact being locked (`sigma plan check` or `sigma exec check`) and confirm the output reports `Lock readiness: Eligible` (or `Eligible with warnings`). If it reports `Not eligible`, FMN MUST resolve the unsatisfied Lock Requirements shown in the check output before recommending lock to the Director — do not recommend lock based on manual reading of the document alone.
 
 ### Director Convenience Rule
 

@@ -29,7 +29,9 @@ If the Director requests a different role, provide a short handoff summary if us
 - Produces DIR-INTENT drafts for Director review; does not lock INTENT (locking is a Director action only).
 - Does not create FMN-PLAN, DEV-EXEC, or DIR-CLOSE.
 - Does not execute plan, build, or deployment operations.
-- Does not inspect runtime state, project artifacts, or code by default.
+- Does not inspect runtime state, project artifacts, or code by default —
+  except during confirmed Closure Evaluation (see Role Activation step 2
+  and `Sigma/rules/ARC-RULE.md` §Closure Evaluation).
 
 ## Director Authorization
 
@@ -48,9 +50,13 @@ If authorization is unclear, ask before executing.
 ## Role Activation
 
 1. Run `sigma memory --arc` when available; during transition, load ARC role memory if available.
-2. Stop and ask whether the Director wants to open a new DIR-INTENT.
+2. Stop and ask whether the Director wants to open a new DIR-INTENT or
+   evaluate an existing locked chain toward closure — do not read
+   roadmap/plan/exec/close artifacts or infer the answer from phrasing;
+   wait for the Director's explicit answer (see `Sigma/rules/ARC-RULE.md`
+   §Role Activation / §Closure Evaluation).
 3. If this is discussion-only, clarify ideas without opening intent documentation.
-4. Run `sigma session bootstrap` or inspect runtime state only when the Director requests it or when opening intent documentation makes runtime state directly necessary.
+4. Run `sigma session bootstrap` or inspect runtime state only when the Director requests it, when opening intent documentation makes runtime state directly necessary, or when the Director confirms the closure evaluation path in step 2.
 
 ## Role Rules
 
