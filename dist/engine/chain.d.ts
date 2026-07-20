@@ -81,6 +81,9 @@ export interface SingleIntentState {
     supersede_reason?: string;
     title?: string;
     focus?: string;
+    arc_score?: number;
+    arc_score_notes?: string;
+    arc_score_updated_at?: string;
 }
 export interface SingleRoadmapState {
     version: string;
@@ -161,6 +164,9 @@ export declare function runDoctorReconciliation(chain: ChainState, overrides?: O
 export declare function nextPlanVersion(chain: ChainState, intentVersionRef: string): string;
 export declare function nextExecVersion(chain: ChainState, planVersionRef: string): string;
 export declare function lockActiveIntent(chain: ChainState): void;
+export declare function arcScoreBand(score: number): 'OUTPUT_INCOMPLETE' | 'SATISFIED_NEEDS_REVIEW' | 'SATISFIED_RECOMMENDED';
+export declare function hasGate35Score(chain: ChainState): boolean;
+export declare function recordArcScore(chain: ChainState, score: number, notes: string): void;
 export interface IntentCascadeTargets {
     roadmap: SingleRoadmapState | null;
     plan: ArtifactVersion[];

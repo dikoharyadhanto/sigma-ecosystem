@@ -34,6 +34,9 @@ exports.runDoctorReconciliation = runDoctorReconciliation;
 exports.nextPlanVersion = nextPlanVersion;
 exports.nextExecVersion = nextExecVersion;
 exports.lockActiveIntent = lockActiveIntent;
+exports.arcScoreBand = arcScoreBand;
+exports.hasGate35Score = hasGate35Score;
+exports.recordArcScore = recordArcScore;
 exports.previewIntentSupersedeCascade = previewIntentSupersedeCascade;
 exports.supersedeIntentVersion = supersedeIntentVersion;
 exports.registerRoadmapDraft = registerRoadmapDraft;
@@ -676,6 +679,39 @@ function lockActiveIntent(chain) {
     // (PLAN-EVAL-01 §3.4 — nothing else in this file to demote).
     chain.gates.gate_2_open = hasCleanGate2Chain(chain);
     chain.gates.gate_3_satisfied = hasCleanGate3Chain(chain);
+}
+// ── ARC Satisfaction Score (Gate 3.5, closure-authority PLAN-EVAL-02) ──────
+// Scale is tiered, not additive: 0-50 is output satisfaction (must be full
+// to cross 50 at all), 50-100 is process satisfaction layered strictly on
+// top of a complete output — see ARC-RULE.md §ARC Satisfaction Score
+// Methodology for the full rationale. Band, not the raw number, is the
+// primary signal shown to Director/FMN (mitigates false precision +
+// Goodhart's Law — Discussion/closure-authority-and-arc-scoring-proposal-20260720.md §4).
+function arcScoreBand(score) {
+    if (score < 50)
+        return 'OUTPUT_INCOMPLETE';
+    if (score < 80)
+        return 'SATISFIED_NEEDS_REVIEW';
+    return 'SATISFIED_RECOMMENDED';
+}
+// Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`.
+function hasGate35Score(chain) {
+    return (chain.intent.arc_score ?? -1) >= 50;
+}
+function recordArcScore(chain, score, notes) {
+    if (!Number.isInteger(score) || score < 0 || score > 100) {
+        throw new Error('ARC score must be an integer between 0 and 100');
+    }
+    if (/[|\n\r]/.test(notes)) {
+        throw new Error('--notes cannot contain "|" or a newline (breaks the intent-history.md table and its recovery parser)');
+    }
+    if (chain.intent.state !== 'LOCKED') {
+        throw new Error('ARC score can only be recorded against a LOCKED DIR-INTENT');
+    }
+    chain.intent.arc_score = score;
+    chain.intent.arc_score_notes = notes;
+    chain.intent.arc_score_updated_at = new Date().toISOString();
+    chain.updated_at = chain.intent.arc_score_updated_at;
 }
 // Read-only preflight for `sigma intent supersede` — mirrors
 // previewIntentSupersedeCascade() in progress.ts. No `version` parameter:

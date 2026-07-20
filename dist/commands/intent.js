@@ -123,6 +123,31 @@ function intentCommand() {
             process.exit(1);
         }
     });
+    cmd.command('score <n>')
+        .description('Record ARC Satisfaction Score for a LOCKED DIR-INTENT (Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`)')
+        .requiredOption('--notes <notes>', 'Rationale for the score')
+        .option('--v <version>', 'Chain version to score instead of the active one')
+        .action((n, opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const { chainVersion, data: chain } = opts.v
+                ? { chainVersion: opts.v, data: (0, chain_1.readChain)(projectRoot, opts.v) }
+                : (0, chain_1.readActiveChain)(projectRoot);
+            (0, chain_1.assertChainCanMutate)(chain);
+            const score = Number(n);
+            (0, chain_1.recordArcScore)(chain, score, opts.notes);
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+            (0, intentHistory_1.renderIntentHistoryFile)(projectRoot);
+            const band = (0, chain_1.arcScoreBand)(score);
+            console.log(`ARC Score recorded: ${band} (${score})`);
+            console.log(`Notes: ${opts.notes}`);
+            console.log(`Gate 3.5 (close new): ${(0, chain_1.hasGate35Score)(chain) ? 'OPEN' : 'BLOCKED'}`);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
     cmd.command('supersede')
         .description('Supersede a LOCKED DIR-INTENT chain — cascades SUPERSEDED to its Roadmap/Plan/Exec/Close (requires --director-confirm)')
         .requiredOption('--v <version>', 'Chain version to supersede (e.g. v1) — need not be the active chain')

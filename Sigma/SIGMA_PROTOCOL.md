@@ -389,6 +389,18 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 
 ---
 
+### Gate 3.5 — ARC Satisfaction Score
+
+| Property | Value |
+| :--- | :--- |
+| Blocks | `sigma close new` |
+| Pre-condition | `chain.intent.arc_score` recorded and >= 50 (`OUTPUT_INCOMPLETE` threshold) via `sigma intent score <n> --notes "..."` |
+| CLI error | `GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. Run: sigma intent score <n> --notes "..."` |
+
+Gate 3.5 is deliberately narrower than Gate 1/1.5/2/3: it gates only `close new`, never `close lock` — the DIR-CLOSE verdict checkbox remains the Director's sole, unmodified closure authority. There is no `sigma override` for this gate below 50; a chain intent version may be left unclosed indefinitely (Sigma's existing multi-chain-version model is the release valve — Director may keep iterating PLAN/EXEC on the same chain or open a new intent version). Between 50 and 79 the gate is open but ARC does not recommend closure; the Director may still run `close lock` through ordinary explicit authorization. See `Sigma/rules/ARC-RULE.md` §ARC Satisfaction Score Methodology for the scoring scale and evaluation doctrine.
+
+---
+
 ## 13. Folder-to-Phase Mapping
 
 | Folder | Phase | Artifacts |
@@ -463,7 +475,7 @@ Findings Section Authorization.
 | :--- | :--- |
 | `project` | Project initialization, status, lifecycle management |
 | `session` | Session orientation — read-only runtime context for agents when role flow or Director request requires it |
-| `intent` | DIR-INTENT lifecycle (new, lock, status, list) |
+| `intent` | DIR-INTENT lifecycle (new, lock, score, status, list) |
 | `plan` | FMN-PLAN lifecycle (new, lock, supersede, queue, status, list) |
 | `exec` | DEV-EXEC lifecycle (new, lock, supersede, status, list) |
 | `close` | DIR-CLOSE lifecycle (new, lock, status) |
@@ -504,8 +516,10 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 | :--- | :--- | :---: | :---: |
 | Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check` | Yes | No |
 | Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `reference update`, `send` | Yes, within role boundary | Usually no |
-| Approval | `intent lock`, `roadmap activate`, `plan lock`, `exec lock`, `close lock` | Only after Director approval | Yes |
+| Approval | `intent lock`, `roadmap activate`, `plan lock`, `exec lock`, `close lock`, `intent score`¹ | Only after Director approval | Yes |
 | Risk / Supersession | `intent supersede --director-confirm`, `plan supersede`, destructive/reset | Only after Director approval | Yes |
+
+¹ `intent score` is Approval-class with a narrower scope than the others in its row: what the Director approves is the act of **committing** the score to `progress-v<N>.json` — not the **content** of the score itself, which ARC already reasoned through and reported in conversation beforehand (see `Sigma/rules/ARC-RULE.md` §ARC Satisfaction Score Methodology). Authorization language for this command is deliberately distinct from ordinary Approval phrasing (e.g. "catat skor", "masukkan skor ke sigma") — not "do you agree with this score."
 
 ### Explicit Approval Rule
 
@@ -668,3 +682,5 @@ Not every governance role has the same activation bootstrap. ARC starts as stop-
 *v0.5 (2026-07-14): ROADMAP restructured from 6 sections to 3 (Overview, Core Process Flow, Stage Overview) and the `roadmap` command family consolidated from 7 to 5 subcommands — `reconcile` and `migrate-core-flow` removed as redundant once the Stage Overview table reads directly from `progress.json` (PLAN-EVAL-03). Stage title/focus/status no longer live in per-stage document sections; they are supplied via `--title`/`--focus` on `plan new`/`plan promote` and stored in `progress.json` only.*
 
 *v0.6 (2026-07-20): §4.1 ARC redefined as a two-phase DESIGN+CLOSE bookend role — ARC may now operate the `sigma close check`/`new`/`lock` CLI lifecycle during Closure Evaluation, moved from FMN (see `Sigma/rules/ARC-RULE.md` §Closure Evaluation, §CLI Operation Policy; `Implementation/planned_sigma_closure_authority_2026_07_20/PLAN-EVAL-01-ARC-CLOSE-CLI-AUTHORITY-MIGRATION.md`). DIR-CLOSE content authorship is unchanged — remains exclusively the Director's. FMN no longer operates `sigma close check`/`lock`.*
+
+*v0.7 (2026-07-20): Added Gate 3.5 — ARC Satisfaction Score (§7), a new pre-condition on `sigma close new` (not `close lock`) recorded via the new command `sigma intent score <n> --notes "..."`. Added `intent score` to the Command Authority Classes table (§16A) as Approval-class with an explicit footnote distinguishing "approve committing the score" from "approve the score's content." See `Sigma/rules/ARC-RULE.md` §ARC Satisfaction Score Methodology and `Implementation/planned_sigma_closure_authority_2026_07_20/PLAN-EVAL-02-GATE-3-5-ARC-SATISFACTION-SCORE.md`.*

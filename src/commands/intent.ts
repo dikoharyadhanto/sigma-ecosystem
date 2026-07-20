@@ -15,6 +15,9 @@ import {
   assertChainCanMutate,
   previewIntentSupersedeCascade,
   supersedeIntentVersion,
+  arcScoreBand,
+  hasGate35Score,
+  recordArcScore,
 } from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
@@ -138,6 +141,33 @@ export function intentCommand(): Command {
         writeChain(projectRoot, chainVersion, chain);
         renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — trigger 2/4
         console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma roadmap new`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  cmd.command('score <n>')
+    .description('Record ARC Satisfaction Score for a LOCKED DIR-INTENT (Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`)')
+    .requiredOption('--notes <notes>', 'Rationale for the score')
+    .option('--v <version>', 'Chain version to score instead of the active one')
+    .action((n: string, opts: { notes: string; v?: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const { chainVersion, data: chain } = opts.v
+          ? { chainVersion: opts.v, data: readChain(projectRoot, opts.v) }
+          : readActiveChain(projectRoot);
+        assertChainCanMutate(chain);
+
+        const score = Number(n);
+        recordArcScore(chain, score, opts.notes);
+        writeChain(projectRoot, chainVersion, chain);
+        renderIntentHistoryFile(projectRoot);
+
+        const band = arcScoreBand(score);
+        console.log(`ARC Score recorded: ${band} (${score})`);
+        console.log(`Notes: ${opts.notes}`);
+        console.log(`Gate 3.5 (close new): ${hasGate35Score(chain) ? 'OPEN' : 'BLOCKED'}`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

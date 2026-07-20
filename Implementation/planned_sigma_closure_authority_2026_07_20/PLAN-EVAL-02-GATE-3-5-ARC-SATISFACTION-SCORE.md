@@ -2,7 +2,7 @@
 
 **Sumber**: [../../Discussion/closure-authority-and-arc-scoring-proposal-20260720.md](../../Discussion/closure-authority-and-arc-scoring-proposal-20260720.md) Section 4, keputusan #2–#14, #16 (Section 9).
 **Tanggal**: 2026-07-20
-**Status**: DRAFT — belum dieksekusi, menunggu otorisasi eksplisit Director.
+**Status**: **EXECUTED (2026-07-20)**. Semua bagian di bawah (schema `chain.ts`, command `sigma intent score`, kolom baru `intent-history.md`, ambang parser `reconstruct.ts`, Gate 3.5 di `SIGMA_PROTOCOL.md` §7, footnote §16A, dan section metodologi baru di `ARC-RULE.md`) sudah diimplementasikan dan diverifikasi (`tsc --noEmit` bersih, 214 test suite lulus, smoke test manual end-to-end untuk happy path/validasi/gate/reconstruct roundtrip). Otorisasi eksplisit Director diberikan setelah open item #2 (daftar frasa otorisasi-commit) diresolusi.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma.
 
 ---
@@ -130,11 +130,10 @@ sigma intent score <n> --notes "<rationale>" [--v <version>]
   Gate 3.5 (close new): OPEN
   ```
 
-**Open item (dicatat, belum diselesaikan di plan ini)**: daftar frasa
-otorisasi-commit yang dianggap cukup ("catat", "simpan skornya", "record
-it") vs bahasa Approval biasa — dokumen sumber eksplisit menyebut ini belum
-dirumuskan (Section 10 poin 4). Perlu dirumuskan Director sebelum
-`ARC-RULE.md` bagian ini ditulis final.
+**Open item — RESOLVED (2026-07-20)**: daftar frasa otorisasi-commit
+dirumuskan Director sebagai — "catat skor", "catat skor ke sigma",
+"masukkan skor", "masukkan skor ke sigma" (atau padanan tak-ambigu yang
+setara). Ditulis final ke `ARC-RULE.md` §ARC Satisfaction Score Methodology.
 
 ---
 
@@ -299,10 +298,16 @@ perlu ditulis sebagai section baru di `ARC-RULE.md`, minimal mencakup:
   perubahan schema justru inti dari fitur, bukan opsional).
 - Ambang `cells.length` di `reconstruct.ts` (Section 4 di atas) butuh
   verifikasi langsung terhadap perilaku `String.split('|')` sebelum
-  diimplementasikan sebagai angka final.
+  diimplementasikan sebagai angka final. **Verified (2026-07-20)**: baris
+  5-kolom lama split jadi 7 elemen, baris 7-kolom baru split jadi 9 elemen
+  (margin 1 tetap konsisten) — dikonfirmasi lewat `String.split('|')`
+  langsung dan lewat `sigma doctor --reconstruct` end-to-end pada proyek
+  scratch (title/focus recovery tetap berhasil dengan tabel 7-kolom).
 
 ## Langkah selanjutnya
 
-Bukan untuk dieksekusi langsung. Menunggu: (1) Director merumuskan daftar
-frasa otorisasi-commit (open item di atas), (2) otorisasi eksplisit Director
-untuk mulai edit schema/kode/rule file.
+**Selesai.** Kedua prasyarat tercapai 2026-07-20: (1) Director merumuskan
+daftar frasa otorisasi-commit (open item di atas, RESOLVED), (2) otorisasi
+eksplisit Director diberikan untuk mulai edit schema/kode/rule file. Lihat
+`README.md` di folder ini untuk status keseluruhan dan urutan eksekusi
+PLAN-EVAL-03/04 selanjutnya (menunggu review Director sebelum dilanjutkan).

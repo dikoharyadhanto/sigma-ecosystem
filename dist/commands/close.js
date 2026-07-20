@@ -43,6 +43,10 @@ function closeCommand() {
             if (!(0, chain_1.hasCleanGate3Chain)(chain)) {
                 throw new Error('GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain). Run: sigma exec lock');
             }
+            if (!(0, chain_1.hasGate35Score)(chain)) {
+                throw new Error('GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. ' +
+                    'Run: sigma intent score <n> --notes "..."');
+            }
             const version = chain.chain_version;
             const relPath = path_1.default.join('Sigma', 'close', `DIR-CLOSE-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
@@ -50,6 +54,10 @@ function closeCommand() {
             (0, chain_1.registerCloseDraft)(chain, relPath);
             (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
             console.log(`Created: ${relPath}`);
+            if (chain.intent.arc_score !== undefined && (0, chain_1.arcScoreBand)(chain.intent.arc_score) === 'SATISFIED_NEEDS_REVIEW') {
+                console.log(`Note: ARC Satisfaction Score is SATISFIED_NEEDS_REVIEW (${chain.intent.arc_score}) — ARC does not ` +
+                    'yet recommend closure. Director may still proceed via close lock through explicit authorization.\n');
+            }
             console.log('Running automatic validation...\n');
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'close');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);

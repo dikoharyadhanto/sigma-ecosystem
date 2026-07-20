@@ -11,6 +11,8 @@ import {
   lockActiveClose,
   lockActiveRoadmap,
   hasCleanGate3Chain,
+  hasGate35Score,
+  arcScoreBand,
 } from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
@@ -59,6 +61,13 @@ export function closeCommand(): Command {
           );
         }
 
+        if (!hasGate35Score(chain)) {
+          throw new Error(
+            'GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. ' +
+            'Run: sigma intent score <n> --notes "..."'
+          );
+        }
+
         const version = chain.chain_version;
         const relPath = path.join('Sigma', 'close', `DIR-CLOSE-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
@@ -67,6 +76,12 @@ export function closeCommand(): Command {
         registerCloseDraft(chain, relPath);
         writeChain(projectRoot, chainVersion, chain);
         console.log(`Created: ${relPath}`);
+        if (chain.intent.arc_score !== undefined && arcScoreBand(chain.intent.arc_score) === 'SATISFIED_NEEDS_REVIEW') {
+          console.log(
+            `Note: ARC Satisfaction Score is SATISFIED_NEEDS_REVIEW (${chain.intent.arc_score}) — ARC does not ` +
+            'yet recommend closure. Director may still proceed via close lock through explicit authorization.\n'
+          );
+        }
         console.log('Running automatic validation...\n');
         const report = validateSigmaDocFile(absPath, 'close');
         printSigmaDocReport(report, projectRoot);

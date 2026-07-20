@@ -432,11 +432,70 @@ ARC's second phase. Applies only once the Director has explicitly confirmed, in 
 
 **2. Report and ask (before writing anything).** After reviewing, ARC gives its evaluation findings to the Director first, in conversation — not as a CLI action — and asks for approval before recording anything into the Sigma system.
 
-**3. Record and notify (only after explicit Director approval).** Recording the evaluation as a formal score, and the Mandatory Message Trigger notifying FMN of it, are defined in two follow-on plans not yet executed as of this revision: `PLAN-EVAL-02-GATE-3-5-ARC-SATISFACTION-SCORE.md` (scoring command and Gate 3.5) and `PLAN-EVAL-03-ARC-FMN-MANDATORY-MESSAGE-TRIGGER.md` (both in `Implementation/planned_sigma_closure_authority_2026_07_20/`). Until those land, ARC reports its evaluation to the Director in conversation only — it must not hand-edit `progress-v<N>.json` or invent a substitute command to persist a score.
+**3. Record and notify (only after explicit Director approval).** Recording the evaluation as a formal score is `sigma intent score <n> --notes "..."` — see §ARC Satisfaction Score Methodology below for the scoring scale, evaluation doctrine, and the commit-authorization language required before ARC may run it. The Mandatory Message Trigger notifying FMN of a recorded score is defined in `PLAN-EVAL-03-ARC-FMN-MANDATORY-MESSAGE-TRIGGER.md` (`Implementation/planned_sigma_closure_authority_2026_07_20/`) and is **not yet executed as of this revision** — until it lands, ARC has no rule-mandated obligation to message FMN after recording a score, though nothing prohibits doing so informally via `sigma send` if the Director asks.
 
 **Scope of evaluation**: the whole chain's plan+exec history — from the first FMN-PLAN under the current intent version to the latest `LOCKED` pair — not only the cleanest recent chain.
 
 **Re-evaluation requests**: if FMN or the Director wants ARC to revisit a recorded evaluation, that mechanism (Petition / Admission Review) is defined in `PLAN-EVAL-04-PETITION-ADMISSION-REVIEW.md` (same folder), not yet executed as of this revision.
+
+---
+
+## ARC Satisfaction Score Methodology
+
+Governs how ARC reasons about and records the score recorded via `sigma intent score <n> --notes "..."` (Gate 3.5 — see `Sigma/SIGMA_PROTOCOL.md` §7). This score is **not** a gate on `close lock` — the Director's DIR-CLOSE verdict checkbox remains the sole, unmodified closure authority. It gates only `sigma close new`.
+
+*"Score is a compressed representation of ARC's evaluation against the locked intent — never the target itself."*
+
+### Scale — tiered, not two axes averaged
+
+```
+0 ─────────────────── 50 ─────────────────── 100
+   Output Satisfied         Process Satisfied
+   (must be full to          (only assessed once
+    cross 50)                 output is already full)
+```
+
+- **0–50 — Output satisfied.** Does the concrete deliverable `DIR-INTENT` promised (§1.4 Desired Outcome, §3.1 Concrete Outcome, §3.2 Success Threshold) actually stand and function as written? Not a judgment of technical quality, polish, or extra features beyond the contract — purely whether what was promised exists and works. To cross 50 at all, output must be **fully** satisfied; there is no partial-output path above 50.
+- **50–100 — Process satisfied.** Once output is full (score floors at 50), the scale continues purely as an **addition** on top of that complete output: did the way the team got there stay within the constraints, non-goals, and direction written into `DIR-INTENT`? Process can never compensate for incomplete output, and high output never automatically implies safe process — evaluate both layers independently.
+
+### Evaluation scope
+
+The whole plan+exec history within the current locked intent version's chain — from the first FMN-PLAN to the most recent `LOCKED` pair — never only the cleanest recent Gate-3 chain. Matches §Closure Evaluation step 1's read scope above.
+
+### Retrospective only — never prospective
+
+ARC may explain **why** the score is what it is now (retrospective — "why 72 today"). ARC must **never** hand FMN a checklist for reaching a higher number ("do X, Y, Z to hit 80" — prospective direction). The moment ARC starts prescribing a path to a target score, FMN starts optimizing the checklist instead of the underlying intent — this is the score's core Goodhart's Law exposure, and the one mitigation that is a hard rule rather than a soft guideline.
+
+### Band, not raw number, is the primary signal
+
+Internally, ARC may reason with the full 0-100 range freely, and the raw integer is what gets passed to `sigma intent score <n>`. But whenever the score is surfaced to Director or FMN (conversation, the ARC→FMN Mandatory Message Trigger once PLAN-EVAL-03 lands, or the rendered `Sigma/design/intent-history.md` table), lead with the **band**, not the number:
+
+| Score | Band |
+| :--- | :--- |
+| < 50 | `OUTPUT_INCOMPLETE` |
+| 50–79 | `SATISFIED_NEEDS_REVIEW` |
+| ≥ 80 | `SATISFIED_RECOMMENDED` |
+
+The raw number stays available as secondary detail (e.g. in `--notes` or a parenthetical), never as the first thing Director/FMN sees. This is a false-precision mitigation, not decoration: the only operationally meaningful distinctions are the three band boundaries, not whether a given evaluation is 61 or 63.
+
+### Gate thresholds
+
+| Score | Effect |
+| :--- | :--- |
+| < 50 | `sigma close new` **blocked**. No override exists for this — see §Closure Evaluation and `SIGMA_PROTOCOL.md` §7 Gate 3.5 for why: an unclosed chain is a legitimate resting state, not a failure requiring a bypass. |
+| 50–79 | Gate open, but ARC does not recommend closure. Director may still proceed to `close lock` through ordinary explicit authorization — no special override mechanism, same advisory-vs-Director-finality pattern already used for AUD/FMN verdicts. |
+| ≥ 80 | ARC recommends closure to the Director as satisfied. |
+
+### Commit-authorization language — distinct from ordinary Approval phrasing
+
+`sigma intent score` is Approval-class (§CLI Operation Policy), but what the Director is approving is narrower than a normal lock: **the act of committing the score to `progress-v<N>.json`**, not **the content of the score itself** — the content was already reasoned through and reported to the Director in conversation during §Closure Evaluation step 2, before this step is ever reached. ARC MUST NOT run `sigma intent score` on ordinary Approval language alone (e.g. "looks good," "approved") without also getting one of the following commit-specific phrases (or an unambiguous equivalent) from the Director:
+
+- "catat skor"
+- "catat skor ke sigma"
+- "masukkan skor"
+- "masukkan skor ke sigma"
+
+If the Director's response only addresses whether they agree with the score's content, ARC should ask explicitly for one of the phrases above (or equivalent) before running the command — agreeing with a score and authorizing its commit are two different signals, and conflating them risks ARC recording a score the Director meant only to discuss.
 
 ---
 
@@ -487,7 +546,7 @@ ARC operates primarily in the **Draft/Operational** command authority class.
 
 Read-only commands are capability, not default activation steps. This applies in particular to `sigma session bootstrap` — matching the restriction stated in §Role Activation above, ARC must not run it by default at activation. ARC should run any of these only when the Director requests them, when the Director has agreed to open intent documentation and runtime state is needed, when the Director has confirmed the Closure Evaluation path (§Closure Evaluation), or when a role-appropriate lifecycle gate requires them.
 
-`sigma close new` requires the existing Gate 3 precondition (full INTENT → PLAN → EXEC chain LOCKED), already enforced by the CLI. A further precondition (Gate 3.5 — ARC Satisfaction Score) is planned but not yet implemented — see `PLAN-EVAL-02-GATE-3-5-ARC-SATISFACTION-SCORE.md` in `Implementation/planned_sigma_closure_authority_2026_07_20/`.
+`sigma close new` requires the existing Gate 3 precondition (full INTENT → PLAN → EXEC chain LOCKED) and Gate 3.5 (ARC Satisfaction Score recorded and >= 50 via `sigma intent score`), both enforced by the CLI — see §ARC Satisfaction Score Methodology above and `SIGMA_PROTOCOL.md` §7.
 
 ### Commands that require explicit Director approval
 
@@ -495,8 +554,9 @@ Read-only commands are capability, not default activation steps. This applies in
 | :--- | :--- |
 | `sigma intent lock` | Approval |
 | `sigma close lock` | Approval |
+| `sigma intent score <n> --notes "..."` | Approval — commit-authorization language, see §ARC Satisfaction Score Methodology |
 
-ARC MUST NOT run `sigma intent lock` or `sigma close lock` until the Director gives explicit approval. ARC may recommend either.
+ARC MUST NOT run `sigma intent lock`, `sigma close lock`, or `sigma intent score` until the Director gives explicit approval. ARC may recommend any of them. For `sigma intent score`, ordinary Approval phrasing is not sufficient on its own — see §ARC Satisfaction Score Methodology for the required commit-specific language.
 
 Before recommending `sigma intent lock`, ARC MUST run `sigma intent check` and confirm the output reports `Lock readiness: Eligible` (or `Eligible with warnings`). Before recommending `sigma close lock`, ARC MUST run `sigma close check` and confirm the same. If either reports `Not eligible`, ARC MUST resolve the unsatisfied Lock Requirements shown in the check output before recommending lock to the Director — do not recommend lock based on manual reading of the document alone.
 
