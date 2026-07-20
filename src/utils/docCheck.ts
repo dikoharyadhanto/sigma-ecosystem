@@ -149,6 +149,7 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
       'PRE_BUILD_TEST_CONTRACT',
       'DEV_HANDOFF_INSTRUCTIONS',
       'AUD_FINDINGS',
+      'DIRECTORS_SUMMARY',
     ],
   },
   exec: {
@@ -172,6 +173,7 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
       'DEV_COMPLETION_STATEMENT',
       'FMN_POST_BUILD_REVIEW',
       'DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS',
+      'DIRECTORS_SUMMARY',
     ],
   },
   close: {

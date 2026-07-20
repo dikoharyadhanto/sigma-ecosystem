@@ -368,3 +368,24 @@ If none, write:
 If none, write:
 
 > No follow-up actions taken.
+
+---
+
+<!-- SIGMA:DEV_EXEC:SECTION:DIRECTORS_SUMMARY -->
+## 17. Director's Summary
+
+> **Filled by DEV or FMN — Append-only.**
+> This is a concise, human-readable summary specifically for the Director. DEV and FMN may freely collaborate to fill this section.
+> **Recommended timing:** Best filled after receiving the FMN Post-Build Review, so it captures the final execution state and readiness.
+
+### Current State / Quick Status
+
+[...]
+
+### Key Decisions
+
+[...]
+
+### Open Risks / Next Actions
+
+[...]

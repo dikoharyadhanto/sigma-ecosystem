@@ -241,7 +241,7 @@ Control sentence: ROADMAP says how many big stages. FMN-PLAN says what to build 
 
 ## FMN-PLAN Creation Rules
 
-FMN-PLAN contains exactly 6 sections — all pre-build, all written before lock, all immutable after lock:
+FMN-PLAN contains exactly 8 sections — Sections 1-6 are pre-build and immutable after lock. Sections 7 and 8 capture final advisory/summary state:
 
 - Section 1: Source Alignment
 - Section 2: Work Order / Task Plan
@@ -249,8 +249,11 @@ FMN-PLAN contains exactly 6 sections — all pre-build, all written before lock,
 - Section 4: Implementation Constraints
 - Section 5: Pre-Build Test Contract
 - Section 6: DEV Handoff Instructions
+- Section 7: AUD Findings
+- Section 8: Director's Summary
 
-FMN does not write post-build content into FMN-PLAN. Post-build review (test results, FMN findings, AUD findings, Director observations) is recorded in DEV-EXEC Sections 13–16.
+FMN does not write post-build content into FMN-PLAN. Post-build review (test results, FMN findings, Director observations) is recorded in DEV-EXEC.
+FMN MUST fill `Section 8: Director's Summary` to provide a concise, human-readable summary of the plan. The recommended timing to fill this is after receiving the AUD advisory verdict or after confirming `SKIP_FOR_AUDIT` with the Director, so the summary captures the final state before lock.
 
 FMN MUST NOT include runtime metadata managed by Sigma CLI or `progress.json`.
 

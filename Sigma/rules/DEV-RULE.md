@@ -127,6 +127,9 @@ DEV MUST document implementation work in `DEV-EXEC`.
 - Issues Encountered
 - Known Limitations / Technical Debt
 - DEV Completion Statement
+- Director's Summary
+
+DEV (or FMN) MUST fill the `Director's Summary` section to provide a concise, human-readable summary of the execution. This section can be freely filled by either DEV or FMN. The recommended timing to fill this is after receiving the FMN Post-Build Review, so it accurately captures the final execution state and readiness.
 
 DEV MUST NOT include runtime metadata managed by Sigma CLI or `progress.json`.
 

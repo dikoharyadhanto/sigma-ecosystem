@@ -144,3 +144,24 @@ DEV should report in DEV-EXEC:
 **Recommended Director Action**:
 
 [...]
+
+---
+
+<!-- SIGMA:FMN_PLAN:SECTION:DIRECTORS_SUMMARY -->
+## 8. Director's Summary
+
+> **Filled by FMN — Before lock.**
+> This is a concise, human-readable summary specifically for the Director.
+> **Recommended timing:** Fill this section after receiving the AUD advisory verdict or after the Director approves `SKIP_FOR_AUDIT` to capture the final pre-lock state.
+
+### Current State / Quick Status
+
+[...]
+
+### Key Decisions
+
+[...]
+
+### Open Risks / Next Actions
+
+[...]
