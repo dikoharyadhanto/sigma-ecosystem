@@ -80,7 +80,7 @@ When referencing artifacts in any output to the Director, use human labels:
 
 ### Pre-lock verification (required)
 
-Before presenting the approval prompt below for `sigma plan lock`, `sigma exec lock`, or `sigma close lock`, run the matching check command first (`sigma plan check`, `sigma exec check`, or `sigma close check`). Only present the approval prompt once check reports `Lock readiness: Eligible` (or `Eligible with warnings`) for the artifact being locked. If check reports `Not eligible`, resolve the unsatisfied Lock Requirements shown in its output before asking the Director to approve lock.
+Before presenting the approval prompt below for `sigma plan lock` or `sigma exec lock`, run the matching check command first (`sigma plan check` or `sigma exec check`). Only present the approval prompt once check reports `Lock readiness: Eligible` (or `Eligible with warnings`) for the artifact being locked. If check reports `Not eligible`, resolve the unsatisfied Lock Requirements shown in its output before asking the Director to approve lock. Closure (`sigma close check`/`close lock`) is ARC's CLI responsibility, not FMN's — do not run or prompt for these.
 
 ### Approval prompt format
 

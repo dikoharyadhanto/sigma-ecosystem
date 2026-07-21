@@ -4,7 +4,11 @@
 luar scope diskusi sumber manapun — bukan berasal dari
 `Discussion/closure-authority-and-arc-scoring-proposal-20260720.md`.
 **Tanggal**: 2026-07-20
-**Status**: DRAFT — belum dieksekusi, menunggu otorisasi eksplisit Director.
+**Status**: **EXECUTED (2026-07-21)**. Fix wajib §2.1 diterapkan ke 4 file
+`fmn.md`/`SKILL.md` (claude_code, codex, antigravity, reasonix). Fix
+opsional §2.2 juga diterapkan — Director memutuskan menambahkannya sekarang
+bersamaan — ke 4 file `arc.md`/`SKILL.md` yang sama. Otorisasi eksplisit
+Director diberikan 2026-07-21.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan
 FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma.
 
@@ -125,6 +129,9 @@ tetap jadi sumber kebenaran).
 
 ## Langkah selanjutnya
 
-Bukan untuk dieksekusi langsung. Menunggu otorisasi eksplisit Director untuk
-mulai edit — termasuk keputusan soal 2.2 (opsional) sebelum atau terpisah
-dari 2.1 (wajib).
+**Selesai.** Director memutuskan mengeksekusi §2.2 (opsional) bersamaan
+dengan §2.1 (wajib), bukan terpisah. Kedelapan file (4 `fmn.md`/`SKILL.md` +
+4 `arc.md`/`SKILL.md`) sudah konsisten dengan wewenang closure ARC yang
+berlaku sejak PLAN-EVAL-01. `bridge/`, `cursor/SIGMA.mdc`, dan
+`report.md`/`report/SKILL.md` tetap tidak disentuh sesuai verifikasi §1 di
+atas — sudah generik/benar.
