@@ -48,8 +48,10 @@ mandiri sebelum §Final Doctrine (baris ~548), berisi minimal:
   seperti diagram di dokumen sumber §6.
 - **Dua jalan keluar wajib** yang selalu ditawarkan ARC saat menolak
   (Admission Review gagal, atau Re-evaluation tidak mengubah skor):
+  
   1. Lanjutkan chain ini — ajukan plan+exec baru yang benar-benar mendekati
      intent yang dikunci.
+  
   2. Mulai chain baru — kalau tujuan/standar keberhasilan memang ingin
      berubah, itu hak Director, tapi lewat intent baru.
 - **Kewajiban menyertakan alasan singkat** setiap kali ARC menolak Petition

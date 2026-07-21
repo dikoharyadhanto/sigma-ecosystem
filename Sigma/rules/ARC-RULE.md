@@ -432,7 +432,7 @@ ARC's second phase. Applies only once the Director has explicitly confirmed, in 
 
 **2. Report and ask (before writing anything).** After reviewing, ARC gives its evaluation findings to the Director first, in conversation — not as a CLI action — and asks for approval before recording anything into the Sigma system.
 
-**3. Record and notify (only after explicit Director approval).** Recording the evaluation as a formal score is `sigma intent score <n> --notes "..."` — see §ARC Satisfaction Score Methodology below for the scoring scale, evaluation doctrine, and the commit-authorization language required before ARC may run it. The Mandatory Message Trigger notifying FMN of a recorded score is defined in `PLAN-EVAL-03-ARC-FMN-MANDATORY-MESSAGE-TRIGGER.md` (`Implementation/planned_sigma_closure_authority_2026_07_20/`) and is **not yet executed as of this revision** — until it lands, ARC has no rule-mandated obligation to message FMN after recording a score, though nothing prohibits doing so informally via `sigma send` if the Director asks.
+**3. Record and notify (only after explicit Director approval).** Recording the evaluation as a formal score is `sigma intent score <n> --notes "..."` — see §ARC Satisfaction Score Methodology below for the scoring scale, evaluation doctrine, and the commit-authorization language required before ARC may run it. Recording the score is immediately followed by the Mandatory Message Trigger notifying FMN — see §Mandatory Message Triggers, Trigger 2 below.
 
 **Scope of evaluation**: the whole chain's plan+exec history — from the first FMN-PLAN under the current intent version to the latest `LOCKED` pair — not only the cleanest recent chain.
 
@@ -468,7 +468,7 @@ ARC may explain **why** the score is what it is now (retrospective — "why 72 t
 
 ### Band, not raw number, is the primary signal
 
-Internally, ARC may reason with the full 0-100 range freely, and the raw integer is what gets passed to `sigma intent score <n>`. But whenever the score is surfaced to Director or FMN (conversation, the ARC→FMN Mandatory Message Trigger once PLAN-EVAL-03 lands, or the rendered `Sigma/design/intent-history.md` table), lead with the **band**, not the number:
+Internally, ARC may reason with the full 0-100 range freely, and the raw integer is what gets passed to `sigma intent score <n>`. But whenever the score is surfaced to Director or FMN (conversation, the ARC→FMN Mandatory Message Trigger — §Mandatory Message Triggers, Trigger 2 — or the rendered `Sigma/design/intent-history.md` table), lead with the **band**, not the number:
 
 | Score | Band |
 | :--- | :--- |
@@ -625,6 +625,47 @@ Risks to watch: [...]
 ```
 
 ARC must not wait for Director to prompt this message. Sending it is part of completing the lock action.
+
+### Trigger 2 — After a new plan+exec LOCKED pair enters the chain
+
+ARC MUST send a message to FMN whenever a new FMN-PLAN + DEV-EXEC pair becomes `LOCKED` within the current intent version's chain — not on every raw `sigma intent score` invocation by itself. This is also the ideal point for ARC to perform a score re-assessment (§ARC Satisfaction Score Methodology).
+
+**Trigger condition — version edge case:** if the last recorded evaluation already covers up through the v1.5 plan+exec pair and the chain advances to a new v1.6 pair, a new evaluation at v1.6 is valid and fires this trigger. If ARC instead re-scores at v1.5 again with no new pair since, that is also valid and not CLI-prohibited — but it can produce a different score/notes for the same version, which reads as inconsistent to Director/FMN. Conclusion: ideally there is at least one new plan+exec pair since the last evaluation before ARC re-scores. This is **soft guidance for ARC's own judgment, not a CLI gate** — nothing in the CLI blocks re-scoring an already-evaluated version.
+
+Message must include, at minimum:
+
+1. Current score as a **band** (`OUTPUT_INCOMPLETE` / `SATISFIED_NEEDS_REVIEW` / `SATISFIED_RECOMMENDED` — §ARC Satisfaction Score Methodology, "Band, not raw number, is the primary signal") as the lead signal, not the raw number.
+2. The version of the last `LOCKED` plan+exec pair the evaluation is grounded in — the evaluation's scope is always cumulative from the earliest chain version up through that pair (§ARC Satisfaction Score Methodology, "Evaluation scope"), never just the latest delta.
+3. What is lacking relative to `DIR-INTENT` — retrospective evaluation only, never a prospective checklist. Same prohibition as §ARC Satisfaction Score Methodology, "Retrospective only — never prospective" — cross-referenced here, not restated in full.
+4. The reasoning behind the recorded score.
+
+```
+sigma send --from ARC --to FMN --type CHECK --action REVIEW \
+  --subject "ARC Satisfaction Score recorded — {BAND} (DIR-INTENT-v{X})" \
+  --message-file <path-to-message-body> \
+  --related-artifact "DIR-INTENT-v{X}"
+```
+
+- `--type CHECK`: this message reports a status/assessment, not a question (`QUESTION`) or a risk (`RISK`).
+- `--action REVIEW`: FMN is expected to review the content, not merely receive it as information (`FYI`).
+- Use `--message-file`, not `--message`, for the same reason as Trigger 1 above — the required content below is multi-line and `--message` is truncated by shells on newlines.
+
+Message file content:
+
+```
+ARC Satisfaction Score recorded for DIR-INTENT-v{X}: {BAND} ({raw score}/100)
+Grounded in: FMN-PLAN-v{Y} + DEV-EXEC-v{Y} (LOCKED)
+
+What's lacking relative to DIR-INTENT:
+1. [...]
+2. [...]
+
+Rationale: [...]
+```
+
+**FMN reply obligation:** FMN is **not required** to reply to this trigger — free discussion or clarification is optional. If FMN wants more than free discussion — i.e. wants ARC to formally re-evaluate the score — the correct path is the Petition mechanism (`PLAN-EVAL-04-PETITION-ADMISSION-REVIEW.md`, not yet executed as of this revision), not an ordinary message reply. This line is written explicitly so other FMN instances do not mistake a free-form reply as sufficient to force re-evaluation.
+
+ARC must not wait for Director to prompt this message. Sending it is part of completing the score-recording step.
 
 ### General Message Policy
 
