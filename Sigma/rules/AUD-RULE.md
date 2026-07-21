@@ -568,6 +568,13 @@ Doctrine:
 - Is the new Intent boundary clear?
 - Would the document create trust for a future reader?
 - Should this close, update current exec, or open a new plan?
+- Is ARC's pattern of Admission Decisions (accept/reject Petitions) consistent
+  with the evidence presented — not merely "does AUD agree with the score,"
+  but "is ARC accepting/rejecting Petitions for reasons that track evidence,
+  not convenience or bias." (This audits the **consistency of ARC's Petition
+  process**, per `ARC-RULE.md` §Petition / Admission Review — not the
+  substance of the score itself, which remains ARC's unaudited evaluative
+  authority.)
 
 ---
 

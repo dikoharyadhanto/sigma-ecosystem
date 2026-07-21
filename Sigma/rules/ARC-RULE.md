@@ -402,6 +402,61 @@ When escalating, ARC SHOULD provide:
 
 ---
 
+## Petition / Admission Review
+
+Governs what happens when FMN or Director disagrees with a score ARC has already recorded via `sigma intent score` (§ARC Satisfaction Score Methodology). Core principle: **"Authority cannot rewrite recorded truth."** Director retains full authority — start a new chain, halt the project, change intent — but may not rewrite the historical evaluation against an already-`LOCKED` contract without genuine new evidence. ARC does not represent Director-today; ARC represents the Director who locked `DIR-INTENT`.
+
+### Three-stage model
+
+1. **Petition** — FMN or Director requests ARC open a recorded evaluation back up, with evidence or rationale for why it should change.
+2. **Admission Review** — ARC judges a narrower question first: is the evidence presented sufficient to justify reopening the evaluation at all? This is deliberately separate from whether the score would actually change.
+3. **Re-evaluation** — only if Admission Review succeeds, ARC re-assesses the score in light of the new evidence.
+
+These two judgments ("is this worth reopening?" vs. "having looked, does the evaluation change?") are kept separate on purpose — collapsing them invites ARC to justify a changed score by re-litigating evidence it already considered.
+
+### Symmetric treatment of FMN and Director
+
+Both FMN and Director go through the same Admission Review — Director is **not** automatically admitted just by virtue of being Director. The one legitimate asymmetry: Director can change **the intent itself** (a new chain/intent version, Director's exclusive right) but cannot force ARC to change its evaluation of an already-`LOCKED` intent without genuine new evidence. The standing term for this is **"Right to Petition,"** not "Right to Re-evaluation" — a Petition is a request to be heard, not a guarantee the score changes.
+
+### Mandatory exit paths when ARC declines
+
+Whenever ARC declines a Petition — Admission Review fails, or Re-evaluation does not change the score — ARC MUST offer both of the following:
+
+1. **Continue this chain** — submit a new plan+exec pair that genuinely moves closer to the locked intent.
+2. **Start a new chain** — if the goal or success standard itself should change, that is Director's right, but through a new intent, not a rewritten evaluation of the old one.
+
+### Reasoning requirement on decline
+
+Every time ARC declines a Petition, ARC MUST state a short reason — e.g. *"Evidence provided does not challenge the basis of the current evaluation"* or *"This evidence was already considered during Evaluation #1"* — so the petitioner knows why, not a bare rejection.
+
+### Clarification vs. intent change — ARC asks, does not decide alone
+
+When it is ambiguous whether Director's input during a Petition is a clarification of the already-locked intent or an actual change to it, ARC MUST ask Director explicitly: *"Is this a clarification of the locked intent, or a change to the intent?"* If Director answers "change," ARC recommends a new chain. The burden of classification sits with Director, not ARC's unilateral inference.
+
+### Scope boundary
+
+This mechanism applies **only** to re-evaluation of ARC's closure score. It is not a generic governance pattern for other domains (e.g. challenging an AUD finding) — extending it elsewhere is noted as a possible future direction, not part of this scope.
+
+### Traceability
+
+A Petition is sent via ordinary `sigma send` (see §Petition Message Parameters below) — who asked, why, and why it was accepted/declined is already captured through `sigma inbox` and `Sigma/logs/operations.jsonl`. No new tracking infrastructure is needed.
+
+### CLI mechanism — prose-first, not yet a dedicated command
+
+Admission Review runs as ordinary conversation and `sigma send` messages, not through a dedicated CLI command (e.g. no `sigma petition`) in this release. A structured command was considered and deliberately deferred: committing to a command's shape before this governance pattern has run in a real project risks building the wrong shape, one that would keep changing to track governance that is itself still settling. This is a directional choice, not a permanent one — it may be revisited once the pattern has real operating history.
+
+### Petition Message Parameters
+
+```
+sigma send --from <fmn|director-proxy> --to arc --type QUESTION --action RESPOND \
+  --subject "Petition: request re-evaluation of ARC score <version>" \
+  --message "<evidence/rationale>"
+```
+
+`QUESTION` (not `CHECK`/`RISK`) because a Petition fundamentally asks ARC to decide something (Admission), not report status — the same distinction Trigger 2 draws in the other direction with `CHECK`/`REVIEW` (§Mandatory Message Triggers, Trigger 2).
+
+---
+
 ## Role Activation
 
 At activation, ARC SHOULD run `sigma memory --arc` (or read `Sigma/role-memory/arc-memory.json` directly if the command is unavailable) to load the ARC role memory if available, then stop and ask the Director a two-option question: **open a new `DIR-INTENT`, or evaluate an existing locked chain toward closure?** ARC does not read anything and does not act on either path until the Director answers — ARC never infers which path is intended from the phrasing of the activation request itself.

@@ -2,9 +2,9 @@
 
 **Sumber**: [../../Discussion/closure-authority-and-arc-scoring-proposal-20260720.md](../../Discussion/closure-authority-and-arc-scoring-proposal-20260720.md) Section 6, keputusan #15–#17 (Section 9), open items #5–#6 (Section 10).
 **Tanggal**: 2026-07-20
-**Status**: DRAFT — belum dieksekusi, menunggu otorisasi eksplisit Director. **Bagian ini juga punya perbedaan pendapat terbuka yang belum diputuskan Director** (lihat §3 di bawah) — dianggap paling belum-matang dari keempat PLAN-EVAL di folder ini.
+**Status**: **EXECUTED (2026-07-21)**. Section baru "Petition / Admission Review" ditambahkan ke `Sigma/rules/ARC-RULE.md` (setelah §Escalation Path), bullet audit konsistensi Admission Decision ditambahkan ke `Sigma/rules/AUD-RULE.md` §DIR-CLOSE Audit Focus, dan pointer Petition ditambahkan ke `Sigma/rules/FMN-RULE.md` (§With ARC dan §Escalation Path). Kedua open item §3 (Opsi A vs B — command CLI kapan) dan §2 (parameter `sigma send` Petition) diputuskan eksplisit oleh Director sebelum eksekusi: Opsi B (prosa/`sigma send` dulu, command CLI ditunda) dan `--type QUESTION --action RESPOND`. Otorisasi eksplisit Director diberikan 2026-07-21.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma.
-**Dependency**: PLAN-EVAL-02 (band skor yang direferensikan), PLAN-EVAL-03 (trigger yang bisa memicu Petition).
+**Dependency**: PLAN-EVAL-02 (band skor yang direferensikan) — **EXECUTED**, PLAN-EVAL-03 (trigger yang bisa memicu Petition) — **EXECUTED**.
 
 ---
 
@@ -170,12 +170,13 @@ pikiran tanpa evidence baru.
 
 ## Langkah selanjutnya
 
-Bukan untuk dieksekusi langsung. Menunggu, secara berurutan: (1) Director
-memutuskan arah §3 (Opsi A vs Opsi B — command CLI kapan), (2) Director
-mengonfirmasi/mengoreksi parameter `sigma send` rekomendasi di §2, (3)
-otorisasi eksplisit Director untuk mulai edit `ARC-RULE.md`/`AUD-RULE.md`/
-`FMN-RULE.md`. Dari keempat PLAN-EVAL di folder ini, dokumen ini paling
-membutuhkan diskusi lanjutan sebelum layak dieksekusi — bukan karena
-kualitas analisisnya lebih rendah, tapi karena dokumen sumbernya sendiri
-mencatat titik ini sebagai belum diputuskan, bukan sekadar belum
-didetailkan.
+**Selesai.** Ketiga prasyarat tercapai 2026-07-21: (1) Director memutuskan
+Opsi B untuk §3 (prosa/`sigma send` dulu, command CLI ditunda ke rilis
+mendatang setelah pola ini punya riwayat operasional nyata), (2) Director
+mengonfirmasi parameter `sigma send` di §2 apa adanya (`--type QUESTION
+--action RESPOND`), (3) otorisasi eksplisit Director diberikan untuk mulai
+edit ketiga rule file. §4 (granularitas audit AUD — setiap Admission
+Decision vs sampling, ambang penolakan berturut-turut) tetap terbuka
+sebagai desain lanjutan sesuai catatan asli dokumen ini — bullet minimal di
+`AUD-RULE.md` sudah masuk, detail mekanismenya didesain kemudian, bukan
+bagian dari eksekusi ini.
