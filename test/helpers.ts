@@ -200,12 +200,18 @@ export function makeChainWithLockedPlan(version = 'v1', planVersion = 'v1.1'): o
 }
 
 // Same build depth as makeChainWithFullBuiltCycle() but no CLOSE yet —
-// chain-scoped equivalent of makeProgressWithLockedExec().
-export function makeChainWithLockedExec(version = 'v1', planExecVersion = 'v1.1'): object {
+// chain-scoped equivalent of makeProgressWithLockedExec(). `arcScore` is
+// opt-in (undefined by default, matching every existing call site) —
+// pass it only where a test needs Gate 3.5 (arc_score >= 50) open, e.g.
+// before calling `close new`.
+export function makeChainWithLockedExec(version = 'v1', planExecVersion = 'v1.1', arcScore?: number): object {
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    intent: {
+      version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now,
+      ...(arcScore !== undefined ? { arc_score: arcScore, arc_score_notes: 'test fixture', arc_score_updated_at: now } : {}),
+    },
     plan: {
       active_version: planExecVersion, active_state: 'LOCKED', pending: [],
       versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],

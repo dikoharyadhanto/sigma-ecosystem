@@ -180,7 +180,7 @@ describe('sigma doctor — intent-history.md self-heal', () => {
     expect(fs.readFileSync(historyPath(env), 'utf8')).toMatch(/\| v1 \| Intent One \| Focus one \| LOCKED \| — \|/);
   });
 
-  it('doctor --reconstruct recovers title/focus from an existing intent-history.md when progress-v<N>.json is missing', () => {
+  it('doctor --reconstruct recovers title/focus from a legacy 5-column intent-history.md when progress-v<N>.json is missing', () => {
     env = setupTestEnv();
     writeArtifact(env.sigmaDir, 'design', 'DIR-INTENT-v1.md', validIntentDoc('v1'));
     fs.writeFileSync(historyPath(env), [
@@ -189,6 +189,26 @@ describe('sigma doctor — intent-history.md self-heal', () => {
       '| Version | Title | Focus | Status | Reason |',
       '| :--- | :--- | :--- | :--- | :--- |',
       '| v1 | Recovered Title | Recovered Focus | DRAFT | — |',
+      '',
+    ].join('\n'));
+
+    const result = runCli('doctor --reconstruct --v v1', env.projectDir, env.homeDir);
+    expect(result.exitCode).toBe(0);
+
+    const chain = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, { title?: string; focus?: string }>;
+    expect(chain.intent.title).toBe('Recovered Title');
+    expect(chain.intent.focus).toBe('Recovered Focus');
+  });
+
+  it('doctor --reconstruct recovers title/focus from a current 7-column intent-history.md (with Score/Notes) when progress-v<N>.json is missing', () => {
+    env = setupTestEnv();
+    writeArtifact(env.sigmaDir, 'design', 'DIR-INTENT-v1.md', validIntentDoc('v1'));
+    fs.writeFileSync(historyPath(env), [
+      '# Intent History',
+      '',
+      '| Version | Title | Focus | Status | Reason | Score | Notes |',
+      '| :--- | :--- | :--- | :--- | :--- | :--- | :--- |',
+      '| v1 | Recovered Title | Recovered Focus | DRAFT | — | SATISFIED_RECOMMENDED (80) | test notes |',
       '',
     ].join('\n'));
 
