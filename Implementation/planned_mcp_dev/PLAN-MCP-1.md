@@ -1,5 +1,15 @@
 # PLAN-MCP-1 — Sigma MCP Server: Concept Validation & Read-Only Prototype
 
+> **⚠️ SUPERSEDED (2026-07-22)** — digantikan oleh
+> `Implementation/planned_sigma_mcp_server_2026_07_22/` (PLAN-EVAL-01 +
+> PLAN-IMPL-01), per keputusan Director. Dokumen ini diarsipkan sebagai
+> referensi historis. Rujukan API-nya sudah **usang**: menyebut
+> `src/engine/progress.ts`, `readProgress`, dan `ProgressJson`, yang sudah
+> dimigrasikan ke `src/engine/chain.ts` (`ChainState`, `readActiveChain`,
+> `getGateStatus(chain)`). Jangan pakai peta fungsi di dokumen ini untuk
+> implementasi baru — gunakan PLAN-IMPL-01. Penamaan tool juga berubah dari
+> dot-notation (`sigma.status`) ke snake_case (`sigma_get_state`).
+
 **Source**: `Implementation/sigma_mcp_roadmap_dev.md`
 **Date**: 2026-07-03
 **Status**: DRAFT FOR REVIEW
