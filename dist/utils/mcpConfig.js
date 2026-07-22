@@ -56,10 +56,32 @@ function readJsonSafe(filePath) {
         return {};
     }
 }
-/** Tulis JSON ke path; buat direktori parent bila perlu. */
+/**
+ * Tulis JSON ke path; buat direktori parent bila perlu.
+ *
+ * Memakai strategi write-to-temp + rename untuk menghindari EPERM pada
+ * Windows ketika file target memiliki attribute Hidden (mis. mcp_config.json
+ * yang dibuat oleh Antigravity). Node.js libuv tidak bisa membuka file Hidden
+ * dengan flag O_TRUNC|O_CREAT, tapi replace via rename selalu berhasil.
+ */
 function writeJsonSafe(filePath, data) {
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(filePath));
-    fs_extra_1.default.writeJsonSync(filePath, data, { spaces: 2 });
+    const json = JSON.stringify(data, null, 2) + '\n';
+    const tmp = filePath + '.sigma_tmp';
+    try {
+        // Tulis ke file temp dulu (tidak pernah Hidden karena baru dibuat)
+        fs_extra_1.default.writeFileSync(tmp, json, 'utf-8');
+        // Rename/replace: aman bahkan untuk file Hidden di Windows
+        fs_extra_1.default.renameSync(tmp, filePath);
+    }
+    catch (e) {
+        // Cleanup tmp kalau rename gagal
+        try {
+            fs_extra_1.default.unlinkSync(tmp);
+        }
+        catch { /* ignore */ }
+        throw e;
+    }
 }
 // ── Stage 2: Project-scoped (ditulis di project start / sync) ─────────────────
 /**
