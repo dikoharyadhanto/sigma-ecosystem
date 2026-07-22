@@ -1,7 +1,7 @@
 import path from 'path';
 import os from 'os';
 
-export const SIGMA_VERSION = '0.9.0';
+export const SIGMA_VERSION = '0.10.0';
 export const SCHEMA_VERSION = '1.0.0';
 
 export const GLOBAL_SIGMA_DIR = path.join(os.homedir(), '.sigma');

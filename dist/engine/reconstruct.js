@@ -89,11 +89,13 @@ function makeMarker(domain, gate, reason, chain, now) {
 // not depend on utils/ (see PLAN-EVAL-06 §6.1).
 //
 // closure-authority PLAN-EVAL-02 — table grew from 5 to 7 data columns (added
-// Score, Notes for the ARC Satisfaction Score). Threshold raised from 6 to 8 to
-// keep the same one-element margin: a 5-column row splits to 7 elements, a
-// 7-column row splits to 9 (verified via String.split('|') directly). Only the
-// first 4 elements (index 0 empty + version/title/focus) are ever read below, so
-// the extra Score/Notes columns don't need their own destructuring here.
+// Score, Notes for the ARC Satisfaction Score). Threshold deliberately kept at
+// 6, not raised to 8: only the first 4 elements (index 0 empty +
+// version/title/focus) are ever read below, so a pre-PLAN-EVAL-02 5-column row
+// (7 elements) and a current 7-column row (9 elements) both recover cleanly —
+// title/focus recovery for projects with an older intent-history.md is
+// preserved, not silently broken by the later column addition
+// (test-suite-debt PLAN-EVAL-01, 2026-07-21).
 function readIntentHistoryMetadata(projectRoot) {
     const filePath = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'design', 'intent-history.md');
     const result = new Map();
@@ -101,8 +103,11 @@ function readIntentHistoryMetadata(projectRoot) {
         return result;
     for (const line of fs_extra_1.default.readFileSync(filePath, 'utf8').split('\n')) {
         const cells = line.split('|').map(c => c.trim());
-        if (cells.length < 8)
-            continue; // not a `| vN | Title | Focus | Status | Reason | Score | Notes |` row
+        // 6 accepts both table shapes — pre-PLAN-EVAL-02 5-column rows (7 elements)
+        // and current 7-column rows with Score/Notes (9 elements) — since only the
+        // first 4 elements (empty + version/title/focus) are ever read below.
+        if (cells.length < 6)
+            continue;
         const [, version, title, focus] = cells;
         if (!/^v\d+$/.test(version))
             continue; // skips header row + the `:---` separator row

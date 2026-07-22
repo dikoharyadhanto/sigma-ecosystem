@@ -47,7 +47,7 @@ describe('Lifecycle hardening coverage', () => {
   it('sigma close new creates a close draft for a clean locked chain', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
-    writeChainFixture(env, 'v1', makeChainWithLockedExec());
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1', 80));
 
     const result = runCli('close new', env.projectDir, env.homeDir);
 
@@ -59,7 +59,7 @@ describe('Lifecycle hardening coverage', () => {
   it('sigma close new rejects a second draft for a chain that already has a non-superseded DIR-CLOSE', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
-    writeChainFixture(env, 'v1', makeChainWithLockedExec());
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1', 80));
 
     const first = runCli('close new', env.projectDir, env.homeDir);
     expect(first.exitCode).toBe(0);

@@ -2,9 +2,9 @@
 
 **Sumber**: [../../Discussion/closure-authority-and-arc-scoring-proposal-20260720.md](../../Discussion/closure-authority-and-arc-scoring-proposal-20260720.md) Section 5, keputusan #12 (Section 9).
 **Tanggal**: 2026-07-20
-**Status**: DRAFT — belum dieksekusi, menunggu otorisasi eksplisit Director.
+**Status**: **EXECUTED (2026-07-21)**. Section baru "Trigger 2 — After a new plan+exec LOCKED pair enters the chain" ditambahkan ke `Sigma/rules/ARC-RULE.md` §Mandatory Message Triggers, beserta update cross-reference di §Closure Evaluation dan §ARC Satisfaction Score Methodology yang sebelumnya menunjuk ke plan ini sebagai "belum dieksekusi". Otorisasi eksplisit Director diberikan 2026-07-21.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma.
-**Dependency**: PLAN-EVAL-02 (band skor yang dilaporkan trigger ini didefinisikan di sana).
+**Dependency**: PLAN-EVAL-02 (band skor yang dilaporkan trigger ini didefinisikan di sana) — **EXECUTED**.
 
 ---
 
@@ -93,7 +93,15 @@ bebas cukup untuk memaksa re-evaluasi.
 
 ## Langkah selanjutnya
 
-Bukan untuk dieksekusi langsung. Menunggu otorisasi eksplisit Director untuk
-mulai edit `ARC-RULE.md`. Direkomendasikan dieksekusi setelah PLAN-EVAL-02
-selesai (trigger ini merujuk fungsi `arcScoreBand()` dan field
-`chain.intent.arc_score*` yang didefinisikan di sana).
+**Selesai.** Otorisasi eksplisit Director diberikan 2026-07-21 untuk mulai
+edit `ARC-RULE.md`, setelah PLAN-EVAL-02 EXECUTED (2026-07-20). Empat titik
+implementasi yang tidak eksplisit di draf awal dokumen ini didiskusikan dan
+diputuskan Director sebelum eksekusi: (1) update cross-reference basi di
+baris ~435/471 `ARC-RULE.md` yang sebelumnya menunjuk plan ini sebagai
+"belum dieksekusi" — dilakukan; (2) `--message-file` (bukan `--message`)
+untuk body multi-baris Trigger 2, mengikuti pola Trigger 1 — dipakai; (3)
+template subject baku `"ARC Satisfaction Score recorded — {BAND}
+(DIR-INTENT-v{X})"` — dipakai; (4) update status header dokumen ini + README
+folder setelah eksekusi, mengikuti konvensi PLAN-EVAL-01/02 — dilakukan.
+Lihat `README.md` di folder ini untuk status keseluruhan dan urutan eksekusi
+PLAN-EVAL-04 selanjutnya (menunggu review Director sebelum dilanjutkan).

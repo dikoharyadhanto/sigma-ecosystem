@@ -1,4 +1,4 @@
-export declare const SIGMA_VERSION = "0.9.0";
+export declare const SIGMA_VERSION = "0.10.0";
 export declare const SCHEMA_VERSION = "1.0.0";
 export declare const GLOBAL_SIGMA_DIR: string;
 export declare const GLOBAL_TEMPLATES_DIR: string;

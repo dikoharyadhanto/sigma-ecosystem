@@ -320,6 +320,8 @@ FMN must not create strategic intent itself.
 
 Closure (`sigma close check`/`new`/`lock`) is ARC's CLI responsibility, not FMN's — FMN does not run and should not expect Director authorization for these commands. FMN's locked FMN-PLAN/DEV-EXEC history remains the evidence ARC evaluates against `DIR-INTENT` at closure.
 
+If FMN disagrees with a recorded ARC Satisfaction Score, the path is a Petition (`ARC-RULE.md` §Petition / Admission Review) — not repeating the argument in free-form messages hoping ARC changes its mind without new evidence.
+
 ---
 
 ### With AUD
@@ -381,6 +383,8 @@ When escalating, FMN SHOULD provide:
 4. options,
 5. recommended path,
 6. specific question for Director.
+
+Disagreement with a recorded ARC Satisfaction Score is not escalated through this generic path — it goes through Petition (`ARC-RULE.md` §Petition / Admission Review), a distinct, evidence-gated mechanism.
 
 ---
 

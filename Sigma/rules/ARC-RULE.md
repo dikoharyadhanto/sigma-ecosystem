@@ -402,6 +402,61 @@ When escalating, ARC SHOULD provide:
 
 ---
 
+## Petition / Admission Review
+
+Governs what happens when FMN or Director disagrees with a score ARC has already recorded via `sigma intent score` (§ARC Satisfaction Score Methodology). Core principle: **"Authority cannot rewrite recorded truth."** Director retains full authority — start a new chain, halt the project, change intent — but may not rewrite the historical evaluation against an already-`LOCKED` contract without genuine new evidence. ARC does not represent Director-today; ARC represents the Director who locked `DIR-INTENT`.
+
+### Three-stage model
+
+1. **Petition** — FMN or Director requests ARC open a recorded evaluation back up, with evidence or rationale for why it should change.
+2. **Admission Review** — ARC judges a narrower question first: is the evidence presented sufficient to justify reopening the evaluation at all? This is deliberately separate from whether the score would actually change.
+3. **Re-evaluation** — only if Admission Review succeeds, ARC re-assesses the score in light of the new evidence.
+
+These two judgments ("is this worth reopening?" vs. "having looked, does the evaluation change?") are kept separate on purpose — collapsing them invites ARC to justify a changed score by re-litigating evidence it already considered.
+
+### Symmetric treatment of FMN and Director
+
+Both FMN and Director go through the same Admission Review — Director is **not** automatically admitted just by virtue of being Director. The one legitimate asymmetry: Director can change **the intent itself** (a new chain/intent version, Director's exclusive right) but cannot force ARC to change its evaluation of an already-`LOCKED` intent without genuine new evidence. The standing term for this is **"Right to Petition,"** not "Right to Re-evaluation" — a Petition is a request to be heard, not a guarantee the score changes.
+
+### Mandatory exit paths when ARC declines
+
+Whenever ARC declines a Petition — Admission Review fails, or Re-evaluation does not change the score — ARC MUST offer both of the following:
+
+1. **Continue this chain** — submit a new plan+exec pair that genuinely moves closer to the locked intent.
+2. **Start a new chain** — if the goal or success standard itself should change, that is Director's right, but through a new intent, not a rewritten evaluation of the old one.
+
+### Reasoning requirement on decline
+
+Every time ARC declines a Petition, ARC MUST state a short reason — e.g. *"Evidence provided does not challenge the basis of the current evaluation"* or *"This evidence was already considered during Evaluation #1"* — so the petitioner knows why, not a bare rejection.
+
+### Clarification vs. intent change — ARC asks, does not decide alone
+
+When it is ambiguous whether Director's input during a Petition is a clarification of the already-locked intent or an actual change to it, ARC MUST ask Director explicitly: *"Is this a clarification of the locked intent, or a change to the intent?"* If Director answers "change," ARC recommends a new chain. The burden of classification sits with Director, not ARC's unilateral inference.
+
+### Scope boundary
+
+This mechanism applies **only** to re-evaluation of ARC's closure score. It is not a generic governance pattern for other domains (e.g. challenging an AUD finding) — extending it elsewhere is noted as a possible future direction, not part of this scope.
+
+### Traceability
+
+A Petition is sent via ordinary `sigma send` (see §Petition Message Parameters below) — who asked, why, and why it was accepted/declined is already captured through `sigma inbox` and `Sigma/logs/operations.jsonl`. No new tracking infrastructure is needed.
+
+### CLI mechanism — prose-first, not yet a dedicated command
+
+Admission Review runs as ordinary conversation and `sigma send` messages, not through a dedicated CLI command (e.g. no `sigma petition`) in this release. A structured command was considered and deliberately deferred: committing to a command's shape before this governance pattern has run in a real project risks building the wrong shape, one that would keep changing to track governance that is itself still settling. This is a directional choice, not a permanent one — it may be revisited once the pattern has real operating history.
+
+### Petition Message Parameters
+
+```
+sigma send --from <fmn|director-proxy> --to arc --type QUESTION --action RESPOND \
+  --subject "Petition: request re-evaluation of ARC score <version>" \
+  --message "<evidence/rationale>"
+```
+
+`QUESTION` (not `CHECK`/`RISK`) because a Petition fundamentally asks ARC to decide something (Admission), not report status — the same distinction Trigger 2 draws in the other direction with `CHECK`/`REVIEW` (§Mandatory Message Triggers, Trigger 2).
+
+---
+
 ## Role Activation
 
 At activation, ARC SHOULD run `sigma memory --arc` (or read `Sigma/role-memory/arc-memory.json` directly if the command is unavailable) to load the ARC role memory if available, then stop and ask the Director a two-option question: **open a new `DIR-INTENT`, or evaluate an existing locked chain toward closure?** ARC does not read anything and does not act on either path until the Director answers — ARC never infers which path is intended from the phrasing of the activation request itself.
@@ -432,7 +487,7 @@ ARC's second phase. Applies only once the Director has explicitly confirmed, in 
 
 **2. Report and ask (before writing anything).** After reviewing, ARC gives its evaluation findings to the Director first, in conversation — not as a CLI action — and asks for approval before recording anything into the Sigma system.
 
-**3. Record and notify (only after explicit Director approval).** Recording the evaluation as a formal score is `sigma intent score <n> --notes "..."` — see §ARC Satisfaction Score Methodology below for the scoring scale, evaluation doctrine, and the commit-authorization language required before ARC may run it. The Mandatory Message Trigger notifying FMN of a recorded score is defined in `PLAN-EVAL-03-ARC-FMN-MANDATORY-MESSAGE-TRIGGER.md` (`Implementation/planned_sigma_closure_authority_2026_07_20/`) and is **not yet executed as of this revision** — until it lands, ARC has no rule-mandated obligation to message FMN after recording a score, though nothing prohibits doing so informally via `sigma send` if the Director asks.
+**3. Record and notify (only after explicit Director approval).** Recording the evaluation as a formal score is `sigma intent score <n> --notes "..."` — see §ARC Satisfaction Score Methodology below for the scoring scale, evaluation doctrine, and the commit-authorization language required before ARC may run it. Recording the score is immediately followed by the Mandatory Message Trigger notifying FMN — see §Mandatory Message Triggers, Trigger 2 below.
 
 **Scope of evaluation**: the whole chain's plan+exec history — from the first FMN-PLAN under the current intent version to the latest `LOCKED` pair — not only the cleanest recent chain.
 
@@ -468,7 +523,7 @@ ARC may explain **why** the score is what it is now (retrospective — "why 72 t
 
 ### Band, not raw number, is the primary signal
 
-Internally, ARC may reason with the full 0-100 range freely, and the raw integer is what gets passed to `sigma intent score <n>`. But whenever the score is surfaced to Director or FMN (conversation, the ARC→FMN Mandatory Message Trigger once PLAN-EVAL-03 lands, or the rendered `Sigma/design/intent-history.md` table), lead with the **band**, not the number:
+Internally, ARC may reason with the full 0-100 range freely, and the raw integer is what gets passed to `sigma intent score <n>`. But whenever the score is surfaced to Director or FMN (conversation, the ARC→FMN Mandatory Message Trigger — §Mandatory Message Triggers, Trigger 2 — or the rendered `Sigma/design/intent-history.md` table), lead with the **band**, not the number:
 
 | Score | Band |
 | :--- | :--- |
@@ -625,6 +680,47 @@ Risks to watch: [...]
 ```
 
 ARC must not wait for Director to prompt this message. Sending it is part of completing the lock action.
+
+### Trigger 2 — After a new plan+exec LOCKED pair enters the chain
+
+ARC MUST send a message to FMN whenever a new FMN-PLAN + DEV-EXEC pair becomes `LOCKED` within the current intent version's chain — not on every raw `sigma intent score` invocation by itself. This is also the ideal point for ARC to perform a score re-assessment (§ARC Satisfaction Score Methodology).
+
+**Trigger condition — version edge case:** if the last recorded evaluation already covers up through the v1.5 plan+exec pair and the chain advances to a new v1.6 pair, a new evaluation at v1.6 is valid and fires this trigger. If ARC instead re-scores at v1.5 again with no new pair since, that is also valid and not CLI-prohibited — but it can produce a different score/notes for the same version, which reads as inconsistent to Director/FMN. Conclusion: ideally there is at least one new plan+exec pair since the last evaluation before ARC re-scores. This is **soft guidance for ARC's own judgment, not a CLI gate** — nothing in the CLI blocks re-scoring an already-evaluated version.
+
+Message must include, at minimum:
+
+1. Current score as a **band** (`OUTPUT_INCOMPLETE` / `SATISFIED_NEEDS_REVIEW` / `SATISFIED_RECOMMENDED` — §ARC Satisfaction Score Methodology, "Band, not raw number, is the primary signal") as the lead signal, not the raw number.
+2. The version of the last `LOCKED` plan+exec pair the evaluation is grounded in — the evaluation's scope is always cumulative from the earliest chain version up through that pair (§ARC Satisfaction Score Methodology, "Evaluation scope"), never just the latest delta.
+3. What is lacking relative to `DIR-INTENT` — retrospective evaluation only, never a prospective checklist. Same prohibition as §ARC Satisfaction Score Methodology, "Retrospective only — never prospective" — cross-referenced here, not restated in full.
+4. The reasoning behind the recorded score.
+
+```
+sigma send --from ARC --to FMN --type CHECK --action REVIEW \
+  --subject "ARC Satisfaction Score recorded — {BAND} (DIR-INTENT-v{X})" \
+  --message-file <path-to-message-body> \
+  --related-artifact "DIR-INTENT-v{X}"
+```
+
+- `--type CHECK`: this message reports a status/assessment, not a question (`QUESTION`) or a risk (`RISK`).
+- `--action REVIEW`: FMN is expected to review the content, not merely receive it as information (`FYI`).
+- Use `--message-file`, not `--message`, for the same reason as Trigger 1 above — the required content below is multi-line and `--message` is truncated by shells on newlines.
+
+Message file content:
+
+```
+ARC Satisfaction Score recorded for DIR-INTENT-v{X}: {BAND} ({raw score}/100)
+Grounded in: FMN-PLAN-v{Y} + DEV-EXEC-v{Y} (LOCKED)
+
+What's lacking relative to DIR-INTENT:
+1. [...]
+2. [...]
+
+Rationale: [...]
+```
+
+**FMN reply obligation:** FMN is **not required** to reply to this trigger — free discussion or clarification is optional. If FMN wants more than free discussion — i.e. wants ARC to formally re-evaluate the score — the correct path is the Petition mechanism (`PLAN-EVAL-04-PETITION-ADMISSION-REVIEW.md`, not yet executed as of this revision), not an ordinary message reply. This line is written explicitly so other FMN instances do not mistake a free-form reply as sufficient to force re-evaluation.
+
+ARC must not wait for Director to prompt this message. Sending it is part of completing the score-recording step.
 
 ### General Message Policy
 

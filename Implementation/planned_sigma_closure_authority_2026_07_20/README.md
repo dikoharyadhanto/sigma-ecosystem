@@ -13,10 +13,12 @@ sekarang. **Eksekusi (perubahan kode/rule file sungguhan) hanya boleh dimulai
 setelah Director memberi otorisasi eksplisit untuk memulai** — per dokumen
 sumber ini dan per dokumen masing-masing di bawah.
 
-**Status per 2026-07-20**: #1 dan #2 sudah **EXECUTED** (lihat tabel di
-bawah). Eksekusi dihentikan setelah #2 selesai sesuai instruksi eksplisit
-Director — #3 dan #4 menunggu Director kembali meminta lanjut eksekusi
-setelah mereview hasil #1/#2.
+**Status per 2026-07-21**: **Semua #1–#5 sudah EXECUTED** (lihat tabel di
+bawah). Eksekusi #3–#5 dilanjutkan setelah Director secara eksplisit
+meminta lanjut dan memberi otorisasi 2026-07-21, termasuk memutuskan open
+item di #4 (Opsi B — command CLI ditunda — dan parameter `sigma send`
+Petition) dan di #5 (fix opsional §2.2 dieksekusi bersamaan dengan fix
+wajib §2.1). Folder ini selesai.
 
 Tidak berhubungan dengan folder `planned_sigma_governance_hardening_2026_07_20`,
 `planned_sigma_multichain_progress_2026_07_17`, atau `planned_sigma_evaluation_*`
@@ -30,9 +32,9 @@ Tidak berhubungan dengan folder `planned_sigma_governance_hardening_2026_07_20`,
 |---|---|---|---|
 | 1 | [PLAN-EVAL-01-ARC-CLOSE-CLI-AUTHORITY-MIGRATION.md](PLAN-EVAL-01-ARC-CLOSE-CLI-AUTHORITY-MIGRATION.md) — **EXECUTED (2026-07-20)** | Pindahkan wewenang operasional CLI `close` dari FMN ke ARC. Murni rule-file text + role definition rewrite — tidak menyentuh schema `chain.ts` atau kode command. | Tidak ada — independen secara teknis, tapi logisnya harus lebih dulu (tanpa ini, skor di #2 tidak ada gunanya operasional karena ARC belum berwenang menjalankan `close`). |
 | 2 | [PLAN-EVAL-02-GATE-3-5-ARC-SATISFACTION-SCORE.md](PLAN-EVAL-02-GATE-3-5-ARC-SATISFACTION-SCORE.md) — **EXECUTED (2026-07-20)** | Mekanisme skor ARC sebagai syarat `sigma close new` ("Gate 3.5"). Menyentuh schema `chain.ts`, command baru `sigma intent score`, `intent-history.md`, parser `reconstruct.ts`, dan gate definition baru di `SIGMA_PROTOCOL.md` §7. | Idealnya setelah #1 (lihat alasan di atas), tapi tidak ada blocker teknis keras. |
-| 3 | [PLAN-EVAL-03-ARC-FMN-MANDATORY-MESSAGE-TRIGGER.md](PLAN-EVAL-03-ARC-FMN-MANDATORY-MESSAGE-TRIGGER.md) | Trigger pesan wajib baru ARC → FMN, dipicu tiap pasangan plan+exec LOCKED baru. Murni penambahan section di `ARC-RULE.md`. | Bergantung pada #2 (pesan melaporkan band skor yang didefinisikan di #2). |
-| 4 | [PLAN-EVAL-04-PETITION-ADMISSION-REVIEW.md](PLAN-EVAL-04-PETITION-ADMISSION-REVIEW.md) | Mekanisme Petition → Admission Review → Re-evaluation untuk permintaan re-evaluasi skor. Murni governance/prosa di `ARC-RULE.md` + `AUD-RULE.md` — **sengaja tidak** dipetakan ke command CLI baru (lihat rasional AUD, dicatat sebagai perbedaan pendapat terbuka yang belum diputuskan Director). | Bergantung secara konten pada #2 (mereferensikan band skor) dan #3 (Trigger yang bisa memicu Petition). |
-| 5 | [PLAN-EVAL-05-SETUP-TARGETS-FMN-CLOSE-AUTHORITY-DRIFT.md](PLAN-EVAL-05-SETUP-TARGETS-FMN-CLOSE-AUTHORITY-DRIFT.md) | Perbaiki drift yang ditemukan saat eksekusi #2: file target platform (`fmn.md`/`report.md` di 6 target) belum ikut diupdate saat PLAN-EVAL-01 mencabut wewenang `sigma close` dari FMN. Murni rule-text di file target, tidak menyentuh kode. | Tidak bergantung pada #2–#4 secara teknis — perbaikan terhadap #1 yang terlewat. Ditemukan, bukan direncanakan sejak awal. |
+| 3 | [PLAN-EVAL-03-ARC-FMN-MANDATORY-MESSAGE-TRIGGER.md](PLAN-EVAL-03-ARC-FMN-MANDATORY-MESSAGE-TRIGGER.md) — **EXECUTED (2026-07-21)** | Trigger pesan wajib baru ARC → FMN, dipicu tiap pasangan plan+exec LOCKED baru. Murni penambahan section di `ARC-RULE.md`. | Bergantung pada #2 (pesan melaporkan band skor yang didefinisikan di #2) — **EXECUTED**. |
+| 4 | [PLAN-EVAL-04-PETITION-ADMISSION-REVIEW.md](PLAN-EVAL-04-PETITION-ADMISSION-REVIEW.md) — **EXECUTED (2026-07-21)** | Mekanisme Petition → Admission Review → Re-evaluation untuk permintaan re-evaluasi skor. Governance/prosa di `ARC-RULE.md` + `AUD-RULE.md` + pointer di `FMN-RULE.md` — **sengaja tidak** dipetakan ke command CLI baru (Opsi B, diputuskan eksplisit oleh Director 2026-07-21). | Bergantung secara konten pada #2 (mereferensikan band skor) dan #3 (Trigger yang bisa memicu Petition) — keduanya **EXECUTED**. |
+| 5 | [PLAN-EVAL-05-SETUP-TARGETS-FMN-CLOSE-AUTHORITY-DRIFT.md](PLAN-EVAL-05-SETUP-TARGETS-FMN-CLOSE-AUTHORITY-DRIFT.md) — **EXECUTED (2026-07-21)** | Perbaiki drift yang ditemukan saat eksekusi #2: 4 file `fmn.md`/`SKILL.md` (claude_code, codex, antigravity, reasonix) masih mengklaim FMN berwenang `sigma close lock`/`close check`. Fix opsional simetris juga diterapkan ke 4 file `arc.md`/`SKILL.md` yang sama. Murni rule-text di file target, tidak menyentuh kode. | Tidak bergantung pada #2–#4 secara teknis — perbaikan terhadap #1 yang terlewat. Ditemukan, bukan direncanakan sejak awal. |
 
 ---
 
@@ -73,10 +75,17 @@ sini per dokumen yang terdampak, supaya tidak hilang saat plan dibaca terpisah:
   bahasa Approval-class biasa yang menyetujui isi skor, bukan tindakan
   mencatatnya. Ditulis final ke `ARC-RULE.md` §ARC Satisfaction Score
   Methodology.
-- **PLAN-EVAL-04**: (a) kapan/apakah Admission Review dipetakan ke command
-  CLI — AI teknisi/pengembang dan AUD tidak sepakat, Director belum
-  memutuskan; (b) siapa mengaudit konsistensi Admission Decision ARC — arah
-  diusulkan (`AUD-RULE.md` §4) tapi mekanisme detail belum dirancang.
+- ~~**PLAN-EVAL-04**: (a) kapan/apakah Admission Review dipetakan ke command
+  CLI~~ — **RESOLVED (2026-07-21)**. Director memutuskan Opsi B: prosa/
+  `sigma send` dulu untuk rilis pertama, command CLI (mis. `sigma petition`)
+  ditunda sampai pola ini punya riwayat operasional nyata. Ditulis final ke
+  `ARC-RULE.md` §Petition / Admission Review, subsection "CLI mechanism —
+  prose-first, not yet a dedicated command".
+  (b) **Masih terbuka**: siapa mengaudit konsistensi Admission Decision ARC
+  — bullet minimal sudah masuk `AUD-RULE.md` §DIR-CLOSE Audit Focus, tapi
+  mekanisme detail (setiap Admission Decision vs sampling, ambang penolakan
+  berturut-turut yang memicu audit otomatis) belum dirancang — sengaja
+  ditunda ke plan-eval lanjutan per catatan asli PLAN-EVAL-04 §4.
 - **Baru (ditemukan 2026-07-20, di luar scope #1–#4)**: file target platform
   (`setup/targets/*/fmn.md`, `report.md` — claude_code, codex, antigravity,
   reasonix, bridge, cursor) masih menyebut FMN berwenang `sigma close
