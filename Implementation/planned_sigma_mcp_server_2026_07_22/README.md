@@ -34,6 +34,9 @@ AI client
 | `README.md` | Dokumen ini — orientasi + hubungan dengan rencana MCP lama. |
 | `PLAN-EVAL-01-NATIVE-MCP-SERVER-READ-ONLY.md` | Rencana increment pertama (level konsep): server stdio + tool read-only, diselaraskan ke best-practice `mcp-builder`. **Accepted Director 2026-07-22.** |
 | `PLAN-IMPL-01-NATIVE-MCP-SERVER-BUILD.md` | Rencana implementasi terperinci: peta berkas, signature fungsi, refactor `runBootstrap`, test fixture, langkah build/verifikasi. Turunan PLAN-EVAL-01. |
+| `PLAN-EVAL-02-GOVERNANCE-DOC-PROPAGATION.md` | Increment lanjutan (Milestone C yang disebut PLAN-EVAL-01): audit + rencana update dokumentasi governance (role rules, bridge files, skill, README) sekarang `sigma-mcp` resmi dipakai. **Selesai dieksekusi 2026-07-22** — 6 stage, ~18 file, `npm test` 227/227 lulus. Lihat "Catatan Eksekusi" di dokumen untuk temuan tambahan (dangling reference `sigma refresh`, command usang `REASONIX.md`). |
+| `RISET-INSTALASI-MCP-CLIENT-2026-07-22.md` | Riset murni (bukan plan): format registrasi MCP terverifikasi untuk **kelima platform** — Claude Code, Codex CLI, Reasonix, Antigravity, Cursor (ditambahkan di sesi lanjutan tanggal yang sama) — dasar teknis PLAN-EVAL-03. |
+| `PLAN-EVAL-03-MCP-SETUP-INSTALLATION-WIRING.md` | Wiring agar `sigma-mcp` otomatis terdaftar ke AI client — project-scoped (`.mcp.json` + `.cursor/mcp.json`, via `project start`/`project sync`) untuk Claude Code+Reasonix+Cursor, global-scoped (`~/.codex/config.toml`, `~/.gemini/config/mcp_config.json`, via `setup install`/`setup update`) untuk Codex+Antigravity. Menulis ulang mekanisme yang dihapus `PLAN-EVAL-07-MCP-LEGACY-REMOVAL.md` — Director mengonfirmasi PLAN-EVAL-07 usang untuk bagian ini. Kelima platform tercakup. **Riset sudah diserap; 2 rekomendasi baru (Codex global, dependency TOML) menunggu konfirmasi Director sebelum eksekusi.** |
 
 ---
 

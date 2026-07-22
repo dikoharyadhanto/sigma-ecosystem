@@ -86,8 +86,19 @@ unsatisfied Lock Requirements shown in its output before recommending lock.
 ### AUD Exception
 
 AUD mode does not follow the above CLI operator model. AUD is a passive
-external auditor by default. AUD must not execute Sigma CLI commands unless
-the Director explicitly authorizes the exact command in an agent environment.
+external auditor by default. AUD must not execute Sigma CLI commands or call
+any MCP tool unless the Director explicitly authorizes the exact command or
+tool call in an agent environment.
+
+### MCP Orientation Layer (read-only)
+
+When a `sigma-mcp` client is configured, the tools `sigma_get_state`,
+`sigma_get_gates`, `sigma_get_orientation`, `sigma_list_artifacts`, and
+`sigma_doctor` return the same read-only orientation data as
+`sigma session bootstrap`/`sigma {domain} check`, as structured JSON instead
+of CLI stdout. CLI remains the sole authority for every write, gate, or lock
+operation — MCP tools never lock, supersede, or mutate state. The AUD
+Exception above applies equally to these tools.
 
 ## Director Authorization Language
 

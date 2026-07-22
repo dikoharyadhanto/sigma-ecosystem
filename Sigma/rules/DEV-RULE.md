@@ -607,6 +607,8 @@ DEV operates primarily in the **Draft/Operational** command authority class.
 | `sigma project status` | Read-only |
 | `sigma git evidence` | Read-only |
 
+Where a `sigma-mcp` client is available, the MCP tools `sigma_get_state`/`sigma_get_orientation`/`sigma_get_gates`/`sigma_list_artifacts`/`sigma_doctor` are a read-only equivalent to the CLI read-only commands above and are subject to the same scope discipline.
+
 ### Commands that require explicit Director approval
 
 | Command | Class |

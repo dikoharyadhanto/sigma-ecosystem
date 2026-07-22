@@ -601,6 +601,8 @@ ARC operates primarily in the **Draft/Operational** command authority class.
 
 Read-only commands are capability, not default activation steps. This applies in particular to `sigma session bootstrap` — matching the restriction stated in §Role Activation above, ARC must not run it by default at activation. ARC should run any of these only when the Director requests them, when the Director has agreed to open intent documentation and runtime state is needed, when the Director has confirmed the Closure Evaluation path (§Closure Evaluation), or when a role-appropriate lifecycle gate requires them.
 
+Where a `sigma-mcp` client is available, the MCP tools `sigma_get_state`/`sigma_get_orientation`/`sigma_get_gates`/`sigma_list_artifacts`/`sigma_doctor` are a read-only equivalent to the CLI commands above and are subject to the same restriction — in particular, ARC must not call `sigma_get_orientation` by default at activation, for the same reason it must not run `sigma session bootstrap` by default.
+
 `sigma close new` requires the existing Gate 3 precondition (full INTENT → PLAN → EXEC chain LOCKED) and Gate 3.5 (ARC Satisfaction Score recorded and >= 50 via `sigma intent score`), both enforced by the CLI — see §ARC Satisfaction Score Methodology above and `SIGMA_PROTOCOL.md` §7.
 
 ### Commands that require explicit Director approval

@@ -4,7 +4,7 @@ Sigma Ecosystem is a lightweight governance ecosystem for AI-assisted software p
 
 It combines a protocol, CLI, AI role rules, bridge files, memory support, and project artifacts to help humans use AI coding agents without losing control of intent, scope, evidence, and closure.
 
-The CLI component is installed as `sigma-cli` and used through the `sigma` command.
+The CLI component is installed as `sigma-ecosystem` and used through the `sigma` command.
 
 Sigma turns AI-assisted work into a traceable lifecycle:
 
@@ -191,7 +191,7 @@ You only run setup commands at the beginning. After that, AI roles normally oper
 ### 1. Install Sigma
 
 ```bash
-npm install -g sigma-cli
+npm install -g sigma-ecosystem
 sigma setup install
 ```
 
@@ -445,6 +445,43 @@ Additional bridge guidance may be provided for Claude Desktop, Gemini CLI, or ot
 
 ---
 
+## sigma-mcp — MCP Orientation Server
+
+Sigma ships a native, read-only [MCP](https://modelcontextprotocol.io) server, `sigma-mcp`, alongside the `sigma` CLI. It exposes the same orientation data CLI commands like `sigma session bootstrap` print to stdout — but as structured JSON an MCP-aware AI client can call directly, without parsing terminal text.
+
+**CLI remains the sole authority for every write, gate, or lock operation.** `sigma-mcp` is strictly additive and read-only — it cannot lock, supersede, close, or mutate `Sigma/progress-v<N>.json` in any way.
+
+### Tools
+
+| Tool | Returns |
+|:--- | :--- |
+| `sigma_get_state` | Project phase, active chain, schema version, gate status |
+| `sigma_get_gates` | Gate 1/2/3 open/satisfied status and labels |
+| `sigma_get_orientation` | Role hint, gate summary, next valid operations, blockers |
+| `sigma_list_artifacts` | Intent/plan/exec/close/roadmap tracker state |
+| `sigma_doctor` | Reconciliation findings (report-only — never writes to disk) |
+
+### Enabling it
+
+`sigma-mcp` is installed as a bin entry alongside `sigma` (see [Install Sigma](#1-install-sigma) above) — no separate install step. Registration with your AI client is currently **manual** — there is no `sigma setup install`/`sigma project start` automation for this yet.
+
+- **Claude Code** — add a `.mcp.json` at your project root:
+
+  ```json
+  {
+    "mcpServers": {
+      "sigma": { "command": "sigma-mcp" }
+    }
+  }
+  ```
+
+- **Cursor** — add the same shape to `.cursor/mcp.json` at your project root.
+- **Codex CLI / Antigravity / Reasonix** — each client has its own MCP registration format (Codex CLI's, for example, is TOML-based) that is not yet verified/documented here. Point the client at the `sigma-mcp` binary per its own MCP setup docs — the server itself (stdio transport, standard MCP tool-call protocol) is client-agnostic.
+
+If `sigma-mcp` is not resolvable as a bare command, confirm the global install completed and `sigma-mcp` is on your `PATH` the same way `sigma` is.
+
+---
+
 ## Suggested AI Role Assignments
 
 These are practical starting points, not product claims. Model capabilities change over time. Use the model that performs best in your environment.
@@ -517,13 +554,13 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 
 ## Updating Sigma — Backward Compatibility for Existing Projects
 
-When `sigma-cli` is updated, existing projects created with `sigma project start` may need to be migrated to stay compatible with the new schema and doctrine files.
+When `sigma-ecosystem` is updated, existing projects created with `sigma project start` may need to be migrated to stay compatible with the new schema and doctrine files.
 
 ### When to run migration
 
 Run migration after:
 
-- `npm update -g sigma-cli` installs a new version
+- `npm update -g sigma-ecosystem` installs a new version
 - `sigma session bootstrap` reports a schema mismatch or unknown field warning
 - A governance role reports an unexpected gate error on an existing project
 

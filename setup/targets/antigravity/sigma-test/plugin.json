@@ -1,7 +1,7 @@
 {
   "name": "sigma-test",
   "version": "1.0.0",
-  "description": "Sigma environment diagnostic — read-only check of CLI, MCP, memory, skills, and project structure",
+  "description": "Sigma environment diagnostic — read-only check of CLI, skills, and project structure",
   "author": {
     "name": "Sigma"
   },

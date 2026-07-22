@@ -49,6 +49,15 @@ it shows exactly which Lock Requirements `lock` will enforce, without
 changing anything. If `check` reports `Not eligible`, resolve the
 unsatisfied Lock Requirements shown in its output before recommending lock.
 
+## MCP Orientation Layer (read-only)
+
+When a `sigma-mcp` client is configured, the tools `sigma_get_state`,
+`sigma_get_gates`, `sigma_get_orientation`, `sigma_list_artifacts`, and
+`sigma_doctor` return the same read-only orientation data as
+`sigma session bootstrap`/`sigma {domain} check`, as structured JSON instead
+of CLI stdout. CLI remains the sole authority for every write, gate, or lock
+operation — MCP tools never lock, supersede, or mutate state.
+
 ## Director Authorization Language
 
 Lock, risk-acknowledgment, supersession, and destructive commands require
@@ -62,7 +71,7 @@ If authorization is unclear, ask before executing.
 
 ## CLI-Managed Files — Do Not Edit Directly
 
-Do not edit `Sigma/progress.json` directly. Use sigma CLI commands to
+Do not edit `Sigma/progress-v<N>.json` directly. Use sigma CLI commands to
 modify workflow state. Run `sigma --help` to see available commands.
 
 ## Sigma CLI Awareness

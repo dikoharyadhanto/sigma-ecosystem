@@ -35,7 +35,6 @@ The following commands require explicit Director authorization before running:
 
 ```
 sigma intent lock
-sigma roadmap activate
 sigma plan lock
 sigma exec lock
 sigma close lock
@@ -60,6 +59,15 @@ When explicitly operating as a Sigma governance role, load role memory if
 available and follow the matching `Sigma/rules/{ROLE}-RULE.md`. Do not treat
 `sigma session bootstrap` as mandatory for every role; run it only when the
 role rule, Director request, or direct runtime evidence chain requires it.
+
+## MCP Orientation Layer (read-only)
+
+When a `sigma-mcp` client is configured, the tools `sigma_get_state`,
+`sigma_get_gates`, `sigma_get_orientation`, `sigma_list_artifacts`, and
+`sigma_doctor` return the same read-only orientation data as the whitelist
+commands above, as structured JSON instead of CLI stdout. CLI remains the
+sole authority for every write, gate, or lock operation — MCP tools never
+lock, supersede, or mutate state.
 
 ## Director Authorization Language
 

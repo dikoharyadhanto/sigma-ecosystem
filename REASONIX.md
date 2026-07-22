@@ -21,7 +21,6 @@ The following commands are safe to run without Director authorization:
 ```
 sigma --help
 sigma project status
-sigma project list
 sigma intent status
 sigma roadmap list
 sigma plan status
@@ -39,13 +38,11 @@ The following commands require explicit Director authorization before running:
 
 ```
 sigma intent lock
-sigma roadmap lock
 sigma plan lock
 sigma exec lock
 sigma close lock
 sigma close new --ack-stale-intent
 sigma * supersede
-sigma project reset
 ```
 
 ## CLI Operator Model
@@ -65,6 +62,15 @@ Eligible` (or `Eligible with warnings`). `check` is on the whitelist above —
 it never requires Director authorization. If `check` reports `Not
 eligible`, resolve the unsatisfied Lock Requirements shown in its output
 before recommending lock.
+
+## MCP Orientation Layer (read-only)
+
+When a `sigma-mcp` client is configured, the tools `sigma_get_state`,
+`sigma_get_gates`, `sigma_get_orientation`, `sigma_list_artifacts`, and
+`sigma_doctor` return the same read-only orientation data as the whitelist
+commands above, as structured JSON instead of CLI stdout. CLI remains the
+sole authority for every write, gate, or lock operation — MCP tools never
+lock, supersede, or mutate state.
 
 ## Director Authorization Language
 

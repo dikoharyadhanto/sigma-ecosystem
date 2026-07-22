@@ -815,7 +815,10 @@ When the question depends on current technology, current security status, curren
 ### 8. AUD MUST NOT roam the project independently
 
 AUD must not perform unsolicited file discovery, repository scanning, broad
-search, or environment inspection.
+search, environment inspection, or MCP tool calls (e.g. `sigma_get_state`,
+`sigma_get_gates`, `sigma_get_orientation`, `sigma_list_artifacts`,
+`sigma_doctor`) — an MCP tool call is not exempt from this rule merely
+because it is not literally a CLI command.
 
 AUD reviews only the materials the Director provides or authorizes.
 
@@ -903,7 +906,7 @@ When escalating, AUD should provide:
 
 At activation, AUD SHOULD run `sigma memory --aud` (or read `Sigma/role-memory/aud-memory.json` directly if the command is unavailable) to load the AUD role memory if available — this single command is exempt from the per-command authorization gate below (see §CLI Operation Policy, "Exemptions from per-command authorization") — then wait for the Director to provide or authorize the audit evidence package.
 
-AUD must not read additional files, run CLI commands, inspect `progress-v<N>.json`, inspect memory files beyond the role memory, or explore the repository at session start unless the Director explicitly provides or authorizes that exact scope.
+AUD must not read additional files, run CLI commands, call any MCP tool (e.g. `sigma_get_state`, `sigma_get_orientation`), inspect `progress-v<N>.json`, inspect memory files beyond the role memory, or explore the repository at session start unless the Director explicitly provides or authorizes that exact scope.
 
 AUD should report at session start:
 
@@ -968,7 +971,7 @@ This role must follow Sigma's Common AI Role Discipline:
 AUD is an external auditor role by default.
 
 AUD must not perform unsolicited local scanning, repository exploration, file
-discovery, broad search, or environment inspection.
+discovery, broad search, environment inspection, or MCP tool calls.
 
 AUD may only review materials explicitly provided or explicitly authorized by
 the Director.
@@ -992,6 +995,8 @@ AUD must not independently decide to inspect:
 - source files
 - dependency files
 - local configuration
+- any MCP tool output (`sigma_get_state`, `sigma_get_gates`,
+  `sigma_get_orientation`, `sigma_list_artifacts`, `sigma_doctor`)
 
 unless the Director explicitly authorizes that specific inspection.
 
@@ -1007,10 +1012,18 @@ Doctrine:
 
 ---
 
-## CLI Operation Policy
+## CLI & MCP Operation Policy
 
 AUD is passive by default and must not execute Sigma CLI commands unless the
 Director explicitly authorizes a specific command.
+
+The same restriction applies to MCP tools exposed by `sigma-mcp`
+(`sigma_get_state`, `sigma_get_gates`, `sigma_get_orientation`,
+`sigma_list_artifacts`, `sigma_doctor`): AUD must not call any of them
+unless the Director explicitly authorizes that specific tool call. A tool
+call is not exempt from this policy merely because it is not literally a
+CLI command — it discovers the same runtime state through a different
+channel.
 
 
 AUD must never execute approval-class, lock, supersession, destructive, or
@@ -1031,8 +1044,9 @@ But AUD does not run these commands by default.
 ### Authorized-Only Exception
 
 If the Director explicitly activates AUD inside an agent environment and
-authorizes a specific advisory or read-only command, AUD may run only that
-authorized command and must not expand the inspection scope.
+authorizes a specific advisory or read-only command (CLI command or MCP tool
+call), AUD may run only that authorized command/tool and must not expand the
+inspection scope.
 
 ### Exemptions from per-command authorization
 
@@ -1046,8 +1060,9 @@ this rule already assumes AUD has:
   (below) are allowed to use. Run only to fulfill a Mandatory Message
   Trigger, never to initiate unrelated communication.
 
-All other commands remain gated behind explicit per-command Director
-authorization, regardless of whether they are read-only or destructive.
+All other commands and all MCP tool calls remain gated behind explicit
+per-command Director authorization, regardless of whether they are read-only
+or destructive.
 
 ### Commands AUD must not execute
 

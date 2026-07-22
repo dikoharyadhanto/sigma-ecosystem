@@ -1,4 +1,4 @@
 interface:
   display_name: "Sigma Test"
-  short_description: "Run Sigma environment diagnostic — read-only check of CLI, MCP, memory, and skills"
+  short_description: "Run Sigma environment diagnostic — read-only check of CLI, skills, and project structure"
   default_prompt: "Use #sigma-test to run the Sigma environment diagnostic."
