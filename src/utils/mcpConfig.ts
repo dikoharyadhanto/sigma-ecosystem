@@ -5,6 +5,7 @@
  *   Tulis  : writeClaudeMcpConfig, writeCursorMcpConfig,
  *            writeCodexMcpConfig, writeAntigravityMcpConfig
  *   Hapus  : removeCodexMcpConfig, removeAntigravityMcpConfig
+ *   Helper : tryMcpOp — wrap operasi MCP dengan try-catch, kembalikan pesan error atau null
  *
  * Prinsip desain:
  *   - Native-only: hanya mendaftarkan sigma-mcp, tidak membangkitkan server lain
@@ -12,6 +13,8 @@
  *   - Idempoten: dipanggil dua kali menghasilkan file yang sama
  *   - Non-destruktif: entri MCP server lain milik pengguna tidak terhapus
  *   - Fungsi hapus: no-op kalau file/key tidak ada; merge-delete kalau ada
+ *   - Fault-tolerant: semua fungsi boleh gagal (EPERM, EACCES, file locked);
+ *     gunakan tryMcpOp() di call site supaya error jadi warn, bukan crash
  */
 
 import fs from 'fs-extra';
@@ -220,5 +223,31 @@ export function isSigmaMcpResolvable(): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+// ── Fault-tolerant wrapper ────────────────────────────────────────────────────
+
+/**
+ * Jalankan operasi MCP (tulis atau hapus) dengan try-catch.
+ * Kembalikan null kalau sukses, atau string pesan error kalau gagal.
+ *
+ * Dipakai di call site (setup.ts, project.ts) supaya kegagalan EPERM,
+ * EACCES, atau file-locked-by-process tidak meng-crash command — caller
+ * cukup `warn(errMsg)` kalau hasilnya bukan null.
+ *
+ * Contoh:
+ *   const err = tryMcpOp(() => writeAntigravityMcpConfig(), '~/.gemini/config/mcp_config.json');
+ *   if (err) warn(`MCP: ${err}`);
+ *   else console.log('  MCP: ~/.gemini/config/mcp_config.json updated.');
+ */
+export function tryMcpOp(op: () => void, targetLabel: string): string | null {
+  try {
+    op();
+    return null;
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    const code = err.code ? ` [${err.code}]` : '';
+    return `Could not write ${targetLabel}${code}: ${err.message ?? String(e)}. The file may be locked by another process (e.g. the AI client itself). Try again with the client closed, or add the entry manually.`;
   }
 }

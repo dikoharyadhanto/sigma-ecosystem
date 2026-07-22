@@ -22,6 +22,7 @@ import {
   removeCodexMcpConfig,
   removeAntigravityMcpConfig,
   isSigmaMcpResolvable,
+  tryMcpOp,
 } from '../utils/mcpConfig';
 
 // ── Bundle paths (files shipped inside the npm package) ─────────────────────
@@ -173,10 +174,16 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
   console.log('  Run `sigma project start` to initialize a project.');
 
   // Stage 3 — Tulis global MCP config untuk Codex dan Antigravity
-  writeCodexMcpConfig();
-  console.log('  MCP: ~/.codex/config.toml updated (sigma-mcp — Codex).');
-  writeAntigravityMcpConfig();
-  console.log('  MCP: ~/.gemini/config/mcp_config.json updated (sigma-mcp — Antigravity).');
+  {
+    const err = tryMcpOp(() => writeCodexMcpConfig(), '~/.codex/config.toml');
+    if (err) warn(`MCP (Codex): ${err}`);
+    else console.log('  MCP: ~/.codex/config.toml updated (sigma-mcp — Codex).');
+  }
+  {
+    const err = tryMcpOp(() => writeAntigravityMcpConfig(), '~/.gemini/config/mcp_config.json');
+    if (err) warn(`MCP (Antigravity): ${err}`);
+    else console.log('  MCP: ~/.gemini/config/mcp_config.json updated (sigma-mcp — Antigravity).');
+  }
   if (!isSigmaMcpResolvable()) {
     warn('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
   }
@@ -422,10 +429,16 @@ async function runUpdate(): Promise<void> {
   console.log('  To sync governance files into a project, run: sigma project sync --confirm');
 
   // Stage 3 — Refresh global MCP config untuk Codex dan Antigravity
-  writeCodexMcpConfig();
-  console.log('  MCP: ~/.codex/config.toml refreshed (sigma-mcp — Codex).');
-  writeAntigravityMcpConfig();
-  console.log('  MCP: ~/.gemini/config/mcp_config.json refreshed (sigma-mcp — Antigravity).');
+  {
+    const err = tryMcpOp(() => writeCodexMcpConfig(), '~/.codex/config.toml');
+    if (err) warn(`MCP (Codex): ${err}`);
+    else console.log('  MCP: ~/.codex/config.toml refreshed (sigma-mcp — Codex).');
+  }
+  {
+    const err = tryMcpOp(() => writeAntigravityMcpConfig(), '~/.gemini/config/mcp_config.json');
+    if (err) warn(`MCP (Antigravity): ${err}`);
+    else console.log('  MCP: ~/.gemini/config/mcp_config.json refreshed (sigma-mcp — Antigravity).');
+  }
   if (!isSigmaMcpResolvable()) {
     warn('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
   }
@@ -559,10 +572,16 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
   }
 
   // Stage 8 — Hapus entri sigma dari global MCP configs
-  removeCodexMcpConfig();
-  console.log('  Removed: sigma entry from ~/.codex/config.toml (if existed).');
-  removeAntigravityMcpConfig();
-  console.log('  Removed: sigma entry from ~/.gemini/config/mcp_config.json (if existed).');
+  {
+    const err = tryMcpOp(() => removeCodexMcpConfig(), '~/.codex/config.toml');
+    if (err) warn(`MCP cleanup (Codex): ${err}`);
+    else console.log('  Removed: sigma entry from ~/.codex/config.toml (if existed).');
+  }
+  {
+    const err = tryMcpOp(() => removeAntigravityMcpConfig(), '~/.gemini/config/mcp_config.json');
+    if (err) warn(`MCP cleanup (Antigravity): ${err}`);
+    else console.log('  Removed: sigma entry from ~/.gemini/config/mcp_config.json (if existed).');
+  }
 
   success('Sigma uninstalled successfully.');
   console.log('  Local project folders (Sigma/, .sigma-identity.json) were not touched.');
