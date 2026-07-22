@@ -36,6 +36,11 @@ import { promptLanguageWizard } from '../engine/languageWizard';
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, fileExists, findProjectRoot } from '../utils/fs';
 import { ensureOperationsLog } from '../utils/operationLog';
+import {
+  writeClaudeMcpConfig,
+  writeCursorMcpConfig,
+  isSigmaMcpResolvable,
+} from '../utils/mcpConfig';
 
 // ── Bundle paths ─────────────────────────────────────────────────────────────
 
@@ -304,6 +309,15 @@ async function runStart(opts: {
   success(`Sigma project initialized: ${projectName} (${projectId})`);
   console.log(`  Location: ${sigmaDir}`);
   console.log('  Next: Run `sigma session bootstrap` or `sigma project status` to confirm state.');
+
+  // Stage 2 — Tulis .mcp.json dan .cursor/mcp.json untuk sigma-mcp
+  writeClaudeMcpConfig(projectRoot);
+  console.log('  MCP: .mcp.json written (sigma-mcp — Claude Code / Reasonix).');
+  writeCursorMcpConfig(projectRoot);
+  console.log('  MCP: .cursor/mcp.json written (sigma-mcp — Cursor).');
+  if (!isSigmaMcpResolvable()) {
+    warn('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
+  }
 }
 
 // ── sigma project status ──────────────────────────────────────────────────────
@@ -394,6 +408,8 @@ function runSync(opts: { confirm?: boolean }): void {
     if (fileExists(BUNDLE_ROLE_MEMORY_DIR)) {
       console.log('  role-memory/ (from bundle)');
     }
+    console.log('  .mcp.json (sigma-mcp — upsert key sigma)');
+    console.log('  .cursor/mcp.json (sigma-mcp — upsert key sigma)');
     warn('Pass --confirm to apply.');
     return;
   }
@@ -433,6 +449,15 @@ function runSync(opts: { confirm?: boolean }): void {
   success('Project synced successfully.');
   for (const f of updated) {
     console.log(`  Updated: ${f}`);
+  }
+
+  // Stage 2 — Upsert .mcp.json dan .cursor/mcp.json (merge-aware)
+  writeClaudeMcpConfig(projectRoot);
+  console.log('  Updated: .mcp.json (sigma-mcp — upsert key sigma).');
+  writeCursorMcpConfig(projectRoot);
+  console.log('  Updated: .cursor/mcp.json (sigma-mcp — upsert key sigma).');
+  if (!isSigmaMcpResolvable()) {
+    warn('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
   }
 }
 

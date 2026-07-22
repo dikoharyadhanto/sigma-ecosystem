@@ -16,6 +16,13 @@ import {
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, copyDir, fileExists } from '../utils/fs';
 import { detectTools, targetPaths } from '../utils/detect';
+import {
+  writeCodexMcpConfig,
+  writeAntigravityMcpConfig,
+  removeCodexMcpConfig,
+  removeAntigravityMcpConfig,
+  isSigmaMcpResolvable,
+} from '../utils/mcpConfig';
 
 // ── Bundle paths (files shipped inside the npm package) ─────────────────────
 
@@ -164,6 +171,15 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
   success('Sigma installed successfully.');
   console.log(`  Global dir: ${GLOBAL_SIGMA_DIR}`);
   console.log('  Run `sigma project start` to initialize a project.');
+
+  // Stage 3 — Tulis global MCP config untuk Codex dan Antigravity
+  writeCodexMcpConfig();
+  console.log('  MCP: ~/.codex/config.toml updated (sigma-mcp — Codex).');
+  writeAntigravityMcpConfig();
+  console.log('  MCP: ~/.gemini/config/mcp_config.json updated (sigma-mcp — Antigravity).');
+  if (!isSigmaMcpResolvable()) {
+    warn('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
+  }
 }
 
 // ── Shared skill + hook deployment (install & update) ───────────────────────
@@ -404,6 +420,15 @@ async function runUpdate(): Promise<void> {
   console.log(`  Backup saved to: ${backupBase}`);
   console.log('  Note: existing project Sigma/ folders were NOT touched.');
   console.log('  To sync governance files into a project, run: sigma project sync --confirm');
+
+  // Stage 3 — Refresh global MCP config untuk Codex dan Antigravity
+  writeCodexMcpConfig();
+  console.log('  MCP: ~/.codex/config.toml refreshed (sigma-mcp — Codex).');
+  writeAntigravityMcpConfig();
+  console.log('  MCP: ~/.gemini/config/mcp_config.json refreshed (sigma-mcp — Antigravity).');
+  if (!isSigmaMcpResolvable()) {
+    warn('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
+  }
 }
 
 // ── sigma setup uninstall ────────────────────────────────────────────────────
@@ -493,7 +518,10 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
     if (hasGlobalDir) console.log(`  ${GLOBAL_SIGMA_DIR}/ (entire directory)`);
     for (const f of skillFilesToRemove) console.log(`  ${f}`);
     if (hasHookEntry) console.log(`  protect-sigma.js hook entry in ${settingsPath}`);
+    console.log('  Key "sigma" from ~/.codex/config.toml [mcp_servers] (if exists)');
+    console.log('  Key "sigma" from ~/.gemini/config/mcp_config.json [mcpServers] (if exists)');
     warn('Pass --confirm to apply. Local project folders (Sigma/, .sigma-identity.json) are never touched.');
+    warn('NOTE: .mcp.json and .cursor/mcp.json in individual project folders cannot be cleaned automatically — remove them manually if sigma is no longer needed.');
     return;
   }
 
@@ -530,9 +558,17 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
     console.log(`  Removed: protect-sigma.js hook entry from ${settingsPath}`);
   }
 
+  // Stage 8 — Hapus entri sigma dari global MCP configs
+  removeCodexMcpConfig();
+  console.log('  Removed: sigma entry from ~/.codex/config.toml (if existed).');
+  removeAntigravityMcpConfig();
+  console.log('  Removed: sigma entry from ~/.gemini/config/mcp_config.json (if existed).');
+
   success('Sigma uninstalled successfully.');
   console.log('  Local project folders (Sigma/, .sigma-identity.json) were not touched.');
   console.log('  The `sigma` command will no longer function until reinstalled.');
+  warn('NOTICE: .mcp.json and .cursor/mcp.json in individual Sigma project folders were NOT cleaned automatically.');
+  warn('  If sigma is no longer needed, remove the "sigma" entry from mcpServers in each project\'s .mcp.json and .cursor/mcp.json manually.');
 }
 
 // ── Command builder ──────────────────────────────────────────────────────────

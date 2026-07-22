@@ -13,6 +13,7 @@ const config_1 = require("../config");
 const output_1 = require("../utils/output");
 const fs_1 = require("../utils/fs");
 const detect_1 = require("../utils/detect");
+const mcpConfig_1 = require("../utils/mcpConfig");
 // ── Bundle paths (files shipped inside the npm package) ─────────────────────
 // __dirname resolves to dist/commands/ at runtime; walk up to package root
 const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
@@ -146,6 +147,14 @@ async function runInstall(opts) {
     (0, output_1.success)('Sigma installed successfully.');
     console.log(`  Global dir: ${config_1.GLOBAL_SIGMA_DIR}`);
     console.log('  Run `sigma project start` to initialize a project.');
+    // Stage 3 — Tulis global MCP config untuk Codex dan Antigravity
+    (0, mcpConfig_1.writeCodexMcpConfig)();
+    console.log('  MCP: ~/.codex/config.toml updated (sigma-mcp — Codex).');
+    (0, mcpConfig_1.writeAntigravityMcpConfig)();
+    console.log('  MCP: ~/.gemini/config/mcp_config.json updated (sigma-mcp — Antigravity).');
+    if (!(0, mcpConfig_1.isSigmaMcpResolvable)()) {
+        (0, output_1.warn)('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
+    }
 }
 // ── Shared skill + hook deployment (install & update) ───────────────────────
 async function deploySkillsAndHook(selectedPlatforms) {
@@ -356,6 +365,14 @@ async function runUpdate() {
     console.log(`  Backup saved to: ${backupBase}`);
     console.log('  Note: existing project Sigma/ folders were NOT touched.');
     console.log('  To sync governance files into a project, run: sigma project sync --confirm');
+    // Stage 3 — Refresh global MCP config untuk Codex dan Antigravity
+    (0, mcpConfig_1.writeCodexMcpConfig)();
+    console.log('  MCP: ~/.codex/config.toml refreshed (sigma-mcp — Codex).');
+    (0, mcpConfig_1.writeAntigravityMcpConfig)();
+    console.log('  MCP: ~/.gemini/config/mcp_config.json refreshed (sigma-mcp — Antigravity).');
+    if (!(0, mcpConfig_1.isSigmaMcpResolvable)()) {
+        (0, output_1.warn)('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
+    }
 }
 // ── sigma setup uninstall ────────────────────────────────────────────────────
 //
@@ -438,7 +455,10 @@ async function runUninstall(opts) {
             console.log(`  ${f}`);
         if (hasHookEntry)
             console.log(`  protect-sigma.js hook entry in ${settingsPath}`);
+        console.log('  Key "sigma" from ~/.codex/config.toml [mcp_servers] (if exists)');
+        console.log('  Key "sigma" from ~/.gemini/config/mcp_config.json [mcpServers] (if exists)');
         (0, output_1.warn)('Pass --confirm to apply. Local project folders (Sigma/, .sigma-identity.json) are never touched.');
+        (0, output_1.warn)('NOTE: .mcp.json and .cursor/mcp.json in individual project folders cannot be cleaned automatically — remove them manually if sigma is no longer needed.');
         return;
     }
     (0, output_1.info)('Uninstalling Sigma...');
@@ -471,9 +491,16 @@ async function runUninstall(opts) {
         removeHookEntry(settingsPath);
         console.log(`  Removed: protect-sigma.js hook entry from ${settingsPath}`);
     }
+    // Stage 8 — Hapus entri sigma dari global MCP configs
+    (0, mcpConfig_1.removeCodexMcpConfig)();
+    console.log('  Removed: sigma entry from ~/.codex/config.toml (if existed).');
+    (0, mcpConfig_1.removeAntigravityMcpConfig)();
+    console.log('  Removed: sigma entry from ~/.gemini/config/mcp_config.json (if existed).');
     (0, output_1.success)('Sigma uninstalled successfully.');
     console.log('  Local project folders (Sigma/, .sigma-identity.json) were not touched.');
     console.log('  The `sigma` command will no longer function until reinstalled.');
+    (0, output_1.warn)('NOTICE: .mcp.json and .cursor/mcp.json in individual Sigma project folders were NOT cleaned automatically.');
+    (0, output_1.warn)('  If sigma is no longer needed, remove the "sigma" entry from mcpServers in each project\'s .mcp.json and .cursor/mcp.json manually.');
 }
 // ── Command builder ──────────────────────────────────────────────────────────
 function setupCommand() {

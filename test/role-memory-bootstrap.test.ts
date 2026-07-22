@@ -31,14 +31,17 @@ describe('Role memory and bootstrap regressions', () => {
 
   afterEach(() => env?.cleanup());
 
-  it('project start seeds role-memory files and does not write any MCP config', () => {
+  it('project start seeds role-memory files and writes MCP config (.mcp.json + .cursor/mcp.json)', () => {
     env = setupTestEnv();
 
     const result = runCli('project start --id TEST --name "Test Project" --confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'role-memory', 'arc-memory.json'))).toBe(true);
-    expect(fs.existsSync(path.join(env.projectDir, '.mcp.json'))).toBe(false);
+    // PLAN-EVAL-03: project start now writes .mcp.json and .cursor/mcp.json (intentional change)
+    expect(fs.existsSync(path.join(env.projectDir, '.mcp.json'))).toBe(true);
+    expect(fs.existsSync(path.join(env.projectDir, '.cursor', 'mcp.json'))).toBe(true);
+    // .vscode/mcp.json was deliberately removed in PLAN-EVAL-07 and is not part of this plan
     expect(fs.existsSync(path.join(env.projectDir, '.vscode', 'mcp.json'))).toBe(false);
   });
 

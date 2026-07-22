@@ -4,12 +4,12 @@
 Director: "saya mau mcp server sigma full ready termasuk plan-eval terkait
 pemasangan setup sigma, edit readme dll."
 **Tanggal**: 2026-07-22
-**Status**: DRAFT — 5/5 keputusan awal tercatat Director 2026-07-22. Riset
-format untuk **kelima platform** (`RISET-INSTALASI-MCP-CLIENT-2026-07-22.md`,
-diperluas mencakup Cursor di sesi lanjutan tanggal yang sama) sudah diserap
-ke plan ini (lihat "Riset Format Terverifikasi", "Arsitektur Trigger"). Dua
-rekomendasi baru pasca-riset menunggu konfirmasi/koreksi Director — lihat
-"Rekomendasi Baru Pasca-Riset" di bagian bawah.
+**Status**: KEPUTUSAN LENGKAP — 7/7 keputusan tercatat Director (5 awal
+2026-07-22 + 2 konfirmasi pasca-riset + 1 tambahan uninstall cleanup
+2026-07-22). Siap eksekusi. Riset format untuk **kelima platform**
+(`RISET-INSTALASI-MCP-CLIENT-2026-07-22.md`, diperluas mencakup Cursor di
+sesi lanjutan tanggal yang sama) sudah diserap ke plan ini (lihat "Riset
+Format Terverifikasi", "Arsitektur Trigger").
 **Catatan**: Disusun Professional Mode. Bukan FMN-PLAN Sigma; tidak punya
 otoritas lock/gate Sigma.
 **Berpasangan dengan**: `PLAN-EVAL-02-GOVERNANCE-DOC-PROPAGATION.md` — plan
@@ -249,6 +249,13 @@ ada server lain** — plus bagian README yang menjelaskannya.
 - **Stage 7** — Verifikasi manual perilaku cwd-inheritance untuk registrasi
   global (Codex, Antigravity) — lihat §Arsitektur Trigger poin cwd. Wajib
   sebelum Stage 3 dianggap selesai untuk kedua platform itu.
+- **Stage 8** — Uninstall cleanup: `sigma setup uninstall` harus
+  **menghapus entri `sigma`** dari keempat file config MCP yang ditulisnya
+  (`.mcp.json` project-scoped tidak bisa dibersihkan oleh uninstall karena
+  per-proyek — lihat §Task Breakdown Stage 8). Tujuan: mencegah leftover
+  entri `sigma-mcp` yang tidak bisa di-start setelah sigma di-uninstall
+  (binary hilang, config masih ada → AI client terus mencoba spawn
+  `sigma-mcp`, gagal diam-diam atau error).
 
 ### Di luar scope (untuk increment ini)
 
@@ -270,18 +277,21 @@ ada server lain** — plus bagian README yang menjelaskannya.
 
 - Modul baru (nama disarankan tidak memakai nama `mcp.ts` lama untuk
   menghindari kerancuan dengan modul yang sudah dihapus PLAN-EVAL-07) berisi
-  4 fungsi: `writeClaudeMcpConfig` (JSON, `.mcp.json`), `writeCursorMcpConfig`
-  (JSON, `.cursor/mcp.json` — reuse payload builder yang sama dengan
-  `writeClaudeMcpConfig`, path tujuan beda), `writeCodexMcpConfig` (TOML,
-  `~/.codex/config.toml`), `writeAntigravityMcpConfig` (JSON,
-  `~/.gemini/config/mcp_config.json`).
+  4 fungsi tulis + 2 fungsi hapus:
+  - **Tulis**: `writeClaudeMcpConfig` (JSON, `.mcp.json`),
+    `writeCursorMcpConfig` (JSON, `.cursor/mcp.json` — reuse payload builder
+    yang sama dengan `writeClaudeMcpConfig`, path tujuan beda),
+    `writeCodexMcpConfig` (TOML, `~/.codex/config.toml`),
+    `writeAntigravityMcpConfig` (JSON, `~/.gemini/config/mcp_config.json`).
+  - **Hapus**: `removeCodexMcpConfig` (hapus key `sigma` dari TOML global),
+    `removeAntigravityMcpConfig` (hapus key `sigma` dari JSON global). Kedua
+    fungsi hapus ini dipanggil oleh `sigma setup uninstall` (Stage 8).
 - **Dependency baru**: JSON pakai `fs-extra` yang sudah ada (nol dependency
-  baru). TOML butuh library parser/serializer (mis. `smol-toml` atau
-  `@iarna/toml`) karena `.codex/config.toml` bisa berisi setting Codex lain
+  baru). TOML butuh library parser/serializer — **`smol-toml` atau
+  `@iarna/toml`** karena `.codex/config.toml` bisa berisi setting Codex lain
   milik pengguna — string manipulation manual berisiko merusaknya.
-  **Perlu persetujuan Director sebelum `npm install`**, sama seperti
-  `@modelcontextprotocol/sdk`/`zod` perlu persetujuan eksplisit di
-  PLAN-EVAL-01.
+  **Disetujui Director 2026-07-22** (lihat Keputusan Director butir 6) —
+  tambahkan ke `package.json` sebelum coding Stage 2-3.
 
 ### Stage 2 — Implementasi `.mcp.json` & `.cursor/mcp.json` (project-scoped)
 
@@ -335,6 +345,38 @@ ada server lain** — plus bagian README yang menjelaskannya.
   Codex/Antigravity kalau tersedia), konfirmasi `sigma_get_state` melapor
   proyek yang benar untuk masing-masing — bukan silang atau "no active
   project" yang salah.
+
+### Stage 8 — Uninstall Cleanup
+
+**Konteks**: `sigma-mcp` tidak berguna kalau sigma sudah di-uninstall —
+binary `sigma-mcp` hilang dari `PATH`, tapi entri config di AI client masih
+ada. Client akan terus mencoba spawn `sigma-mcp`, gagal setiap sesi (error
+diam-diam atau spawn error). Ini sampah yang perlu dibersihkan.
+
+**Cakupan cleanup**:
+
+| Config | Command pembersih | Cara hapus |
+|---|---|---|
+| `~/.codex/config.toml` | `sigma setup uninstall` | Hapus key `[mcp_servers.sigma]` — TOML merge-delete, sisa file utuh |
+| `~/.gemini/config/mcp_config.json` | `sigma setup uninstall` | Hapus key `sigma` dari `mcpServers` — JSON merge-delete, sisa file utuh |
+| `.mcp.json` (project root) | **Tidak bisa** — per-proyek, jumlah proyek tidak diketahui saat uninstall | Fallback: beri pesan ke pengguna saat `setup uninstall` selesai |
+| `.cursor/mcp.json` (project root) | **Tidak bisa** — sama, per-proyek | Fallback: sama |
+
+**Detail implementasi**:
+
+- `sigma setup uninstall` panggil `removeCodexMcpConfig()` dan
+  `removeAntigravityMcpConfig()` setelah langkah cleanup lain yang sudah
+  ada (skill files, dll.) — di blok yang sama, bukan command terpisah.
+- Kedua fungsi hapus: baca file → hapus key `sigma` → tulis ulang. Kalau
+  file tidak ada atau key tidak ada: no-op (tidak error).
+- Setelah cleanup global selesai, `setup uninstall` **cetak pesan**
+  menginformasikan pengguna bahwa `.mcp.json` dan `.cursor/mcp.json` di
+  masing-masing proyek Sigma **tidak bisa dibersihkan otomatis** dan perlu
+  dihapus/diedit manual kalau sigma tidak akan dipakai lagi.
+- **Test**: `removeCodexMcpConfig` dan `removeAntigravityMcpConfig` ditest
+  untuk: file ada + key ada (hapus key, sisa file utuh), file ada + key
+  tidak ada (no-op), file tidak ada (no-op). Idempotensi: jalankan dua
+  kali, hasil sama.
 
 ---
 
@@ -418,6 +460,15 @@ ada server lain** — plus bagian README yang menjelaskannya.
 - [ ] `npm test` penuh lulus (termasuk test yang sengaja disesuaikan,
       tercatat eksplisit di acceptance criteria — bukan modifikasi tak
       terlacak).
+- [ ] **Uninstall cleanup (Stage 8)**: `sigma setup uninstall` menghapus key
+      `sigma` dari `~/.codex/config.toml` dan
+      `~/.gemini/config/mcp_config.json` — sisa konten file utuh, tidak ada
+      data pengguna lain yang ikut terhapus.
+- [ ] `sigma setup uninstall` mencetak pesan yang menginformasikan pengguna
+      bahwa `.mcp.json` dan `.cursor/mcp.json` di proyek-proyek Sigma tidak
+      dibersihkan otomatis (perlu manual).
+- [ ] Test fungsi hapus (no-op kalau file/key tidak ada, merge-delete kalau
+      ada, idempoten).
 
 ---
 
@@ -460,24 +511,34 @@ Diputuskan Director 2026-07-22, 5 dari 5 pertanyaan terjawab:
 
 Semua 5 pertanyaan awal terjawab.
 
-## Rekomendasi Baru Pasca-Riset (perlu konfirmasi/koreksi Director)
+6. **Codex CLI: global dikonfirmasi** — **dikonfirmasi Director 2026-07-22**:
+   pilih `~/.codex/config.toml` (global) untuk Codex, bukan
+   `.codex/config.toml` (project-trusted-only). Alasan: menghindari
+   ketidakpastian perilaku "trusted-only" yang tidak terverifikasi. Trade-off
+   kehilangan git-shareability diterima.
 
-Dua hal baru muncul saat menyerap `RISET-INSTALASI-MCP-CLIENT-2026-07-22.md`
-ke plan ini — bukan pertanyaan terbuka yang memblokir, tapi keputusan desain
-yang saya ambil sebagai rekomendasi dan perlu diketahui/dikoreksi Director
-sebelum Stage 1 dieksekusi:
+7. **Dependency TOML baru disetujui** — **disetujui Director 2026-07-22**:
+   gunakan `smol-toml` atau `@iarna/toml` untuk parsing/serialization
+   `~/.codex/config.toml`. Library dipilih saat Stage 1 (bandingkan size,
+   ESM/CJS compatibility, maintenance status), `npm install` dijalankan
+   setelah pilihan diputuskan.
 
-1. **Codex CLI: global, bukan project-scoped.** Riset menemukan dua opsi
-   (`~/.codex/config.toml` global vs `.codex/config.toml` project-trusted-only).
-   Saya pilih **global** untuk menghindari ketidakpastian perilaku
-   "trusted-only" yang tidak dikonfirmasi riset (lihat §Arsitektur Trigger
-   & Catatan Risiko). Trade-off: kehilangan git-shareability yang dimiliki
-   opsi project-scope. Kalau Anda lebih mengutamakan git-shareability,
-   beri tahu — scope-nya berubah (perlu verifikasi trust-gating dulu).
-2. **Dependency TOML baru** (`smol-toml` atau `@iarna/toml`) untuk menulis
-   `~/.codex/config.toml` dengan aman (merge, bukan string manipulation).
-   Ini precedent yang sama seperti persetujuan `@modelcontextprotocol/sdk`
-   di PLAN-EVAL-01 — perlu persetujuan eksplisit sebelum `npm install`
-   dijalankan di Stage 1.
+8. **Uninstall cleanup (tambahan Director 2026-07-22)**: `sigma setup
+   uninstall` **wajib membersihkan** entri `sigma` dari config MCP global
+   yang ditulisnya (`~/.codex/config.toml`, `~/.gemini/config/mcp_config.json`)
+   — binary `sigma-mcp` tidak ada setelah uninstall, entri config yang
+   tersisa akan menyebabkan AI client terus gagal spawn server. Config
+   project-scoped (`.mcp.json`, `.cursor/mcp.json`) tidak bisa dibersihkan
+   otomatis (per-proyek, tidak diketahui saat uninstall) — diganti pesan
+   informasi ke pengguna. Lihat §Task Breakdown Stage 8 untuk detail
+   implementasi.
 
-Kalau tidak ada koreksi, plan ini siap eksekusi menunggu instruksi Director.
+---
+
+## Status Eksekusi
+
+Semua 8 keputusan tercatat. Plan siap eksekusi. Urutan stage:
+Stage 1 (freeze + dependency) → Stage 2 (project-scoped JSON) →
+Stage 3 (global-scoped JSON+TOML) → Stage 4 (command resolution) →
+Stage 5 (test) → Stage 6 (README) → Stage 7 (manual verify) →
+Stage 8 (uninstall cleanup + test).

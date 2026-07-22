@@ -463,22 +463,56 @@ Sigma ships a native, read-only [MCP](https://modelcontextprotocol.io) server, `
 
 ### Enabling it
 
-`sigma-mcp` is installed as a bin entry alongside `sigma` (see [Install Sigma](#1-install-sigma) above) — no separate install step. Registration with your AI client is currently **manual** — there is no `sigma setup install`/`sigma project start` automation for this yet.
+`sigma-mcp` is installed as a bin entry alongside `sigma` (see [Install Sigma](#1-install-sigma) above) — no separate install step.
 
-- **Claude Code** — add a `.mcp.json` at your project root:
+**Registration is automatic** — `sigma project start` and `sigma project sync` write the client config for your AI tools as part of project setup. No manual JSON editing needed.
 
-  ```json
-  {
-    "mcpServers": {
-      "sigma": { "command": "sigma-mcp" }
-    }
+| Command | Config written | Platforms |
+|:--- |:--- |:--- |
+| `sigma setup install` / `sigma setup update` | `~/.codex/config.toml` · `~/.gemini/config/mcp_config.json` | Codex CLI · Antigravity |
+| `sigma project start` / `sigma project sync` | `.mcp.json` · `.cursor/mcp.json` | Claude Code · Reasonix · Cursor |
+
+All writes are **merge-aware** — existing MCP server entries you've added manually are preserved; only the `sigma` key is upserted. Running the commands twice is safe (idempotent).
+
+If `sigma-mcp` is not yet on your `PATH` when you run these commands, a warning is printed but the config is still written — it will work as soon as you complete the global install.
+
+> **Uninstall note:** `sigma setup uninstall --confirm` automatically removes the `sigma` entry from the two global config files (`~/.codex/config.toml`, `~/.gemini/config/mcp_config.json`). The project-local `.mcp.json` and `.cursor/mcp.json` files are not touched — remove or edit the `sigma` entry from those files manually if sigma is no longer needed.
+
+<details>
+<summary>Manual registration reference (troubleshooting)</summary>
+
+**Claude Code / Reasonix** — `.mcp.json` at project root:
+
+```json
+{
+  "mcpServers": {
+    "sigma": { "command": "sigma-mcp", "args": [] }
   }
-  ```
+}
+```
 
-- **Cursor** — add the same shape to `.cursor/mcp.json` at your project root.
-- **Codex CLI / Antigravity / Reasonix** — each client has its own MCP registration format (Codex CLI's, for example, is TOML-based) that is not yet verified/documented here. Point the client at the `sigma-mcp` binary per its own MCP setup docs — the server itself (stdio transport, standard MCP tool-call protocol) is client-agnostic.
+**Cursor** — same shape at `.cursor/mcp.json` at project root.
 
-If `sigma-mcp` is not resolvable as a bare command, confirm the global install completed and `sigma-mcp` is on your `PATH` the same way `sigma` is.
+**Codex CLI** — `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.sigma]
+command = "sigma-mcp"
+args = []
+```
+
+**Antigravity** — `~/.gemini/config/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "sigma": { "command": "sigma-mcp", "args": [] }
+  }
+}
+```
+
+</details>
+
 
 ---
 
