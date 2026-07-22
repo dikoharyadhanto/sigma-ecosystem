@@ -4,10 +4,10 @@ exports.sessionCommand = sessionCommand;
 const commander_1 = require("commander");
 const chain_1 = require("../engine/chain");
 const registry_1 = require("../engine/registry");
-const fs_1 = require("../utils/fs");
 const mailbox_1 = require("../engine/mailbox");
 const config_1 = require("../config");
 const projectConfig_1 = require("../engine/projectConfig");
+const bootstrapView_1 = require("../session/bootstrapView");
 // ── Format helpers ────────────────────────────────────────────────────────────
 function fmtVersion(v) {
     return v ?? 'none';
@@ -93,17 +93,11 @@ function printReferenceDocuments(opts, docEntries) {
 }
 // ── sigma session bootstrap ───────────────────────────────────────────────────
 function runBootstrap(opts) {
-    const projectRoot = (0, fs_1.findProjectRoot)();
-    const identity = (0, chain_1.readProjectIdentity)(projectRoot);
-    // No chain yet (fresh project, before the first `intent new`) is a valid
-    // state to bootstrap from — matches today's graceful "none" display
-    // rather than erroring out.
-    const hasChain = (0, chain_1.listChainVersions)(projectRoot).length > 0;
-    const { chainVersion, data: chain } = hasChain
-        ? (0, chain_1.readActiveChain)(projectRoot)
-        : { chainVersion: null, data: null };
-    const gates = chain ? (0, chain_1.getGateStatus)(chain) : null;
-    const nextOps = chain ? (0, chain_1.getNextValidOperations)(chain) : ['intent new'];
+    // PLAN-IMPL-01 Stage 1 — data assembly extracted to buildBootstrapView so the
+    // MCP orientation tool can reuse it without any console output. The printing
+    // below is unchanged and must stay byte-identical (regression: role-memory-
+    // bootstrap.test.ts, lifecycle-hardening.test.ts).
+    const { projectRoot, identity, chainVersion, chain, gates, nextOps } = (0, bootstrapView_1.buildBootstrapView)();
     const role = opts.role?.toUpperCase();
     const roleGuidance = getRoleGuidance(role, gates?.gate_2_open ?? false);
     let docEntries = [];

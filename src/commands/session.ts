@@ -1,10 +1,5 @@
 import { Command } from 'commander';
 import {
-  readActiveChain,
-  readProjectIdentity,
-  listChainVersions,
-  getGateStatus,
-  getNextValidOperations,
   getGateStatusLabel,
   getInvalidWarningLines,
   hasInvalidRuntime,
@@ -18,6 +13,7 @@ import { findProjectRoot } from '../utils/fs';
 import { readIndex, getUnreadForRole, MessageEntry } from '../engine/mailbox';
 import { MESSAGING_ROLES, SigmaRole } from '../config';
 import { readProjectConfig } from '../engine/projectConfig';
+import { buildBootstrapView } from '../session/bootstrapView';
 
 interface RoleBootstrapGuidance {
   routine: string[];
@@ -117,18 +113,11 @@ function printReferenceDocuments(opts: { role?: string }, docEntries: DocumentEn
 // ── sigma session bootstrap ───────────────────────────────────────────────────
 
 function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
-  const projectRoot = findProjectRoot();
-  const identity = readProjectIdentity(projectRoot);
-
-  // No chain yet (fresh project, before the first `intent new`) is a valid
-  // state to bootstrap from — matches today's graceful "none" display
-  // rather than erroring out.
-  const hasChain = listChainVersions(projectRoot).length > 0;
-  const { chainVersion, data: chain } = hasChain
-    ? readActiveChain(projectRoot)
-    : { chainVersion: null, data: null };
-  const gates = chain ? getGateStatus(chain) : null;
-  const nextOps = chain ? getNextValidOperations(chain) : ['intent new'];
+  // PLAN-IMPL-01 Stage 1 — data assembly extracted to buildBootstrapView so the
+  // MCP orientation tool can reuse it without any console output. The printing
+  // below is unchanged and must stay byte-identical (regression: role-memory-
+  // bootstrap.test.ts, lifecycle-hardening.test.ts).
+  const { projectRoot, identity, chainVersion, chain, gates, nextOps } = buildBootstrapView();
   const role = opts.role?.toUpperCase() as SigmaRole | undefined;
   const roleGuidance = getRoleGuidance(role, gates?.gate_2_open ?? false);
 

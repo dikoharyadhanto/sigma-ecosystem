@@ -1,0 +1,1 @@
+{"version":3,"file":"shared.d.ts","sourceRoot":"","sources":["../../src/mcp/shared.ts"],"names":[],"mappings":"AAQA,eAAO,MAAM,aAAa,EAAG,QAAiB,CAAC;AAK/C,wBAAgB,WAAW,IAAI,MAAM,GAAG,IAAI,CAM3C;AAKD,wBAAgB,MAAM,CAAC,OAAO,EAAE,OAAO;;;;;EAEtC;AAED,wBAAgB,OAAO,CAAC,OAAO,EAAE,MAAM;;;;;;EAKtC;AAID,wBAAgB,SAAS,CAAC,KAAK,GAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAM;;;;EAO5D"}
