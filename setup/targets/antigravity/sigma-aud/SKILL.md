@@ -85,7 +85,7 @@ circumstance.
 
 ## Role Activation
 
-1. Run `sigma memory --aud` when available; during transition, load AUD role memory if available.
+1. Load AUD role memory via Sigma MCP (`sigma_get_memory`, role: AUD) when available; fallback to `sigma memory --aud` or local `Sigma/role-memory/aud-memory.json`.
 2. Wait for the Director to provide or authorize the audit evidence package.
 3. Report audit mode, audit boundary, and Evidence Boundary block before beginning analysis.
 

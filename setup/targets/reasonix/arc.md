@@ -49,7 +49,7 @@ If authorization is unclear, ask before executing.
 
 ## Role Activation
 
-1. Run `sigma memory --arc` when available; during transition, load ARC role memory if available.
+1. Load ARC role memory via Sigma MCP (`sigma_get_memory`, role: ARC) when available; fallback to `sigma memory --arc` or local `Sigma/role-memory/arc-memory.json`.
 2. Stop and ask whether the Director wants to open a new DIR-INTENT or
    evaluate an existing locked chain toward closure — do not read
    roadmap/plan/exec/close artifacts or infer the answer from phrasing;

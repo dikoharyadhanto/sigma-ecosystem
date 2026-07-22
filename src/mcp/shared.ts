@@ -4,19 +4,85 @@
 // stdout. The stdio transport reserves stdout for JSON-RPC frames. Diagnostics
 // go to stderr via console.error, never console.log.
 
+import { fileURLToPath } from 'url';
 import { findProjectRoot } from '../utils/fs';
 
 export const SOURCE_ENGINE = 'engine' as const;
 
-// Returns the project root, or null when the caller is not inside a Sigma
-// project. Tools treat null as a valid "no active project" state and respond
-// gracefully rather than throwing (which would surface as a transport error).
-export function resolveRoot(): string | null {
-  try {
-    return findProjectRoot();
-  } catch {
-    return null;
+const clientRootsCache: string[] = [];
+
+export function setClientRoots(roots: string[]): void {
+  clientRootsCache.length = 0;
+  for (const r of roots) {
+    addClientRoot(r);
   }
+}
+
+export function addClientRoot(uriOrPath: string): void {
+  try {
+    const pathStr = uriOrPath.startsWith('file://')
+      ? fileURLToPath(uriOrPath)
+      : uriOrPath;
+    if (pathStr && !clientRootsCache.includes(pathStr)) {
+      clientRootsCache.push(pathStr);
+    }
+  } catch {
+    // Ignore malformed URIs
+  }
+}
+
+/**
+ * Resolves the Sigma project root from multiple candidate sources:
+ * 1. explicitPath (e.g. passed from an MCP tool argument)
+ * 2. Environment variables (SIGMA_PROJECT_ROOT, INIT_CWD, PWD)
+ * 3. CLI arguments (--project-root, --cwd, or a positional path)
+ * 4. Client roots received via MCP protocol (roots/list)
+ * 5. Current working directory (process.cwd())
+ */
+export function resolveRoot(explicitPath?: string): string | null {
+  const candidates: string[] = [];
+
+  // 1. Explicit path parameter
+  if (explicitPath && typeof explicitPath === 'string' && explicitPath.trim().length > 0) {
+    candidates.push(explicitPath.trim());
+  }
+
+  // 2. Environment variables
+  if (process.env.SIGMA_PROJECT_ROOT) candidates.push(process.env.SIGMA_PROJECT_ROOT);
+  if (process.env.INIT_CWD) candidates.push(process.env.INIT_CWD);
+
+  // 3. CLI arguments (e.g., sigma-mcp --project-root <path> or sigma-mcp <path>)
+  const args = process.argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--project-root' || arg === '--cwd') {
+      if (args[i + 1]) candidates.push(args[i + 1]);
+    } else if (!arg.startsWith('-')) {
+      candidates.push(arg);
+    }
+  }
+
+  if (process.env.PWD) candidates.push(process.env.PWD);
+
+  // 4. MCP Client Roots
+  for (const root of clientRootsCache) {
+    candidates.push(root);
+  }
+
+  // 5. Default process.cwd()
+  candidates.push(process.cwd());
+
+  // Try each candidate directory using findProjectRoot()
+  for (const candidate of candidates) {
+    try {
+      const root = findProjectRoot(candidate);
+      if (root) return root;
+    } catch {
+      // Continue to next candidate
+    }
+  }
+
+  return null;
 }
 
 // Standard success envelope. If a future SDK spike (PLAN-IMPL-01 §2.5) confirms

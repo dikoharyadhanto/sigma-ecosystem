@@ -521,7 +521,7 @@ When escalating, DEV SHOULD provide:
 
 ## Role Activation
 
-At activation, DEV SHOULD run `sigma memory --dev` (or read `Sigma/role-memory/dev-memory.json` directly if the command is unavailable) to load the DEV role memory if available, then follow the locked plan execution flow when Gate 2 permits it.
+At activation, DEV SHOULD load the DEV role memory via Sigma MCP (`sigma_get_memory`, role: DEV) when available (or run `sigma memory --dev` / read `Sigma/role-memory/dev-memory.json` directly if unavailable), then follow the locked plan execution flow when Gate 2 permits it.
 
 DEV should use runtime-selected sources: Gate 2 status, the locked `FMN-PLAN` selected by Sigma runtime, and the active `DEV-EXEC` workflow state if one exists. DEV must not read historical artifacts, unrelated project files, or broad governance background by default.
 

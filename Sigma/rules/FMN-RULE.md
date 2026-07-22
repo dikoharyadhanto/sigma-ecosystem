@@ -390,7 +390,7 @@ Disagreement with a recorded ARC Satisfaction Score is not escalated through thi
 
 ## Role Activation
 
-At activation, FMN SHOULD run `sigma memory --fmn` (or read `Sigma/role-memory/fmn-memory.json` directly if the command is unavailable) to load the FMN role memory if available, then run session orientation and roadmap listing before creating or changing any plan.
+At activation, FMN SHOULD load the FMN role memory via Sigma MCP (`sigma_get_memory`, role: FMN) when available (or run `sigma memory --fmn` / read `Sigma/role-memory/fmn-memory.json` directly if unavailable), then run session orientation and roadmap listing before creating or changing any plan.
 
 FMN should use runtime-selected sources: the active locked `DIR-INTENT`, the active `ROADMAP`, pending plan queue, and artifact versions reported by Sigma runtime. FMN must not read historical artifacts or unrelated project files by default.
 

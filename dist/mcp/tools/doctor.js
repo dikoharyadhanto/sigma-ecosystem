@@ -30,17 +30,23 @@ function computeDoctor(root) {
         source: shared_1.SOURCE_ENGINE,
     };
 }
+const zod_1 = require("zod");
 function registerDoctorTool(server) {
     server.registerTool('sigma_doctor', {
         title: 'Sigma Doctor (diagnosis only)',
-        description: 'Run Sigma runtime reconciliation as a READ-ONLY diagnosis and report what it would repair or flag, without writing to disk. Takes no arguments. Returns { active, findings: { repaired, invalidMarked, invalidCleared, remainingInvalid }, applied: false, source }. applied is always false — this tool never persists changes. Returns { active: false, ... } when no chain exists.',
-        inputSchema: {},
+        description: 'Run Sigma runtime reconciliation as a READ-ONLY diagnosis and report what it would repair or flag, without writing to disk. Read-only. Accepts optional project_root parameter. Returns { active, findings, applied: false, source }.',
+        inputSchema: {
+            project_root: zod_1.z
+                .string()
+                .optional()
+                .describe('Optional absolute path to the Sigma project root directory.'),
+        },
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async () => (0, shared_1.okText)(computeDoctor((0, shared_1.resolveRoot)())));
+    }, async ({ project_root }) => (0, shared_1.okText)(computeDoctor((0, shared_1.resolveRoot)(project_root))));
 }
 //# sourceMappingURL=doctor.js.map

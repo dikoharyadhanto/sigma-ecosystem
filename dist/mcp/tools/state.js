@@ -33,17 +33,23 @@ function computeState(root) {
         source: shared_1.SOURCE_ENGINE,
     };
 }
+const zod_1 = require("zod");
 function registerStateTool(server) {
     server.registerTool('sigma_get_state', {
         title: 'Get Sigma Lifecycle State',
-        description: 'Return the current Sigma lifecycle phase, active chain, project identity, and gate summary. Read-only; wraps the same engine code path as the CLI. Takes no arguments. Returns { active, phase, active_chain, project_id, project_name, schema_version, gates, has_invalid_runtime, source }, or { active: false, ... } when no Sigma chain exists in the current directory.',
-        inputSchema: {},
+        description: 'Return the current Sigma lifecycle phase, active chain, project identity, and gate summary. Read-only; wraps the same engine code path as the CLI. Accepts optional project_root parameter. Returns { active, phase, active_chain, project_id, project_name, schema_version, gates, has_invalid_runtime, source }, or { active: false, ... } when no Sigma chain exists.',
+        inputSchema: {
+            project_root: zod_1.z
+                .string()
+                .optional()
+                .describe('Optional absolute path to the Sigma project root directory.'),
+        },
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async () => (0, shared_1.okText)(computeState((0, shared_1.resolveRoot)())));
+    }, async ({ project_root }) => (0, shared_1.okText)(computeState((0, shared_1.resolveRoot)(project_root))));
 }
 //# sourceMappingURL=state.js.map

@@ -83,6 +83,6 @@ modify workflow state. Run `sigma --help` to see available commands.
   explicit Director request requires it.
 - If explicitly operating as a Sigma governance role, load role memory if
   available and follow the matching `Sigma/rules/{ROLE}-RULE.md`.
-- Do not treat `sigma session bootstrap` as mandatory for every role; ARC and
+- Do not treat session orientation (`sigma_get_orientation` via MCP, or CLI fallback `sigma session bootstrap`) as mandatory for every role; ARC and
   AUD start from bounded Director intent/evidence, while FMN and DEV orient
   only inside their direct runtime evidence chain.

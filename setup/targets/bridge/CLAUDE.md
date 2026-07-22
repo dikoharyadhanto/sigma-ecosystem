@@ -126,8 +126,8 @@ If authorization is unclear, ask before executing.
 
 ## Governance Role Activation
 
-On governance role activation, load the role memory if available
-(`Sigma/role-memory/{role}-memory.json`, or run `sigma memory --<role>`),
+On governance role activation, load the role memory via Sigma MCP (`sigma_get_memory`)
+when available (or `Sigma/role-memory/{role}-memory.json`, or CLI fallback `sigma memory --<role>`),
 then follow the matching role rule file. If the role-memory file lookup
 fails, verify with the exact case shown above before concluding memory is
 unavailable — do not assume unavailability from a single failed guess.

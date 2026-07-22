@@ -78,18 +78,21 @@ function antigravityConfigPath(home: string) {
   return path.join(home, '.gemini', 'config', 'mcp_config.json');
 }
 
-const EXPECTED_ENTRY = { command: 'sigma-mcp', args: [] };
+const expectedEntry = (root?: string) => ({
+  command: 'sigma-mcp',
+  args: root ? [root] : [],
+});
 
 // ── writeClaudeMcpConfig ──────────────────────────────────────────────────────
 
 describe('writeClaudeMcpConfig', () => {
-  it('creates .mcp.json with sigma entry when file does not exist', async () => {
+  it('creates .mcp.json with sigma entry and project path when file does not exist', async () => {
     const { writeClaudeMcpConfig } = await importMcpConfig();
     writeClaudeMcpConfig(tmpProject);
 
     expect(fs.existsSync(mcpJsonPath(tmpProject))).toBe(true);
     const content = fs.readJsonSync(mcpJsonPath(tmpProject));
-    expect(content.mcpServers.sigma).toEqual(EXPECTED_ENTRY);
+    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
   });
 
   it('merges sigma entry without touching existing servers', async () => {
@@ -102,7 +105,7 @@ describe('writeClaudeMcpConfig', () => {
     writeClaudeMcpConfig(tmpProject);
 
     const content = fs.readJsonSync(mcpJsonPath(tmpProject));
-    expect(content.mcpServers.sigma).toEqual(EXPECTED_ENTRY);
+    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
     expect(content.mcpServers.other).toEqual({ command: 'other-mcp', args: [] });
   });
 
@@ -112,7 +115,7 @@ describe('writeClaudeMcpConfig', () => {
     writeClaudeMcpConfig(tmpProject);
 
     const content = fs.readJsonSync(mcpJsonPath(tmpProject));
-    expect(content.mcpServers.sigma).toEqual(EXPECTED_ENTRY);
+    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
     expect(Object.keys(content.mcpServers)).toHaveLength(1);
   });
 
@@ -123,7 +126,7 @@ describe('writeClaudeMcpConfig', () => {
     writeClaudeMcpConfig(tmpProject);
 
     const content = fs.readJsonSync(mcpJsonPath(tmpProject));
-    expect(content.mcpServers.sigma).toEqual(EXPECTED_ENTRY);
+    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
   });
 });
 
@@ -136,7 +139,7 @@ describe('writeCursorMcpConfig', () => {
 
     expect(fs.existsSync(cursorMcpPath(tmpProject))).toBe(true);
     const content = fs.readJsonSync(cursorMcpPath(tmpProject));
-    expect(content.mcpServers.sigma).toEqual(EXPECTED_ENTRY);
+    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
   });
 
   it('merges sigma entry without touching existing servers', async () => {
@@ -149,7 +152,7 @@ describe('writeCursorMcpConfig', () => {
     writeCursorMcpConfig(tmpProject);
 
     const content = fs.readJsonSync(cursorMcpPath(tmpProject));
-    expect(content.mcpServers.sigma).toEqual(EXPECTED_ENTRY);
+    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
     expect(content.mcpServers.other).toEqual({ command: 'other-mcp', args: [] });
   });
 
@@ -159,7 +162,7 @@ describe('writeCursorMcpConfig', () => {
     writeCursorMcpConfig(tmpProject);
 
     const content = fs.readJsonSync(cursorMcpPath(tmpProject));
-    expect(content.mcpServers.sigma).toEqual(EXPECTED_ENTRY);
+    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
   });
 });
 
@@ -168,37 +171,38 @@ describe('writeCursorMcpConfig', () => {
 describe('writeCodexMcpConfig', () => {
   it('creates ~/.codex/config.toml with [mcp_servers.sigma] when file does not exist', async () => {
     const { writeCodexMcpConfig } = await importMcpConfig();
-    writeCodexMcpConfig();
+    writeCodexMcpConfig(tmpProject);
 
     const filePath = codexConfigPath(tmpHome);
     expect(fs.existsSync(filePath)).toBe(true);
     const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
     expect(parsed.mcp_servers?.sigma?.command).toBe('sigma-mcp');
-    expect(parsed.mcp_servers?.sigma?.args).toEqual([]);
+    expect(parsed.mcp_servers?.sigma?.args).toEqual([tmpProject]);
   });
 
   it('merges sigma without touching other Codex settings', async () => {
     const { writeCodexMcpConfig } = await importMcpConfig();
     const filePath = codexConfigPath(tmpHome);
     fs.ensureDirSync(path.dirname(filePath));
-    // File dengan setting Codex lain
     fs.writeFileSync(filePath, `[model]\nname = "o3"\n\n[mcp_servers.other]\ncommand = "other-mcp"\nargs = []\n`, 'utf-8');
 
-    writeCodexMcpConfig();
+    writeCodexMcpConfig(tmpProject);
 
     const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
     expect(parsed.mcp_servers?.sigma?.command).toBe('sigma-mcp');
+    expect(parsed.mcp_servers?.sigma?.args).toEqual([tmpProject]);
     expect(parsed.mcp_servers?.other?.command).toBe('other-mcp');
     expect((parsed.model as any)?.name).toBe('o3');
   });
 
   it('is idempotent', async () => {
     const { writeCodexMcpConfig } = await importMcpConfig();
-    writeCodexMcpConfig();
-    writeCodexMcpConfig();
+    writeCodexMcpConfig(tmpProject);
+    writeCodexMcpConfig(tmpProject);
 
     const parsed = parseTOML(fs.readFileSync(codexConfigPath(tmpHome), 'utf-8')) as any;
     expect(parsed.mcp_servers?.sigma?.command).toBe('sigma-mcp');
+    expect(parsed.mcp_servers?.sigma?.args).toEqual([tmpProject]);
     expect(Object.keys(parsed.mcp_servers)).toHaveLength(1);
   });
 });
@@ -206,14 +210,14 @@ describe('writeCodexMcpConfig', () => {
 // ── writeAntigravityMcpConfig ─────────────────────────────────────────────────
 
 describe('writeAntigravityMcpConfig', () => {
-  it('creates ~/.gemini/config/mcp_config.json with sigma entry', async () => {
+  it('creates ~/.gemini/config/mcp_config.json with sigma entry and project path', async () => {
     const { writeAntigravityMcpConfig } = await importMcpConfig();
-    writeAntigravityMcpConfig();
+    writeAntigravityMcpConfig(tmpProject);
 
     const filePath = antigravityConfigPath(tmpHome);
     expect(fs.existsSync(filePath)).toBe(true);
     const content = fs.readJsonSync(filePath);
-    expect(content.mcpServers.sigma).toEqual(EXPECTED_ENTRY);
+    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
   });
 
   it('merges sigma without touching other MCP servers', async () => {
@@ -224,20 +228,20 @@ describe('writeAntigravityMcpConfig', () => {
       mcpServers: { other: { command: 'other-mcp', args: [] } },
     });
 
-    writeAntigravityMcpConfig();
+    writeAntigravityMcpConfig(tmpProject);
 
     const content = fs.readJsonSync(filePath);
-    expect(content.mcpServers.sigma).toEqual(EXPECTED_ENTRY);
+    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
     expect(content.mcpServers.other).toEqual({ command: 'other-mcp', args: [] });
   });
 
   it('is idempotent', async () => {
     const { writeAntigravityMcpConfig } = await importMcpConfig();
-    writeAntigravityMcpConfig();
-    writeAntigravityMcpConfig();
+    writeAntigravityMcpConfig(tmpProject);
+    writeAntigravityMcpConfig(tmpProject);
 
     const content = fs.readJsonSync(antigravityConfigPath(tmpHome));
-    expect(content.mcpServers.sigma).toEqual(EXPECTED_ENTRY);
+    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
   });
 });
 

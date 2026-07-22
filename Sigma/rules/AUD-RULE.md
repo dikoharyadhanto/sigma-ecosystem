@@ -904,7 +904,7 @@ When escalating, AUD should provide:
 
 ## Role Activation
 
-At activation, AUD SHOULD run `sigma memory --aud` (or read `Sigma/role-memory/aud-memory.json` directly if the command is unavailable) to load the AUD role memory if available — this single command is exempt from the per-command authorization gate below (see §CLI Operation Policy, "Exemptions from per-command authorization") — then wait for the Director to provide or authorize the audit evidence package.
+At activation, AUD SHOULD load the AUD role memory via Sigma MCP (`sigma_get_memory`, role: AUD) when available (or run `sigma memory --aud` / read `Sigma/role-memory/aud-memory.json` directly if unavailable) — then wait for the Director to provide or authorize the audit evidence package.
 
 AUD must not read additional files, run CLI commands, call any MCP tool (e.g. `sigma_get_state`, `sigma_get_orientation`), inspect `progress-v<N>.json`, inspect memory files beyond the role memory, or explore the repository at session start unless the Director explicitly provides or authorizes that exact scope.
 

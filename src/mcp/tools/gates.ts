@@ -38,14 +38,21 @@ export function computeGates(root: string | null): unknown {
   };
 }
 
+import { z } from 'zod';
+
 export function registerGatesTool(server: McpServer): void {
   server.registerTool(
     'sigma_get_gates',
     {
       title: 'Get Sigma Gate Status',
       description:
-        'Return the three Sigma lifecycle gates with human-readable labels and any INVALID runtime markers. Read-only; takes no arguments. Returns { active, gate_1_open, gate_2_open, gate_3_satisfied, labels: { gate_1_open, gate_2_open, gate_3_satisfied }, invalid_markers, source }. Each label is one of OPEN | BLOCKED | SATISFIED | INVALID. Returns { active: false, ... } when no chain exists.',
-      inputSchema: {},
+        'Return the three Sigma lifecycle gates with human-readable labels and any INVALID runtime markers. Read-only. Accepts optional project_root parameter. Returns { active, gate_1_open, gate_2_open, gate_3_satisfied, labels, invalid_markers, source }.',
+      inputSchema: {
+        project_root: z
+          .string()
+          .optional()
+          .describe('Optional absolute path to the Sigma project root directory.'),
+      },
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -53,6 +60,7 @@ export function registerGatesTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async () => okText(computeGates(resolveRoot())),
+    async ({ project_root }: { project_root?: string }) =>
+      okText(computeGates(resolveRoot(project_root))),
   );
 }

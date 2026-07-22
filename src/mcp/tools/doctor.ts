@@ -35,14 +35,21 @@ export function computeDoctor(root: string | null): unknown {
   };
 }
 
+import { z } from 'zod';
+
 export function registerDoctorTool(server: McpServer): void {
   server.registerTool(
     'sigma_doctor',
     {
       title: 'Sigma Doctor (diagnosis only)',
       description:
-        'Run Sigma runtime reconciliation as a READ-ONLY diagnosis and report what it would repair or flag, without writing to disk. Takes no arguments. Returns { active, findings: { repaired, invalidMarked, invalidCleared, remainingInvalid }, applied: false, source }. applied is always false — this tool never persists changes. Returns { active: false, ... } when no chain exists.',
-      inputSchema: {},
+        'Run Sigma runtime reconciliation as a READ-ONLY diagnosis and report what it would repair or flag, without writing to disk. Read-only. Accepts optional project_root parameter. Returns { active, findings, applied: false, source }.',
+      inputSchema: {
+        project_root: z
+          .string()
+          .optional()
+          .describe('Optional absolute path to the Sigma project root directory.'),
+      },
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -50,6 +57,7 @@ export function registerDoctorTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async () => okText(computeDoctor(resolveRoot())),
+    async ({ project_root }: { project_root?: string }) =>
+      okText(computeDoctor(resolveRoot(project_root))),
   );
 }

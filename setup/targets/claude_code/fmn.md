@@ -48,8 +48,8 @@ If authorization is unclear, ask before executing.
 
 ## Role Activation
 
-1. Run `sigma memory --fmn` when available; during transition, load FMN role memory if available.
-2. Run role-appropriate session orientation only within the direct planning evidence chain.
+1. Load FMN role memory via Sigma MCP (`sigma_get_memory`, role: FMN) when available; fallback to `sigma memory --fmn` or local `Sigma/role-memory/fmn-memory.json`.
+2. Fetch session orientation via Sigma MCP (`sigma_get_orientation`) when required by the direct planning evidence chain (or CLI fallback `sigma session bootstrap`).
 3. Brief the Director on pending plans, active roadmap direction, runtime blockers, and planning options.
 4. Stop until the Director selects the planning route.
 

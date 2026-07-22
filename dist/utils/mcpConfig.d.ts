@@ -18,7 +18,7 @@
  */
 /**
  * Tulis/upsert entri sigma ke .mcp.json di project root.
- * Format: { "mcpServers": { "sigma": { "command": "sigma-mcp", "args": [] } } }
+ * Format: { "mcpServers": { "sigma": { "command": "sigma-mcp", "args": [projectRoot] } } }
  * Merge-aware: entri server lain dipertahankan.
  */
 export declare function writeClaudeMcpConfig(projectRoot: string): void;
@@ -32,19 +32,14 @@ export declare function writeCursorMcpConfig(projectRoot: string): void;
  * Upsert entri sigma ke ~/.codex/config.toml (global Codex config).
  * Bagian: [mcp_servers.sigma]
  * Merge-aware: setting Codex lain (non-mcp_servers) dipertahankan utuh.
- *
- * Format TOML yang dihasilkan di bagian sigma:
- *   [mcp_servers.sigma]
- *   command = "sigma-mcp"
- *   args = []
  */
-export declare function writeCodexMcpConfig(): void;
+export declare function writeCodexMcpConfig(projectRoot?: string): void;
 /**
  * Upsert entri sigma ke ~/.gemini/config/mcp_config.json (global Antigravity config).
- * Format: { "mcpServers": { "sigma": { "command": "sigma-mcp", "args": [] } } }
+ * Format: { "mcpServers": { "sigma": { "command": "sigma-mcp", "args": [projectRoot] } } }
  * Merge-aware: server MCP lain milik pengguna dipertahankan.
  */
-export declare function writeAntigravityMcpConfig(): void;
+export declare function writeAntigravityMcpConfig(projectRoot?: string): void;
 /**
  * Hapus key "sigma" dari [mcp_servers] di ~/.codex/config.toml.
  * No-op kalau file tidak ada atau key tidak ada.

@@ -30,17 +30,23 @@ function computeGates(root) {
         source: shared_1.SOURCE_ENGINE,
     };
 }
+const zod_1 = require("zod");
 function registerGatesTool(server) {
     server.registerTool('sigma_get_gates', {
         title: 'Get Sigma Gate Status',
-        description: 'Return the three Sigma lifecycle gates with human-readable labels and any INVALID runtime markers. Read-only; takes no arguments. Returns { active, gate_1_open, gate_2_open, gate_3_satisfied, labels: { gate_1_open, gate_2_open, gate_3_satisfied }, invalid_markers, source }. Each label is one of OPEN | BLOCKED | SATISFIED | INVALID. Returns { active: false, ... } when no chain exists.',
-        inputSchema: {},
+        description: 'Return the three Sigma lifecycle gates with human-readable labels and any INVALID runtime markers. Read-only. Accepts optional project_root parameter. Returns { active, gate_1_open, gate_2_open, gate_3_satisfied, labels, invalid_markers, source }.',
+        inputSchema: {
+            project_root: zod_1.z
+                .string()
+                .optional()
+                .describe('Optional absolute path to the Sigma project root directory.'),
+        },
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async () => (0, shared_1.okText)(computeGates((0, shared_1.resolveRoot)())));
+    }, async ({ project_root }) => (0, shared_1.okText)(computeGates((0, shared_1.resolveRoot)(project_root))));
 }
 //# sourceMappingURL=gates.js.map

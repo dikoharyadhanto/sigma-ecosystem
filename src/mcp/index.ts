@@ -5,8 +5,9 @@
 // parsing terminal text. The CLI remains the operational authority; this layer
 // is read-only over the same engine functions.
 //
-// Registers the five read-only core tools: sigma_get_state,
-// sigma_get_orientation, sigma_get_gates, sigma_list_artifacts, sigma_doctor.
+// Registers the six read-only core tools: sigma_get_state,
+// sigma_get_orientation, sigma_get_gates, sigma_list_artifacts, sigma_doctor,
+// sigma_get_memory.
 //
 // stdout is reserved for JSON-RPC frames — all diagnostics go to stderr.
 
@@ -18,6 +19,7 @@ import { registerOrientationTool } from './tools/orientation';
 import { registerGatesTool } from './tools/gates';
 import { registerArtifactsTool } from './tools/artifacts';
 import { registerDoctorTool } from './tools/doctor';
+import { registerMemoryTool } from './tools/memory';
 
 // Exported so tests can boot the server in-process (PLAN-IMPL-01 §4).
 export function buildServer(): McpServer {
@@ -27,18 +29,38 @@ export function buildServer(): McpServer {
   registerGatesTool(server);
   registerArtifactsTool(server);
   registerDoctorTool(server);
+  registerMemoryTool(server);
   return server;
 }
 
-async function main(): Promise<void> {
+import { addClientRoot } from './shared';
+
+export async function startMcpServer(): Promise<void> {
   const server = buildServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('sigma-mcp running on stdio'); // stderr only — never console.log
+
+  // Best-effort fetch client roots via MCP protocol (roots/list)
+  try {
+    const rootsResult = await server.server.listRoots();
+    if (rootsResult && Array.isArray(rootsResult.roots)) {
+      for (const r of rootsResult.roots) {
+        if (r.uri) addClientRoot(r.uri);
+      }
+    }
+  } catch {
+    // Client may not support roots capability
+  }
 }
 
-if (require.main === module) {
-  main().catch((e) => {
+const isEntrypoint =
+  typeof require !== 'undefined' &&
+  require.main &&
+  (require.main === module || require.main.filename.endsWith('sigma-mcp.js'));
+
+if (isEntrypoint) {
+  startMcpServer().catch((e) => {
     console.error('Fatal error in sigma-mcp:', e);
     process.exit(1);
   });

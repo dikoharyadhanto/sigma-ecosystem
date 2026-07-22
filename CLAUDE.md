@@ -100,12 +100,12 @@ tool call in an agent environment.
 ### MCP Orientation Layer (read-only)
 
 When a `sigma-mcp` client is configured, the tools `sigma_get_state`,
-`sigma_get_gates`, `sigma_get_orientation`, `sigma_list_artifacts`, and
-`sigma_doctor` return the same read-only orientation data as
-`sigma session bootstrap`/`sigma {domain} check`, as structured JSON instead
-of CLI stdout. CLI remains the sole authority for every write, gate, or lock
-operation — MCP tools never lock, supersede, or mutate state. The AUD
-Exception above applies equally to these tools.
+`sigma_get_gates`, `sigma_get_orientation`, `sigma_list_artifacts`,
+`sigma_doctor`, and `sigma_get_memory` return the same read-only orientation
+data as `sigma session bootstrap`/`sigma {domain} check`/`sigma memory`, as
+structured JSON instead of CLI stdout. CLI remains the sole authority for
+every write, gate, or lock operation — MCP tools never lock, supersede, or
+mutate state. The AUD Exception above applies equally to these tools.
 
 ## Director Authorization Language
 
@@ -134,11 +134,11 @@ If authorization is unclear, ask before executing.
 
 ## Governance Role Activation
 
-On governance role activation, load the role memory if available
-(`Sigma/role-memory/{role}-memory.json`, or run `sigma memory --arc`/`--fmn`/`--dev`/`--aud`),
+On governance role activation, load the role memory via Sigma MCP (`sigma_get_memory`)
+when available (or `Sigma/role-memory/{role}-memory.json`, or CLI fallback `sigma memory --<role>`),
 then follow the matching role rule file.
 
-Do not treat `sigma session bootstrap` as mandatory for every role.
+Do not treat session orientation (via MCP `sigma_get_orientation` or CLI fallback `sigma session bootstrap`) as mandatory for every role.
 Use it only when the active role rule, Director request, or direct runtime
 evidence chain requires project state.
 

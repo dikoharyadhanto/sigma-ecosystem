@@ -41,14 +41,21 @@ export function computeState(root: string | null): unknown {
   };
 }
 
+import { z } from 'zod';
+
 export function registerStateTool(server: McpServer): void {
   server.registerTool(
     'sigma_get_state',
     {
       title: 'Get Sigma Lifecycle State',
       description:
-        'Return the current Sigma lifecycle phase, active chain, project identity, and gate summary. Read-only; wraps the same engine code path as the CLI. Takes no arguments. Returns { active, phase, active_chain, project_id, project_name, schema_version, gates, has_invalid_runtime, source }, or { active: false, ... } when no Sigma chain exists in the current directory.',
-      inputSchema: {},
+        'Return the current Sigma lifecycle phase, active chain, project identity, and gate summary. Read-only; wraps the same engine code path as the CLI. Accepts optional project_root parameter. Returns { active, phase, active_chain, project_id, project_name, schema_version, gates, has_invalid_runtime, source }, or { active: false, ... } when no Sigma chain exists.',
+      inputSchema: {
+        project_root: z
+          .string()
+          .optional()
+          .describe('Optional absolute path to the Sigma project root directory.'),
+      },
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -56,6 +63,7 @@ export function registerStateTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async () => okText(computeState(resolveRoot())),
+    async ({ project_root }: { project_root?: string }) =>
+      okText(computeState(resolveRoot(project_root))),
   );
 }

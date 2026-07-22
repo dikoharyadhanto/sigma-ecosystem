@@ -19,6 +19,7 @@ import { computeGates } from '../src/mcp/tools/gates';
 import { computeArtifacts } from '../src/mcp/tools/artifacts';
 import { computeDoctor } from '../src/mcp/tools/doctor';
 import { computeOrientation } from '../src/mcp/tools/orientation';
+import { computeMemory } from '../src/mcp/tools/memory';
 import { buildServer } from '../src/mcp/index';
 
 import {
@@ -222,7 +223,7 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
     env?.cleanup();
   });
 
-  it('lists exactly the five tools and every call returns source:engine', async () => {
+  it('lists exactly the six tools and every call returns source:engine', async () => {
     env = setupTestEnv();
     projectWithChain(env, makeChainWithLockedExec());
     // Registered tools resolve the project via findProjectRoot() from cwd.
@@ -237,11 +238,12 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
-      ['sigma_doctor', 'sigma_get_gates', 'sigma_get_orientation', 'sigma_get_state', 'sigma_list_artifacts'].sort(),
+      ['sigma_doctor', 'sigma_get_gates', 'sigma_get_orientation', 'sigma_get_state', 'sigma_list_artifacts', 'sigma_get_memory'].sort(),
     );
 
     for (const name of names) {
-      const res = await client.callTool({ name, arguments: {} });
+      const args = name === 'sigma_get_memory' ? { role: 'FMN' } : {};
+      const res = await client.callTool({ name, arguments: args });
       const text = (res.content as Array<{ type: string; text: string }>)[0].text;
       const payload = JSON.parse(text) as Payload;
       expect(payload.source).toBe('engine');
@@ -250,6 +252,39 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
 
     await client.close();
     await server.close();
+  });
+
+  it('computeMemory returns valid role memory payload for all roles', () => {
+    for (const role of ['ARC', 'FMN', 'DEV', 'AUD'] as const) {
+      const res = computeMemory(null, role) as Payload;
+      expect(res.active).toBe(true);
+      expect(res.role).toBe(role);
+      expect(Array.isArray(res.general)).toBe(true);
+      expect(Array.isArray(res.role_specific)).toBe(true);
+    }
+  });
+});
+
+describe('sigma-mcp project root resolution fallbacks', () => {
+  it('resolves root from explicit parameter and environment variables', async () => {
+    const { resolveRoot, addClientRoot } = await import('../src/mcp/shared');
+    const testEnv = setupTestEnv();
+    projectWithChain(testEnv, makeChain());
+
+    // 1. Explicit parameter
+    expect(resolveRoot(testEnv.projectDir)).toBe(testEnv.projectDir);
+
+    // 2. SIGMA_PROJECT_ROOT env var
+    process.env.SIGMA_PROJECT_ROOT = testEnv.projectDir;
+    expect(resolveRoot()).toBe(testEnv.projectDir);
+    delete process.env.SIGMA_PROJECT_ROOT;
+
+    // 3. Client Root URI via addClientRoot
+    const fileUri = `file:///${testEnv.projectDir.replace(/\\/g, '/')}`;
+    addClientRoot(fileUri);
+    expect(resolveRoot()).toBe(testEnv.projectDir);
+
+    testEnv.cleanup();
   });
 });
 

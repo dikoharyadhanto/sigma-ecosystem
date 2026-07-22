@@ -45,17 +45,23 @@ function computeArtifacts(root) {
         source: shared_1.SOURCE_ENGINE,
     };
 }
+const zod_1 = require("zod");
 function registerArtifactsTool(server) {
     server.registerTool('sigma_list_artifacts', {
         title: 'List Sigma Artifacts',
-        description: 'Return the artifact tracker summary for the active chain: intent, roadmap, plan, exec, and close, each with version and state (counts for plan/exec history, not the full version arrays). Read-only; takes no arguments. Returns { active, active_chain, intent, roadmap, plan, exec, close, source }. roadmap and close are null until created. Returns { active: false, ... } when no chain exists.',
-        inputSchema: {},
+        description: 'Return the artifact tracker summary for the active chain: intent, roadmap, plan, exec, and close, each with version and state. Read-only. Accepts optional project_root parameter. Returns { active, active_chain, intent, roadmap, plan, exec, close, source }.',
+        inputSchema: {
+            project_root: zod_1.z
+                .string()
+                .optional()
+                .describe('Optional absolute path to the Sigma project root directory.'),
+        },
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async () => (0, shared_1.okText)(computeArtifacts((0, shared_1.resolveRoot)())));
+    }, async ({ project_root }) => (0, shared_1.okText)(computeArtifacts((0, shared_1.resolveRoot)(project_root))));
 }
 //# sourceMappingURL=artifacts.js.map

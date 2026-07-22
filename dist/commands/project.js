@@ -247,7 +247,7 @@ async function runStart(opts) {
     (0, output_1.success)(`Sigma project initialized: ${projectName} (${projectId})`);
     console.log(`  Location: ${sigmaDir}`);
     console.log('  Next: Run `sigma session bootstrap` or `sigma project status` to confirm state.');
-    // Stage 2 — Tulis .mcp.json dan .cursor/mcp.json untuk sigma-mcp
+    // Stage 2 & PLAN-EVAL-04 — Tulis local & global MCP config dengan explicit projectRoot
     {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeClaudeMcpConfig)(projectRoot), '.mcp.json');
         if (err)
@@ -261,6 +261,20 @@ async function runStart(opts) {
             (0, output_1.warn)(`MCP (Cursor): ${err}`);
         else
             console.log('  MCP: .cursor/mcp.json written (sigma-mcp — Cursor).');
+    }
+    {
+        const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeCodexMcpConfig)(projectRoot), '~/.codex/config.toml');
+        if (err)
+            (0, output_1.warn)(`MCP (Codex): ${err}`);
+        else
+            console.log('  MCP: ~/.codex/config.toml updated (sigma-mcp — Codex).');
+    }
+    {
+        const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeAntigravityMcpConfig)(projectRoot), '~/.gemini/config/mcp_config.json');
+        if (err)
+            (0, output_1.warn)(`MCP (Antigravity): ${err}`);
+        else
+            console.log('  MCP: ~/.gemini/config/mcp_config.json updated (sigma-mcp — Antigravity).');
     }
     if (!(0, mcpConfig_1.isSigmaMcpResolvable)()) {
         (0, output_1.warn)('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
@@ -378,7 +392,7 @@ function runSync(opts) {
     for (const f of updated) {
         console.log(`  Updated: ${f}`);
     }
-    // Stage 2 — Upsert .mcp.json dan .cursor/mcp.json (merge-aware)
+    // Stage 2 & PLAN-EVAL-04 — Upsert local & global MCP config dengan explicit projectRoot
     {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeClaudeMcpConfig)(projectRoot), '.mcp.json');
         if (err)
@@ -392,6 +406,20 @@ function runSync(opts) {
             (0, output_1.warn)(`MCP (Cursor): ${err}`);
         else
             console.log('  Updated: .cursor/mcp.json (sigma-mcp — upsert key sigma).');
+    }
+    {
+        const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeCodexMcpConfig)(projectRoot), '~/.codex/config.toml');
+        if (err)
+            (0, output_1.warn)(`MCP (Codex): ${err}`);
+        else
+            console.log('  Updated: ~/.codex/config.toml (sigma-mcp — upsert key sigma).');
+    }
+    {
+        const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeAntigravityMcpConfig)(projectRoot), '~/.gemini/config/mcp_config.json');
+        if (err)
+            (0, output_1.warn)(`MCP (Antigravity): ${err}`);
+        else
+            console.log('  Updated: ~/.gemini/config/mcp_config.json (sigma-mcp — upsert key sigma).');
     }
     if (!(0, mcpConfig_1.isSigmaMcpResolvable)()) {
         (0, output_1.warn)('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');

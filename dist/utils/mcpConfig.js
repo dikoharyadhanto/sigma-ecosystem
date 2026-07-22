@@ -34,12 +34,16 @@ const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 const smol_toml_1 = require("smol-toml");
 // ── Payload sigma-mcp ─────────────────────────────────────────────────────────
-/** Entri sigma-mcp yang ditulis ke semua config. command = "sigma-mcp" (bare,
- *  asumsi global install — resolvable via PATH). */
-const SIGMA_MCP_ENTRY = {
-    command: 'sigma-mcp',
-    args: [],
-};
+/** Helper untuk membuat entri config sigma-mcp.
+ *  Jika projectRoot diberikan, masukkan ke args: [projectRoot]. */
+function makeMcpEntry(projectRoot) {
+    return {
+        command: 'sigma-mcp',
+        args: projectRoot && typeof projectRoot === 'string' && projectRoot.trim().length > 0
+            ? [projectRoot.trim()]
+            : [],
+    };
+}
 // ── Helpers ───────────────────────────────────────────────────────────────────
 /** Baca JSON dari path; kembalikan {} kalau file tidak ada atau parse gagal. */
 function readJsonSafe(filePath) {
@@ -86,7 +90,7 @@ function writeJsonSafe(filePath, data) {
 // ── Stage 2: Project-scoped (ditulis di project start / sync) ─────────────────
 /**
  * Tulis/upsert entri sigma ke .mcp.json di project root.
- * Format: { "mcpServers": { "sigma": { "command": "sigma-mcp", "args": [] } } }
+ * Format: { "mcpServers": { "sigma": { "command": "sigma-mcp", "args": [projectRoot] } } }
  * Merge-aware: entri server lain dipertahankan.
  */
 function writeClaudeMcpConfig(projectRoot) {
@@ -95,7 +99,7 @@ function writeClaudeMcpConfig(projectRoot) {
     if (!existing.mcpServers || typeof existing.mcpServers !== 'object' || Array.isArray(existing.mcpServers)) {
         existing.mcpServers = {};
     }
-    existing.mcpServers.sigma = SIGMA_MCP_ENTRY;
+    existing.mcpServers.sigma = makeMcpEntry(projectRoot);
     writeJsonSafe(filePath, existing);
 }
 /**
@@ -109,21 +113,16 @@ function writeCursorMcpConfig(projectRoot) {
     if (!existing.mcpServers || typeof existing.mcpServers !== 'object' || Array.isArray(existing.mcpServers)) {
         existing.mcpServers = {};
     }
-    existing.mcpServers.sigma = SIGMA_MCP_ENTRY;
+    existing.mcpServers.sigma = makeMcpEntry(projectRoot);
     writeJsonSafe(filePath, existing);
 }
-// ── Stage 3: Global-scoped (ditulis di setup install / update) ────────────────
+// ── Stage 3: Global-scoped (ditulis di setup install / update & project start / sync) ──
 /**
  * Upsert entri sigma ke ~/.codex/config.toml (global Codex config).
  * Bagian: [mcp_servers.sigma]
  * Merge-aware: setting Codex lain (non-mcp_servers) dipertahankan utuh.
- *
- * Format TOML yang dihasilkan di bagian sigma:
- *   [mcp_servers.sigma]
- *   command = "sigma-mcp"
- *   args = []
  */
-function writeCodexMcpConfig() {
+function writeCodexMcpConfig(projectRoot) {
     const filePath = path_1.default.join(os_1.default.homedir(), '.codex', 'config.toml');
     let parsed = {};
     if (fs_extra_1.default.existsSync(filePath)) {
@@ -133,30 +132,28 @@ function writeCodexMcpConfig() {
         }
         catch {
             // Kalau parse gagal, pertahankan parsed = {} dan overwrite
-            // (file corrupt — lebih baik reset section ini daripada biarkan rusak)
         }
     }
-    // Pastikan mcp_servers ada sebagai tabel
     if (!parsed.mcp_servers || typeof parsed.mcp_servers !== 'object' || Array.isArray(parsed.mcp_servers)) {
         parsed.mcp_servers = {};
     }
     const mcpServers = parsed.mcp_servers;
-    mcpServers.sigma = { command: 'sigma-mcp', args: [] };
+    mcpServers.sigma = makeMcpEntry(projectRoot);
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(filePath));
     fs_extra_1.default.writeFileSync(filePath, (0, smol_toml_1.stringify)(parsed), 'utf-8');
 }
 /**
  * Upsert entri sigma ke ~/.gemini/config/mcp_config.json (global Antigravity config).
- * Format: { "mcpServers": { "sigma": { "command": "sigma-mcp", "args": [] } } }
+ * Format: { "mcpServers": { "sigma": { "command": "sigma-mcp", "args": [projectRoot] } } }
  * Merge-aware: server MCP lain milik pengguna dipertahankan.
  */
-function writeAntigravityMcpConfig() {
+function writeAntigravityMcpConfig(projectRoot) {
     const filePath = path_1.default.join(os_1.default.homedir(), '.gemini', 'config', 'mcp_config.json');
     const existing = readJsonSafe(filePath);
     if (!existing.mcpServers || typeof existing.mcpServers !== 'object' || Array.isArray(existing.mcpServers)) {
         existing.mcpServers = {};
     }
-    existing.mcpServers.sigma = SIGMA_MCP_ENTRY;
+    existing.mcpServers.sigma = makeMcpEntry(projectRoot);
     writeJsonSafe(filePath, existing);
 }
 // ── Stage 8: Uninstall cleanup ────────────────────────────────────────────────

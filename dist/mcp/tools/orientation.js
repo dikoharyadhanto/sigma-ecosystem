@@ -68,12 +68,16 @@ function computeOrientation(root, role) {
 function registerOrientationTool(server) {
     server.registerTool('sigma_get_orientation', {
         title: 'Get Sigma Orientation',
-        description: 'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, and unread inbox counts. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes the inbox counts to that role. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, source }. next_valid_operations is the raw CLI-valid list and does NOT indicate which require Director authorization. Returns { active: false, ... } outside a Sigma project.',
+        description: 'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, and unread inbox counts. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes the inbox counts to that role. Optional project_root sets the project directory. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, source }.',
         inputSchema: {
             role: zod_1.z
                 .enum(['ARC', 'FMN', 'DEV', 'AUD'])
                 .optional()
                 .describe('Optional Sigma role to scope inbox unread counts to.'),
+            project_root: zod_1.z
+                .string()
+                .optional()
+                .describe('Optional absolute path to the Sigma project root directory.'),
         },
         annotations: {
             readOnlyHint: true,
@@ -81,6 +85,6 @@ function registerOrientationTool(server) {
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ role }) => (0, shared_1.okText)(computeOrientation((0, shared_1.resolveRoot)(), role)));
+    }, async ({ role, project_root }) => (0, shared_1.okText)(computeOrientation((0, shared_1.resolveRoot)(project_root), role)));
 }
 //# sourceMappingURL=orientation.js.map

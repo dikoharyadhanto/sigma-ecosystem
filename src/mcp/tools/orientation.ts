@@ -76,12 +76,16 @@ export function registerOrientationTool(server: McpServer): void {
     {
       title: 'Get Sigma Orientation',
       description:
-        'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, and unread inbox counts. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes the inbox counts to that role. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, source }. next_valid_operations is the raw CLI-valid list and does NOT indicate which require Director authorization. Returns { active: false, ... } outside a Sigma project.',
+        'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, and unread inbox counts. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes the inbox counts to that role. Optional project_root sets the project directory. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, source }.',
       inputSchema: {
         role: z
           .enum(['ARC', 'FMN', 'DEV', 'AUD'])
           .optional()
           .describe('Optional Sigma role to scope inbox unread counts to.'),
+        project_root: z
+          .string()
+          .optional()
+          .describe('Optional absolute path to the Sigma project root directory.'),
       },
       annotations: {
         readOnlyHint: true,
@@ -90,7 +94,7 @@ export function registerOrientationTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ role }: { role?: 'ARC' | 'FMN' | 'DEV' | 'AUD' }) =>
-      okText(computeOrientation(resolveRoot(), role as SigmaRole | undefined)),
+    async ({ role, project_root }: { role?: 'ARC' | 'FMN' | 'DEV' | 'AUD'; project_root?: string }) =>
+      okText(computeOrientation(resolveRoot(project_root), role as SigmaRole | undefined)),
   );
 }

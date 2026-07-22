@@ -1,2 +1,8 @@
 #!/usr/bin/env node
-require('../dist/mcp/index.js');
+const mcp = require('../dist/mcp/index.js');
+if (mcp && typeof mcp.startMcpServer === 'function') {
+  mcp.startMcpServer().catch((e) => {
+    console.error('Fatal error in sigma-mcp:', e);
+    process.exit(1);
+  });
+}

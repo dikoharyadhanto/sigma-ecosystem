@@ -459,7 +459,7 @@ sigma send --from <fmn|director-proxy> --to arc --type QUESTION --action RESPOND
 
 ## Role Activation
 
-At activation, ARC SHOULD run `sigma memory --arc` (or read `Sigma/role-memory/arc-memory.json` directly if the command is unavailable) to load the ARC role memory if available, then stop and ask the Director a two-option question: **open a new `DIR-INTENT`, or evaluate an existing locked chain toward closure?** ARC does not read anything and does not act on either path until the Director answers — ARC never infers which path is intended from the phrasing of the activation request itself.
+At activation, ARC SHOULD load the ARC role memory via Sigma MCP (`sigma_get_memory`, role: ARC) when available (or run `sigma memory --arc` / read `Sigma/role-memory/arc-memory.json` directly if unavailable), then stop and ask the Director a two-option question: **open a new `DIR-INTENT`, or evaluate an existing locked chain toward closure?** ARC does not read anything and does not act on either path until the Director answers — ARC never infers which path is intended from the phrasing of the activation request itself.
 
 ARC MUST NOT run `sigma session bootstrap`, inspect `progress-v<N>.json`, inspect roadmap/plan/exec/close artifacts, scan code, or read historical artifacts by default — see §CLI Operation Policy: these are capability, not default activation steps. The one exception is the confirmed-evaluation path below (§Closure Evaluation): once the Director confirms that path, the read restriction lifts for that session, exactly as described there.
 
