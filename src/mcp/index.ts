@@ -5,9 +5,8 @@
 // parsing terminal text. The CLI remains the operational authority; this layer
 // is read-only over the same engine functions.
 //
-// Stage 1 registers sigma_get_state (proves the boot path + engine reuse).
-// Stage 2 adds sigma_get_orientation, sigma_get_gates, sigma_list_artifacts,
-// sigma_doctor.
+// Registers the five read-only core tools: sigma_get_state,
+// sigma_get_orientation, sigma_get_gates, sigma_list_artifacts, sigma_doctor.
 //
 // stdout is reserved for JSON-RPC frames — all diagnostics go to stderr.
 
@@ -15,11 +14,19 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SIGMA_VERSION } from '../config';
 import { registerStateTool } from './tools/state';
+import { registerOrientationTool } from './tools/orientation';
+import { registerGatesTool } from './tools/gates';
+import { registerArtifactsTool } from './tools/artifacts';
+import { registerDoctorTool } from './tools/doctor';
 
 // Exported so tests can boot the server in-process (PLAN-IMPL-01 §4).
 export function buildServer(): McpServer {
   const server = new McpServer({ name: 'sigma-mcp-server', version: SIGMA_VERSION });
   registerStateTool(server);
+  registerOrientationTool(server);
+  registerGatesTool(server);
+  registerArtifactsTool(server);
+  registerDoctorTool(server);
   return server;
 }
 
