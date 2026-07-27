@@ -173,14 +173,16 @@ DEV should report in DEV-EXEC:
 > This is a concise, human-readable summary specifically for the Director.
 > **Recommended timing:** Fill this section after receiving the AUD advisory verdict or after the Director approves `SKIP_FOR_AUDIT` to capture the final pre-lock state.
 
-### Current State / Quick Status
+### Overview
+
+> Max 5 sentences. Plain-language core of the contract this plan sets — what DEV is actually being asked to build and why, distilled from the Work Order and Acceptance Criteria.
+> Write for a Director who will read only this paragraph and nothing else in the document. No TASK-/AC-/TC- ID references, no jargon that requires scrolling up to decode — spell out the substance inline instead of pointing at a section.
+> Fold in any non-negotiable constraint the Director must know before lock; don't leave it for a separate list.
 
 [...]
 
-### Key Decisions
+### Open Question / Unclear Decision
 
-[...]
-
-### Open Risks / Next Actions
+> Optional — leave as [...] or omit if nothing applies. Only fill if there is a genuine open question or undecided point the Director should know before lock. Not a place to restate risks already covered elsewhere.
 
 [...]

@@ -378,11 +378,17 @@ If none, write:
 > This is a concise, human-readable summary specifically for the Director. DEV and FMN may freely collaborate to fill this section.
 > **Recommended timing:** Best filled after receiving the FMN Post-Build Review, so it captures the final execution state and readiness.
 
-### Current State / Quick Status
+### Overview
+
+> Max 5 sentences. Plain-language core of what this execution builds or built — not a status checklist, not a restatement of every task.
+> Write for a Director who will read only this paragraph and nothing else in the document. No TASK-/AC-/TC-/OBS-/REQ- ID references, no jargon that requires scrolling up to decode — spell out the substance inline instead of pointing at a section.
+> Fold in any key implementation decision or deviation the Director must know about; don't leave it for a separate list.
 
 [...]
 
-### Key Decisions
+### Open Question / Unclear Decision
+
+> Optional — leave as [...] or omit if nothing applies. Only fill if there is a genuine open question or undecided point the Director should know before proceeding. Not a place to restate issues already covered elsewhere.
 
 [...]
 
