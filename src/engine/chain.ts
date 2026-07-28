@@ -4,10 +4,10 @@ import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, OVERRID
 
 // PLAN-EVAL-01 (Core Storage & Schema Migration, Opsi C) — foundation module.
 // `intent`/`roadmap`/`close` are single objects per chain file here (not
-// arrays) — see
-// Implementation/planned_sigma_multichain_progress_2026_07_17/PLAN-EVAL-01-CORE-STORAGE-SCHEMA-MIGRATION.md
-// §3 for the schema decisions and their rationale. `plan`/`exec` keep the
-// exact `PlanTracker`/`ArtifactTracker` shape — unchanged.
+// arrays) — schema decisions and rationale in
+// PLAN-EVAL-01-CORE-STORAGE-SCHEMA-MIGRATION.md §3, retrievable via git
+// history (not a live path). `plan`/`exec` keep the exact
+// `PlanTracker`/`ArtifactTracker` shape — unchanged.
 //
 // PLAN-EVAL-05 — the shared types/helpers below (through "Shared Types —
 // relocated from progress.ts") used to live in `src/engine/progress.ts`.
@@ -942,7 +942,8 @@ export function lockActiveIntent(chain: ChainState): void {
 // top of a complete output — see ARC-RULE.md §ARC Satisfaction Score
 // Methodology for the full rationale. Band, not the raw number, is the
 // primary signal shown to Director/FMN (mitigates false precision +
-// Goodhart's Law — Discussion/closure-authority-and-arc-scoring-proposal-20260720.md §4).
+// Goodhart's Law — rationale in closure-authority-and-arc-scoring-proposal-20260720.md
+// §4, retrievable via git history, not a live path).
 
 export function arcScoreBand(score: number): 'OUTPUT_INCOMPLETE' | 'SATISFIED_NEEDS_REVIEW' | 'SATISFIED_RECOMMENDED' {
   if (score < 50) return 'OUTPUT_INCOMPLETE';
