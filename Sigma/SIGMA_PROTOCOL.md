@@ -155,7 +155,7 @@ Cannot lock any artifact. Cannot challenge Intent Core. Cannot block artifact pr
 
 - Author all 6 sections of FMN-PLAN before build begins: source alignment, work order, acceptance criteria, implementation constraints, pre-build test contract, DEV handoff instructions. FMN-PLAN is immutable after lock — FMN never touches it again.
 - After DEV completes DEV-EXEC, fill Section 13 (FMN Review) of the DEV-EXEC artifact — verify ACs against DEV's evidence and issue advisory verdict.
-- Cannot begin until DIR-INTENT is LOCKED (Gate 1) and an ACTIVE ROADMAP exists (Gate 1.5).
+- Cannot begin until DIR-INTENT is LOCKED (Gate 1) and the chain's ROADMAP exists (Gate 1.5).
 
 Cannot lock any artifact. Cannot author DEV-EXEC or DIR-CLOSE.
 
@@ -278,20 +278,19 @@ Closure document authored by the Director. Must explicitly reference the FMN-PLA
 | Storage | `Sigma/build/` |
 | Versioning | Tier 1 |
 
-**Mandatory governance artifact.** ROADMAP is required before FMN-PLAN can be created — `plan new` is blocked unless an ACTIVE ROADMAP exists (Gate 1.5).
+**Mandatory governance artifact.** ROADMAP is required before FMN-PLAN can be created — `plan new` is blocked unless the chain's ROADMAP exists and is not SUPERSEDED (Gate 1.5).
 
 ROADMAP breaks a locked DIR-INTENT into large build stages. Each Stage Overview row maps to an FMN-PLAN version. ROADMAP is partially CLI-managed — stage title/focus/status are supplied via `--title`/`--focus` on `sigma plan new` and `sigma plan promote`, stored in `progress-v<N>.json`, and rendered into the Stage Overview table by `sigma roadmap render`; the Core Process Flow section remains manual.
 
-**State machine**: `DRAFT → ACTIVE → INACTIVE → LOCKED`
+**State machine**: `DRAFT → LOCKED` (or `SUPERSEDED` when the chain's intent is superseded)
 
 | State | Meaning |
 | :--- | :--- |
-| `DRAFT` | Created; not yet the execution backbone |
-| `ACTIVE` | The only ROADMAP permitted to receive new official FMN-PLAN artifacts |
-| `INACTIVE` | Displaced by a newer ACTIVE roadmap without formal closure; readable, not writable |
-| `LOCKED` | Final state after `sigma close lock` auto-locks the ACTIVE ROADMAP |
+| `DRAFT` | Created; receives new official FMN-PLAN artifacts |
+| `LOCKED` | Final state after `sigma close lock` auto-locks a still-DRAFT ROADMAP |
+| `SUPERSEDED` | Set by the `sigma intent supersede` cascade; readable, not writable |
 
-**Core invariant**: Only one ROADMAP may be ACTIVE at a time. `sigma roadmap activate --v <ver>` atomically demotes the current ACTIVE to INACTIVE and promotes the target DRAFT to ACTIVE.
+**Core invariant**: Exactly one ROADMAP per chain. It is created by `sigma roadmap new` after `sigma intent lock`; there is no activate/demote step (`roadmap activate` was removed with the one-chain-per-file storage model).
 
 The Stage Overview table is generated directly from `progress-v<N>.json` on every `sigma roadmap render` — there is no separate reconciliation step, since the table has no independent copy of stage data that could drift out of sync.
 
@@ -352,13 +351,13 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 
 ---
 
-### Gate 1.5 — ROADMAP Active
+### Gate 1.5 — ROADMAP Exists
 
 | Property | Value |
 | :--- | :--- |
-| Blocks | `sigma plan new` |
-| Pre-condition | At least one `ROADMAP` with status `ACTIVE` exists |
-| CLI error | `Gate 1.5 blocked: An ACTIVE ROADMAP must exist before FMN-PLAN can be created. Run: sigma roadmap new. If another ROADMAP is already ACTIVE, create the new one as DRAFT then run sigma roadmap activate --v <ver>.` |
+| Blocks | `sigma plan new`, `sigma plan promote` |
+| Pre-condition | The chain's `ROADMAP` exists and is not `SUPERSEDED` |
+| CLI error | `Gate 1.5 blocked: A ROADMAP must exist for this chain before FMN-PLAN can be created. Run: sigma roadmap new` |
 
 ---
 
@@ -516,7 +515,7 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 | :--- | :--- | :---: | :---: |
 | Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check` | Yes | No |
 | Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `reference update`, `send` | Yes, within role boundary | Usually no |
-| Approval | `intent lock`, `roadmap activate`, `plan lock`, `exec lock`, `close lock`, `intent score`¹ | Only after Director approval | Yes |
+| Approval | `intent lock`, `plan lock`, `exec lock`, `close lock`, `intent score`¹ | Only after Director approval | Yes |
 | Risk / Supersession | `intent supersede --director-confirm`, `plan supersede`, destructive/reset | Only after Director approval | Yes |
 
 ¹ `intent score` is Approval-class with a narrower scope than the others in its row: what the Director approves is the act of **committing** the score to `progress-v<N>.json` — not the **content** of the score itself, which ARC already reasoned through and reported in conversation beforehand (see `Sigma/rules/ARC-RULE.md` §ARC Satisfaction Score Methodology). Authorization language for this command is deliberately distinct from ordinary Approval phrasing (e.g. "catat skor", "masukkan skor ke sigma") — not "do you agree with this score."

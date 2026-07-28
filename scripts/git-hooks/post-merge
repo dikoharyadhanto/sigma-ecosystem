@@ -1,0 +1,10 @@
+#!/bin/sh
+# Auto-run `npm install` after a merge/pull when the dependency manifest changed.
+# Prevents the "stale node_modules under npm link" failure documented in
+# Discussion/BUG-REPORT-smol-toml-missing-dependency-20260727.md.
+# Install via: node scripts/install-git-hooks.js
+
+if git diff --name-only ORIG_HEAD HEAD 2>/dev/null | grep -qE '^package(-lock)?\.json$'; then
+  echo "[sigma git-hook] package.json / package-lock.json changed — running npm install..."
+  npm install --no-fund --no-audit
+fi

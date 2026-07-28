@@ -21,7 +21,7 @@
     "When FMN is called, first run session orientation and roadmap listing before creating or changing any plan.",
     "After orientation, stop and brief the Director on pending plans, latest progress, active roadmap direction, and planning options.",
     "Do not create, promote, or lock a plan until the Director selects the next planning direction.",
-    "Use the ACTIVE ROADMAP as the staging backbone for official FMN-PLAN work.",
+    "Use the chain's ROADMAP as the staging backbone for official FMN-PLAN work.",
     "Turn the Director-selected direction into a bounded FMN-PLAN with tasks, non-scope, constraints, acceptance criteria, and test contract.",
     "Treat AUD notes and reference files as advisory input unless Director explicitly selects them as planning scope.",
     "When FMN receives audit results via `sigma send`/inbox, FMN may reply via `sigma send` with its response — agreement, objection, doubt, or any disagreement with the findings.",

@@ -115,7 +115,7 @@ Gates prevent downstream work from starting before upstream decisions are stable
 | Gate | Condition required |
 |:--- |:--- |
 | Gate 1 | `DIR-INTENT` must be LOCKED before creating a ROADMAP |
-| Gate 1.5 | An ACTIVE ROADMAP must exist before creating a non-pending `FMN-PLAN` |
+| Gate 1.5 | The chain's ROADMAP must exist (not SUPERSEDED) before creating a non-pending `FMN-PLAN` |
 | Gate 2 | `FMN-PLAN` must be LOCKED before creating `DEV-EXEC` |
 | Gate 3 | `DEV-EXEC` must be LOCKED before creating `DIR-CLOSE` |
 
@@ -546,26 +546,35 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | session  | `sigma session bootstrap`          | Load project state at session start                                            |
 | intent   | `sigma intent new`                 | Create a `DIR-INTENT` draft                                                    |
 | intent   | `sigma intent lock`                | Lock the active `DIR-INTENT` with Director approval                            |
+| intent   | `sigma intent check`               | Validate `DIR-INTENT` structure and report lock readiness (read-only)          |
 | intent   | `sigma intent status`              | Show active intent version and state                                           |
 | intent   | `sigma intent list`                | List intent versions                                                           |
-| roadmap  | `sigma roadmap new`                | Create a `ROADMAP` draft (auto-activates if no ACTIVE exists)                  |
-| roadmap  | `sigma roadmap check`              | Validate the active `ROADMAP` structure and markers                            |
-| roadmap  | `sigma roadmap activate`           | Activate a DRAFT `ROADMAP` (demotes current ACTIVE to INACTIVE)                |
-| roadmap  | `sigma roadmap render`             | Regenerate the Stage Overview table in the active `ROADMAP`                     |
-| roadmap  | `sigma roadmap list`               | List stages in the active `ROADMAP` with title, focus, and plan status         |
-| plan     | `sigma plan new`                   | Create an `FMN-PLAN` draft (requires locked INTENT + ACTIVE ROADMAP)           |
+| intent   | `sigma intent activate --v <ver>`  | Switch which chain is active (analog `git checkout <branch>`)                  |
+| intent   | `sigma intent score <n>`           | Record ARC Satisfaction Score (0–100) for a LOCKED intent (Gate 3.5)           |
+| intent   | `sigma intent supersede`           | Supersede a LOCKED chain — cascades to its artifacts (`--director-confirm`)    |
+| roadmap  | `sigma roadmap new`                | Create the chain's `ROADMAP` draft (locked `DIR-INTENT`; one per chain)        |
+| roadmap  | `sigma roadmap check`              | Validate the chain's `ROADMAP` structure and markers                           |
+| roadmap  | `sigma roadmap render`             | Regenerate the Stage Overview table in the chain's `ROADMAP`                   |
+| roadmap  | `sigma roadmap list`               | List stages in the chain's `ROADMAP` with title, focus, and plan status        |
+| plan     | `sigma plan new`                   | Create an `FMN-PLAN` draft (requires locked INTENT + existing ROADMAP)         |
 | plan     | `sigma plan new --pending`         | Stage a future plan without entering the version queue                         |
 | plan     | `sigma plan promote`               | Promote a pending plan into the official FIFO draft queue                      |
 | plan     | `sigma plan activate`              | Set an existing DRAFT version as the active plan (FIFO lock order unchanged)   |
 | plan     | `sigma plan queue`                 | Show the FIFO draft lock queue and pending plans (read-only)                   |
 | plan     | `sigma plan lock`                  | Lock the oldest DRAFT `FMN-PLAN` in FIFO order (opens Gate 2)                  |
+| plan     | `sigma plan check`                 | Validate `FMN-PLAN` structure and report lock readiness (read-only)            |
 | plan     | `sigma plan status`                | Show active plan version and state                                             |
+| plan     | `sigma plan list`                  | List plan versions                                                             |
+| plan     | `sigma plan update --v <ver>`      | Update stage title/focus for an existing plan (`--title`/`--focus`)            |
 | plan     | `sigma plan supersede`             | Supersede a locked plan version                                                |
 | exec     | `sigma exec new`                   | Create a `DEV-EXEC` draft                                                      |
 | exec     | `sigma exec lock`                  | Lock the active `DEV-EXEC` with Director approval                              |
+| exec     | `sigma exec check`                 | Validate `DEV-EXEC` structure and report lock readiness (read-only)            |
 | exec     | `sigma exec status`                | Show active execution version and state                                        |
+| exec     | `sigma exec list`                  | List execution versions                                                        |
 | close    | `sigma close new`                  | Create a `DIR-CLOSE` draft                                                     |
 | close    | `sigma close lock`                 | Lock the active `DIR-CLOSE` with Director approval                             |
+| close    | `sigma close check`                | Validate `DIR-CLOSE` structure and report lock readiness (read-only)           |
 | close    | `sigma close status`               | Show closure state                                                             |
 | config   | `sigma config`                     | Interactive wizard for all 3 language preferences (yes/no per field)           |
 | config   | `sigma config show`                | Show current project language preferences                                      |
@@ -576,10 +585,13 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | inbox    | `sigma inbox archive <id>`         | Archive a message                                                              |
 | inbox    | `sigma inbox check`                | Run inbox integrity check (index vs disk files, attachments, field values)     |
 | git      | `sigma git evidence`               | Show read-only Git state summary                                               |
+| memory   | `sigma memory --<role>`            | Show role activation memory reminders for arc/fmn/dev/aud (read-only)          |
+| reference| `sigma reference update`           | Rebuild the project-wide reference list (Comprehensive Research source index)  |
+| report   | `sigma report logs`                | View the operation history log with filters (read-only)                        |
 | override | `sigma override`                   | Bypass current lifecycle gate under Director authority (recorded in audit log) |
 | doctor   | `sigma doctor`                     | Diagnose and reconcile runtime state (repairs drift, marks unresolved breaks INVALID) |
 | doctor   | `sigma doctor --recovery`          | Explicit alias for the default `sigma doctor` behavior                        |
-| doctor   | `sigma doctor --reconstruct`       | Rebuild `progress.json` from artifact files on disk when it is missing or corrupted |
+| doctor   | `sigma doctor --reconstruct`       | Rebuild `progress-v<N>.json` from artifact files when missing or corrupted     |
 | setup    | `sigma setup install`              | Install Sigma globally to `~/.sigma/`, deploy skill files + hook               |
 | setup    | `sigma setup update`               | Update global templates/governance and redeploy skill files + hook             |
 | setup    | `sigma setup uninstall --confirm`  | Remove `~/.sigma/`, deployed skill files, and the hook entry (global only)     |
@@ -631,7 +643,7 @@ sigma session bootstrap
 The following are never modified by migration commands:
 
 - Locked artifacts (`DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, `DIR-CLOSE`)
-- `Sigma/progress.json` gate and lock decisions
+- `Sigma/progress-v<N>.json` gate and lock decisions
 - `.sigma-identity.json` at project root (project identity — untouched by migration or `sigma setup uninstall`)
 - `Sigma/logs/` — legacy CSO handoff files (if present; CSO was removed from current Sigma)
 - All content inside `Sigma/build/`, `Sigma/design/`, `Sigma/close/`
@@ -656,12 +668,12 @@ Global-only by construction: uninstall never resolves a project-local path, so n
 Sigma governance truth remains in:
 
 ```text
-Sigma/progress.json
+Sigma/progress-v<N>.json   (one per chain)
 Sigma artifacts
 Sigma/memory/overrides.jsonl
 ```
 
-State-changing Sigma commands validate `Sigma/progress.json` before they mutate runtime state. If the file is structurally valid but internally contradictory, the CLI blocks the mutation and names the affected field with recovery guidance.
+State-changing Sigma commands validate the target chain's `Sigma/progress-v<N>.json` before they mutate runtime state. If the file is structurally valid but internally contradictory, the CLI blocks the mutation and names the affected field with recovery guidance.
 
 Read-only status/bootstrap commands remain the safest first step when recovery is needed:
 

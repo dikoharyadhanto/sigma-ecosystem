@@ -9,7 +9,6 @@ import {
   getDocumentsForRole,
   DocumentEntry,
 } from '../engine/registry';
-import { findProjectRoot } from '../utils/fs';
 import { readIndex, getUnreadForRole, MessageEntry } from '../engine/mailbox';
 import { MESSAGING_ROLES, SigmaRole } from '../config';
 import { readProjectConfig } from '../engine/projectConfig';

@@ -19,13 +19,13 @@
     "Sigma/SIGMA_PROTOCOL.md",
     "Sigma/SIGMA-OPERATION-REGISTRY.json",
     "Sigma/SIGMA-REGISTRY.json",
-    "SIGMA_README.md",
     "README.md"
   ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
+    "prepare": "node scripts/install-git-hooks.js",
     "refresh-registries": "node scripts/refresh-registries.js",
     "refresh-registries:dry": "node scripts/refresh-registries.js --dry-run",
     "migrate-legacy": "node scripts/migrate-legacy-progress.js"

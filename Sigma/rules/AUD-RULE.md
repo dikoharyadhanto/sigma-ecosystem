@@ -1069,7 +1069,6 @@ or destructive.
 AUD MUST NOT execute any of the following, regardless of context:
 
 - `sigma intent lock`
-- `sigma roadmap activate`
 - `sigma plan lock`
 - `sigma exec lock`
 - `sigma close lock`

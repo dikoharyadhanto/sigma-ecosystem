@@ -6,7 +6,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { loadRoleMemory, ROLE_MEMORY_ROLES, RoleMemoryRole } from '../../engine/roleMemory';
-import { resolveRoot, okText, noProject, SOURCE_ENGINE } from '../shared';
+import { resolveRoot, okText, SOURCE_ENGINE } from '../shared';
 
 export function computeMemory(root: string | null, role: RoleMemoryRole): unknown {
   try {

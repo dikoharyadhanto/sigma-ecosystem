@@ -2,7 +2,7 @@
 # ROADMAP
 
 > FMN-owned implementation staging document. ROADMAP breaks a locked Director Intent into build stages before each stage is converted into FMN-PLAN. ROADMAP is mandatory — `sigma plan new` requires a ROADMAP for the current INTENT version.
-> ROADMAP version = INTENT major version. ROADMAP is ACTIVE while it is the build backbone and auto-locks on `sigma close lock`.
+> ROADMAP version = INTENT major version. ROADMAP stays DRAFT while it is the build backbone and auto-locks on `sigma close lock`.
 
 ---
 

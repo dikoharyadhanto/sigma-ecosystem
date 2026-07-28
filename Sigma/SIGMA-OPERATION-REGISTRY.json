@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-07-14T00:00:00.000Z",
+  "generated_at": "2026-07-28T11:06:11.734457Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 51,
+  "total_operations": 53,
   "domains": [
     "close",
     "config",
@@ -16,6 +16,7 @@
     "plan",
     "project",
     "reference",
+    "report",
     "roadmap",
     "send",
     "session",
@@ -247,42 +248,6 @@
       }
     },
     {
-      "operation_id": "memory_show",
-      "domain": "memory",
-      "action": "show",
-      "level": "read_only",
-      "role": "any",
-      "description": "Display the short role activation memory for ARC, FMN, DEV, or AUD. Reads Sigma/role-memory/{role}-memory.json from the project when available, otherwise falls back to the bundled package copy. Does not read progress-v<N>.json or mutate filesystem state.",
-      "inputs": [
-        {
-          "name": "--arc|--fmn|--dev|--aud",
-          "type": "flag",
-          "required": true,
-          "description": "Exactly one role flag must be provided."
-        }
-      ],
-      "outputs": [
-        {
-          "type": "display",
-          "description": "Authority note, general reminders, and role-specific reminders for the selected role"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "flag",
-          "condition": "exactly one role flag must be present",
-          "error_message": "Exactly one role flag is required: --arc, --fmn, --dev, or --aud."
-        }
-      ],
-      "gating": {
-        "pre_condition": "selected role memory file exists locally or in the bundled package",
-        "post_condition": "none (read-only)"
-      },
-      "error_messages": {
-        "missing_role_flag": "Exactly one role flag is required: --arc, --fmn, --dev, or --aud."
-      }
-    },
-    {
       "operation_id": "intent_new",
       "domain": "intent",
       "action": "new",
@@ -306,35 +271,6 @@
         "post_condition": "intent.active_state == 'DRAFT'"
       },
       "error_messages": {}
-    },
-    {
-      "operation_id": "intent_review",
-      "domain": "intent",
-      "action": "review",
-      "level": "semantic",
-      "role": "any",
-      "description": "AUD advisory review of the active DIR-INTENT. Named 'review' not 'audit' — Intent Core is sovereign (clarity-only, not auditable). Outputs advisory findings section written to the document file. Director retains sole lock authority. Does NOT change progress-v<N>.json runtime state — INTENT remains DRAFT after review.",
-      "inputs": [],
-      "outputs": [
-        {
-          "type": "file_section",
-          "description": "Advisory findings section appended to active DIR-INTENT document"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "state",
-          "condition": "intent.active_version must not be null",
-          "error_message": "No active DIR-INTENT. Run: sigma intent new"
-        }
-      ],
-      "gating": {
-        "pre_condition": "intent.active_version != null",
-        "post_condition": "none — document-only, no runtime state change"
-      },
-      "error_messages": {
-        "no_active_intent": "No active DIR-INTENT. Run: sigma intent new"
-      }
     },
     {
       "operation_id": "intent_lock",
@@ -671,54 +607,6 @@
       },
       "error_messages": {
         "not_completed": "Active DEV-EXEC must be in COMPLETED state to lock. Run: sigma exec advance complete"
-      }
-    },
-    {
-      "operation_id": "exec_supersede",
-      "domain": "exec",
-      "action": "supersede",
-      "level": "semantic",
-      "role": "director",
-      "description": "Explicitly supersede a locked DEV-EXEC version. Requires --v <version> and --reason <string>. Sets the target version state to SUPERSEDED. Does NOT remove the file. Does NOT auto-trigger.",
-      "inputs": [
-        {
-          "name": "--v",
-          "type": "string",
-          "required": true,
-          "description": "Version label to supersede, e.g. 'v0.1'"
-        },
-        {
-          "name": "--reason",
-          "type": "string",
-          "required": true,
-          "description": "Human-readable reason for superseding this version"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "state_change",
-          "description": "Target version exec.versions[].state = 'SUPERSEDED'; supersede_reason recorded"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "flag",
-          "condition": "--v and --reason must both be present",
-          "error_message": "sigma exec supersede requires --v <version> and --reason <reason>"
-        },
-        {
-          "type": "state",
-          "condition": "target version must be LOCKED",
-          "error_message": "Target DEV-EXEC version is not LOCKED. Only LOCKED versions can be superseded."
-        }
-      ],
-      "gating": {
-        "pre_condition": "--v and --reason present; target version is LOCKED",
-        "post_condition": "target version state == 'SUPERSEDED'; supersede_reason recorded"
-      },
-      "error_messages": {
-        "missing_flags": "sigma exec supersede requires --v <version> and --reason <reason>",
-        "not_locked": "Target DEV-EXEC version is not LOCKED. Only LOCKED versions can be superseded."
       }
     },
     {
@@ -1076,7 +964,7 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List stages in the ACTIVE ROADMAP with title, focus, and plan status.",
+      "description": "List stages in the chain's ROADMAP with title, focus, and plan status.",
       "inputs": [],
       "outputs": [
         {
@@ -1105,21 +993,51 @@
       "action": "set language",
       "level": "semantic",
       "role": "any",
-      "description": "Set the Director interaction language (e.g., \"en\", \"id\"). Artifact content (FMN-PLAN, DEV-EXEC, ROADMAP) is always written in English regardless of this setting.",
-      "inputs": [],
-      "outputs": [
+      "description": "Set one language preference non-interactively to a free-form language name (e.g. \"English\", \"Indonesia\") — not an ISO code. Requires exactly one target flag.",
+      "inputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "name": "<name>",
+          "type": "string",
+          "required": true,
+          "description": "Free-form language name, e.g. \"English\", \"Indonesia\""
+        },
+        {
+          "name": "--interaction",
+          "type": "flag",
+          "required": false,
+          "description": "Set the AI communication (Director-facing) language"
+        },
+        {
+          "name": "--sigma-document",
+          "type": "flag",
+          "required": false,
+          "description": "Set the Sigma document (DIR-INTENT/FMN-PLAN/DEV-EXEC/etc.) language"
+        },
+        {
+          "name": "--output-document",
+          "type": "flag",
+          "required": false,
+          "description": "Set the non-Sigma output document language"
         }
       ],
-      "constraints": [],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Selected language preference written to Sigma/project.config.json"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "exactly one of --interaction, --sigma-document, --output-document must be present",
+          "error_message": "Requires exactly one of --interaction, --sigma-document, or --output-document."
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "project root with Sigma/ directory exists",
+        "post_condition": "Sigma/project.config.json created or updated"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "config_show",
@@ -1127,50 +1045,60 @@
       "action": "show",
       "level": "read_only",
       "role": "any",
-      "description": "Show current project configuration",
+      "description": "Show current project configuration from Sigma/project.config.json (defaults shown when the file is absent).",
       "inputs": [],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "display",
+          "description": "Current language preferences and project configuration values"
         }
       ],
       "constraints": [],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "none — absent config falls back to defaults",
+        "post_condition": "none — read-only"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "inbox",
       "domain": "inbox",
       "action": "inbox",
-      "level": "semantic",
+      "level": "read_only",
       "role": "any",
-      "description": "Manage role message inbox",
+      "description": "List messages in a role inbox. Default shows unread only; --all includes READ and ARCHIVED. Messages are stored in Sigma/messages/{ROLE}/.",
       "inputs": [
         {
           "name": "--role",
           "type": "string",
           "required": true,
-          "description": "--role <role>"
+          "description": "Role inbox to view (arc|fmn|dev|aud)"
+        },
+        {
+          "name": "--all",
+          "type": "flag",
+          "required": false,
+          "description": "Include READ and ARCHIVED messages (default: unread only)"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "display",
+          "description": "Message listing (ID, from, type, subject, status) for the selected role"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "--role must be a valid messaging role",
+          "error_message": "--role is required (arc|fmn|dev|aud)"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "none — empty/missing mailbox lists nothing",
+        "post_condition": "none — read-only"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "inbox_read",
@@ -1178,21 +1106,33 @@
       "action": "read",
       "level": "semantic",
       "role": "any",
-      "description": "Read a message and mark it as READ",
-      "inputs": [],
-      "outputs": [
+      "description": "Read a message: prints its full content and marks it READ in the mailbox index and message file. Clearing unread this way is what re-opens the sender-side `sigma send` unread gate.",
+      "inputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "name": "<message-id>",
+          "type": "string",
+          "required": true,
+          "description": "Message ID to read, e.g. MSG-20260601-..."
         }
       ],
-      "constraints": [],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Message status → READ in Sigma/messages/index.json and the message file; content printed"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "message ID must exist in the mailbox index",
+          "error_message": "Message not found"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "message exists",
+        "post_condition": "message no longer counts as unread for its recipient role"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "inbox_archive",
@@ -1200,21 +1140,33 @@
       "action": "archive",
       "level": "semantic",
       "role": "any",
-      "description": "Archive a message (hides from default listing)",
-      "inputs": [],
-      "outputs": [
+      "description": "Archive a message: marks it ARCHIVED so it is hidden from the default (unread) and --all listings context. File is never deleted.",
+      "inputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "name": "<message-id>",
+          "type": "string",
+          "required": true,
+          "description": "Message ID to archive"
         }
       ],
-      "constraints": [],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Message status → ARCHIVED in Sigma/messages/index.json and the message file"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "message ID must exist in the mailbox index",
+          "error_message": "Message not found"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "message exists",
+        "post_condition": "message hidden from default inbox listing; file retained on disk"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "inbox_check",
@@ -1222,50 +1174,71 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Run integrity check: validate index entries vs disk files, attachments, field values",
+      "description": "Mailbox integrity check: validates index entries against disk files, attachment presence, and field values. Reports corruption (e.g. duplicate message IDs from older builds) without modifying anything.",
       "inputs": [],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "display",
+          "description": "Integrity report — index/disk mismatches, missing attachments, invalid field values"
         }
       ],
       "constraints": [],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "none",
+        "post_condition": "none — read-only; repairs are manual by design"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "override",
       "domain": "override",
       "action": "override",
       "level": "semantic",
-      "role": "any",
-      "description": "Bypass the current lifecycle gate under Director authority (recorded in Sigma/memory/overrides.jsonl)",
+      "role": "director",
+      "description": "Bypass the current lifecycle gate under explicit Director authority. Every override is appended to Sigma/memory/overrides.jsonl for audit. --dry-run previews the bypass without modifying state.",
       "inputs": [
         {
           "name": "--reason",
           "type": "string",
           "required": true,
-          "description": "--reason <reason>"
+          "description": "Describe why this override is authorized"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": true,
+          "description": "Explicit Director authorization to execute the override"
+        },
+        {
+          "name": "--dry-run",
+          "type": "flag",
+          "required": false,
+          "description": "Show what would be bypassed without modifying state"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "state_change",
+          "description": "Current gate bypassed; override record appended to Sigma/memory/overrides.jsonl"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "--reason and --director-confirm must both be present",
+          "error_message": "override requires --reason and --director-confirm"
+        },
+        {
+          "type": "state",
+          "condition": "a currently-blocked gate must exist to bypass",
+          "error_message": "No blocked gate to override"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "a lifecycle gate is currently blocking and Director confirms",
+        "post_condition": "gate bypassed; permanent audit record in overrides.jsonl"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "plan_activate",
@@ -1273,28 +1246,33 @@
       "action": "activate",
       "level": "semantic",
       "role": "any",
-      "description": "Set an existing DRAFT FMN-PLAN version as the active plan (for display/status only; lock order remains FIFO)",
+      "description": "Set an existing DRAFT FMN-PLAN version as the active plan for display/status purposes only — FIFO lock order is unchanged; `plan lock` still locks the oldest DRAFT.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
           "required": true,
-          "description": "--v <version>"
+          "description": "DRAFT version to activate (e.g. v1.10)"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "state_change",
+          "description": "plan.active_version updated to the target DRAFT version"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "target version must exist and be DRAFT",
+          "error_message": "Version not found or not in DRAFT state"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "target plan version exists in DRAFT state",
+        "post_condition": "status/display commands report the new active plan; lock order still FIFO"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "plan_promote",
@@ -1302,50 +1280,71 @@
       "action": "promote",
       "level": "semantic",
       "role": "any",
-      "description": "Promote a pending plan into the official draft queue with an assigned version",
+      "description": "Promote a pending plan into the official FIFO draft queue with an assigned version. Stage title/focus are written into the chain ROADMAP Stage Overview data.",
       "inputs": [
         {
           "name": "--id",
           "type": "string",
           "required": true,
-          "description": "--id <id>"
+          "description": "Pending plan ID to promote (e.g. a3b9)"
+        },
+        {
+          "name": "--title",
+          "type": "string",
+          "required": true,
+          "description": "Stage title written into the ROADMAP Stage Overview table"
+        },
+        {
+          "name": "--focus",
+          "type": "string",
+          "required": true,
+          "description": "Stage focus summary written into the ROADMAP Stage Overview table"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "state_change",
+          "description": "Pending plan assigned a version and moved into the FIFO draft queue; ROADMAP stage row recorded"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "pending plan with the given ID must exist",
+          "error_message": "Pending plan not found"
+        },
+        {
+          "type": "state",
+          "condition": "Gate 1.5 — the chain's ROADMAP must exist and not be SUPERSEDED",
+          "error_message": "Gate 1.5 blocked: A ROADMAP must exist for this chain to promote a plan."
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "pending plan exists; chain ROADMAP exists (Gate 1.5)",
+        "post_condition": "plan is an official DRAFT in FIFO lock order"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "plan_queue",
       "domain": "plan",
       "action": "queue",
-      "level": "semantic",
+      "level": "read_only",
       "role": "any",
-      "description": "Show the FIFO draft lock queue and pending plans (read-only diagnostic)",
+      "description": "Show the FIFO draft lock queue and pending plans (read-only diagnostic).",
       "inputs": [],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "display",
+          "description": "FIFO draft lock queue (next-to-lock first) and staged pending plans"
         }
       ],
       "constraints": [],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "none",
+        "post_condition": "none — read-only"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "roadmap_render",
@@ -1353,21 +1352,26 @@
       "action": "render",
       "level": "semantic",
       "role": "any",
-      "description": "Regenerate the derived Stage Overview table in the ACTIVE ROADMAP",
+      "description": "Regenerate the derived Stage Overview table in the active chain's ROADMAP document from chain state. The table has no independent data copy, so this cannot drift — it is a pure re-render.",
       "inputs": [],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "file_section",
+          "description": "Stage Overview table rewritten inside the ROADMAP markdown document"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "the chain's ROADMAP must exist",
+          "error_message": "No ROADMAP found for this chain. Run: sigma roadmap new"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "chain ROADMAP exists",
+        "post_condition": "Stage Overview table matches chain state exactly"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "send",
@@ -1375,70 +1379,92 @@
       "action": "send",
       "level": "semantic",
       "role": "any",
-      "description": "Send a message from one role to another.\n  Policy: a sender must have no unread messages in their own inbox before sending.\n  Clear unread messages with: sigma inbox read <id>\n  Valid messaging roles: arc, fmn, dev, aud (director communicates directly)",
+      "description": "Send a message from one role to another. Message files are CLI-generated — never create or rename them manually. Unread gate: the SENDER must have no unread messages in their own inbox before sending (clear with sigma inbox read <id>).",
       "inputs": [
         {
           "name": "--from",
           "type": "string",
           "required": true,
-          "description": "--from <role>"
+          "description": "Sender role (arc|fmn|dev|aud)"
         },
         {
           "name": "--to",
           "type": "string",
           "required": true,
-          "description": "--to <role>"
+          "description": "Recipient role (arc|fmn|dev|aud)"
         },
         {
           "name": "--type",
           "type": "string",
-          "required": true,
-          "description": "--type <type>"
+          "required": false,
+          "description": "Message type (default: note)"
         },
         {
           "name": "--subject",
           "type": "string",
-          "required": true,
-          "description": "--subject <subject>"
+          "required": false,
+          "description": "Short subject line"
         },
         {
           "name": "--message",
           "type": "string",
-          "required": true,
-          "description": "--message <body>"
+          "required": false,
+          "description": "Message body (single-line; use --message-file for multi-line content)"
         },
         {
           "name": "--message-file",
           "type": "string",
-          "required": true,
-          "description": "--message-file <path>"
+          "required": false,
+          "description": "Path to a file whose contents become the message body (preserves newlines)"
         },
         {
           "name": "--attach",
           "type": "string",
-          "required": true,
-          "description": "--attach <file>"
+          "required": false,
+          "description": "File to attach (copied into Sigma/messages/attachments/)"
         },
         {
           "name": "--reply-to",
           "type": "string",
-          "required": true,
-          "description": "--reply-to <id>"
+          "required": false,
+          "description": "Message ID this message is responding to (soft-check; does not block if not found)"
+        },
+        {
+          "name": "--action",
+          "type": "string",
+          "required": false,
+          "description": "Action required from recipient (default: fyi)"
+        },
+        {
+          "name": "--related-artifact",
+          "type": "string",
+          "required": false,
+          "description": "Artifact this message relates to (e.g. FMN-PLAN-v2, DEV-EXEC-v1; default: N/A)"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "state_change",
+          "description": "Message file created in Sigma/messages/{RECIPIENT}/ and registered in Sigma/messages/index.json; attachment copied when provided"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "sender must have zero unread messages in their own inbox",
+          "error_message": "Send blocked: sender has unread messages. Clear with: sigma inbox read <id>"
+        },
+        {
+          "type": "flag",
+          "condition": "--from and --to must be valid messaging roles",
+          "error_message": "Valid messaging roles: arc|fmn|dev|aud (director communicates directly)"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "sender inbox has no unread messages",
+        "post_condition": "message is unread in the recipient inbox; progress-v<N>.json untouched"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "close_check",
@@ -1446,28 +1472,33 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate the active DIR-CLOSE structure and markers",
+      "description": "Validate a DIR-CLOSE document structure and markers, and report Lock readiness for `sigma close lock`. Read-only — never mutates state.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
-          "required": true,
-          "description": "--v <version>"
+          "required": false,
+          "description": "Check the DIR-CLOSE of a specific chain instead of the active one"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "display",
+          "description": "Validation report and Lock readiness verdict for DIR-CLOSE"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "target chain and its DIR-CLOSE document must exist",
+          "error_message": "No DIR-CLOSE found. Run: sigma close new"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "chain DIR-CLOSE exists",
+        "post_condition": "none — read-only"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "doctor",
@@ -1475,21 +1506,51 @@
       "action": "doctor",
       "level": "semantic",
       "role": "any",
-      "description": "Diagnose and reconcile Sigma runtime state",
-      "inputs": [],
-      "outputs": [
+      "description": "Diagnose and reconcile Sigma runtime state. Default (or --recovery) reconciles the active chain file against artifacts on disk; --reconstruct rebuilds a missing/corrupted progress-v<N>.json from artifact files; --all-versions applies to every chain.",
+      "inputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "name": "--recovery",
+          "type": "flag",
+          "required": false,
+          "description": "Explicit alias for the default reconciliation behavior"
+        },
+        {
+          "name": "--all-versions",
+          "type": "flag",
+          "required": false,
+          "description": "Apply to every chain found on disk instead of just the active one"
+        },
+        {
+          "name": "--reconstruct",
+          "type": "flag",
+          "required": false,
+          "description": "Rebuild chain file(s) from artifact files on disk"
+        },
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "With --reconstruct, target one specific chain instead of the active one (e.g. v2)"
         }
       ],
-      "constraints": [],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Diagnosis report; progress-v<N>.json repaired or reconstructed when drift/corruption is found"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "--v is only meaningful together with --reconstruct",
+          "error_message": "--v requires --reconstruct"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "project root with Sigma/ directory exists",
+        "post_condition": "chain file(s) consistent with artifacts on disk"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "exec_check",
@@ -1497,28 +1558,33 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate the active DEV-EXEC structure and markers",
+      "description": "Validate a DEV-EXEC document structure and markers, and report Lock readiness for `sigma exec lock`. Read-only — never mutates state.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
-          "required": true,
-          "description": "--v <version>"
+          "required": false,
+          "description": "Check a specific DEV-EXEC version instead of the active one"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "display",
+          "description": "Validation report and Lock readiness verdict for DEV-EXEC"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "target exec version and its document must exist",
+          "error_message": "No DEV-EXEC found. Run: sigma exec new"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "exec version exists",
+        "post_condition": "none — read-only"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "intent_check",
@@ -1526,50 +1592,69 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate the active DIR-INTENT structure and markers",
+      "description": "Validate a DIR-INTENT document structure and markers, and report Lock readiness (Eligible / Eligible with warnings / Not eligible) for `sigma intent lock`. Read-only — never mutates state.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
-          "required": true,
-          "description": "--v <version>"
+          "required": false,
+          "description": "Check a specific chain instead of the active one"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "display",
+          "description": "Validation report and Lock readiness verdict for DIR-INTENT"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "target chain and its DIR-INTENT document must exist",
+          "error_message": "No DIR-INTENT found. Run: sigma intent new"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "chain exists",
+        "post_condition": "none — read-only"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "memory",
       "domain": "memory",
       "action": "memory",
-      "level": "semantic",
+      "level": "read_only",
       "role": "any",
-      "description": "Show Sigma role memory reminders (read-only)",
-      "inputs": [],
-      "outputs": [
+      "description": "Display the short role activation memory for ARC, FMN, DEV, or AUD. Reads Sigma/role-memory/{role}-memory.json from the project when available, otherwise falls back to the bundled package copy. Does not read progress-v<N>.json or mutate filesystem state.",
+      "inputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "name": "--arc|--fmn|--dev|--aud",
+          "type": "flag",
+          "required": true,
+          "description": "Exactly one role flag must be provided."
         }
       ],
-      "constraints": [],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Authority note, general reminders, and role-specific reminders for the selected role"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "exactly one role flag must be present",
+          "error_message": "Exactly one role flag is required: --arc, --fmn, --dev, or --aud."
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "selected role memory file exists locally or in the bundled package",
+        "post_condition": "none (read-only)"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {
+        "missing_role_flag": "Exactly one role flag is required: --arc, --fmn, --dev, or --aud."
+      }
     },
     {
       "operation_id": "plan_check",
@@ -1577,28 +1662,33 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate an FMN-PLAN structure and markers",
+      "description": "Validate an FMN-PLAN document structure and markers, and report Lock readiness for `sigma plan lock`. Read-only — never mutates state.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
-          "required": true,
-          "description": "--v <version>"
+          "required": false,
+          "description": "Check a specific FMN-PLAN version instead of the active one"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "display",
+          "description": "Validation report and Lock readiness verdict for FMN-PLAN"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "target plan version and its document must exist",
+          "error_message": "No FMN-PLAN found. Run: sigma plan new"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "plan version exists",
+        "post_condition": "none — read-only"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "plan_update",
@@ -1606,40 +1696,45 @@
       "action": "update",
       "level": "semantic",
       "role": "any",
-      "description": "Update title and/or focus for an existing FMN-PLAN stage in the active ROADMAP",
+      "description": "Update stage title and/or focus for an existing FMN-PLAN stage; the change is reflected in the ROADMAP Stage Overview on next render.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
           "required": true,
-          "description": "--v <version>"
+          "description": "Plan version to update (e.g. v1.15)"
         },
         {
           "name": "--title",
           "type": "string",
-          "required": true,
-          "description": "--title <title>"
+          "required": false,
+          "description": "New stage title"
         },
         {
           "name": "--focus",
           "type": "string",
-          "required": true,
-          "description": "--focus <focus>"
+          "required": false,
+          "description": "New stage focus summary"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "state_change",
+          "description": "Stage title/focus updated in chain state; ROADMAP Stage Overview reflects it on render"
         }
       ],
-      "constraints": [],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "at least one of --title or --focus must be provided",
+          "error_message": "Provide at least one of --title or --focus"
+        }
+      ],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "target plan version exists",
+        "post_condition": "stage metadata updated"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     },
     {
       "operation_id": "roadmap_check",
@@ -1647,28 +1742,264 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate the active ROADMAP structure and markers",
+      "description": "Validate a ROADMAP document structure and markers (SIGMA:DOC header, required sections). Read-only.",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "Check the ROADMAP of a specific chain instead of the active one"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Validation report for the ROADMAP document"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "the target chain's ROADMAP must exist",
+          "error_message": "No ROADMAP found for this chain. Run: sigma roadmap new"
+        }
+      ],
+      "gating": {
+        "pre_condition": "chain ROADMAP exists",
+        "post_condition": "none — read-only"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "config",
+      "domain": "config",
+      "action": "config",
+      "level": "semantic",
+      "role": "any",
+      "description": "Interactive language-preference wizard. `sigma config` with no subcommand prompts for interaction/document/output language preferences and writes them to Sigma/project.config.json. Non-interactive equivalent: sigma config set language.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Language preferences written to Sigma/project.config.json"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "must run inside a Sigma project (findProjectRoot)",
+          "error_message": "Not inside a Sigma project."
+        }
+      ],
+      "gating": {
+        "pre_condition": "project root with Sigma/ directory exists",
+        "post_condition": "Sigma/project.config.json created or updated"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "intent_score",
+      "domain": "intent",
+      "action": "score",
+      "level": "semantic",
+      "role": "director",
+      "description": "Record ARC Satisfaction Score (integer 0-100) for a LOCKED DIR-INTENT. Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`. Score and notes are stored on the chain and rendered into Sigma/design/intent-history.md.",
+      "inputs": [
+        {
+          "name": "<n>",
+          "type": "number",
+          "required": true,
+          "description": "Score value — integer between 0 and 100"
+        },
+        {
+          "name": "--notes",
+          "type": "string",
+          "required": true,
+          "description": "Rationale for the score; must not contain \"|\" or newlines"
+        },
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "Chain version to score instead of the active one"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "intent.arc_score, intent.arc_score_notes, intent.arc_score_updated_at recorded on the target chain; intent-history.md re-rendered"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "value",
+          "condition": "score must be an integer between 0 and 100",
+          "error_message": "ARC score must be an integer between 0 and 100"
+        },
+        {
+          "type": "state",
+          "condition": "target intent must be LOCKED",
+          "error_message": "ARC score can only be recorded against a LOCKED DIR-INTENT"
+        },
+        {
+          "type": "value",
+          "condition": "--notes must not contain \"|\" or newline characters",
+          "error_message": "--notes cannot contain \"|\" or a newline (breaks the intent-history.md table and its recovery parser)"
+        }
+      ],
+      "gating": {
+        "pre_condition": "target chain intent.state == LOCKED",
+        "post_condition": "arc_score recorded — satisfies Gate 3.5 for sigma close new"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "intent_supersede",
+      "domain": "intent",
+      "action": "supersede",
+      "level": "semantic",
+      "role": "director",
+      "description": "Explicitly supersede a LOCKED DIR-INTENT chain. Cascades SUPERSEDED to the chain's ROADMAP, FMN-PLAN, DEV-EXEC, and DIR-CLOSE artifacts. Requires --director-confirm — this is a Director-authority irreversible governance action.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
           "required": true,
-          "description": "--v <version>"
+          "description": "Chain version to supersede (e.g. v1) — need not be the active chain"
+        },
+        {
+          "name": "--reason",
+          "type": "string",
+          "required": true,
+          "description": "Reason for superseding"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": true,
+          "description": "Explicit Director authorization to execute the supersede"
         }
       ],
       "outputs": [
         {
-          "type": "NEEDS_REVIEW",
-          "description": "Fill in: outputs for this operation"
+          "type": "state_change",
+          "description": "Chain intent.state = SUPERSEDED with supersede_reason; cascade sets roadmap/plans/execs/close in the same chain to SUPERSEDED"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "--director-confirm must be present",
+          "error_message": "intent supersede requires --director-confirm (Director authority)"
+        },
+        {
+          "type": "state",
+          "condition": "target chain must exist and its intent be LOCKED",
+          "error_message": "Only a LOCKED DIR-INTENT can be superseded"
+        }
+      ],
+      "gating": {
+        "pre_condition": "target chain intent.state == LOCKED and --director-confirm present",
+        "post_condition": "chain and all downstream artifacts SUPERSEDED — permanently ineligible to become active"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "intent_activate",
+      "domain": "intent",
+      "action": "activate",
+      "level": "semantic",
+      "role": "any",
+      "description": "Switch which chain is active (analog `git checkout <branch>`). No --director-confirm required — default-to-latest plus mandatory session bootstrap visibility are the compensating safety net. SUPERSEDED chains are permanently ineligible.",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "Chain version to activate (e.g. v2)"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Active-chain pointer updated; Sigma/design/intent-history.md re-rendered"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "target chain file must exist",
+          "error_message": "Chain <version> not found"
+        },
+        {
+          "type": "state",
+          "condition": "target intent must not be SUPERSEDED",
+          "error_message": "INTENT <version> is SUPERSEDED — permanently ineligible to become active again. Run: sigma intent list"
+        }
+      ],
+      "gating": {
+        "pre_condition": "target chain exists and intent.state != SUPERSEDED",
+        "post_condition": "subsequent domain commands operate on the newly active chain"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "report_logs",
+      "domain": "report",
+      "action": "logs",
+      "level": "read_only",
+      "role": "any",
+      "description": "View the operation history log (Sigma/logs/operations.jsonl) with optional filters. Read-only — never writes or rotates the log.",
+      "inputs": [
+        {
+          "name": "--status",
+          "type": "string",
+          "required": false,
+          "description": "Filter by result: success or error"
+        },
+        {
+          "name": "--operation",
+          "type": "string",
+          "required": false,
+          "description": "Filter by operation name (substring match, e.g. \"intent\")"
+        },
+        {
+          "name": "--since",
+          "type": "string",
+          "required": false,
+          "description": "Only entries at or after this time (ISO date, or relative: 1d, 12h, 30m)"
+        },
+        {
+          "name": "--until",
+          "type": "string",
+          "required": false,
+          "description": "Only entries at or before this time (ISO date, or relative: 1d, 12h, 30m)"
+        },
+        {
+          "name": "-n, --limit",
+          "type": "number",
+          "required": false,
+          "description": "Show only the last N matching entries"
+        },
+        {
+          "name": "--json",
+          "type": "flag",
+          "required": false,
+          "description": "Print raw JSONL instead of formatted log lines"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Formatted (or raw JSONL) operation log entries matching the filters"
         }
       ],
       "constraints": [],
       "gating": {
-        "pre_condition": "NEEDS_REVIEW",
-        "post_condition": "NEEDS_REVIEW"
+        "pre_condition": "none — missing log file reports an empty history",
+        "post_condition": "none — read-only"
       },
-      "error_messages": {},
-      "NEEDS_REVIEW": true
+      "error_messages": {}
     }
   ]
 }
