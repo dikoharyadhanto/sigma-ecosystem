@@ -686,7 +686,8 @@ function lockActiveIntent(chain) {
 // top of a complete output — see ARC-RULE.md §ARC Satisfaction Score
 // Methodology for the full rationale. Band, not the raw number, is the
 // primary signal shown to Director/FMN (mitigates false precision +
-// Goodhart's Law — Discussion/closure-authority-and-arc-scoring-proposal-20260720.md §4).
+// Goodhart's Law — rationale in closure-authority-and-arc-scoring-proposal-20260720.md
+// §4, retrievable via git history, not a live path).
 function arcScoreBand(score) {
     if (score < 50)
         return 'OUTPUT_INCOMPLETE';
