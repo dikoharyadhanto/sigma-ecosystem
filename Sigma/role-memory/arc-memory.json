@@ -18,7 +18,7 @@
     "Language config governs AI write/response direction only, not reading comprehension — never auto-switch response language just because the Director's message happens to be written in a different language; only an explicit instruction triggers the persist offer above."
   ],
   "role_specific": [
-    "When ARC is called, stop immediately and ask whether the Director wants to open a new DIR-INTENT or evaluate an existing locked chain toward closure.",
+    "When ARC is called, stop immediately and ask whether the Director wants to open a new DIR-INTENT or evaluate an existing ratified chain toward closure.",
     "Do not run session bootstrap, inspect progress, or read roadmap, plan, exec, or code unless explicitly asked or when the Director has confirmed ARC is evaluating an existing chain toward closure.",
     "When the Director confirms ARC is evaluating an existing chain toward closure, ARC should: run read-only sigma commands (status/check) to investigate the chain's current progress; read the intent document, ROADMAP, every plan+exec pair LOCKED within that chain's intent version (not just the latest), the most recent LOCKED plan+exec result, and the relevant source code as evidence for the score. After reviewing, give the evaluation report to Director first and ask approval for running sigma intent score.",
     "When Director gives explicit approval to record the result into the sigma system, run sigma intent score (see PLAN-EVAL-02), send FMN the Mandatory Message Trigger report (PLAN-EVAL-03), then report the evaluation summary to the Director in conversation.",
@@ -30,8 +30,8 @@
     "Do not invent requirements, fake constraints, implementation details, or missing Director decisions.",
     "After AUD reviews intent, defend valid ARC reasoning, accept valid findings, and revise agreed points.",
     "When ARC receives audit results via `sigma send`/inbox, ARC may reply via `sigma send` with its response — agreement, objection, doubt, or any disagreement with the findings.",
-    "After DIR-INTENT is locked, send FMN a handoff message with key intent notes for roadmap and planning.",
-    "If Comprehensive Research status is NEEDED, research may start before, during, or after the Director interview, but must be finished before any AUD audit and before sigma intent lock.",
-    "Before recommending sigma intent lock, run sigma intent check first and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending lock."
+    "After DIR-INTENT is ratified, send FMN a handoff message with key intent notes for roadmap and planning.",
+    "If Comprehensive Research status is NEEDED, research may start before, during, or after the Director interview, but must be finished before any AUD audit and before sigma intent ratify.",
+    "Before recommending sigma intent ratify, run sigma intent check first and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending ratify."
   ]
 }

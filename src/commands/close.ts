@@ -48,7 +48,7 @@ export function closeCommand(): Command {
   cmd.description('Manage DIR-CLOSE artifact');
 
   cmd.command('new')
-    .description('Create a new DIR-CLOSE draft (requires INTENT → PLAN → EXEC chain all LOCKED)')
+    .description('Create a new DIR-CLOSE draft (requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED)')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
@@ -57,7 +57,7 @@ export function closeCommand(): Command {
 
         if (!hasCleanGate3Chain(chain)) {
           throw new Error(
-            'GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain). Run: sigma exec lock'
+            'GATE 3 BLOCKED: Requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED (same version chain). Run: sigma exec lock'
           );
         }
 

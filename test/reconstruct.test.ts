@@ -45,7 +45,7 @@ describe('sigma doctor --reconstruct', () => {
     expect(result.stdout).toMatch(/No ambiguous state/);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
-    expect(data.intent).toMatchObject({ version: 'v1', state: 'LOCKED' });
+    expect(data.intent).toMatchObject({ version: 'v1', state: 'RATIFIED' });
     expect(data.roadmap).toMatchObject({ version: 'v1', state: 'DRAFT' });
     expect(data.plan.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED' });
     expect(data.exec.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED', plan_version_ref: 'v0.1' });
@@ -124,7 +124,7 @@ describe('sigma doctor --reconstruct', () => {
     expect(result.exitCode).toBe(0);
     const v1 = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     const v2 = fs.readJsonSync(chainPath(env, 'v2')) as Record<string, any>;
-    expect(v1.intent.state).toBe('LOCKED');
+    expect(v1.intent.state).toBe('RATIFIED');
     expect(v2.intent.state).toBe('DRAFT');
   });
 
@@ -283,7 +283,7 @@ describe('sigma doctor --reconstruct — PLAN-EVAL-07 metadata preservation', ()
     expect(result.stdout).toMatch(/No ambiguous state/);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
-    expect(data.intent).toMatchObject({ version: 'v1', state: 'LOCKED' });
+    expect(data.intent).toMatchObject({ version: 'v1', state: 'RATIFIED' });
     expect(data.plan.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED' });
     expect(data.exec.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED' });
   });

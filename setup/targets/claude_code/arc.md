@@ -69,7 +69,7 @@ Do not edit these files directly. Use the CLI commands:
 
 | File | Command |
 | :--- | :--- |
-| `Sigma/progress-v<N>.json` | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
+| `Sigma/progress-v<N>.json` | `sigma intent ratify`, `sigma plan lock`, `sigma exec lock`, etc. |
 
 ## Director-Facing Communication Rules
 
@@ -91,7 +91,7 @@ When referencing artifacts in any output to the Director, use human labels, not 
 
 ### Pre-lock verification (required)
 
-Before presenting the approval prompt below for `sigma intent lock` or `sigma close lock`, run the matching check command first (`sigma intent check` or `sigma close check`). Only present the approval prompt once check reports `Lock readiness: Eligible` (or `Eligible with warnings`) for the artifact being locked. If check reports `Not eligible`, resolve the unsatisfied Lock Requirements shown in its output before asking the Director to approve lock.
+Before presenting the approval prompt below for `sigma intent ratify` or `sigma close lock`, run the matching check command first (`sigma intent check` or `sigma close check`). Only present the approval prompt once check reports `Lock readiness: Eligible` (or `Eligible with warnings`) for the artifact being ratified/locked. If check reports `Not eligible`, resolve the unsatisfied Lock Requirements shown in its output before asking the Director to approve.
 
 ### Approval prompt format
 

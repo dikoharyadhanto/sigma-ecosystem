@@ -76,7 +76,7 @@ export function planCommand(): Command {
   cmd.description('Manage FMN-PLAN artifact');
 
   cmd.command('new')
-    .description('Create a new FMN-PLAN draft (requires locked DIR-INTENT + ROADMAP). Use --pending to stage a future plan without entering the version queue.')
+    .description('Create a new FMN-PLAN draft (requires ratified DIR-INTENT + ROADMAP). Use --pending to stage a future plan without entering the version queue.')
     .option('--pending', 'Stage as a pending plan (no version assigned; not in lock queue)')
     .requiredOption('--title <title>', 'Stage title written into the ROADMAP Stage Overview table')
     .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP Stage Overview table')
@@ -106,10 +106,10 @@ export function planCommand(): Command {
         }
 
         if (!getOperationalGate(chain, 'gate_1_open')) {
-          throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
+          throw new Error('GATE 1 BLOCKED: No ratified DIR-INTENT. Run: sigma intent ratify');
         }
-        if (chain.intent.state !== 'LOCKED') {
-          throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
+        if (chain.intent.state !== 'RATIFIED') {
+          throw new Error('GATE 1 BLOCKED: No ratified DIR-INTENT. Run: sigma intent ratify');
         }
         // Gate 1.5: require a ROADMAP that exists and isn't SUPERSEDED (§3.5)
         const roadmapAbsPathForGate = getRoadmapPathIfEligible(projectRoot, chain);
@@ -244,8 +244,8 @@ export function planCommand(): Command {
           );
         }
 
-        if (!getOperationalGate(chain, 'gate_1_open') || chain.intent.state !== 'LOCKED') {
-          throw new Error('GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock');
+        if (!getOperationalGate(chain, 'gate_1_open') || chain.intent.state !== 'RATIFIED') {
+          throw new Error('GATE 1 BLOCKED: No ratified DIR-INTENT. Run: sigma intent ratify');
         }
 
         const roadmapAbsPathForGate = getRoadmapPathIfEligible(projectRoot, chain);

@@ -273,17 +273,17 @@
       "error_messages": {}
     },
     {
-      "operation_id": "intent_lock",
+      "operation_id": "intent_ratify",
       "domain": "intent",
-      "action": "lock",
+      "action": "ratify",
       "level": "semantic",
       "role": "director",
-      "description": "Lock the active DIR-INTENT. Gate: INTENT must be DRAFT. Auto-supersedes any prior LOCKED INTENT (single-active policy). Sets gate_1_open = true and transitions lifecycle_state to BUILD. Propagates STALE_INTENT: any PLAN version with intent_version_ref pointing to the now-superseded INTENT gets stale_intent = true; EXEC versions whose referenced PLAN has stale_intent = true also get stale_intent = true.",
+      "description": "Ratify the active DIR-INTENT. Gate: INTENT must be DRAFT. Each chain file holds exactly one intent, so there is no prior LOCKED/RATIFIED version in the same file to auto-supersede or demote — a complementary or prior intent simply lives in its own chain file, untouched (see sigma intent supersede for the only path to SUPERSEDED). Sets gate_1_open = true and transitions lifecycle_state to BUILD.",
       "inputs": [],
       "outputs": [
         {
           "type": "state_change",
-          "description": "intent.active_state = 'LOCKED'; prior LOCKED version (if any) → 'SUPERSEDED'"
+          "description": "intent.state = 'RATIFIED'; intent.ratified_at stamped"
         },
         {
           "type": "state_change",
@@ -292,25 +292,21 @@
         {
           "type": "state_change",
           "description": "gates.gate_1_open = true"
-        },
-        {
-          "type": "state_change",
-          "description": "stale_intent = true propagated to referencing PLAN and EXEC versions"
         }
       ],
       "constraints": [
         {
           "type": "state",
-          "condition": "intent.active_state == 'DRAFT'",
-          "error_message": "Active DIR-INTENT is not in DRAFT state. Cannot lock."
+          "condition": "intent.state == 'DRAFT'",
+          "error_message": "Active DIR-INTENT is not in DRAFT state. Cannot ratify."
         }
       ],
       "gating": {
-        "pre_condition": "intent.active_state == 'DRAFT'",
-        "post_condition": "intent.active_state == 'LOCKED'; lifecycle_state == 'BUILD'; gates.gate_1_open == true"
+        "pre_condition": "intent.state == 'DRAFT'",
+        "post_condition": "intent.state == 'RATIFIED'; lifecycle_state == 'BUILD'; gates.gate_1_open == true"
       },
       "error_messages": {
-        "not_draft": "Active DIR-INTENT is not in DRAFT state. Cannot lock."
+        "not_draft": "Active DIR-INTENT is not in DRAFT state. Cannot ratify."
       }
     },
     {
@@ -319,7 +315,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show active DIR-INTENT version, state, locked_at timestamp, and any STALE_INTENT propagation events.",
+      "description": "Show active DIR-INTENT version, state, ratified_at timestamp, and any STALE_INTENT propagation events.",
       "inputs": [],
       "outputs": [
         {
@@ -346,7 +342,7 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List all DIR-INTENT versions with states, locked_at timestamps, and superseded_by references.",
+      "description": "List all DIR-INTENT versions with states, ratified_at timestamps, and superseded_by references.",
       "inputs": [],
       "outputs": [
         {
@@ -373,7 +369,7 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create a FMN-PLAN DRAFT from the template. Gate 1: gates.gate_1_open == true (DIR-INTENT must be LOCKED). Records intent_version_ref from the currently locked INTENT version. File named: build/FMN-PLAN-v{next_version}.md.",
+      "description": "Create a FMN-PLAN DRAFT from the template. Gate 1: gates.gate_1_open == true (DIR-INTENT must be RATIFIED). Records intent_version_ref from the currently locked INTENT version. File named: build/FMN-PLAN-v{next_version}.md.",
       "inputs": [],
       "outputs": [
         {
@@ -389,15 +385,15 @@
         {
           "type": "gate",
           "condition": "gates.gate_1_open == true",
-          "error_message": "GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock"
+          "error_message": "GATE 1 BLOCKED: No ratified DIR-INTENT. Run: sigma intent ratify"
         }
       ],
       "gating": {
-        "pre_condition": "gates.gate_1_open == true (INTENT is LOCKED)",
+        "pre_condition": "gates.gate_1_open == true (INTENT is RATIFIED)",
         "post_condition": "plan.active_state == 'DRAFT'; intent_version_ref recorded"
       },
       "error_messages": {
-        "gate_1_blocked": "GATE 1 BLOCKED: No locked DIR-INTENT. Run: sigma intent lock"
+        "gate_1_blocked": "GATE 1 BLOCKED: No ratified DIR-INTENT. Run: sigma intent ratify"
       }
     },
     {
@@ -587,7 +583,7 @@
         },
         {
           "type": "state_change",
-          "description": "gates.gate_3_satisfied re-evaluated: true if full chain INTENT LOCKED → PLAN LOCKED referencing it → this EXEC LOCKED referencing that PLAN"
+          "description": "gates.gate_3_satisfied re-evaluated: true if full chain INTENT RATIFIED → PLAN LOCKED referencing it → this EXEC LOCKED referencing that PLAN"
         },
         {
           "type": "decision_harvest",
@@ -669,7 +665,7 @@
       "action": "new",
       "level": "semantic",
       "role": "director",
-      "description": "Create a DIR-CLOSE DRAFT from the template. Gate 3 chain: (1) active INTENT is LOCKED; (2) at least one PLAN is LOCKED; (3) that PLAN's intent_version_ref points to the active LOCKED INTENT; (4) at least one EXEC is LOCKED; (5) that EXEC's plan_version_ref points to the qualifying PLAN. If the qualifying chain has stale_intent = true, CLI blocks — Director must pass --ack-stale-intent to proceed. Acknowledgment is recorded in the DIR-CLOSE DRAFT metadata. Sets lifecycle_state to CLOSE.",
+      "description": "Create a DIR-CLOSE DRAFT from the template. Gate 3 chain: (1) active INTENT is RATIFIED; (2) at least one PLAN is LOCKED; (3) that PLAN's intent_version_ref points to the active LOCKED INTENT; (4) at least one EXEC is LOCKED; (5) that EXEC's plan_version_ref points to the qualifying PLAN. If the qualifying chain has stale_intent = true, CLI blocks — Director must pass --ack-stale-intent to proceed. Acknowledgment is recorded in the DIR-CLOSE DRAFT metadata. Sets lifecycle_state to CLOSE.",
       "inputs": [
         {
           "name": "--ack-stale-intent",
@@ -695,8 +691,8 @@
       "constraints": [
         {
           "type": "gate",
-          "condition": "Full chain: active INTENT LOCKED → PLAN LOCKED referencing that INTENT → EXEC LOCKED referencing that PLAN",
-          "error_message": "GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain)"
+          "condition": "Full chain: active INTENT RATIFIED → PLAN LOCKED referencing that INTENT → EXEC LOCKED referencing that PLAN",
+          "error_message": "GATE 3 BLOCKED: Requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED (same version chain)"
         },
         {
           "type": "stale",
@@ -709,7 +705,7 @@
         "post_condition": "close.active_state == 'DRAFT'; lifecycle_state == 'CLOSE'"
       },
       "error_messages": {
-        "gate_3_blocked": "GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain)",
+        "gate_3_blocked": "GATE 3 BLOCKED: Requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED (same version chain)",
         "gate_3_stale": "GATE 3 STALE: Qualifying chain has stale intent. Add --ack-stale-intent to acknowledge."
       }
     },
@@ -940,21 +936,21 @@
       "constraints": [
         {
           "type": "gate",
-          "condition": "progress.intent.active_state == 'LOCKED'",
-          "error_message": "ROADMAP requires a locked DIR-INTENT. Run: sigma intent lock"
+          "condition": "progress.intent.state == 'RATIFIED'",
+          "error_message": "ROADMAP requires a ratified DIR-INTENT. Run: sigma intent ratify"
         },
         {
           "type": "gate",
-          "condition": "no ROADMAP version exists for the locked INTENT major",
+          "condition": "no ROADMAP version exists for the ratified INTENT major",
           "error_message": "ROADMAP for this INTENT major already exists. Run: sigma roadmap list"
         }
       ],
       "gating": {
-        "pre_condition": "progress.intent.active_state == 'LOCKED'; no ROADMAP version already exists for the locked INTENT major",
+        "pre_condition": "progress.intent.state == 'RATIFIED'; no ROADMAP version already exists for the ratified INTENT major",
         "post_condition": "ROADMAP-v{N}.md exists in Sigma/build/; progress-v<N>.json records the roadmap with state DRAFT"
       },
       "error_messages": {
-        "no_locked_intent": "No locked DIR-INTENT found. ROADMAP requires a locked intent. Run: sigma intent lock",
+        "no_locked_intent": "No ratified DIR-INTENT found. ROADMAP requires a ratified intent. Run: sigma intent ratify",
         "roadmap_exists": "ROADMAP for this INTENT major already exists. Run: sigma roadmap list"
       }
     },
@@ -1592,7 +1588,7 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate a DIR-INTENT document structure and markers, and report Lock readiness (Eligible / Eligible with warnings / Not eligible) for `sigma intent lock`. Read-only — never mutates state.",
+      "description": "Validate a DIR-INTENT document structure and markers, and report Lock readiness (Eligible / Eligible with warnings / Not eligible) for `sigma intent ratify`. Read-only — never mutates state.",
       "inputs": [
         {
           "name": "--v",
@@ -1803,7 +1799,7 @@
       "action": "score",
       "level": "semantic",
       "role": "director",
-      "description": "Record ARC Satisfaction Score (integer 0-100) for a LOCKED DIR-INTENT. Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`. Score and notes are stored on the chain and rendered into Sigma/design/intent-history.md.",
+      "description": "Record ARC Satisfaction Score (integer 0-100) for a RATIFIED DIR-INTENT. Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`. Score and notes are stored on the chain and rendered into Sigma/design/intent-history.md.",
       "inputs": [
         {
           "name": "<n>",
@@ -1838,8 +1834,8 @@
         },
         {
           "type": "state",
-          "condition": "target intent must be LOCKED",
-          "error_message": "ARC score can only be recorded against a LOCKED DIR-INTENT"
+          "condition": "target intent must be RATIFIED",
+          "error_message": "ARC score can only be recorded against a RATIFIED DIR-INTENT"
         },
         {
           "type": "value",
@@ -1848,7 +1844,7 @@
         }
       ],
       "gating": {
-        "pre_condition": "target chain intent.state == LOCKED",
+        "pre_condition": "target chain intent.state == RATIFIED",
         "post_condition": "arc_score recorded — satisfies Gate 3.5 for sigma close new"
       },
       "error_messages": {}
@@ -1859,7 +1855,7 @@
       "action": "supersede",
       "level": "semantic",
       "role": "director",
-      "description": "Explicitly supersede a LOCKED DIR-INTENT chain. Cascades SUPERSEDED to the chain's ROADMAP, FMN-PLAN, DEV-EXEC, and DIR-CLOSE artifacts. Requires --director-confirm — this is a Director-authority irreversible governance action.",
+      "description": "Explicitly supersede a RATIFIED DIR-INTENT chain. Cascades SUPERSEDED to the chain's ROADMAP, FMN-PLAN, DEV-EXEC, and DIR-CLOSE artifacts. Requires --director-confirm — this is a Director-authority irreversible governance action.",
       "inputs": [
         {
           "name": "--v",
@@ -1894,12 +1890,12 @@
         },
         {
           "type": "state",
-          "condition": "target chain must exist and its intent be LOCKED",
-          "error_message": "Only a LOCKED DIR-INTENT can be superseded"
+          "condition": "target chain must exist and its intent be RATIFIED",
+          "error_message": "Only a RATIFIED DIR-INTENT can be superseded"
         }
       ],
       "gating": {
-        "pre_condition": "target chain intent.state == LOCKED and --director-confirm present",
+        "pre_condition": "target chain intent.state == RATIFIED and --director-confirm present",
         "post_condition": "chain and all downstream artifacts SUPERSEDED — permanently ineligible to become active"
       },
       "error_messages": {}

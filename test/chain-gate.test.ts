@@ -51,7 +51,7 @@ describe('Chain gate: INTENT → PLAN → EXEC', () => {
   it('gates are enforced in order: INTENT gate blocks before PLAN gate', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
-    // No intent locked
+    // No intent ratified
     writeChainFixture(env, 'v1', makeChainWithDraftIntent());
 
     // exec new should hit gate_1 (via gate_2_open=false) — not pass silently

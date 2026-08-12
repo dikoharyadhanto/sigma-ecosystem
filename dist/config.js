@@ -7,7 +7,14 @@ exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = 
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 exports.SIGMA_VERSION = '0.10.0';
-exports.SCHEMA_VERSION = '1.0.0';
+// 1.1.0 — RATIFIED rename (Director directive 2026-08-12): DIR-INTENT
+// intent.state "LOCKED" → "RATIFIED", intent.locked_at → intent.ratified_at.
+// A chain written by an older binary still reads fine (readChain()
+// normalizes it); the bump matters for the other direction — an older
+// binary reading a chain already written with "RATIFIED" would otherwise
+// silently treat the intent as not-locked instead of surfacing a clear
+// INVALID (schema-too-new) marker. See isNewerSchema().
+exports.SCHEMA_VERSION = '1.1.0';
 exports.GLOBAL_SIGMA_DIR = path_1.default.join(os_1.default.homedir(), '.sigma');
 exports.GLOBAL_TEMPLATES_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'templates');
 exports.GLOBAL_RULES_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'rules');

@@ -48,15 +48,15 @@ describe('sigma intent supersede', () => {
     expect(result.stderr).toMatch(/not found/i);
   });
 
-  it('fails when the intent version is DRAFT, not LOCKED (INACTIVE no longer exists, PLAN-EVAL-01 §3.4)', () => {
+  it('fails when the intent version is DRAFT, not RATIFIED (INACTIVE no longer exists, PLAN-EVAL-01 §3.4)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
-    writeChainFixture(env, 'v1', { chain_version: 'v1', schema_version: '1.0.0', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), lifecycle_state: 'DESIGN', intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, roadmap: null, plan: { active_version: null, active_state: null, versions: [], pending: [] }, exec: { active_version: null, active_state: null, versions: [] }, close: null, gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false } });
+    writeChainFixture(env, 'v1', { chain_version: 'v1', schema_version: '1.1.0', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), lifecycle_state: 'DESIGN', intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, roadmap: null, plan: { active_version: null, active_state: null, versions: [], pending: [] }, exec: { active_version: null, active_state: null, versions: [] }, close: null, gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false } });
 
     const result = runCli('intent supersede --v v1 --reason "testing" --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/requires LOCKED/i);
+    expect(result.stderr).toMatch(/requires RATIFIED/i);
   });
 
   // ── Director-confirm gate (second code-enforced precedent after override.ts) ─
@@ -72,7 +72,7 @@ describe('sigma intent supersede', () => {
     expect(result.stderr).toMatch(/--director-confirm/);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
-    expect(data.intent.state).toBe('LOCKED');
+    expect(data.intent.state).toBe('RATIFIED');
     expect(data.roadmap.state).toBe('LOCKED');
     expect(data.plan.versions[0].state).toBe('LOCKED');
     expect(data.exec.versions[0].state).toBe('LOCKED');
@@ -185,14 +185,14 @@ describe('sigma intent supersede', () => {
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     expect(data.plan.versions[0].state).toBe('SUPERSEDED');
-    expect(data.intent.state).toBe('LOCKED');
+    expect(data.intent.state).toBe('RATIFIED');
   });
 });
 
-// ── Regression: intent lock never auto-supersedes; reopening never mutates
+// ── Regression: intent ratify never auto-supersedes; reopening never mutates
 // the prior chain's own file (Opsi C makes this structural, not behavioral) ──
 
-describe('intent lock regression — no auto-supersede, no auto-cascade', () => {
+describe('intent ratify regression — no auto-supersede, no auto-cascade', () => {
   let env: TestEnv;
 
   afterEach(() => env?.cleanup());
@@ -215,8 +215,8 @@ describe('intent lock regression — no auto-supersede, no auto-cascade', () => 
       validIntentDoc('v2')
     );
 
-    const locked = runCli('intent lock', env.projectDir, env.homeDir);
-    expect(locked.exitCode).toBe(0);
+    const ratified = runCli('intent ratify', env.projectDir, env.homeDir);
+    expect(ratified.exitCode).toBe(0);
 
     // The old chain file is byte-for-byte unchanged — no INACTIVE demotion,
     // no touch of any kind. Isolation is structural now, not a state value.
@@ -224,7 +224,7 @@ describe('intent lock regression — no auto-supersede, no auto-cascade', () => 
     expect(v1After).toEqual(v1Before);
 
     const v2 = fs.readJsonSync(chainPath(env, 'v2')) as Record<string, any>;
-    expect(v2.intent.state).toBe('LOCKED');
+    expect(v2.intent.state).toBe('RATIFIED');
     expect(v2.gates.gate_1_open).toBe(true);
   });
 });

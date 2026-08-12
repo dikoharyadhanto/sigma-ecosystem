@@ -1068,7 +1068,7 @@ or destructive.
 
 AUD MUST NOT execute any of the following, regardless of context:
 
-- `sigma intent lock`
+- `sigma intent ratify`
 - `sigma plan lock`
 - `sigma exec lock`
 - `sigma close lock`

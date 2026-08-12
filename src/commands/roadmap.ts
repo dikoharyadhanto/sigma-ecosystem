@@ -37,15 +37,15 @@ export function roadmapCommand(): Command {
   cmd.description('Manage ROADMAP artifact');
 
   cmd.command('new')
-    .description('Create the ROADMAP for the active chain (requires locked DIR-INTENT; one per chain)')
+    .description('Create the ROADMAP for the active chain (requires ratified DIR-INTENT; one per chain)')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
         const { chainVersion, data: chain } = readActiveChain(projectRoot);
         assertChainCanMutate(chain);
 
-        if (chain.intent.state !== 'LOCKED') {
-          throw new Error('ROADMAP requires a locked DIR-INTENT. Run: sigma intent lock');
+        if (chain.intent.state !== 'RATIFIED') {
+          throw new Error('ROADMAP requires a ratified DIR-INTENT. Run: sigma intent ratify');
         }
 
         const version = chain.chain_version;

@@ -96,7 +96,7 @@ Do not edit these files directly. Use the CLI commands:
 
 | File | Command |
 | :--- | :--- |
-| `Sigma/progress-v<N>.json` | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
+| `Sigma/progress-v<N>.json` | `sigma intent ratify`, `sigma plan lock`, `sigma exec lock`, etc. |
 
 ## Director-Facing Communication Rules
 

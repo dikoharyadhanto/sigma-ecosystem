@@ -170,7 +170,7 @@ describe('sigma_list_artifacts', () => {
 
     const out = computeArtifacts(env.projectDir) as Payload;
     expect(out.active).toBe(true);
-    expect(out.intent).toMatchObject({ version: 'v1', state: 'LOCKED' });
+    expect(out.intent).toMatchObject({ version: 'v1', state: 'RATIFIED' });
     expect(out.plan).toMatchObject({ active_version: 'v1.1', active_state: 'LOCKED', versions_count: 1, pending_count: 0 });
     expect(out.exec).toMatchObject({ active_version: 'v1.1', active_state: 'LOCKED', versions_count: 1 });
     expect(out.close).toBeNull();

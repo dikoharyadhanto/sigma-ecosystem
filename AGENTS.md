@@ -31,7 +31,7 @@ Codex operates in one of five modes:
 ### 3. FMN (Foreman)
 
 - Activation: explicit Director request (e.g., "You are my Foreman", "Activate FMN") or `#fmn` skill invocation
-- Scope: drafts FMN-PLAN; operates after DIR-INTENT is LOCKED
+- Scope: drafts FMN-PLAN; operates after DIR-INTENT is RATIFIED
 - Constraints: follow `Sigma/rules/FMN-RULE.md`
 
 ### 4. DEV (Developer)
@@ -82,7 +82,7 @@ approval, risk, and closure decisions.
 
 ### Pre-Lock Verification
 
-Before recommending or running any lock command (`intent lock`, `plan lock`,
+Before recommending or running any lock/ratify command (`intent ratify`, `plan lock`,
 `exec lock`, `close lock`), run the matching `sigma {domain} check` first
 and confirm it reports `Lock readiness: Eligible` (or `Eligible with
 warnings`). `check` is read-only and never requires Director authorization —
@@ -125,11 +125,11 @@ If authorization is unclear, ask before executing.
 
 ## CLI-Managed Files — Do Not Edit Directly
 
-| File                                  | Command                                                         |
-|:------------------------------------- |:--------------------------------------------------------------- |
-| `Sigma/progress-v<N>.json`            | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
-| `Sigma/SIGMA-REGISTRY.json`           | `sigma project sync --confirm`                                  |
-| `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma project sync --confirm`                                  |
+| File                                  | Command                                                           |
+|:------------------------------------- |:----------------------------------------------------------------- |
+| `Sigma/progress-v<N>.json`            | `sigma intent ratify`, `sigma plan lock`, `sigma exec lock`, etc. |
+| `Sigma/SIGMA-REGISTRY.json`           | `sigma project sync --confirm`                                    |
+| `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma project sync --confirm`                                    |
 
 ## Governance Role Activation
 

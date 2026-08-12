@@ -7,7 +7,7 @@
 > Appendix: detailed evidence register for audit and traceability.
 >
 > **Lock State**: Managed by Sigma CLI via `progress-v<N>.json`. Do not edit lock state here.
-> **Gate Rule**: Requires INTENT -> PLAN -> EXEC chain all LOCKED before `sigma close new`.
+> **Gate Rule**: Requires INTENT RATIFIED and PLAN -> EXEC chain all LOCKED before `sigma close new`.
 > **Audience**: Director, future project owner, operator, and human reviewer.
 
 ---
@@ -164,7 +164,7 @@ Reason:
 
 If none, write:
 
-> No material deviation from locked DIR-INTENT or FMN-PLAN.
+> No material deviation from ratified DIR-INTENT or locked FMN-PLAN.
 
 ### Superseded or Corrected Paths
 

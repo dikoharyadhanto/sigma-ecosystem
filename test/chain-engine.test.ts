@@ -13,7 +13,7 @@ import {
   readChain,
   writeChain,
   readActiveChain,
-  lockActiveIntent,
+  ratifyIntent,
   previewIntentSupersedeCascade,
   supersedeIntentVersion,
   registerRoadmapDraft,
@@ -113,7 +113,7 @@ describe('resolveActiveChainVersion — invariant: exactly one ACTIVE chain (DIS
   it('skips SUPERSEDED chains when auto-defaulting', () => {
     const v1 = createInitialChain('v1', 'x');
     const v2 = createInitialChain('v2', 'x');
-    lockActiveIntent(v1);
+    ratifyIntent(v1);
     supersedeIntentVersion(v1, 'superseded by v2');
     writeChain(projectRoot, 'v1', v1);
     writeChain(projectRoot, 'v2', v2);
@@ -127,7 +127,7 @@ describe('resolveActiveChainVersion — invariant: exactly one ACTIVE chain (DIS
     // dead chain until this fallback kicks in.
     const v1 = createInitialChain('v1', 'x');
     const v2 = createInitialChain('v2', 'x');
-    lockActiveIntent(v1);
+    ratifyIntent(v1);
     supersedeIntentVersion(v1, 'superseded by v2');
     writeChain(projectRoot, 'v1', v1);
     writeChain(projectRoot, 'v2', v2);
@@ -137,7 +137,7 @@ describe('resolveActiveChainVersion — invariant: exactly one ACTIVE chain (DIS
 
   it('throws when every existing chain is SUPERSEDED', () => {
     const v1 = createInitialChain('v1', 'x');
-    lockActiveIntent(v1);
+    ratifyIntent(v1);
     supersedeIntentVersion(v1, 'dead end');
     writeChain(projectRoot, 'v1', v1);
     writeActivateStatus(projectRoot, null);
@@ -158,23 +158,23 @@ describe('readActiveChain / writeChain round-trip', () => {
 
 function lockedIntentChain(version = 'v1'): ChainState {
   const chain = createInitialChain(version, `Sigma/design/DIR-INTENT-${version}.md`);
-  lockActiveIntent(chain);
+  ratifyIntent(chain);
   return chain;
 }
 
-describe('lockActiveIntent', () => {
-  it('opens Gate 1, sets lifecycle to BUILD, sets locked_at', () => {
+describe('ratifyIntent', () => {
+  it('opens Gate 1, sets lifecycle to BUILD, sets ratified_at', () => {
     const chain = createInitialChain('v1', 'x');
-    lockActiveIntent(chain);
-    expect(chain.intent.state).toBe('LOCKED');
-    expect(chain.intent.locked_at).toBeTruthy();
+    ratifyIntent(chain);
+    expect(chain.intent.state).toBe('RATIFIED');
+    expect(chain.intent.ratified_at).toBeTruthy();
     expect(chain.gates.gate_1_open).toBe(true);
     expect(chain.lifecycle_state).toBe('BUILD');
   });
 
-  it('rejects locking a non-DRAFT intent', () => {
+  it('rejects ratifying a non-DRAFT intent', () => {
     const chain = lockedIntentChain();
-    expect(() => lockActiveIntent(chain)).toThrow(/DRAFT/);
+    expect(() => ratifyIntent(chain)).toThrow(/DRAFT/);
   });
 });
 
@@ -253,9 +253,9 @@ describe('supersedeIntentVersion — chain-scoped cascade (PLAN-EVAL-01 §3.4)',
     expect(chain.close?.state).toBe('SUPERSEDED');
   });
 
-  it('rejects superseding a non-LOCKED intent (INACTIVE no longer exists as a state, §3.4)', () => {
+  it('rejects superseding a non-RATIFIED intent (INACTIVE no longer exists as a state, §3.4)', () => {
     const chain = createInitialChain('v1', 'x');
-    expect(() => supersedeIntentVersion(chain, 'reason')).toThrow(/LOCKED/);
+    expect(() => supersedeIntentVersion(chain, 'reason')).toThrow(/RATIFIED/);
   });
 });
 
@@ -303,12 +303,12 @@ describe('runDoctorReconciliation', () => {
 });
 
 describe('getNextValidOperations', () => {
-  it('suggests intent lock for a fresh DRAFT chain', () => {
+  it('suggests intent ratify for a fresh DRAFT chain', () => {
     const chain = createInitialChain('v1', 'x');
-    expect(getNextValidOperations(chain)).toContain('intent lock');
+    expect(getNextValidOperations(chain)).toContain('intent ratify');
   });
 
-  it('suggests roadmap new once intent is locked, not before', () => {
+  it('suggests roadmap new once intent is ratified, not before', () => {
     const chain = lockedIntentChain();
     expect(getNextValidOperations(chain)).toContain('roadmap new');
   });

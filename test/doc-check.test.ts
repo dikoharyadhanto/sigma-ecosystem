@@ -58,14 +58,14 @@ describe('Document checks and auto-validation', () => {
     expect(checked.stdout).toMatch(/Lock readiness: Not eligible/);
   });
 
-  it('intent lock is blocked when required markers are missing', () => {
+  it('intent ratify is blocked when required markers are missing', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, '# DIR-INTENT\n\n## 1. Intent Core — Sovereign Layer\n');
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/Sigma Intent Check failed/);
@@ -87,38 +87,38 @@ describe('Document checks and auto-validation', () => {
   });
 });
 
-describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
+describe('AUD Advisory Verdict gate (intent ratify / plan lock only)', () => {
   let env: TestEnv;
 
   afterEach(() => env?.cleanup());
 
-  it('intent lock fails when no verdict checkbox is checked', () => {
+  it('intent ratify fails when no verdict checkbox is checked', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, validIntentDoc('v1').replace('- [x] PASS', ''));
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toMatch(/no verdict checkbox is checked/);
   });
 
-  it('intent lock fails when more than one verdict checkbox is checked', () => {
+  it('intent ratify fails when more than one verdict checkbox is checked', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, validIntentDoc('v1').replace('- [x] PASS', '- [x] PASS\n- [x] REVISE'));
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toMatch(/more than one verdict checkbox is checked/);
   });
 
-  it('intent lock fails when SKIP_FOR_AUDIT is checked but Director Instruction is empty', () => {
+  it('intent ratify fails when SKIP_FOR_AUDIT is checked but Director Instruction is empty', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
@@ -128,13 +128,13 @@ describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
       validIntentDoc('v1').replace('- [x] PASS', '- [x] SKIP_FOR_AUDIT\n\nDirector Instruction (verbatim): [...]')
     );
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toMatch(/Director Instruction \(verbatim\)" is empty/);
   });
 
-  it('intent lock succeeds when SKIP_FOR_AUDIT is checked with a recorded Director Instruction', () => {
+  it('intent ratify succeeds when SKIP_FOR_AUDIT is checked with a recorded Director Instruction', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
@@ -147,18 +147,18 @@ describe('AUD Advisory Verdict gate (intent lock / plan lock only)', () => {
       )
     );
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
   });
 });
 
-describe('Final Validation Checklist gate (intent lock only)', () => {
+describe('Final Validation Checklist gate (intent ratify only)', () => {
   let env: TestEnv;
 
   afterEach(() => env?.cleanup());
 
-  it('intent lock fails when a Lock Requirement item is not checked', () => {
+  it('intent ratify fails when a Lock Requirement item is not checked', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
@@ -168,14 +168,14 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
       validIntentDoc('v1').replace('- [x] Risk appetite is stated.', '- [ ] Risk appetite is stated.')
     );
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toMatch(/✗ Risk appetite is stated\./);
     expect(result.stdout).toMatch(/NOT READY FOR LOCK \(1 requirement\(s\) unsatisfied\)/);
   });
 
-  it('intent lock fails when a Quality Bar dimension in Section 4 is still a placeholder', () => {
+  it('intent ratify fails when a Quality Bar dimension in Section 4 is still a placeholder', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
@@ -188,14 +188,14 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
       )
     );
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toMatch(/✗ Quality Bar — Security minimum standard stated or N\/A/);
     expect(result.stdout).toMatch(/NOT READY FOR LOCK \(1 requirement\(s\) unsatisfied\)/);
   });
 
-  it('intent lock succeeds when Lock Requirement is complete and Quality Bar has no placeholders, ignoring unchecked Conditional Requirement', () => {
+  it('intent ratify succeeds when Lock Requirement is complete and Quality Bar has no placeholders, ignoring unchecked Conditional Requirement', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
@@ -203,7 +203,7 @@ describe('Final Validation Checklist gate (intent lock only)', () => {
     // validIntentDoc() ships with Conditional Requirement items left unchecked by default.
     fs.writeFileSync(intentFile, validIntentDoc('v1'));
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Document is structurally valid and all Lock Requirements are satisfied\./);

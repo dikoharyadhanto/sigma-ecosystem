@@ -132,9 +132,16 @@ function readExistingChain(projectRoot, chainVersion) {
     if (!fs_extra_1.default.existsSync(filePath))
         return null;
     try {
-        const raw = fs_extra_1.default.readJsonSync(filePath);
-        (0, chain_1.validateChainSemantics)(raw);
-        return raw;
+        // Goes through readChain() rather than a raw fs.readJsonSync() so a
+        // legacy chain file still carrying intent.state "LOCKED" (pre-RATIFIED
+        // rename, Director directive 2026-08-12) gets normalized before
+        // validateChainSemantics() sees it — otherwise gate_1_open=true with a
+        // literal "LOCKED" intent fails hasRatifiedIntent() and this function
+        // silently returns null, discarding real plan/exec title/focus history
+        // that PLAN-EVAL-07 exists specifically to preserve.
+        const chain = (0, chain_1.readChain)(projectRoot, chainVersion);
+        (0, chain_1.validateChainSemantics)(chain);
+        return chain;
     }
     catch {
         return null;
@@ -263,11 +270,11 @@ function buildReconstructedChains(projectRoot, found, recoveredMetadata = new Ma
         // ── INTENT ──────────────────────────────────────────────────────────────
         const hasDownstreamEvidence = plans.length > 0 || !!roadmapEntry;
         if (hasDownstreamEvidence) {
-            chain.intent.state = 'LOCKED';
-            chain.intent.locked_at = now;
+            chain.intent.state = 'RATIFIED';
+            chain.intent.ratified_at = now;
         }
         else {
-            markers.push(makeMarker('intent', 'gate_1_open', `DIR-INTENT ${chainVersion} found on disk but no downstream FMN-PLAN or ROADMAP confirms it was ever LOCKED. Re-run \`sigma intent lock\` if it should be, or leave as DRAFT.`, { intent_version: chainVersion, plan_version: null, exec_version: null }, now));
+            markers.push(makeMarker('intent', 'gate_1_open', `DIR-INTENT ${chainVersion} found on disk but no downstream FMN-PLAN or ROADMAP confirms it was ever RATIFIED. Re-run \`sigma intent ratify\` if it should be, or leave as DRAFT.`, { intent_version: chainVersion, plan_version: null, exec_version: null }, now));
         }
         if (useExistingWholesale) {
             // PLAN-EVAL-07 — nothing changed on disk since this chain's existing
@@ -370,7 +377,7 @@ function buildReconstructedChains(projectRoot, found, recoveredMetadata = new Ma
         }
         // ── Lifecycle ─────────────────────────────────────────────────────────────
         const hasAnyBuildArtifact = chain.roadmap !== null || chain.plan.versions.length > 0 || chain.exec.versions.length > 0 || chain.close !== null;
-        chain.lifecycle_state = hasAnyBuildArtifact || chain.intent.state === 'LOCKED' ? 'BUILD' : 'DESIGN';
+        chain.lifecycle_state = hasAnyBuildArtifact || chain.intent.state === 'RATIFIED' ? 'BUILD' : 'DESIGN';
         // Gates + structural consistency markers are computed by the exact same
         // function `sigma doctor` (default mode) already uses — avoids
         // duplicating gate logic in two places that would need to stay in sync.

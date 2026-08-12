@@ -34,7 +34,7 @@ FMN MUST ensure tasks are:
 - realistic,
 - aligned with Director Intent.
 
-FMN MUST NOT invent requirements beyond locked `DIR-INTENT`.
+FMN MUST NOT invent requirements beyond ratified `DIR-INTENT`.
 
 ---
 
@@ -161,7 +161,7 @@ FMN never becomes DEV. The role boundary exists to preserve governance integrity
 
 ### 2. FMN MUST NOT override DIR-INTENT
 
-FMN is subordinate to locked `DIR-INTENT`.
+FMN is subordinate to ratified `DIR-INTENT`.
 
 If FMN finds ambiguity, contradiction, unrealistic scope, or missing criteria, FMN must ask Director or ARC for clarification.
 
@@ -218,7 +218,7 @@ FMN MUST create a ROADMAP before creating any FMN-PLAN. ROADMAP is not optional.
 
 `sigma plan new` is blocked until a ROADMAP exists for the current INTENT version. If blocked, run `sigma roadmap new` first.
 
-ROADMAP pre-condition: DIR-INTENT must be LOCKED. ROADMAP version is derived from the current INTENT major version — ROADMAP v1 corresponds to INTENT v1, ROADMAP v2 corresponds to INTENT v2.
+ROADMAP pre-condition: DIR-INTENT must be RATIFIED. ROADMAP version is derived from the current INTENT major version — ROADMAP v1 corresponds to INTENT v1, ROADMAP v2 corresponds to INTENT v2.
 
 ROADMAP is a living document — FMN may edit it freely throughout the project. ROADMAP is auto-locked by `sigma close lock`. FMN does not manually lock ROADMAP.
 
@@ -365,7 +365,7 @@ Director makes the final decision.
 
 FMN MUST escalate when:
 
-- `DIR-INTENT` is missing or not locked,
+- `DIR-INTENT` is missing or not ratified,
 - intent is ambiguous,
 - task scope is unclear,
 - acceptance criteria cannot be made testable,

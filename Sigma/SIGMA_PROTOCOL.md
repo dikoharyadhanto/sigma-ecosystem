@@ -58,7 +58,7 @@ START → DESIGN → BUILD → CLOSE
 
 **START**: Project initialized via `sigma project start`. No artifacts exist yet.
 
-**DESIGN**: Director, assisted by ARC, produces DIR-INTENT. DESIGN is complete when DIR-INTENT is LOCKED. FMN and DEV do not operate during DESIGN.
+**DESIGN**: Director, assisted by ARC, produces DIR-INTENT. DESIGN is complete when DIR-INTENT is RATIFIED. FMN and DEV do not operate during DESIGN.
 
 **BUILD**: Three sequential sub-components:
 1. ROADMAP — Foreman creates and activates a ROADMAP staging plan. Required before any FMN-PLAN can be created (Gate 1.5).
@@ -115,9 +115,9 @@ AI roles follow position response limits, revision limits, and decision cycle ru
 | Authors | DIR-INTENT (draft) |
 | Lock authority | None — Director only |
 
-Interviews the Director to surface and structure intent. Drafts DIR-INTENT including intent core, constraints, technical direction, assumptions, risk, scope boundary, and evidence requirements. In DESIGN, ARC's active drafting work ends when DIR-INTENT is LOCKED — but ARC's role does not end there: at CLOSE, only when the Director confirms it, ARC returns to evaluate whether BUILD delivered against that same DIR-INTENT (see `Sigma/rules/ARC-RULE.md` §Closure Evaluation).
+Interviews the Director to surface and structure intent. Drafts DIR-INTENT including intent core, constraints, technical direction, assumptions, risk, scope boundary, and evidence requirements. In DESIGN, ARC's active drafting work ends when DIR-INTENT is RATIFIED — but ARC's role does not end there: at CLOSE, only when the Director confirms it, ARC returns to evaluate whether BUILD delivered against that same DIR-INTENT (see `Sigma/rules/ARC-RULE.md` §Closure Evaluation).
 
-When DIR-INTENT's Comprehensive Research status is NEEDED, ARC investigates using a bounded Research Mode and records sources in `Sigma/reference/reference-list.md` (see Section 5.7). Research must be reviewed by AUD and completed before `sigma intent lock`.
+When DIR-INTENT's Comprehensive Research status is NEEDED, ARC investigates using a bounded Research Mode and records sources in `Sigma/reference/reference-list.md` (see Section 5.7). Research must be reviewed by AUD and completed before `sigma intent ratify`.
 
 Cannot lock any artifact. Cannot author FMN-PLAN, DEV-EXEC, or DIR-CLOSE content — DIR-CLOSE content authorship remains exclusively the Director's, even though ARC may operate the `sigma close` CLI lifecycle (see `Sigma/rules/ARC-RULE.md` §CLI Operation Policy). Cannot operate in BUILD phase.
 
@@ -155,7 +155,7 @@ Cannot lock any artifact. Cannot challenge Intent Core. Cannot block artifact pr
 
 - Author all 6 sections of FMN-PLAN before build begins: source alignment, work order, acceptance criteria, implementation constraints, pre-build test contract, DEV handoff instructions. FMN-PLAN is immutable after lock — FMN never touches it again.
 - After DEV completes DEV-EXEC, fill Section 13 (FMN Review) of the DEV-EXEC artifact — verify ACs against DEV's evidence and issue advisory verdict.
-- Cannot begin until DIR-INTENT is LOCKED (Gate 1) and the chain's ROADMAP exists (Gate 1.5).
+- Cannot begin until DIR-INTENT is RATIFIED (Gate 1) and the chain's ROADMAP exists (Gate 1.5).
 
 Cannot lock any artifact. Cannot author DEV-EXEC or DIR-CLOSE.
 
@@ -196,24 +196,31 @@ Sigma uses six artifact types: five governance artifacts (DIR-INTENT, ROADMAP, F
 | Property | Value |
 | :--- | :--- |
 | Owner | Director |
-| Authored by | ARC (draft), Director (approval and lock verdict) |
+| Authored by | ARC (draft), Director (approval and ratify verdict) |
 | Phase | DESIGN |
 | Storage | `Sigma/design/` |
 | Versioning | Tier 1 |
-| Auto-supersede | No — locking a new DIR-INTENT demotes the prior LOCKED version to `INACTIVE`, never `SUPERSEDED`. `SUPERSEDED` only via explicit `sigma intent supersede --director-confirm` (see Gate 3 section). |
+| Auto-supersede | No — a chain file holds exactly one intent, so there is nothing else in the same file for a new DIR-INTENT to demote. `SUPERSEDED` only via explicit `sigma intent supersede --director-confirm` (see Gate 3 section). |
 
 Foundational intent document capturing Director's vision, constraints, technical preferences, scope boundary, risk assessment, and evidence requirements. Includes an optional AUD findings section.
 
-**State machine**: `DRAFT → LOCKED → INACTIVE → SUPERSEDED` (a LOCKED intent may also go straight `LOCKED → SUPERSEDED` via `intent supersede`).
+**State machine**: `DRAFT → RATIFIED → SUPERSEDED`. Ratification establishes the governing Director intent — it does not freeze its operationalization; see 5.1.1.
 
 | State | Meaning |
 | :--- | :--- |
 | `DRAFT` | Created; not yet the governing intent |
-| `LOCKED` | The current, active intent — opens Gate 1 |
-| `INACTIVE` | Displaced by a newer LOCKED intent; not cancelled, just not the current focus. Descendants (ROADMAP/FMN-PLAN/DEV-EXEC/DIR-CLOSE) are untouched. |
+| `RATIFIED` | The current, active intent — opens Gate 1 |
 | `SUPERSEDED` | Explicitly retired by Director via `sigma intent supersede --director-confirm`. Cascades `SUPERSEDED` to every ROADMAP/FMN-PLAN/DEV-EXEC/DIR-CLOSE version that references this INTENT — including already-`LOCKED` ones. |
 
-`INACTIVE` never implies cancellation and never triggers a cascade — a new INTENT may be complementary rather than a replacement. Only `sigma intent supersede` makes the explicit, Director-confirmed claim that this INTENT chain is retired.
+Each chain file (`progress-v<N>.json`) holds exactly one DIR-INTENT, so there is no `INACTIVE`-style demotion to arbitrate — a complementary or superseding INTENT is simply a separate chain file (see Section 6). Only `sigma intent supersede` makes the explicit, Director-confirmed claim that a given INTENT chain is retired.
+
+#### 5.1.1 Sovereign Intent vs. Operationalization — the Amendment mechanism
+
+Ratifying DIR-INTENT locks in the Director's **destination and values** (Sovereign layer — see 5.1's two-layer split below), not the literal text of every section forever. The **Operationalization** layer — ARC's current translation of that destination into something FMN/DEV can execute against — may evolve through an explicit, Director-approved **Amendment** without requiring a new Intent Version. Evolving Operationalization as understanding deepens is not a violation of intent; it is the normal function of a working boundary getting sharper.
+
+The counterpart constraint carries equal weight: no Amendment may be used to silently alter, bypass, or reinterpret the Sovereign layer. A change that touches Sovereign content is never an Amendment — it is a new Intent Version, full stop.
+
+Every DIR-INTENT item in Section 6 (Scope Boundary) and Section 9 (Functional Requirements) is tagged Sovereign or Operationalization at authoring time (see the template's Tier Definitions, Section 1.6). Amendment mechanics (`sigma intent amendment`, Section 14 Amendment History, ARC's classification role) are specified separately once implemented — not yet part of this protocol version.
 
 DIR-INTENT has two layers: **Intent Core** (sovereign — goals, vision, purpose; not AUD-challengeable) and **Challengeable sublayers** (route, assumptions, constraints, risk — all auditable).
 
@@ -280,7 +287,7 @@ Closure document authored by the Director. Must explicitly reference the FMN-PLA
 
 **Mandatory governance artifact.** ROADMAP is required before FMN-PLAN can be created — `plan new` is blocked unless the chain's ROADMAP exists and is not SUPERSEDED (Gate 1.5).
 
-ROADMAP breaks a locked DIR-INTENT into large build stages. Each Stage Overview row maps to an FMN-PLAN version. ROADMAP is partially CLI-managed — stage title/focus/status are supplied via `--title`/`--focus` on `sigma plan new` and `sigma plan promote`, stored in `progress-v<N>.json`, and rendered into the Stage Overview table by `sigma roadmap render`; the Core Process Flow section remains manual.
+ROADMAP breaks a ratified DIR-INTENT into large build stages. Each Stage Overview row maps to an FMN-PLAN version. ROADMAP is partially CLI-managed — stage title/focus/status are supplied via `--title`/`--focus` on `sigma plan new` and `sigma plan promote`, stored in `progress-v<N>.json`, and rendered into the Stage Overview table by `sigma roadmap render`; the Core Process Flow section remains manual.
 
 **State machine**: `DRAFT → LOCKED` (or `SUPERSEDED` when the chain's intent is superseded)
 
@@ -290,7 +297,7 @@ ROADMAP breaks a locked DIR-INTENT into large build stages. Each Stage Overview 
 | `LOCKED` | Final state after `sigma close lock` auto-locks a still-DRAFT ROADMAP |
 | `SUPERSEDED` | Set by the `sigma intent supersede` cascade; readable, not writable |
 
-**Core invariant**: Exactly one ROADMAP per chain. It is created by `sigma roadmap new` after `sigma intent lock`; there is no activate/demote step (`roadmap activate` was removed with the one-chain-per-file storage model).
+**Core invariant**: Exactly one ROADMAP per chain. It is created by `sigma roadmap new` after `sigma intent ratify`; there is no activate/demote step (`roadmap activate` was removed with the one-chain-per-file storage model).
 
 The Stage Overview table is generated directly from `progress-v<N>.json` on every `sigma roadmap render` — there is no separate reconciliation step, since the table has no independent copy of stage data that could drift out of sync.
 
@@ -316,7 +323,7 @@ Project-wide source index supporting DIR-INTENT's Comprehensive Research section
 
 **Not tracked in `progress-v<N>.json`** — no lifecycle state, no lock, no gate. Existence is guaranteed by construction at `project start`, with a self-healing fallback in `sigma reference update`.
 
-If Comprehensive Research status is NEEDED, AUD Verificator Mode must review source-tier compliance for cited IDs before `sigma intent lock` (see Section 14).
+If Comprehensive Research status is NEEDED, AUD Verificator Mode must review source-tier compliance for cited IDs before `sigma intent ratify` (see Section 14).
 
 > Template: `Sigma/templates/REFERENCE-LIST-TEMPLATE.md`
 
@@ -346,8 +353,8 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 | Property | Value |
 | :--- | :--- |
 | Blocks | `sigma roadmap new` |
-| Pre-condition | At least one `DIR-INTENT` with status `LOCKED` exists |
-| CLI error | `Gate 1 blocked: DIR-INTENT must be LOCKED before ROADMAP can be created.` |
+| Pre-condition | At least one `DIR-INTENT` with status `RATIFIED` exists |
+| CLI error | `Gate 1 blocked: DIR-INTENT must be RATIFIED before ROADMAP can be created.` |
 
 ---
 
@@ -376,15 +383,15 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 | Property | Value |
 | :--- | :--- |
 | Blocks | `sigma close new` |
-| Pre-condition | Full INTENT → PLAN → EXEC chain: active INTENT LOCKED; at least one DEV-EXEC LOCKED whose `plan_version_ref` points to a LOCKED FMN-PLAN whose `intent_version_ref` points to that INTENT |
-| CLI error (no chain) | `Gate 3 blocked: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain).` |
+| Pre-condition | Full INTENT → PLAN → EXEC chain: active INTENT RATIFIED; at least one DEV-EXEC LOCKED whose `plan_version_ref` points to a LOCKED FMN-PLAN whose `intent_version_ref` points to that INTENT |
+| CLI error (no chain) | `Gate 3 blocked: Requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED (same version chain).` |
 
-**INTENT SUPERSEDE cascade (PLAN-EVAL-01)**: `sigma intent supersede --v <version> --reason <reason> --director-confirm` is the *only* path to a `SUPERSEDED` DIR-INTENT — locking a new DIR-INTENT never supersedes the prior one automatically (it demotes it to `INACTIVE`; see Section 5.1). Because the claim is explicit and Director-confirmed, its effect is a full downward cascade rather than a soft flag:
+**INTENT SUPERSEDE cascade (PLAN-EVAL-01)**: `sigma intent supersede --v <version> --reason <reason> --director-confirm` is the *only* path to a `SUPERSEDED` DIR-INTENT — ratifying a new DIR-INTENT never supersedes the prior one automatically. Each chain file holds exactly one intent, so there is nothing else in the same file for a new DIR-INTENT to demote — a prior INTENT chain simply sits beside the new one, RATIFIED and untouched, until an explicit supersede targets it (see Section 5.1). Because the supersede claim is explicit and Director-confirmed, its effect is a full downward cascade rather than a soft flag:
 
 - Supersedes the target DIR-INTENT, then cascades `SUPERSEDED` to every ROADMAP, FMN-PLAN, DEV-EXEC, and DIR-CLOSE version whose `intent_version_ref`/`plan_version_ref` chains back to it — **including already-`LOCKED` entries**. LOCKED status is not revoked; the version simply also becomes `SUPERSEDED`.
-- The cascade is strictly downward and chain-scoped: it never touches an unrelated INTENT chain (e.g. a complementary `INACTIVE` or `LOCKED` INTENT sitting beside the one being superseded), and superseding a PLAN (`sigma plan supersede`) never reaches back up to change INTENT state.
+- The cascade is strictly downward and chain-scoped: it never touches an unrelated INTENT chain (e.g. a complementary RATIFIED INTENT sitting beside the one being superseded, in its own chain file), and superseding a PLAN (`sigma plan supersede`) never reaches back up to change INTENT state.
 - The command shows a mandatory preflight — every artifact that will cascade, flagged if already `LOCKED` — before requiring `--director-confirm`. This is the second code-enforced `--director-confirm` gate in Sigma (after `sigma override`), because the blast radius can span four artifact domains including completed work.
-- Without an explicit `intent supersede`, a DIR-CLOSE (or any other descendant) tied to an `INACTIVE` INTENT remains exactly as it was — still lockable, still valid. `INACTIVE` is deliberately not treated as "dead".
+- Without an explicit `intent supersede`, a DIR-CLOSE (or any other descendant) tied to a RATIFIED-but-not-active INTENT chain remains exactly as it was — still lockable, still valid. A chain not being the active one is never treated as "dead".
 
 ---
 
@@ -474,7 +481,7 @@ Findings Section Authorization.
 | :--- | :--- |
 | `project` | Project initialization, status, lifecycle management |
 | `session` | Session orientation — read-only runtime context for agents when role flow or Director request requires it |
-| `intent` | DIR-INTENT lifecycle (new, lock, score, status, list) |
+| `intent` | DIR-INTENT lifecycle (new, ratify, score, status, list) |
 | `plan` | FMN-PLAN lifecycle (new, lock, supersede, queue, status, list) |
 | `exec` | DEV-EXEC lifecycle (new, lock, supersede, status, list) |
 | `close` | DIR-CLOSE lifecycle (new, lock, status) |
@@ -515,7 +522,7 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 | :--- | :--- | :---: | :---: |
 | Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check` | Yes | No |
 | Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `reference update`, `send` | Yes, within role boundary | Usually no |
-| Approval | `intent lock`, `plan lock`, `exec lock`, `close lock`, `intent score`¹ | Only after Director approval | Yes |
+| Approval | `intent ratify`, `plan lock`, `exec lock`, `close lock`, `intent score`¹ | Only after Director approval | Yes |
 | Risk / Supersession | `intent supersede --director-confirm`, `plan supersede`, destructive/reset | Only after Director approval | Yes |
 
 ¹ `intent score` is Approval-class with a narrower scope than the others in its row: what the Director approves is the act of **committing** the score to `progress-v<N>.json` — not the **content** of the score itself, which ARC already reasoned through and reported in conversation beforehand (see `Sigma/rules/ARC-RULE.md` §ARC Satisfaction Score Methodology). Authorization language for this command is deliberately distinct from ordinary Approval phrasing (e.g. "catat skor", "masukkan skor ke sigma") — not "do you agree with this score."
@@ -530,7 +537,7 @@ If authorization is unclear, ask before executing.
 
 ### Pre-Lock Verification Rule
 
-Before recommending or executing any Approval-class lock command (`intent lock`, `plan lock`, `exec lock`, `close lock`), the AI role MUST first run the matching `{domain} check` command and confirm it reports `Lock readiness: Eligible` (or `Eligible with warnings`). `check` never mutates state and never requires Director authorization — it is a Lock Readiness dashboard: it shows exactly which Lock Requirements `lock` will enforce, without changing anything.
+Before recommending or executing any Approval-class lock/ratify command (`intent ratify`, `plan lock`, `exec lock`, `close lock`), the AI role MUST first run the matching `{domain} check` command and confirm it reports `Lock readiness: Eligible` (or `Eligible with warnings`). `check` never mutates state and never requires Director authorization — it is a Lock Readiness dashboard: it shows exactly which Lock Requirements `lock`/`ratify` will enforce, without changing anything.
 
 If `check` reports `Not eligible`, the AI role must resolve the unsatisfied Lock Requirements shown in its output before recommending or executing lock — do not recommend lock from memory or a manual read of the document alone. By design, a document `check` reports fully satisfied cannot then fail `lock` for the same requirement (see PLAN-EVAL-11, "Lock Validation Equivalence") — if that ever happens, treat it as a CLI defect, not a normal outcome.
 
@@ -616,7 +623,7 @@ Three independent fields exist:
 
 During role activation or session orientation, AI roles check `Sigma/project.config.json` (surfaced by `sigma session bootstrap`) and follow all three settings.
 
-**Formal Sigma identifiers always stay in English regardless of language setting** — artifact codes (`DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, `DIR-CLOSE`, `ROADMAP`), lifecycle/gate state names (`DRAFT`, `LOCKED`, `SUPERSEDED`, `BUILDING`, `TESTING`, `COMPLETED`), CLI commands, filenames, JSON keys, and other machine-readable syntax are never translated. Only human-readable prose follows the configured language.
+**Formal Sigma identifiers always stay in English regardless of language setting** — artifact codes (`DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, `DIR-CLOSE`, `ROADMAP`), lifecycle/gate state names (`DRAFT`, `RATIFIED`, `LOCKED`, `SUPERSEDED`, `BUILDING`, `TESTING`, `COMPLETED`), CLI commands, filenames, JSON keys, and other machine-readable syntax are never translated. Only human-readable prose follows the configured language.
 
 **Language preferences govern AI write/response direction only, not reading comprehension.** An AI role must never auto-switch its response or document-writing language just because the Director's message happens to be written in a different language — only an explicit Director instruction changes the effective language for a turn or session, and persisting that change to `sigma config` requires explicit Director approval (see 16C).
 

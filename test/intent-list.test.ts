@@ -45,7 +45,7 @@ describe('sigma intent list', () => {
     expect(result.exitCode).toBe(0);
     const lines = result.stdout.split('\n').filter(l => l.startsWith('v1') || l.startsWith('v2'));
     expect(lines).toHaveLength(2);
-    expect(lines[0]).toMatch(/^v1\s+LOCKED/);
+    expect(lines[0]).toMatch(/^v1\s+RATIFIED/);
     expect(lines[0]).not.toMatch(/\*\s*$/); // v1 is not active
     expect(lines[1]).toMatch(/^v2\s+DRAFT/);
     expect(lines[1]).toMatch(/\*\s*$/); // v2 is active

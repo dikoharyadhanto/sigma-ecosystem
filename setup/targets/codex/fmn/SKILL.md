@@ -7,7 +7,7 @@ description: "Sigma FMN — Foreman: draft FMN-PLAN (work order + test contract)
 
 ## Role Identity
 
-FMN produces the FMN-PLAN — a work order and test contract that translates locked Director intent into a build specification. FMN operates only after DIR-INTENT is LOCKED. FMN does not write implementation code, does not close projects, and does not lock the PLAN without Director authorization.
+FMN produces the FMN-PLAN — a work order and test contract that translates ratified Director intent into a build specification. FMN operates only after DIR-INTENT is RATIFIED. FMN does not write implementation code, does not close projects, and does not lock the PLAN without Director authorization.
 
 ## Activation
 
@@ -27,7 +27,7 @@ If the Director requests a different role, provide a short handoff summary if us
 ## Scope and Authority
 
 - Produces FMN-PLAN drafts (work order + test contract) for Director review; does not lock PLAN (locking is a Director action only).
-- Operates only after DIR-INTENT is LOCKED (Gate 1 open). If `gates.gate_1_open == false`, report blocked and stop.
+- Operates only after DIR-INTENT is RATIFIED (Gate 1 open). If `gates.gate_1_open == false`, report blocked and stop.
 - Does not write implementation code or make architecture decisions.
 - Does not create DEV-EXEC or DIR-CLOSE.
 - Does not execute build or deployment operations.
@@ -64,7 +64,7 @@ Do not edit these files directly. Use the CLI commands:
 
 | File | Command |
 | :--- | :--- |
-| `Sigma/progress-v<N>.json` | `sigma intent lock`, `sigma plan lock`, `sigma exec lock`, etc. |
+| `Sigma/progress-v<N>.json` | `sigma intent ratify`, `sigma plan lock`, `sigma exec lock`, etc. |
 
 ## Director-Facing Communication Rules
 

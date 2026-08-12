@@ -53,7 +53,7 @@ describe('intent new on a CLOSED project', () => {
     // untouched, not mutated in place (PLAN-EVAL-01 §3.4/§4).
     const v1 = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     expect(v1.lifecycle_state).toBe('CLOSED');
-    expect(v1.intent.state).toBe('LOCKED');
+    expect(v1.intent.state).toBe('RATIFIED');
 
     const v2 = fs.readJsonSync(chainPath(env, 'v2')) as Record<string, any>;
     expect(v2.intent.version).toBe('v2');

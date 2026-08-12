@@ -41,7 +41,7 @@ describe('Progress hardening', () => {
       gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false },
     });
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/chain_version/i);
@@ -49,7 +49,7 @@ describe('Progress hardening', () => {
     expect(result.stderr).toMatch(/sigma session bootstrap/i);
   });
 
-  it('blocks mutating commands when gate_1_open is true without a LOCKED intent', () => {
+  it('blocks mutating commands when gate_1_open is true without a RATIFIED intent', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     const now = new Date().toISOString();
@@ -64,7 +64,7 @@ describe('Progress hardening', () => {
       gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
     });
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/gate_1_open/i);
@@ -115,11 +115,11 @@ describe('Progress hardening', () => {
       validIntentDoc('v2')
     );
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
     expect(result.exitCode).toBe(0);
 
     const v2 = fs.readJsonSync(chainPath(env, 'v2')) as Record<string, any>;
-    expect(v2.intent.state).toBe('LOCKED');
+    expect(v2.intent.state).toBe('RATIFIED');
     expect(v2.gates.gate_1_open).toBe(true);
 
     // v1's file — its own LOCKED plan/exec and gates — is byte-for-byte

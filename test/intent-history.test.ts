@@ -103,17 +103,17 @@ describe('Sigma/design/intent-history.md auto-render', () => {
     expect(v2Index).toBeGreaterThan(v1Index);
   });
 
-  it('updates the row to LOCKED after intent lock', () => {
+  it('updates the row to RATIFIED after intent ratify', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', withIntentMeta(makeChainWithDraftIntent('v1'), 'Foo Intent', 'Foo focus'));
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md'), validIntentDoc('v1'));
 
-    const result = runCli('intent lock', env.projectDir, env.homeDir);
+    const result = runCli('intent ratify', env.projectDir, env.homeDir);
     expect(result.exitCode).toBe(0);
 
     const content = fs.readFileSync(historyPath(env), 'utf8');
-    expect(content).toMatch(/\| v1 \| Foo Intent \| Foo focus \| LOCKED \| — \|/);
+    expect(content).toMatch(/\| v1 \| Foo Intent \| Foo focus \| RATIFIED \| — \|/);
   });
 
   it('updates the row to SUPERSEDED with the reason after intent supersede', () => {
@@ -163,7 +163,7 @@ describe('sigma doctor — intent-history.md self-heal', () => {
     const result = runCli('doctor', env.projectDir, env.homeDir);
     expect(result.exitCode).toBe(0);
     expect(fs.existsSync(historyPath(env))).toBe(true);
-    expect(fs.readFileSync(historyPath(env), 'utf8')).toMatch(/\| v1 \| Intent One \| Focus one \| LOCKED \| — \|/);
+    expect(fs.readFileSync(historyPath(env), 'utf8')).toMatch(/\| v1 \| Intent One \| Focus one \| RATIFIED \| — \|/);
   });
 
   it('regenerates a deleted intent-history.md (--all-versions)', () => {
@@ -177,7 +177,7 @@ describe('sigma doctor — intent-history.md self-heal', () => {
 
     const result = runCli('doctor --all-versions', env.projectDir, env.homeDir);
     expect(result.exitCode).toBe(0);
-    expect(fs.readFileSync(historyPath(env), 'utf8')).toMatch(/\| v1 \| Intent One \| Focus one \| LOCKED \| — \|/);
+    expect(fs.readFileSync(historyPath(env), 'utf8')).toMatch(/\| v1 \| Intent One \| Focus one \| RATIFIED \| — \|/);
   });
 
   it('doctor --reconstruct recovers title/focus from a legacy 5-column intent-history.md when progress-v<N>.json is missing', () => {

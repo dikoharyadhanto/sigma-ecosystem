@@ -27,7 +27,7 @@ Refer to `SIGMA_README.md` at the project root for the full governance protocol.
 
 | Human label | Artifact code | State flow |
 |---|---|---|
-| Intent Doc | DIR-INTENT | DRAFT → LOCKED |
+| Intent Doc | DIR-INTENT | DRAFT → RATIFIED |
 | Plan Doc | FMN-PLAN | DRAFT → LOCKED |
 | Execution Evidence | DEV-EXEC | DRAFT → BUILDING → TESTING → COMPLETED → LOCKED |
 | Closure Doc | DIR-CLOSE | DRAFT → LOCKED |
@@ -37,6 +37,6 @@ Refer to `SIGMA_README.md` at the project root for the full governance protocol.
 
 | Gate | Requires | Unlocks |
 |---|---|---|
-| Gate 1 | DIR-INTENT LOCKED | `sigma plan new` |
+| Gate 1 | DIR-INTENT RATIFIED | `sigma plan new` |
 | Gate 2 | FMN-PLAN LOCKED | `sigma exec new` |
 | Gate 3 | DEV-EXEC LOCKED + full evidence chain | `sigma close new` |

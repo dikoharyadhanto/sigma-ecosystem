@@ -68,7 +68,7 @@ export interface OverrideEntry {
 export declare function readOverrides(projectRoot: string): OverrideEntry[];
 export declare function parseMajorVersion(version: string): number;
 export declare function parseMinorVersion(version: string): number;
-export type IntentState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
+export type IntentState = 'DRAFT' | 'RATIFIED' | 'SUPERSEDED';
 export type RoadmapState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type CloseState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export interface SingleIntentState {
@@ -77,7 +77,7 @@ export interface SingleIntentState {
     file?: string;
     created_at: string;
     updated_at: string;
-    locked_at?: string;
+    ratified_at?: string;
     supersede_reason?: string;
     title?: string;
     focus?: string;
@@ -116,6 +116,7 @@ export interface ChainState {
     close: SingleCloseState | null;
     gates: Gates;
     runtime_invalid?: RuntimeInvalidState;
+    _migratedOnRead?: string[];
 }
 export interface ActivateStatus {
     active_chain: string | null;
@@ -142,7 +143,7 @@ export declare function readActiveChain(projectRoot: string): {
 };
 export declare function readProjectIdentity(projectRoot: string): ProjectIdentity;
 export declare function createInitialChain(chainVersion: string, intentFilePath: string, title?: string, focus?: string): ChainState;
-export declare function hasActiveLockedIntent(chain: ChainState): boolean;
+export declare function hasRatifiedIntent(chain: ChainState): boolean;
 export declare function hasCleanGate2Chain(chain: ChainState): boolean;
 export declare function hasCleanGate3Chain(chain: ChainState): boolean;
 export declare function validateChainSemantics(chain: ChainState): void;
@@ -163,7 +164,7 @@ export interface DoctorReport {
 export declare function runDoctorReconciliation(chain: ChainState, overrides?: OverrideEntry[]): DoctorReport;
 export declare function nextPlanVersion(chain: ChainState, intentVersionRef: string): string;
 export declare function nextExecVersion(chain: ChainState, planVersionRef: string): string;
-export declare function lockActiveIntent(chain: ChainState): void;
+export declare function ratifyIntent(chain: ChainState): void;
 export declare function arcScoreBand(score: number): 'OUTPUT_INCOMPLETE' | 'SATISFIED_NEEDS_REVIEW' | 'SATISFIED_RECOMMENDED';
 export declare function hasGate35Score(chain: ChainState): boolean;
 export declare function recordArcScore(chain: ChainState, score: number, notes: string): void;

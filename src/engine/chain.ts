@@ -136,7 +136,11 @@ export function parseMinorVersion(version: string): number {
 
 // PLAN-EVAL-01 §3.4 — INACTIVE dropped: structurally dead once each chain
 // file holds exactly one intent (nothing left in the same file to demote).
-export type IntentState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
+// Rename doctrinal (Discussion 2026-08-11_0115 §3 item 1, Director directive
+// 2026-08-12): ratification establishes the governing Director intent — it
+// does not freeze its operationalization. Only DIR-INTENT uses RATIFIED;
+// Roadmap/Plan/Exec/Close keep LOCKED.
+export type IntentState = 'DRAFT' | 'RATIFIED' | 'SUPERSEDED';
 // PLAN-EVAL-01 §3.5 — ACTIVE/INACTIVE dropped: nothing to arbitrate with a
 // single roadmap object per chain. `roadmap lock` stays a manual command
 // (PLAN-EVAL-04 scope, not implemented here) — this is a structural-only
@@ -150,7 +154,7 @@ export interface SingleIntentState {
   file?: string;
   created_at: string;
   updated_at: string;
-  locked_at?: string;
+  ratified_at?: string; // renamed from locked_at (Director directive 2026-08-12) — see readChain() normalization
   supersede_reason?: string;
   title?: string; // PLAN-EVAL-06 — rendered into Sigma/design/intent-history.md
   focus?: string; // PLAN-EVAL-06 — rendered into Sigma/design/intent-history.md
@@ -199,6 +203,12 @@ export interface ChainState {
   close: SingleCloseState | null; // null until `close new`
   gates: Gates;
   runtime_invalid?: RuntimeInvalidState;
+  // In-memory only — never written to disk (writeChain() strips it before
+  // serializing). Set by readChain() when it normalizes a legacy on-disk
+  // value (e.g. intent.state "LOCKED" → "RATIFIED") so runDoctorReconciliation()
+  // can surface the conversion in report.repaired[] instead of silently
+  // seeing an already-normalized chain and reporting nothing.
+  _migratedOnRead?: string[];
 }
 
 // Sigma/activate_status.json — the only manifest field, deliberately. No
@@ -342,6 +352,34 @@ export function resolveActiveChainVersion(projectRoot: string): string {
 
 // ── Chain file read/write ───────────────────────────────────────────────────
 
+// Backward compatibility for chain files written before the RATIFIED rename
+// (Director directive 2026-08-12): normalizes intent.state "LOCKED"/"INACTIVE"
+// (the latter only from very old legacy-migrated files) to "RATIFIED", and
+// intent.locked_at to intent.ratified_at. This is the single choke point —
+// every chain read goes through readChain(), so no second read path can miss
+// it. Records what it changed on chain._migratedOnRead (in-memory only) so
+// runDoctorReconciliation() can report the conversion instead of seeing an
+// already-normalized chain and reporting nothing (§3.7 of the RATIFIED plan).
+// The file on disk itself is only rewritten once something actually calls
+// writeChain() — normalization here does not touch disk.
+function normalizeIntentStateOnRead(chain: ChainState): void {
+  const migrated: string[] = [];
+  const legacyState = chain.intent.state as string;
+  if (legacyState === 'LOCKED' || legacyState === 'INACTIVE') {
+    chain.intent.state = 'RATIFIED';
+    migrated.push(`intent.state "${legacyState}" → "RATIFIED"`);
+  }
+  const legacyLockedAt = (chain.intent as unknown as Record<string, unknown>).locked_at as string | undefined;
+  if (legacyLockedAt && !chain.intent.ratified_at) {
+    chain.intent.ratified_at = legacyLockedAt;
+    migrated.push('intent.locked_at → intent.ratified_at');
+  }
+  delete (chain.intent as unknown as Record<string, unknown>).locked_at;
+  if (migrated.length > 0) {
+    chain._migratedOnRead = migrated;
+  }
+}
+
 export function readChain(projectRoot: string, chainVersion: string): ChainState {
   const filePath = chainFilePath(projectRoot, chainVersion);
   if (!fs.existsSync(filePath)) {
@@ -363,13 +401,16 @@ export function readChain(projectRoot: string, chainVersion: string): ChainState
       throw new Error(`${filePath} is missing required field: "${field}"`);
     }
   }
-  return raw as ChainState;
+  const chain = raw as ChainState;
+  normalizeIntentStateOnRead(chain);
+  return chain;
 }
 
 export function writeChain(projectRoot: string, chainVersion: string, data: ChainState): void {
   const filePath = chainFilePath(projectRoot, chainVersion);
   const tmpPath = `${filePath}.tmp`;
   data.updated_at = new Date().toISOString();
+  delete data._migratedOnRead; // in-memory only — never persisted
   fs.writeJsonSync(tmpPath, data, { spaces: 2 });
   fs.moveSync(tmpPath, filePath, { overwrite: true });
 }
@@ -473,13 +514,18 @@ function semanticError(chainVersion: string, field: string, message: string): Er
 function validateSingleState(
   chain: ChainState,
   field: string,
-  value: { state: string; created_at: string; updated_at: string; locked_at?: string; supersede_reason?: string } | null,
+  value: { state: string; created_at: string; updated_at: string; locked_at?: string; ratified_at?: string; supersede_reason?: string } | null,
 ): void {
   if (value === null) return;
   if (!value.created_at || !value.updated_at) {
     throw semanticError(chain.chain_version, field, 'created_at and updated_at are required');
   }
-  if (value.state === 'LOCKED' && !value.locked_at) {
+  // intent uses RATIFIED/ratified_at (Director directive 2026-08-12); roadmap/close keep LOCKED/locked_at.
+  if (field === 'intent') {
+    if (value.state === 'RATIFIED' && !value.ratified_at) {
+      throw semanticError(chain.chain_version, `${field}.ratified_at`, 'RATIFIED entries must include ratified_at');
+    }
+  } else if (value.state === 'LOCKED' && !value.locked_at) {
     throw semanticError(chain.chain_version, `${field}.locked_at`, 'LOCKED entries must include locked_at');
   }
   if (value.state === 'SUPERSEDED' && !value.supersede_reason) {
@@ -542,8 +588,8 @@ function validateTracker(chain: ChainState, domain: 'plan' | 'exec'): void {
   }
 }
 
-export function hasActiveLockedIntent(chain: ChainState): boolean {
-  return chain.intent.state === 'LOCKED';
+export function hasRatifiedIntent(chain: ChainState): boolean {
+  return chain.intent.state === 'RATIFIED';
 }
 
 function hasActiveLockedPlan(chain: ChainState): boolean {
@@ -555,7 +601,7 @@ function hasActiveLockedPlan(chain: ChainState): boolean {
 // to); kept as a written field for defensive validation, not because it can
 // vary.
 export function hasCleanGate2Chain(chain: ChainState): boolean {
-  return chain.intent.state === 'LOCKED' && chain.plan.versions.some(
+  return chain.intent.state === 'RATIFIED' && chain.plan.versions.some(
     v => v.state === 'LOCKED' && v.intent_version_ref === chain.intent.version
   );
 }
@@ -571,7 +617,7 @@ export function hasCleanGate3Chain(chain: ChainState): boolean {
   );
   if (!referencedPlan) return false;
 
-  return chain.intent.state === 'LOCKED' && referencedPlan.intent_version_ref === chain.intent.version;
+  return chain.intent.state === 'RATIFIED' && referencedPlan.intent_version_ref === chain.intent.version;
 }
 
 export function validateChainSemantics(chain: ChainState): void {
@@ -607,8 +653,8 @@ export function validateChainSemantics(chain: ChainState): void {
     }
   }
 
-  if (chain.gates.gate_1_open && !hasActiveLockedIntent(chain)) {
-    throw semanticError(chain.chain_version, 'gates.gate_1_open', 'gate is open without a LOCKED INTENT');
+  if (chain.gates.gate_1_open && !hasRatifiedIntent(chain)) {
+    throw semanticError(chain.chain_version, 'gates.gate_1_open', 'gate is open without a RATIFIED INTENT');
   }
   if (chain.gates.gate_2_open && !hasActiveLockedPlan(chain)) {
     throw semanticError(chain.chain_version, 'gates.gate_2_open', 'gate is open without a LOCKED PLAN');
@@ -741,6 +787,25 @@ export function runDoctorReconciliation(chain: ChainState, overrides: OverrideEn
   const repaired: string[] = [];
   const now = new Date().toISOString();
 
+  // Migrate the RATIFIED rename (Director directive 2026-08-12) from
+  // in-memory-only to persisted-on-disk. readChain() already normalized
+  // intent.state/locked_at before this function ever saw the chain, so
+  // there is nothing left here to detect from chain.intent itself — instead
+  // we read what readChain() recorded on _migratedOnRead and turn it into a
+  // repaired[] line, so `doctor` actually reports the conversion instead of
+  // silently writing an already-normalized chain and claiming nothing changed.
+  if (chain._migratedOnRead && chain._migratedOnRead.length > 0) {
+    for (const change of chain._migratedOnRead) {
+      repaired.push(`Migrated to RATIFIED schema: ${change}`);
+    }
+  }
+  // Bump schema_version forward only — never downgrades a chain written by a
+  // newer binary (isNewerSchema() guard mirrors validateChainSemantics()).
+  if (chain.schema_version !== SCHEMA_VERSION && !isNewerSchema(chain.schema_version, SCHEMA_VERSION)) {
+    repaired.push(`schema_version migrated "${chain.schema_version}" → "${SCHEMA_VERSION}"`);
+    chain.schema_version = SCHEMA_VERSION;
+  }
+
   // Auto-repair the known exec-new corruption pattern: a LOCKED exec and a
   // later DRAFT exec share the same version key. Unchanged from progress.ts.
   const execVersionsByKey = new Map<string, ArtifactVersion[]>();
@@ -793,7 +858,7 @@ export function runDoctorReconciliation(chain: ChainState, overrides: OverrideEn
       return false;
     });
 
-  const expectedGate1 = hasActiveLockedIntent(chain) || hasActiveOverrideForGate('Gate 1');
+  const expectedGate1 = hasRatifiedIntent(chain) || hasActiveOverrideForGate('Gate 1');
   if (chain.gates.gate_1_open !== expectedGate1) {
     repaired.push(`gates.gate_1_open repaired from "${chain.gates.gate_1_open}" to "${expectedGate1}"`);
     chain.gates.gate_1_open = expectedGate1;
@@ -916,20 +981,20 @@ export function nextExecVersion(chain: ChainState, planVersionRef: string): stri
 // already-existing chain, so that step of the old two-step
 // (createInitialProgress + registerIntentDraft) collapses into one.
 
-export function lockActiveIntent(chain: ChainState): void {
+export function ratifyIntent(chain: ChainState): void {
   const now = new Date().toISOString();
   if (chain.intent.state !== 'DRAFT') {
-    throw new Error(`INTENT ${chain.intent.version} is in state "${chain.intent.state}"; lock requires DRAFT`);
+    throw new Error(`INTENT ${chain.intent.version} is in state "${chain.intent.state}"; ratify requires DRAFT`);
   }
 
-  chain.intent.state = 'LOCKED';
-  chain.intent.locked_at = now;
+  chain.intent.state = 'RATIFIED';
+  chain.intent.ratified_at = now;
   chain.intent.updated_at = now;
 
   chain.gates.gate_1_open = true;
   chain.lifecycle_state = 'BUILD';
 
-  // Recompute from this chain's own PLAN/EXEC — matches lockActiveIntent()'s
+  // Recompute from this chain's own PLAN/EXEC — matches ratifyIntent()'s
   // reopen/pivot behavior in progress.ts, minus the INACTIVE-demotion loop
   // (PLAN-EVAL-01 §3.4 — nothing else in this file to demote).
   chain.gates.gate_2_open = hasCleanGate2Chain(chain);
@@ -963,8 +1028,8 @@ export function recordArcScore(chain: ChainState, score: number, notes: string):
   if (/[|\n\r]/.test(notes)) {
     throw new Error('--notes cannot contain "|" or a newline (breaks the intent-history.md table and its recovery parser)');
   }
-  if (chain.intent.state !== 'LOCKED') {
-    throw new Error('ARC score can only be recorded against a LOCKED DIR-INTENT');
+  if (chain.intent.state !== 'RATIFIED') {
+    throw new Error('ARC score can only be recorded against a RATIFIED DIR-INTENT');
   }
   chain.intent.arc_score = score;
   chain.intent.arc_score_notes = notes;
@@ -994,8 +1059,8 @@ export function previewIntentSupersedeCascade(chain: ChainState): IntentCascadeT
 
 export function supersedeIntentVersion(chain: ChainState, reason: string): void {
   const now = new Date().toISOString();
-  if (chain.intent.state !== 'LOCKED') {
-    throw new Error(`INTENT ${chain.intent.version} is in state "${chain.intent.state}"; supersede requires LOCKED`);
+  if (chain.intent.state !== 'RATIFIED') {
+    throw new Error(`INTENT ${chain.intent.version} is in state "${chain.intent.state}"; supersede requires RATIFIED`);
   }
 
   const cascade = previewIntentSupersedeCascade(chain);
@@ -1277,19 +1342,19 @@ export function lockActiveClose(chain: ChainState): void {
 
 export function getNextValidOperations(chain: ChainState): string[] {
   const ops: string[] = [];
-  const intentLocked = chain.intent.state === 'LOCKED';
+  const intentRatified = chain.intent.state === 'RATIFIED';
   const planLocked = chain.plan.active_state === 'LOCKED';
   const roadmapExists = chain.roadmap !== null && chain.roadmap.state !== 'SUPERSEDED';
 
   if (chain.intent.state === 'DRAFT') {
-    ops.push('intent lock');
+    ops.push('intent ratify');
   }
 
-  if (intentLocked && !roadmapExists) {
+  if (intentRatified && !roadmapExists) {
     ops.push('roadmap new');
   }
 
-  if (intentLocked && roadmapExists) {
+  if (intentRatified && roadmapExists) {
     ops.push('plan new');
   }
   const draftPlans = chain.plan.versions.filter(v => v.state === 'DRAFT');

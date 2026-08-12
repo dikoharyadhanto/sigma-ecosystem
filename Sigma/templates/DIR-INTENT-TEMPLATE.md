@@ -39,6 +39,30 @@
 
 [The core value this project must deliver.]
 
+### 1.6 Tier Definitions — Sovereign vs. Operationalization
+
+> Every item in Section 6 (Scope Boundary) and Section 9 (Functional
+> Requirements) must be tagged with one of these two tiers. Section 7
+> (Constraints & Preferences) already uses an equivalent pattern (Binding
+> Level) — this is the same idea applied to scope and requirements.
+
+- **Sovereign** — the Director's actual destination and values: what this
+  project is *for*, meant to be stable for the life of the project.
+  Changing a Sovereign item is never an Amendment — it requires a new
+  Intent Version.
+- **Operationalization** — ARC's current translation of that destination
+  into something FMN/DEV can execute against, given what is known *right
+  now*. May evolve through explicit Director-approved Amendment without
+  creating a new Intent Version — evolving it is not a violation of
+  intent, it is the normal function of a working boundary getting
+  sharper.
+
+**Default when uncertain: Sovereign.** Tagging something Sovereign by
+mistake only forces the heavier path (a new Intent Version instead of an
+Amendment). Tagging something Operationalization by mistake risks becoming
+exactly the loophole this taxonomy exists to close — silently reinterpreting
+sovereign intent through the lighter Amendment mechanism.
+
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:COMPREHENSIVE_RESEARCH -->
@@ -55,7 +79,7 @@
 > exists, or to help interpret one.
 >
 > If status is NEEDED, AUD Verificator Mode must review source-tier
-> compliance for the IDs cited below before `sigma intent lock` — see
+> compliance for the IDs cited below before `sigma intent ratify` — see
 > Section 13.
 
 ### 2.1 Status
@@ -203,23 +227,31 @@ We prioritize **[X]** over **[Y]**.
 
 > **Audit Status**: FULL_AUDIT
 > Scope must be explicit enough for FMN to produce execution work without inventing intent.
+>
+> Each item below is tagged Sovereign or Operationalization — see 1.6. This
+> is where the CanopySense-style drift this taxonomy was built to catch
+> actually happens: an item quietly treated as fixed law when it was only
+> ever ARC's best guess, or the reverse.
 
 ### 6.1 In Scope
 
-- [Must deliver item 1]
-- [Must deliver item 2]
+| ID     | Must Deliver | Tier                           | Reason |
+|:------ |:------------ |:------------------------------ |:------ |
+| SC-001 | [...]        | Sovereign / Operationalization | [...]  |
 
 ### 6.2 Out of Scope
 
-- [Explicitly deferred item 1]
-- [Explicitly deferred item 2]
+| ID     | Explicitly Deferred | Tier                           | Reason |
+|:------ |:------------------- |:------------------------------ |:------ |
+| OS-001 | [...]               | Sovereign / Operationalization | [...]  |
 
 ### 6.3 Non-Goals
 
 We will NOT do the following:
 
-- [Non-goal 1]
-- [Non-goal 2]
+| ID     | Non-Goal | Tier                           | Reason |
+|:------ |:-------- |:------------------------------ |:------ |
+| NG-001 | [...]    | Sovereign / Operationalization | [...]  |
 
 ### 6.4 Why This Boundary Matters
 
@@ -284,10 +316,13 @@ We will NOT do the following:
 
 > **Audit Status**: FULL_AUDIT
 > FMN uses this section to create the FMN-PLAN task plan and test contract.
+>
+> Each requirement is tagged Sovereign or Operationalization — see 1.6.
 
 ### REQ-001 — [Requirement Title]
 
 **Priority**: Must / Should / Could
+**Tier**: Sovereign / Operationalization
 
 **User Story**:
 As a [role], I want to [action], so that [benefit].
@@ -300,6 +335,7 @@ As a [role], I want to [action], so that [benefit].
 ### REQ-002 — [Requirement Title]
 
 **Priority**: Must / Should / Could
+**Tier**: Sovereign / Operationalization
 
 **User Story**:
 As a [role], I want to [action], so that [benefit].
@@ -425,7 +461,7 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 - [ ] REJECT_RECOMMENDED
 - [ ] PROMOTE_TO_HEAVIER_PROCESS
 - [ ] OTHER: [describe]
-- [ ] SKIP_FOR_AUDIT — Director explicitly approved skipping audit for this lock cycle
+- [ ] SKIP_FOR_AUDIT — Director explicitly approved skipping audit for this ratify cycle
 
 **Director Instruction (verbatim)** *(required only if SKIP_FOR_AUDIT is checked — transcribe the Director's exact words, not a paraphrase)*: [...]
 
@@ -444,12 +480,12 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 <!-- SIGMA:DIR_INTENT:SECTION:FINAL_VALIDATION_CHECKLIST -->
 ## 13. Final Validation Checklist
 
-> Complete this checklist before running `sigma intent lock`.
+> Complete this checklist before running `sigma intent ratify`.
 
-### 13.1 Lock Requirement
+### 13.1 Ratify Requirement
 
-> All items below must be checked before `sigma intent lock` will succeed.
-> For the four Quality Bar items, `sigma intent lock` validates the actual
+> All items below must be checked before `sigma intent ratify` will succeed.
+> For the four Quality Bar items, `sigma intent ratify` validates the actual
 > Section 4 table content (a real minimum standard or an explicit "N/A"),
 > not just this checkbox.
 
@@ -471,9 +507,9 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 
 ### 13.2 Conditional Requirement
 
-> These items are not a lock gate — they only matter when their own
+> These items are not a ratify gate — they only matter when their own
 > condition applies. Leave unchecked and irrelevant when the condition
-> does not apply; `sigma intent lock` does not evaluate them.
+> does not apply; `sigma intent ratify` does not evaluate them.
 
 - [ ] If Comprehensive Research status = NEEDED, all four subsections are filled or explicitly marked N/A, and `reference-list.md` has real entries for this intent's research — not just leftover entries from earlier work.
-- [ ] If Comprehensive Research status = NEEDED, AUD Verificator Mode has reviewed source-tier compliance for the cited IDs and recorded a verdict in Section 12 — or the Director has explicitly accepted the risk of locking without that review.
+- [ ] If Comprehensive Research status = NEEDED, AUD Verificator Mode has reviewed source-tier compliance for the cited IDs and recorded a verdict in Section 12 — or the Director has explicitly accepted the risk of ratifying without that review.

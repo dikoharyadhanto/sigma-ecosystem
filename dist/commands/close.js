@@ -34,14 +34,14 @@ function closeCommand() {
     const cmd = new commander_1.Command('close');
     cmd.description('Manage DIR-CLOSE artifact');
     cmd.command('new')
-        .description('Create a new DIR-CLOSE draft (requires INTENT → PLAN → EXEC chain all LOCKED)')
+        .description('Create a new DIR-CLOSE draft (requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED)')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
             (0, chain_1.assertChainCanMutate)(chain);
             if (!(0, chain_1.hasCleanGate3Chain)(chain)) {
-                throw new Error('GATE 3 BLOCKED: Requires INTENT → PLAN → EXEC chain all LOCKED (same version chain). Run: sigma exec lock');
+                throw new Error('GATE 3 BLOCKED: Requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED (same version chain). Run: sigma exec lock');
             }
             if (!(0, chain_1.hasGate35Score)(chain)) {
                 throw new Error('GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. ' +

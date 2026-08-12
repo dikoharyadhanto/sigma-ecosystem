@@ -14,7 +14,7 @@ process.stdin.on('end', () => {
   if (/Edit|Write/.test(tool) && /Sigma[\/\\]progress(-v\d+)?\.json$/.test(filePath)) {
     process.stdout.write(JSON.stringify({
       decision: 'block',
-      reason: 'Sigma progress-v<N>.json is CLI-managed. Use sigma commands (sigma intent lock, sigma plan lock, etc.) instead of direct edits.',
+      reason: 'Sigma progress-v<N>.json is CLI-managed. Use sigma commands (sigma intent ratify, sigma plan lock, etc.) instead of direct edits.',
     }) + '\n');
     process.exit(0);
   }

@@ -30,7 +30,7 @@ function describeBlockedGate(chain) {
         return {
             artifact: 'DIR-INTENT',
             gate: 'Gate 1',
-            description: 'Intent Doc (DIR-INTENT) is not LOCKED — Gate 1 is blocked.',
+            description: 'Intent Doc (DIR-INTENT) is not RATIFIED — Gate 1 is blocked.',
         };
     }
     if (!chain.gates.gate_2_open) {

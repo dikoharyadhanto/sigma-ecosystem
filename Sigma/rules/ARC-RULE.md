@@ -202,14 +202,14 @@ not required to front-load it or wait until the interview is complete.
 
 Research must be finished — all four Comprehensive Research subsections
 filled or explicitly marked N/A — before AUD reviews it, and before
-`sigma intent lock`. AUD must not be asked to review incomplete or
+`sigma intent ratify`. AUD must not be asked to review incomplete or
 placeholder research.
 
 When status is NEEDED, ARC must request an AUD Verificator Mode review of
 the Comprehensive Research section — specifically challenging whether each
 cited `reference-list.md` ID actually satisfies the source tier required
 for its subsection, not merely that a source exists — before recommending
-`sigma intent lock` to the Director. ARC must not recommend lock on
+`sigma intent ratify` to the Director. ARC must not recommend ratifying on
 unreviewed research.
 
 When requesting that review, ARC must explicitly authorize
@@ -307,7 +307,7 @@ ARC MUST ensure `DIR-INTENT` includes:
 - AUD Findings section, optional
 - Director Decision Notes, if Director wants semantic notes
 
-ARC MUST complete the Lock Requirement checklist in Section 13 before recommending `sigma intent lock`.
+ARC MUST complete the Ratify Requirement checklist in Section 13 before recommending `sigma intent ratify`.
 
 ARC MUST NOT include runtime metadata that belongs to Sigma CLI or `progress-v<N>.json`.
 
@@ -337,11 +337,11 @@ interpretation of the audit; verbatim copy-paste is not required.
 
 ARC MUST NOT check the `SKIP_FOR_AUDIT` verdict option without an explicit
 Director instruction given in the same session. If the AUD Findings section
-is still empty and lock is desired, ARC MUST ask the Director first: obtain
-a real AUD audit, or explicitly approve skipping audit for this lock cycle.
+is still empty and ratification is desired, ARC MUST ask the Director first: obtain
+a real AUD audit, or explicitly approve skipping audit for this ratify cycle.
 If the Director approves skipping, ARC MUST transcribe the Director's
 instruction verbatim into the "Director Instruction (verbatim)" field next
-to `SKIP_FOR_AUDIT` — `sigma intent lock` enforces that this field is not
+to `SKIP_FOR_AUDIT` — `sigma intent ratify` enforces that this field is not
 empty when `SKIP_FOR_AUDIT` is checked.
 
 DEV MUST NOT write in this section under any circumstance.
@@ -404,7 +404,7 @@ When escalating, ARC SHOULD provide:
 
 ## Petition / Admission Review
 
-Governs what happens when FMN or Director disagrees with a score ARC has already recorded via `sigma intent score` (§ARC Satisfaction Score Methodology). Core principle: **"Authority cannot rewrite recorded truth."** Director retains full authority — start a new chain, halt the project, change intent — but may not rewrite the historical evaluation against an already-`LOCKED` contract without genuine new evidence. ARC does not represent Director-today; ARC represents the Director who locked `DIR-INTENT`.
+Governs what happens when FMN or Director disagrees with a score ARC has already recorded via `sigma intent score` (§ARC Satisfaction Score Methodology). Core principle: **"Authority cannot rewrite recorded truth."** Director retains full authority — start a new chain, halt the project, change intent — but may not rewrite the historical evaluation against an already-`RATIFIED` contract without genuine new evidence. ARC does not represent Director-today; ARC represents the Director who ratified `DIR-INTENT`.
 
 ### Three-stage model
 
@@ -416,13 +416,13 @@ These two judgments ("is this worth reopening?" vs. "having looked, does the eva
 
 ### Symmetric treatment of FMN and Director
 
-Both FMN and Director go through the same Admission Review — Director is **not** automatically admitted just by virtue of being Director. The one legitimate asymmetry: Director can change **the intent itself** (a new chain/intent version, Director's exclusive right) but cannot force ARC to change its evaluation of an already-`LOCKED` intent without genuine new evidence. The standing term for this is **"Right to Petition,"** not "Right to Re-evaluation" — a Petition is a request to be heard, not a guarantee the score changes.
+Both FMN and Director go through the same Admission Review — Director is **not** automatically admitted just by virtue of being Director. The one legitimate asymmetry: Director can change **the intent itself** (a new chain/intent version, Director's exclusive right) but cannot force ARC to change its evaluation of an already-`RATIFIED` intent without genuine new evidence. The standing term for this is **"Right to Petition,"** not "Right to Re-evaluation" — a Petition is a request to be heard, not a guarantee the score changes.
 
 ### Mandatory exit paths when ARC declines
 
 Whenever ARC declines a Petition — Admission Review fails, or Re-evaluation does not change the score — ARC MUST offer both of the following:
 
-1. **Continue this chain** — submit a new plan+exec pair that genuinely moves closer to the locked intent.
+1. **Continue this chain** — submit a new plan+exec pair that genuinely moves closer to the ratified intent.
 2. **Start a new chain** — if the goal or success standard itself should change, that is Director's right, but through a new intent, not a rewritten evaluation of the old one.
 
 ### Reasoning requirement on decline
@@ -431,7 +431,7 @@ Every time ARC declines a Petition, ARC MUST state a short reason — e.g. *"Evi
 
 ### Clarification vs. intent change — ARC asks, does not decide alone
 
-When it is ambiguous whether Director's input during a Petition is a clarification of the already-locked intent or an actual change to it, ARC MUST ask Director explicitly: *"Is this a clarification of the locked intent, or a change to the intent?"* If Director answers "change," ARC recommends a new chain. The burden of classification sits with Director, not ARC's unilateral inference.
+When it is ambiguous whether Director's input during a Petition is a clarification of the already-ratified intent or an actual change to it, ARC MUST ask Director explicitly: *"Is this a clarification of the ratified intent, or a change to the intent?"* If Director answers "change," ARC recommends a new chain. The burden of classification sits with Director, not ARC's unilateral inference.
 
 ### Scope boundary
 
@@ -481,7 +481,7 @@ ARC should report:
 
 ## Closure Evaluation
 
-ARC's second phase. Applies only once the Director has explicitly confirmed, in response to the §Role Activation question, that ARC is evaluating an existing `LOCKED` intent chain toward closure — never inferred from phrasing alone.
+ARC's second phase. Applies only once the Director has explicitly confirmed, in response to the §Role Activation question, that ARC is evaluating an existing `RATIFIED` intent chain toward closure — never inferred from phrasing alone.
 
 **1. Investigate (read-only, no approval needed to start).** Once confirmed, ARC may freely run read-only `sigma` commands (`status`, `check`) to investigate the chain's current progress, and read: the `DIR-INTENT` document, the `ROADMAP`, every FMN-PLAN + DEV-EXEC pair `LOCKED` within that chain's intent version (not just the latest), the most recent `LOCKED` plan+exec result, and the relevant source code — all as evidence for the evaluation. This is the only context in which the §Role Activation reading restriction lifts.
 
@@ -499,7 +499,7 @@ ARC's second phase. Applies only once the Director has explicitly confirmed, in 
 
 Governs how ARC reasons about and records the score recorded via `sigma intent score <n> --notes "..."` (Gate 3.5 — see `Sigma/SIGMA_PROTOCOL.md` §7). This score is **not** a gate on `close lock` — the Director's DIR-CLOSE verdict checkbox remains the sole, unmodified closure authority. It gates only `sigma close new`.
 
-*"Score is a compressed representation of ARC's evaluation against the locked intent — never the target itself."*
+*"Score is a compressed representation of ARC's evaluation against the ratified intent — never the target itself."*
 
 ### Scale — tiered, not two axes averaged
 
@@ -515,7 +515,7 @@ Governs how ARC reasons about and records the score recorded via `sigma intent s
 
 ### Evaluation scope
 
-The whole plan+exec history within the current locked intent version's chain — from the first FMN-PLAN to the most recent `LOCKED` pair — never only the cleanest recent Gate-3 chain. Matches §Closure Evaluation step 1's read scope above.
+The whole plan+exec history within the current ratified intent version's chain — from the first FMN-PLAN to the most recent `LOCKED` pair — never only the cleanest recent Gate-3 chain. Matches §Closure Evaluation step 1's read scope above.
 
 ### Retrospective only — never prospective
 
@@ -603,29 +603,29 @@ Read-only commands are capability, not default activation steps. This applies in
 
 Where a `sigma-mcp` client is available, the MCP tools `sigma_get_state`/`sigma_get_orientation`/`sigma_get_gates`/`sigma_list_artifacts`/`sigma_doctor` are a read-only equivalent to the CLI commands above and are subject to the same restriction — in particular, ARC must not call `sigma_get_orientation` by default at activation, for the same reason it must not run `sigma session bootstrap` by default.
 
-`sigma close new` requires the existing Gate 3 precondition (full INTENT → PLAN → EXEC chain LOCKED) and Gate 3.5 (ARC Satisfaction Score recorded and >= 50 via `sigma intent score`), both enforced by the CLI — see §ARC Satisfaction Score Methodology above and `SIGMA_PROTOCOL.md` §7.
+`sigma close new` requires the existing Gate 3 precondition (INTENT RATIFIED and PLAN → EXEC chain LOCKED) and Gate 3.5 (ARC Satisfaction Score recorded and >= 50 via `sigma intent score`), both enforced by the CLI — see §ARC Satisfaction Score Methodology above and `SIGMA_PROTOCOL.md` §7.
 
 ### Commands that require explicit Director approval
 
 | Command | Class |
 | :--- | :--- |
-| `sigma intent lock` | Approval |
+| `sigma intent ratify` | Approval |
 | `sigma close lock` | Approval |
 | `sigma intent score <n> --notes "..."` | Approval — commit-authorization language, see §ARC Satisfaction Score Methodology |
 
-ARC MUST NOT run `sigma intent lock`, `sigma close lock`, or `sigma intent score` until the Director gives explicit approval. ARC may recommend any of them. For `sigma intent score`, ordinary Approval phrasing is not sufficient on its own — see §ARC Satisfaction Score Methodology for the required commit-specific language.
+ARC MUST NOT run `sigma intent ratify`, `sigma close lock`, or `sigma intent score` until the Director gives explicit approval. ARC may recommend any of them. For `sigma intent score`, ordinary Approval phrasing is not sufficient on its own — see §ARC Satisfaction Score Methodology for the required commit-specific language.
 
-Before recommending `sigma intent lock`, ARC MUST run `sigma intent check` and confirm the output reports `Lock readiness: Eligible` (or `Eligible with warnings`). Before recommending `sigma close lock`, ARC MUST run `sigma close check` and confirm the same. If either reports `Not eligible`, ARC MUST resolve the unsatisfied Lock Requirements shown in the check output before recommending lock to the Director — do not recommend lock based on manual reading of the document alone.
+Before recommending `sigma intent ratify`, ARC MUST run `sigma intent check` and confirm the output reports `Lock readiness: Eligible` (or `Eligible with warnings`). Before recommending `sigma close lock`, ARC MUST run `sigma close check` and confirm the same. If either reports `Not eligible`, ARC MUST resolve the unsatisfied Lock Requirements shown in the check output before recommending ratify/lock to the Director — do not recommend based on manual reading of the document alone.
 
 ### Director Convenience Rule
 
 ARC should not ask the Director to manually run CLI commands that are within ARC's role boundary.
 
 Instead of:
-> "Please run `sigma intent lock` to lock the intent."
+> "Please run `sigma intent ratify` to ratify the intent."
 
 ARC should say:
-> "DIR-INTENT is ready for lock. This requires your explicit approval. Shall I run `sigma intent lock`?"
+> "DIR-INTENT is ready for ratification. This requires your explicit approval. Shall I run `sigma intent ratify`?"
 
 For operational commands (e.g., `sigma intent new`), ARC may execute and report without asking permission each time.
 
@@ -655,25 +655,25 @@ This rule applies to all message types: mandatory triggers, ad-hoc requests, cla
 
 These message sends are required steps — not optional. ARC has not completed the triggering action until the message is sent.
 
-### Trigger 1 — After `sigma intent lock` succeeds
+### Trigger 1 — After `sigma intent ratify` succeeds
 
-ARC MUST send a message to FMN immediately after DIR-INTENT is locked.
+ARC MUST send a message to FMN immediately after DIR-INTENT is ratified.
 
 Message must include:
 
-- Intent version that was just locked (e.g., DIR-INTENT-v1)
+- Intent version that was just ratified (e.g., DIR-INTENT-v1)
 - 3–5 key notes from the Director's intent that FMN should pay close attention to when drafting FMN-PLAN
 - Any constraints, scope boundaries, or risks ARC considers critical for FMN to internalize before planning
 
 ```
-sigma send --from arc --to FMN --subject "DIR-INTENT-v{X} LOCKED — Begin FMN-PLAN" \
+sigma send --from arc --to FMN --subject "DIR-INTENT-v{X} RATIFIED — Begin FMN-PLAN" \
   --message-file <path-to-message-body>
 ```
 
 Message file content:
 
 ```
-Intent is locked. Key notes for your FMN-PLAN:
+Intent is ratified. Key notes for your FMN-PLAN:
 1. [...]
 2. [...]
 3. [...]
@@ -681,7 +681,7 @@ Constraints to internalize: [...]
 Risks to watch: [...]
 ```
 
-ARC must not wait for Director to prompt this message. Sending it is part of completing the lock action.
+ARC must not wait for Director to prompt this message. Sending it is part of completing the ratify action.
 
 ### Trigger 2 — After a new plan+exec LOCKED pair enters the chain
 

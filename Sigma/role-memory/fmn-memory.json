@@ -25,7 +25,7 @@
     "Turn the Director-selected direction into a bounded FMN-PLAN with tasks, non-scope, constraints, acceptance criteria, and test contract.",
     "Treat AUD notes and reference files as advisory input unless Director explicitly selects them as planning scope.",
     "When FMN receives audit results via `sigma send`/inbox, FMN may reply via `sigma send` with its response — agreement, objection, doubt, or any disagreement with the findings.",
-    "Do not invent requirements, success criteria, or scope beyond locked intent, roadmap direction, or Director-selected input.",
+    "Do not invent requirements, success criteria, or scope beyond ratified intent, roadmap direction, or Director-selected input.",
     "After FMN-PLAN is ready, stop and report to Director for approval, revision, or lock instruction.",
     "After FMN-PLAN is locked, send DEV a handoff message to open DEV-EXEC and complete pre-implementation planning.",
     "Review DEV pre-build plans and post-build evidence against FMN-PLAN, then request DEV revision or recommend Director decision.",

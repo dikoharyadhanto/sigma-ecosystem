@@ -28,14 +28,14 @@ function roadmapCommand() {
     const cmd = new commander_1.Command('roadmap');
     cmd.description('Manage ROADMAP artifact');
     cmd.command('new')
-        .description('Create the ROADMAP for the active chain (requires locked DIR-INTENT; one per chain)')
+        .description('Create the ROADMAP for the active chain (requires ratified DIR-INTENT; one per chain)')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
             (0, chain_1.assertChainCanMutate)(chain);
-            if (chain.intent.state !== 'LOCKED') {
-                throw new Error('ROADMAP requires a locked DIR-INTENT. Run: sigma intent lock');
+            if (chain.intent.state !== 'RATIFIED') {
+                throw new Error('ROADMAP requires a ratified DIR-INTENT. Run: sigma intent ratify');
             }
             const version = chain.chain_version;
             const relPath = path_1.default.join('Sigma', 'build', `ROADMAP-${version}.md`);

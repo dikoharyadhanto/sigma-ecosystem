@@ -11,7 +11,7 @@ import {
   writeChain,
   readActiveChain,
   writeActivateStatus,
-  lockActiveIntent,
+  ratifyIntent,
   assertChainCanMutate,
   previewIntentSupersedeCascade,
   supersedeIntentVersion,
@@ -122,33 +122,46 @@ export function intentCommand(): Command {
       }
     });
 
-  cmd.command('lock')
-    .description('Lock active DIR-INTENT (opens Gate 1, lifecycle → BUILD)')
+  cmd.command('ratify')
+    .description('Ratify active DIR-INTENT (opens Gate 1, lifecycle → BUILD)')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
         const { chainVersion, data: chain } = readActiveChain(projectRoot);
         assertChainCanMutate(chain);
         if (chain.intent.state !== 'DRAFT') {
-          throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot lock.');
+          throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot ratify.');
         }
         const absPath = intentDocPath(projectRoot, chain);
         const report = validateSigmaDocFile(absPath, 'intent');
         printSigmaDocReport(report, projectRoot);
         ensureSigmaDocEligible(report, 'intent');
         const version = chain.intent.version;
-        lockActiveIntent(chain);
+        ratifyIntent(chain);
         writeChain(projectRoot, chainVersion, chain);
         renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — trigger 2/4
-        console.log(`DIR-INTENT ${version} LOCKED. Gate 1 open. Lifecycle → BUILD. Next: sigma roadmap new`);
+        console.log(`DIR-INTENT ${version} RATIFIED. Gate 1 open. Lifecycle → BUILD. Next: sigma roadmap new`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
       }
     });
 
+  // Tombstone — `sigma intent lock` was renamed to `sigma intent ratify`
+  // (Director directive 2026-08-12), removed outright with no alias. This
+  // does not ratify anything; it exists only so the old command name fails
+  // with a message pointing at the new one, instead of commander's generic
+  // "unknown command" error.
+  cmd.command('lock')
+    .description('Removed — use `sigma intent ratify`')
+    .action(() => {
+      console.error('Error: `sigma intent lock` has been removed. Use `sigma intent ratify`.');
+      console.error('DIR-INTENT is ratified, not locked — see SIGMA_PROTOCOL §5.1.');
+      process.exit(1);
+    });
+
   cmd.command('score <n>')
-    .description('Record ARC Satisfaction Score for a LOCKED DIR-INTENT (Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`)')
+    .description('Record ARC Satisfaction Score for a RATIFIED DIR-INTENT (Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`)')
     .requiredOption('--notes <notes>', 'Rationale for the score')
     .option('--v <version>', 'Chain version to score instead of the active one')
     .action((n: string, opts: { notes: string; v?: string }) => {
@@ -175,7 +188,7 @@ export function intentCommand(): Command {
     });
 
   cmd.command('supersede')
-    .description('Supersede a LOCKED DIR-INTENT chain — cascades SUPERSEDED to its Roadmap/Plan/Exec/Close (requires --director-confirm)')
+    .description('Supersede a RATIFIED DIR-INTENT chain — cascades SUPERSEDED to its Roadmap/Plan/Exec/Close (requires --director-confirm)')
     .requiredOption('--v <version>', 'Chain version to supersede (e.g. v1) — need not be the active chain')
     .requiredOption('--reason <reason>', 'Reason for superseding')
     .option('--director-confirm', 'Required. Explicit Director authorization to execute the supersede.')
@@ -185,8 +198,8 @@ export function intentCommand(): Command {
         const chain = readChain(projectRoot, opts.v);
         assertChainCanMutate(chain);
 
-        if (chain.intent.state !== 'LOCKED') {
-          throw new Error(`INTENT ${opts.v} is in state "${chain.intent.state}"; supersede requires LOCKED.`);
+        if (chain.intent.state !== 'RATIFIED') {
+          throw new Error(`INTENT ${opts.v} is in state "${chain.intent.state}"; supersede requires RATIFIED.`);
         }
 
         const cascade = previewIntentSupersedeCascade(chain);
@@ -284,7 +297,7 @@ export function intentCommand(): Command {
         console.log(`Chain:      ${chainVersion}`);
         console.log(`Version:    ${chain.intent.version}`);
         console.log(`State:      ${chain.intent.state}`);
-        if (chain.intent.locked_at) console.log(`Locked at:  ${chain.intent.locked_at}`);
+        if (chain.intent.ratified_at) console.log(`Ratified at: ${chain.intent.ratified_at}`);
         if (chain.intent.file) console.log(`File:       ${chain.intent.file}`);
         console.log(`\nGate 1:     ${chain.gates.gate_1_open ? 'OPEN' : 'BLOCKED'}`);
         console.log('');

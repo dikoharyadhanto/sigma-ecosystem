@@ -114,16 +114,16 @@ Gates prevent downstream work from starting before upstream decisions are stable
 
 | Gate | Condition required |
 |:--- |:--- |
-| Gate 1 | `DIR-INTENT` must be LOCKED before creating a ROADMAP |
+| Gate 1 | `DIR-INTENT` must be RATIFIED before creating a ROADMAP |
 | Gate 1.5 | The chain's ROADMAP must exist (not SUPERSEDED) before creating a non-pending `FMN-PLAN` |
 | Gate 2 | `FMN-PLAN` must be LOCKED before creating `DEV-EXEC` |
 | Gate 3 | `DEV-EXEC` must be LOCKED before creating `DIR-CLOSE` |
 
-### Lock
+### Lock / Ratify
 
-A **lock** is a Director authorization that advances an artifact from DRAFT to LOCKED state, opening the next gate.
+A **lock** is a Director authorization that advances an artifact from DRAFT to LOCKED state, opening the next gate. `DIR-INTENT` uses the same mechanism under the name **ratify** (`sigma intent ratify`, DRAFT → RATIFIED) — same function, distinct term to underline that ratifying establishes the governing intent without freezing how it gets operationalized. Every other artifact (ROADMAP, FMN-PLAN, DEV-EXEC, DIR-CLOSE) keeps `lock`/`LOCKED`.
 
-Locking is irreversible without a supersede. A locked artifact is never edited in place.
+Locking (or ratifying) is irreversible without a supersede. A locked or ratified artifact is never edited in place.
 
 ---
 
@@ -234,7 +234,7 @@ Use the next role when needed:
 
 ```text
 /fmn
-Create the build plan for the locked intent.
+Create the build plan for the ratified intent.
 ```
 
 ```text
@@ -545,18 +545,18 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | project  | `sigma project register`           | Repair/backfill `.sigma-identity.json` at project root (not a global registry) |
 | session  | `sigma session bootstrap`          | Load project state at session start                                            |
 | intent   | `sigma intent new`                 | Create a `DIR-INTENT` draft                                                    |
-| intent   | `sigma intent lock`                | Lock the active `DIR-INTENT` with Director approval                            |
+| intent   | `sigma intent ratify`              | Ratify the active `DIR-INTENT` with Director approval                          |
 | intent   | `sigma intent check`               | Validate `DIR-INTENT` structure and report lock readiness (read-only)          |
 | intent   | `sigma intent status`              | Show active intent version and state                                           |
 | intent   | `sigma intent list`                | List intent versions                                                           |
 | intent   | `sigma intent activate --v <ver>`  | Switch which chain is active (analog `git checkout <branch>`)                  |
-| intent   | `sigma intent score <n>`           | Record ARC Satisfaction Score (0–100) for a LOCKED intent (Gate 3.5)           |
-| intent   | `sigma intent supersede`           | Supersede a LOCKED chain — cascades to its artifacts (`--director-confirm`)    |
-| roadmap  | `sigma roadmap new`                | Create the chain's `ROADMAP` draft (locked `DIR-INTENT`; one per chain)        |
+| intent   | `sigma intent score <n>`           | Record ARC Satisfaction Score (0–100) for a RATIFIED intent (Gate 3.5)         |
+| intent   | `sigma intent supersede`           | Supersede a RATIFIED chain — cascades to its artifacts (`--director-confirm`)  |
+| roadmap  | `sigma roadmap new`                | Create the chain's `ROADMAP` draft (ratified `DIR-INTENT`; one per chain)      |
 | roadmap  | `sigma roadmap check`              | Validate the chain's `ROADMAP` structure and markers                           |
 | roadmap  | `sigma roadmap render`             | Regenerate the Stage Overview table in the chain's `ROADMAP`                   |
 | roadmap  | `sigma roadmap list`               | List stages in the chain's `ROADMAP` with title, focus, and plan status        |
-| plan     | `sigma plan new`                   | Create an `FMN-PLAN` draft (requires locked INTENT + existing ROADMAP)         |
+| plan     | `sigma plan new`                   | Create an `FMN-PLAN` draft (requires ratified INTENT + existing ROADMAP)       |
 | plan     | `sigma plan new --pending`         | Stage a future plan without entering the version queue                         |
 | plan     | `sigma plan promote`               | Promote a pending plan into the official FIFO draft queue                      |
 | plan     | `sigma plan activate`              | Set an existing DRAFT version as the active plan (FIFO lock order unchanged)   |

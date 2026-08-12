@@ -4,7 +4,11 @@ import path from 'path';
 import os from 'os';
 
 const CLI = path.resolve(__dirname, '..', 'dist', 'cli.js');
-const SCHEMA_VERSION = '1.0.0';
+// Mirrors src/config.ts SCHEMA_VERSION (1.1.0 since the RATIFIED rename,
+// Director directive 2026-08-12) — real code (project.ts) writes this same
+// value into .sigma-identity.json, so fixtures should match what a fresh
+// `sigma project start` actually produces.
+const SCHEMA_VERSION = '1.1.0';
 
 export interface CliResult {
   stdout: string;
@@ -152,7 +156,7 @@ export function makeChainWithLockedIntent(version = 'v1'): object {
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    intent: { version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
     gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
   });
 }
@@ -168,7 +172,7 @@ export function makeChainWithFullBuiltCycle(version = 'v1', planExecVersion = 'v
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    intent: { version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
     roadmap: { version, state: 'LOCKED', file: `Sigma/build/ROADMAP-${version}.md`, created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: planExecVersion, active_state: 'LOCKED', pending: [],
@@ -183,13 +187,13 @@ export function makeChainWithFullBuiltCycle(version = 'v1', planExecVersion = 'v
   });
 }
 
-// Intent LOCKED, roadmap LOCKED, one PLAN LOCKED, no EXEC yet — chain-scoped
+// Intent RATIFIED, roadmap LOCKED, one PLAN LOCKED, no EXEC yet — chain-scoped
 // equivalent of makeProgressWithLockedPlan().
 export function makeChainWithLockedPlan(version = 'v1', planVersion = 'v1.1'): object {
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    intent: { version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
     roadmap: { version, state: 'LOCKED', file: `Sigma/build/ROADMAP-${version}.md`, created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: planVersion, active_state: 'LOCKED', pending: [],
@@ -209,7 +213,7 @@ export function makeChainWithLockedExec(version = 'v1', planExecVersion = 'v1.1'
   return makeChain(version, {
     lifecycle_state: 'BUILD',
     intent: {
-      version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now,
+      version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now,
       ...(arcScore !== undefined ? { arc_score: arcScore, arc_score_notes: 'test fixture', arc_score_updated_at: now } : {}),
     },
     plan: {
@@ -231,7 +235,7 @@ export function makeChainWithDraftExec(version = 'v1'): object {
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    intent: { version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
     plan: {
       active_version: version, active_state: 'LOCKED', pending: [],
       versions: [{ version, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${version}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
@@ -250,7 +254,7 @@ export function makeChainWithDraftClose(version = 'v1'): object {
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    intent: { version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
     plan: {
       active_version: version, active_state: 'LOCKED', pending: [],
       versions: [{ version, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${version}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],

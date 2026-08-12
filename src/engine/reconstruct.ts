@@ -12,6 +12,7 @@ import {
   parseMajorVersion,
   parseMinorVersion,
   chainFilePath,
+  readChain,
   validateChainSemantics,
 } from './chain';
 
@@ -31,8 +32,8 @@ import {
 // independently — there is no "highest version wins" demotion anymore
 // (unlike the pre-PLAN-EVAL-05 single-ProgressJson algorithm). Under Opsi C,
 // `intent new` may be run at any time regardless of whether the previous
-// chain is LOCKED/DRAFT (DISCUSSION "Konsolidasi Lanjutan" bagian 3), so two
-// LOCKED intents living side by side in separate chain files is a normal,
+// chain is RATIFIED/DRAFT (DISCUSSION "Konsolidasi Lanjutan" bagian 3), so two
+// RATIFIED intents living side by side in separate chain files is a normal,
 // valid state — not corruption to arbitrate between.
 
 interface FoundArtifact {
@@ -207,9 +208,16 @@ function readExistingChain(projectRoot: string, chainVersion: string): ChainStat
   const filePath = chainFilePath(projectRoot, chainVersion);
   if (!fs.existsSync(filePath)) return null;
   try {
-    const raw = fs.readJsonSync(filePath) as ChainState;
-    validateChainSemantics(raw);
-    return raw;
+    // Goes through readChain() rather than a raw fs.readJsonSync() so a
+    // legacy chain file still carrying intent.state "LOCKED" (pre-RATIFIED
+    // rename, Director directive 2026-08-12) gets normalized before
+    // validateChainSemantics() sees it — otherwise gate_1_open=true with a
+    // literal "LOCKED" intent fails hasRatifiedIntent() and this function
+    // silently returns null, discarding real plan/exec title/focus history
+    // that PLAN-EVAL-07 exists specifically to preserve.
+    const chain = readChain(projectRoot, chainVersion);
+    validateChainSemantics(chain);
+    return chain;
   } catch {
     return null;
   }
@@ -340,12 +348,12 @@ export function buildReconstructedChains(
     // ── INTENT ──────────────────────────────────────────────────────────────
     const hasDownstreamEvidence = plans.length > 0 || !!roadmapEntry;
     if (hasDownstreamEvidence) {
-      chain.intent.state = 'LOCKED';
-      chain.intent.locked_at = now;
+      chain.intent.state = 'RATIFIED';
+      chain.intent.ratified_at = now;
     } else {
       markers.push(makeMarker(
         'intent', 'gate_1_open',
-        `DIR-INTENT ${chainVersion} found on disk but no downstream FMN-PLAN or ROADMAP confirms it was ever LOCKED. Re-run \`sigma intent lock\` if it should be, or leave as DRAFT.`,
+        `DIR-INTENT ${chainVersion} found on disk but no downstream FMN-PLAN or ROADMAP confirms it was ever RATIFIED. Re-run \`sigma intent ratify\` if it should be, or leave as DRAFT.`,
         { intent_version: chainVersion, plan_version: null, exec_version: null },
         now,
       ));
@@ -464,7 +472,7 @@ export function buildReconstructedChains(
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
     const hasAnyBuildArtifact = chain.roadmap !== null || chain.plan.versions.length > 0 || chain.exec.versions.length > 0 || chain.close !== null;
-    chain.lifecycle_state = hasAnyBuildArtifact || chain.intent.state === 'LOCKED' ? 'BUILD' : 'DESIGN';
+    chain.lifecycle_state = hasAnyBuildArtifact || chain.intent.state === 'RATIFIED' ? 'BUILD' : 'DESIGN';
 
     // Gates + structural consistency markers are computed by the exact same
     // function `sigma doctor` (default mode) already uses — avoids
