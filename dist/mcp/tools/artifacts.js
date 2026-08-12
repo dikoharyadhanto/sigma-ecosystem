@@ -41,11 +41,17 @@ function computeArtifacts(root) {
             active_state: data.plan.active_state,
             versions_count: data.plan.versions.length,
             pending_count: data.plan.pending.length,
+            // PLAN-IMPL-MULTIDRAFT-LOCK §8.5 (Director directive 2026-08-12) —
+            // active_version is a display pointer only; an AI role must not infer
+            // "the" current plan from it once concurrent DRAFTs are possible.
+            // Structured so a consumer can detect ambiguity without parsing text.
+            open_drafts: data.plan.versions.filter(v => v.state === 'DRAFT').map(v => v.version),
         },
         exec: {
             active_version: data.exec.active_version,
             active_state: data.exec.active_state,
             versions_count: data.exec.versions.length,
+            open_drafts: data.exec.versions.filter(v => v.state === 'DRAFT').map(v => v.version),
         },
         close: data.close
             ? { version: data.close.version, state: data.close.state }

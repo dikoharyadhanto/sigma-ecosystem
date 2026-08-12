@@ -7,7 +7,8 @@ import {
   writeChain,
   nextExecVersion,
   registerExecDraft,
-  lockActiveExec,
+  lockExecVersion,
+  resolveTargetVersion,
   assertChainCanMutate,
   getOperationalGate,
 } from '../engine/chain';
@@ -27,12 +28,26 @@ function execDocPath(projectRoot: string, chain: ChainState, version?: string): 
   return path.join(projectRoot, entry.file ?? path.join('Sigma', 'build', `DEV-EXEC-${entry.version}.md`));
 }
 
+// PLAN-IMPL-MULTIDRAFT-LOCK §8.3 (Director directive 2026-08-12) — same
+// ambiguity rule as plan.ts's assertPlanCheckUnambiguous(): `check` defaults
+// to the active pointer only while unambiguous (0 or 1 open DRAFT).
+function assertExecCheckUnambiguous(chain: ChainState, explicit: string | undefined): void {
+  if (explicit) return;
+  const resolution = resolveTargetVersion(chain.exec.versions, undefined);
+  if (resolution.kind === 'ambiguous') {
+    throw new Error(
+      `${resolution.candidates.length} DRAFT DEV-EXECs are open: ${resolution.candidates.join(', ')}\n` +
+      `Specify which one to check: sigma exec check --v ${resolution.candidates[0]}`
+    );
+  }
+}
+
 export function execCommand(): Command {
   const cmd = new Command('exec');
   cmd.description('Manage DEV-EXEC artifact');
 
   cmd.command('new')
-    .description('Create a new DEV-EXEC draft (requires locked FMN-PLAN)')
+    .description('Create a new DEV-EXEC draft (requires a LOCKED FMN-PLAN with no open exec)')
     .option('--plan <version>', 'Explicitly specify which locked plan to execute (required when multiple unexecuted locked plans exist)')
     .action((opts: { plan?: string }) => {
       try {
@@ -44,43 +59,53 @@ export function execCommand(): Command {
           throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
         }
 
-        // Guard: block if any exec is in a non-final state (not LOCKED or SUPERSEDED)
-        const activeExec = chain.exec.versions.find(
-          v => v.state !== 'LOCKED' && v.state !== 'SUPERSEDED'
-        );
-        if (activeExec) {
-          throw new Error(
-            `EXEC CONFLICT: DEV-EXEC ${activeExec.version} is in ${activeExec.state} state.\n` +
-            `Lock it before creating a new exec: sigma exec lock`
-          );
-        }
-
-        // Find LOCKED plans that do NOT have a corresponding LOCKED exec
+        // PLAN-IMPL-MULTIDRAFT-LOCK §4 — the old chain-wide guard ("any exec
+        // not LOCKED/SUPERSEDED blocks every new exec, regardless of which
+        // plan it references") is replaced by a per-PLAN guard: at most one
+        // non-final exec per plan (§2.2 of the source discussion,
+        // Director-confirmed cardinality invariant), evaluated against the
+        // specific plan being targeted. Candidates for auto-resolution are
+        // LOCKED plans with no exec at all in a non-SUPERSEDED state — a
+        // plan with an open DRAFT exec is not a candidate for a *new* exec,
+        // it already has one to continue.
         const lockedPlans = chain.plan.versions.filter(v => v.state === 'LOCKED');
-        const lockedExecPlanRefs = new Set(
+        const plansWithOpenExec = new Set(
           chain.exec.versions
-            .filter(v => v.state === 'LOCKED')
+            .filter(v => v.state !== 'SUPERSEDED')
             .map(v => v.plan_version_ref)
-            .filter(Boolean)
+            .filter((ref): ref is string => Boolean(ref))
         );
-        const unexecutedPlans = lockedPlans.filter(p => !lockedExecPlanRefs.has(p.version));
+        const unexecutedPlans = lockedPlans.filter(p => !plansWithOpenExec.has(p.version));
 
         let planVersionRef: string;
-        if (unexecutedPlans.length === 0) {
-          throw new Error(
-            'All locked plans already have locked execs.\n' +
-            'Run: sigma plan new   to create a new plan'
-          );
-        } else if (opts.plan) {
-          const specified = unexecutedPlans.find(p => p.version === opts.plan);
-          if (!specified) {
-            const available = unexecutedPlans.map(p => p.version).join(', ');
+        if (opts.plan) {
+          planVersionRef = opts.plan;
+          const target = lockedPlans.find(p => p.version === planVersionRef);
+          if (!target) {
+            const available = lockedPlans.map(p => p.version).join(', ') || '(none)';
             throw new Error(
-              `FMN-PLAN ${opts.plan} is not an unexecuted locked plan.\n` +
-              `Unexecuted locked plans: ${available}`
+              `FMN-PLAN ${planVersionRef} is not a LOCKED plan.\n` +
+              `LOCKED plans: ${available}`
             );
           }
-          planVersionRef = opts.plan;
+          const openExecForPlan = chain.exec.versions.find(
+            v => v.plan_version_ref === planVersionRef && v.state !== 'SUPERSEDED'
+          );
+          if (openExecForPlan) {
+            throw new Error(
+              `EXEC CONFLICT: FMN-PLAN ${planVersionRef} already has DEV-EXEC ${openExecForPlan.version} in ${openExecForPlan.state} state.\n` +
+              'A plan has at most one execution — continue that DEV-EXEC instead of creating a new one:\n' +
+              `  ${openExecForPlan.file ?? `Sigma/build/DEV-EXEC-${openExecForPlan.version}.md`}\n` +
+              `  sigma exec check --v ${openExecForPlan.version}\n` +
+              'To abandon it instead, supersede its plan and open a new plan version:\n' +
+              `  sigma plan supersede --v ${planVersionRef} --reason "..."`
+            );
+          }
+        } else if (unexecutedPlans.length === 0) {
+          throw new Error(
+            'All locked plans already have an exec.\n' +
+            'Run: sigma plan new   to create a new plan'
+          );
         } else if (unexecutedPlans.length === 1) {
           planVersionRef = unexecutedPlans[0].version;
         } else {
@@ -115,26 +140,42 @@ export function execCommand(): Command {
     });
 
   cmd.command('lock')
-    .description('Lock active DEV-EXEC (re-evaluates Gate 3)')
-    .action(() => {
+    .description('Lock a DRAFT DEV-EXEC (re-evaluates Gate 3). Requires --v when more than one DRAFT is open.')
+    .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)')
+    .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
         const { chainVersion, data: chain } = readActiveChain(projectRoot);
         assertChainCanMutate(chain);
-        if (chain.exec.active_state !== 'DRAFT') {
-          throw new Error('Active DEV-EXEC is not in DRAFT state. Cannot lock.');
+
+        const resolution = resolveTargetVersion(chain.exec.versions, opts.v);
+        if (resolution.kind === 'empty') {
+          throw new Error('No DRAFT DEV-EXEC to lock. Run: sigma exec new');
         }
-        const absPath = execDocPath(projectRoot, chain);
+        if (resolution.kind === 'ambiguous') {
+          const described = resolution.candidates
+            .map(v => {
+              const entry = chain.exec.versions.find(e => e.version === v);
+              return entry?.plan_version_ref ? `${v} (plan ${entry.plan_version_ref})` : v;
+            })
+            .join(', ');
+          throw new Error(
+            `${resolution.candidates.length} DRAFT DEV-EXECs are open: ${described}\n` +
+            `Specify which one to lock: sigma exec lock --v ${resolution.candidates[0]}`
+          );
+        }
+        const lockTargetVersion = resolution.version;
+
+        const absPath = execDocPath(projectRoot, chain, lockTargetVersion);
         const report = validateSigmaDocFile(absPath, 'exec');
         printSigmaDocReport(report, projectRoot);
         ensureSigmaDocEligible(report, 'exec');
-        const version = chain.exec.active_version!;
-        lockActiveExec(chain);
+        lockExecVersion(chain, lockTargetVersion);
         writeChain(projectRoot, chainVersion, chain);
         const gate3 = chain.gates.gate_3_satisfied
           ? 'SATISFIED'
-          : 'not satisfied — stale chain or incomplete chain';
-        console.log(`DEV-EXEC ${version} LOCKED. Gate 3: ${gate3}`);
+          : 'not satisfied — open work remains';
+        console.log(`DEV-EXEC ${lockTargetVersion} LOCKED. Gate 3: ${gate3}`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
@@ -142,12 +183,13 @@ export function execCommand(): Command {
     });
 
   cmd.command('check')
-    .description('Validate the active DEV-EXEC structure and markers')
-    .option('--v <version>', 'Check a specific DEV-EXEC version instead of the active one')
+    .description('Validate a DEV-EXEC structure and markers')
+    .option('--v <version>', 'Check a specific DEV-EXEC version. Required when more than one DRAFT is open.')
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
         const { data: chain } = readActiveChain(projectRoot);
+        assertExecCheckUnambiguous(chain, opts.v);
         const absPath = execDocPath(projectRoot, chain, opts.v);
         const report = validateSigmaDocFile(absPath, 'exec');
         printSigmaDocReport(report, projectRoot);
@@ -159,23 +201,44 @@ export function execCommand(): Command {
     });
 
   cmd.command('status')
-    .description('Show active DEV-EXEC status')
+    .description('Show DEV-EXEC chain state: open DRAFTs with plan pairing, LOCKED execs, Gate 3')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
         const { data: chain } = readActiveChain(projectRoot);
         console.log('\n=== DEV-EXEC Status ===\n');
-        if (!chain.exec.active_version) {
-          console.log('No active EXEC. Run: sigma exec new');
+
+        const drafts = chain.exec.versions
+          .filter(v => v.state === 'DRAFT')
+          .sort((a, b) => a.created_at.localeCompare(b.created_at));
+        const locked = chain.exec.versions
+          .filter(v => v.state === 'LOCKED')
+          .sort((a, b) => a.created_at.localeCompare(b.created_at));
+        const supersededCount = chain.exec.versions.filter(v => v.state === 'SUPERSEDED').length;
+
+        if (drafts.length === 0) {
+          console.log('DRAFT: none');
         } else {
-          const active = chain.exec.versions.find(v => v.version === chain.exec.active_version);
-          console.log(`Version:          ${chain.exec.active_version}`);
-          console.log(`State:            ${chain.exec.active_state}`);
-          if (active?.plan_version_ref) console.log(`PLAN Ref:         ${active.plan_version_ref}`);
-          if (active?.locked_at) console.log(`Locked at:        ${active.locked_at}`);
-          if (active?.file) console.log(`File:             ${active.file}`);
+          console.log(`DRAFT (${drafts.length}):`);
+          for (const d of drafts) {
+            console.log(`  ${d.version}  (plan ${d.plan_version_ref ?? '—'})  (created ${d.created_at.slice(0, 10)})`);
+          }
         }
-        console.log(`\nGate 3:           ${chain.gates.gate_3_satisfied ? 'SATISFIED' : 'not satisfied'}`);
+
+        console.log('');
+        if (locked.length === 0) {
+          console.log('LOCKED: none');
+        } else {
+          console.log(`LOCKED (${locked.length}):`);
+          for (const e of locked) {
+            console.log(`  ${e.version}  (plan ${e.plan_version_ref ?? '—'})`);
+          }
+        }
+
+        console.log(`\nGate 3: ${chain.gates.gate_3_satisfied ? 'SATISFIED' : 'not satisfied'}`);
+        if (supersededCount > 0) {
+          console.log(`(${supersededCount} SUPERSEDED exec(s) not shown above — run: sigma exec list)`);
+        }
         console.log('');
       } catch (e) {
         console.error((e as Error).message);

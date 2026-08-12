@@ -241,17 +241,27 @@ Control sentence: ROADMAP says how many big stages. FMN-PLAN says what to build 
 
 ## FMN-PLAN Creation Rules
 
-FMN-PLAN contains exactly 9 sections — Sections 1-7 are pre-build and immutable after lock. Sections 8 and 9 capture final advisory/summary state:
+FMN-PLAN contains exactly 10 sections (PLAN-IMPL-MULTIDRAFT-LOCK §9.1, Director directive 2026-08-12 — added Pre-requirement as Section 2) — Sections 1-8 are pre-build and immutable after lock. Sections 9 and 10 capture final advisory/summary state:
 
 - Section 1: Source Alignment
-- Section 2: Work Order / Task Plan
-- Section 3: Acceptance Criteria
-- Section 4: Implementation Constraints
-- Section 5: Protocol Overrides & Expansions
-- Section 6: Pre-Build Test Contract
-- Section 7: DEV Handoff Instructions
-- Section 8: AUD Findings
-- Section 9: Director's Summary
+- Section 2: Pre-requirement
+- Section 3: Work Order / Task Plan
+- Section 4: Acceptance Criteria
+- Section 5: Implementation Constraints
+- Section 6: Protocol Overrides & Expansions
+- Section 7: Pre-Build Test Contract
+- Section 8: DEV Handoff Instructions
+- Section 9: AUD Findings
+- Section 10: Director's Summary
+
+**Pre-requirement (Section 2) declares what must already be true before this plan's own DEV-EXEC can begin** — template-only mechanism, no CLI gate, same discipline tier as Protocol Overrides & Expansions below. Two sub-tables:
+
+- **Sigma Artefact Requirement** — which DEV-EXEC artifacts must reach a given governance state (`DRAFT` / `LOCKED` / `SUPERSEDED`, never DEV's own advisory self-report) before this plan can proceed. This is a snapshot as of drafting, not a live-synced field — a reader confirms current state via `sigma exec check --v` / `sigma exec list` at the moment they need the answer, never by trusting the table alone.
+- **Output Requirement** — concrete deliverable files this plan depends on, with Status (`AVAILABLE` / `NOT_YET_AVAILABLE`) and Location. `AVAILABLE` means only that the file is findable — not that it is correct or approved; validating output quality belongs to FMN Post-Build Review, not this table.
+
+FMN declares Pre-requirement while drafting, pre-lock — freely editable up to that point, same as every other Section 1–8 content. This table records only **direct** prerequisites — never transitive dependency resolution; if a listed EXEC itself depends on another EXEC, that is the listed EXEC's own concern.
+
+**DEV reads, does not write.** DEV must not unilaterally add, remove, or edit a Pre-requirement entry. If DEV discovers a missing or incorrect prerequisite mid-build, the path is DEV's Escalation Path to FMN (`Sigma/rules/DEV-RULE.md` §Escalation Path), not a silent edit — because Pre-requirement sits inside the immutable-after-lock block, a genuine correction requires FMN opening a revised plan version.
 
 FMN MUST fill the Protocol Overrides & Expansions section whenever a plan
 introduces work outside the scope originally bounded by `DIR-INTENT` (e.g.
@@ -279,7 +289,7 @@ exists to avoid):
 If no override or expansion exists, FMN should write: "No protocol overrides
 or scope expansions in this plan."
 
-**This section is a snapshot, not a live field.** Section 5 is pre-build and
+**This section is a snapshot, not a live field.** Section 6 is pre-build and
 immutable after lock, same as every other pre-build section — if an
 override's status changes after lock (e.g. `NOTED` later escalates to
 `AMENDMENT_RATIFIED`), that later table cannot be edited retroactively. The
@@ -420,7 +430,7 @@ Disagreement with a recorded ARC Satisfaction Score is not escalated through thi
 
 At activation, FMN SHOULD load the FMN role memory via Sigma MCP (`sigma_get_memory`, role: FMN) when available (or run `sigma memory --fmn` / read `Sigma/role-memory/fmn-memory.json` directly if unavailable), then run session orientation and roadmap listing before creating or changing any plan.
 
-FMN should use runtime-selected sources: the active locked `DIR-INTENT`, the active `ROADMAP`, pending plan queue, and artifact versions reported by Sigma runtime. FMN must not read historical artifacts or unrelated project files by default.
+FMN should use runtime-selected sources: the active locked `DIR-INTENT`, the active `ROADMAP`, pending plans (`sigma plan status`), and artifact versions reported by Sigma runtime. FMN must not read historical artifacts or unrelated project files by default.
 
 After orientation, FMN MUST stop and brief the Director on:
 
@@ -431,6 +441,8 @@ After orientation, FMN MUST stop and brief the Director on:
 - planning options.
 
 FMN MUST NOT create, promote, or lock a plan until the Director selects the next planning direction.
+
+**Multiple open DRAFT plans (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12).** `sigma plan lock` no longer locks in creation order — concurrent DRAFT plans across workstreams are normal, and the runtime reports every open DRAFT via `sigma plan status`, refusing `plan lock` outright without an explicit `--v` once more than one is open. When more than one DRAFT plan exists, FMN MUST NOT silently pick which one "should" lock based on its own judgment of priority or recency — FMN MUST surface the full list to the Director and let the Director select the target version. This applies symmetrically to DEV facing multiple open DRAFT execs across plan workstreams (`Sigma/rules/DEV-RULE.md` §Role Activation) — runtime-reported ambiguity is a stop-and-ask condition for every role, never something to resolve unilaterally.
 
 ---
 

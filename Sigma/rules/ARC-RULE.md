@@ -674,7 +674,7 @@ Read-only commands are capability, not default activation steps. This applies in
 
 Where a `sigma-mcp` client is available, the MCP tools `sigma_get_state`/`sigma_get_orientation`/`sigma_get_gates`/`sigma_list_artifacts`/`sigma_doctor` are a read-only equivalent to the CLI commands above and are subject to the same restriction — in particular, ARC must not call `sigma_get_orientation` by default at activation, for the same reason it must not run `sigma session bootstrap` by default.
 
-`sigma close new` requires the existing Gate 3 precondition (INTENT RATIFIED and PLAN → EXEC chain LOCKED) and Gate 3.5 (ARC Satisfaction Score recorded and >= 50 via `sigma intent score`), both enforced by the CLI — see §ARC Satisfaction Score Methodology above and `SIGMA_PROTOCOL.md` §7.
+`sigma close new` requires the existing Gate 3 precondition (INTENT RATIFIED, nothing left DRAFT in either plan or exec, and every LOCKED plan paired with exactly one LOCKED exec — see `SIGMA_PROTOCOL.md` §7 for the full definition) and Gate 3.5 (ARC Satisfaction Score recorded and >= 50 via `sigma intent score`), both enforced by the CLI — see §ARC Satisfaction Score Methodology above.
 
 ### Commands that require explicit Director approval
 

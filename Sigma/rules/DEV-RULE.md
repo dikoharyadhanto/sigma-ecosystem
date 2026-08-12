@@ -56,6 +56,20 @@ Both paths may be used together. Neither is mandatory — DEV chooses based on w
 
 ---
 
+### 1c. Technical Research (DEV-EXEC Section 3)
+
+DEV-EXEC Section 3, Technical Research (PLAN-IMPL-MULTIDRAFT-LOCK §9.2, Director directive 2026-08-12), is an execution-time mechanism for resolving implementation-specific knowledge gaps — library/API behavior, an established pattern, or a specific technical uncertainty flagged in DEV Pre-Build Assessment. It does not re-open, replace, or supersede DIR-INTENT Comprehensive Research: DEV cites DIR-INTENT by ID if relevant rather than re-arguing Theory/Concept or Problem/Data grounding.
+
+**Entirely DEV's discretion, no gate.** Only DEV's own judgment marks Section 3.1 Status as `NEEDED` — unlike DIR-INTENT's Comprehensive Research, Director or FMN cannot trigger it, and nothing blocks `sigma exec lock` on its content. No AI role is required to review or approve what DEV writes there.
+
+**Each entry must resolve into a decision, not just record that research happened.** Fixed shape: Question → Finding → Decision → Implication. Cite sources by `Sigma/reference/reference-list.md` row ID (LA/WL/OS) — the same project-wide reference list DIR-INTENT's research already uses, not a parallel citation system. "Decision" is DEV's own implementation-level judgment call, already within DEV's existing Freedom of Method (§2 below) — not a contract-level decision.
+
+**No gate does not mean no accountability.** Marking `NOT_NEEDED` is still a real judgment call — if an unverified assumption later causes a problem, that is legitimate content for Issues Encountered or FMN Post-Build Review, exactly as any other DEV judgment already is.
+
+**Must not become a backdoor to silently change FMN-PLAN.** If research reveals that a PLAN-specified approach is wrong, that is a finding, not authority to unilaterally substitute a different approach. A finding that stays within Freedom of Method gets recorded in Deviations From FMN-PLAN as usual; a finding that touches a contract-level constraint or decision requires the Escalation Path (§Escalation Path below) before DEV acts on it.
+
+---
+
 ### 2. Freedom of Method
 
 DEV has freedom of method within the boundaries of `FMN-PLAN`.
@@ -410,7 +424,7 @@ DEV should not become passive.
 
 ### 7. DEV MUST NOT start material implementation without explicit Director authorization
 
-DEV may complete routine startup, read the locked `FMN-PLAN` selected by Sigma runtime, write the DEV pre-build planning sections (Source Plan Alignment through Key Technical Decisions), and fill the DEV Pre-Build Assessment section without Director authorization.
+DEV may complete routine startup, read the locked `FMN-PLAN` it is executing against (verified explicitly per §Role Activation when more than one PLAN/EXEC workstream is open), write the DEV pre-build planning sections (Source Plan Alignment through Key Technical Decisions), and fill the DEV Pre-Build Assessment section without Director authorization.
 
 DEV MUST NOT write, modify, or delete any source file, test file, or configuration file until the Director explicitly authorizes implementation to begin.
 
@@ -523,7 +537,9 @@ When escalating, DEV SHOULD provide:
 
 At activation, DEV SHOULD load the DEV role memory via Sigma MCP (`sigma_get_memory`, role: DEV) when available (or run `sigma memory --dev` / read `Sigma/role-memory/dev-memory.json` directly if unavailable), then follow the locked plan execution flow when Gate 2 permits it.
 
-DEV should use runtime-selected sources: Gate 2 status, the locked `FMN-PLAN` selected by Sigma runtime, and the active `DEV-EXEC` workflow state if one exists. DEV must not read historical artifacts, unrelated project files, or broad governance background by default.
+DEV should use runtime-selected sources: Gate 2 status, the `FMN-PLAN`/`DEV-EXEC` pairing under work (`sigma plan status`/`sigma exec status`), and the active `DEV-EXEC` workflow state if one exists. DEV must not read historical artifacts, unrelated project files, or broad governance background by default.
+
+**Multiple open PLAN/EXEC workstreams (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12).** Concurrent build workstreams across different LOCKED plans are normal — each may have its own DRAFT `DEV-EXEC` open at once. There is no longer a single implicit "the current work" target. Before material implementation, DEV MUST explicitly verify which PLAN/EXEC pair is being worked on (`sigma exec status`, `sigma exec check --v <version>`) rather than assuming the most recently created exec is "the" one. When it is not obvious which pairing the Director means, DEV MUST stop and ask — runtime-reported ambiguity is a stop-and-ask condition, never something to resolve on DEV's own judgment (mirrors `Sigma/rules/FMN-RULE.md` §Role Activation for multiple DRAFT plans).
 
 When Gate 2 is open, DEV does not need to ask whether to open `DEV-EXEC`. DEV may complete routine startup, study the locked `FMN-PLAN`, create or fill `DEV-EXEC` pre-implementation planning, message FMN for pre-build review, then stop and report to the Director.
 
@@ -532,11 +548,11 @@ DEV MUST NOT begin material implementation until FMN review exists and the Direc
 DEV should report:
 
 - Gate 2 status,
-- the locked plan selected by runtime,
+- which locked plan and exec version are being worked on, verified explicitly rather than assumed,
 - any ambiguity before coding,
 - the next valid implementation action or required stop point.
 
-**Warm Context Skip:** If an active FMN advisory exists from within the same work session and context is already loaded, DEV may skip repeated broad orientation and state that warm context is being reused. DEV must still verify the runtime-selected locked plan before material implementation.
+**Warm Context Skip:** If an active FMN advisory exists from within the same work session and context is already loaded, DEV may skip repeated broad orientation and state that warm context is being reused. DEV must still verify the specific locked plan/exec pairing before material implementation.
 
 ---
 

@@ -146,7 +146,15 @@ function runBootstrap(opts) {
             console.log(`  [WARNING] Doc state: UNCERTIFIED_EDIT (edited after ${since}) — see: sigma intent check`);
         }
         console.log(artifactLine('Plan Doc', 'FMN-PLAN', fmtVersion(chain.plan.active_version), chain.plan.active_state));
+        const openPlanDrafts = chain.plan.versions.filter(v => v.state === 'DRAFT');
+        if (openPlanDrafts.length > 1) {
+            console.log(`  [NOTE] ${openPlanDrafts.length} DRAFT FMN-PLANs are open: ${openPlanDrafts.map(v => v.version).join(', ')} — run: sigma plan status`);
+        }
         console.log(artifactLine('Execution Evidence', 'DEV-EXEC', fmtVersion(chain.exec.active_version), chain.exec.active_state));
+        const openExecDrafts = chain.exec.versions.filter(v => v.state === 'DRAFT');
+        if (openExecDrafts.length > 1) {
+            console.log(`  [NOTE] ${openExecDrafts.length} DRAFT DEV-EXECs are open: ${openExecDrafts.map(v => v.version).join(', ')} — run: sigma exec status`);
+        }
         console.log(artifactLine('Closure Doc', 'DIR-CLOSE', fmtVersion(chain.close?.version ?? null), chain.close?.state ?? null));
         console.log(artifactLine('Roadmap Doc', 'ROADMAP', fmtVersion(chain.roadmap?.version ?? null), chain.roadmap?.state ?? null));
         console.log('\n--- Gate Status ---');

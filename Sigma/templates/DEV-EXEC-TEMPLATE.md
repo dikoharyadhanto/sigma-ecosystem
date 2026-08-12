@@ -1,4 +1,4 @@
-<!-- SIGMA:DOC type=DEV_EXEC schema=1 -->
+<!-- SIGMA:DOC type=DEV_EXEC schema=2 -->
 # DEV-EXEC
 
 > Implementation approach, execution report, verification evidence, and developer walkthrough.
@@ -57,8 +57,77 @@ If none, write: No concerns — plan is clear and sufficient to proceed.]
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:TECHNICAL_RESEARCH -->
+## 3. Technical Research
+
+> Filled by DEV — Before Build. Entirely DEV's discretion.
+> Technical Research is an execution-time research mechanism for resolving
+> implementation-specific knowledge gaps. It does not re-open, replace, or
+> supersede DIR-INTENT Comprehensive Research.
+>
+> **No gate, no AI-role review.** Unlike DIR-INTENT's Comprehensive
+> Research, nothing here blocks `sigma exec lock`, and only DEV's own
+> judgment triggers it — Director or FMN cannot mark it NEEDED. No AI role
+> (FMN, AUD, ARC) is required to review, verify, or approve what DEV writes
+> in this section. "No gate" does not mean "no accountability" — if an
+> unverified assumption later causes a problem, that remains legitimate
+> content for Issues Encountered or FMN Post-Build Review, exactly as any
+> other DEV judgment already is.
+> **Must not become a backdoor to silently change FMN-PLAN.** If research
+> reveals that a PLAN-specified approach is actually wrong, that is a
+> finding, not authority to unilaterally substitute a different approach.
+> If the finding stays within DEV's Freedom of Method
+> (`Sigma/rules/DEV-RULE.md`), proceed and record it in Deviations From
+> FMN-PLAN. If it touches a contract-level constraint or decision, use the
+> Escalation Path before acting.
+
+### 3.1 Status
+
+- [ ] NEEDED
+- [ ] NOT_NEEDED
+
+If NOT_NEEDED, state briefly why existing knowledge is sufficient:
+
+[...]
+
+### 3.2 Technical / Implementation Approach Research
+
+> Investigating the correct way to implement a specific technical
+> requirement (library/API/framework behavior, established pattern or
+> algorithm).
+> Sources: official documentation from the official/authoritative source
+> (preferred), or a reputable technical Q&A community (e.g. Stack Overflow,
+> GIS Stack Exchange). Cite by `Sigma/reference/reference-list.md` row ID
+> only (LA/WL/OS) — reuse the project-wide reference list, do not build a
+> parallel citation system.
+> Each entry must resolve into a decision, not just record that research
+> happened. Fixed shape: **Question → Finding → Decision → Implication**.
+> "Decision" is DEV's own implementation-level judgment call, already
+> within DEV's existing Freedom of Method — not a contract-level decision.
+> "Implication" should cross-reference the specific Implementation Approach
+> / Key Technical Decisions item the finding feeds into.
+
+| Question | Finding | Decision | Implication |
+| :--- | :--- | :--- | :--- |
+| [...] | [...] (cite reference-list.md row ID) | [...] | [...] |
+
+### 3.3 Technical Risk / Unknown Resolution
+
+> Resolving a specific technical uncertainty already flagged in §2's
+> Questions & Concerns or in Key Technical Decisions, before DEV commits to
+> an approach.
+> Must NOT re-derive DIR-INTENT's Theory/Concept or Problem/Data grounding
+> — cite DIR-INTENT by ID if relevant, do not re-argue it. Same entry shape
+> as §3.2: Question / Finding / Decision / Implication.
+
+| Question | Finding | Decision | Implication |
+| :--- | :--- | :--- | :--- |
+| [...] | [...] (cite reference-list.md row ID) | [...] | [...] |
+
+---
+
 <!-- SIGMA:DEV_EXEC:SECTION:IMPLEMENTATION_APPROACH -->
-## 3. Implementation Approach
+## 4. Implementation Approach
 
 > **Filled by DEV — Before Build**
 
@@ -85,7 +154,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:FILES_COMPONENTS_TO_CHANGE -->
-## 4. Files / Components To Change
+## 5. Files / Components To Change
 
 > **Filled by DEV — Before Build**
 
@@ -97,7 +166,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:KEY_TECHNICAL_DECISIONS -->
-## 5. Key Technical Decisions
+## 6. Key Technical Decisions
 
 > **Filled by DEV — Before Build**
 
@@ -108,9 +177,9 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:FMN_PRE_BUILD_REVIEW -->
-## 6. FMN Pre-Build Review
+## 7. FMN Pre-Build Review
 
-> **Filled by FMN — After DEV Pre-Build Planning (Sections 1–5). DEV must not write in this section.**
+> **Filled by FMN — After DEV Pre-Build Planning (Sections 1–6). DEV must not write in this section.**
 
 ### Pre-Build Clarification
 
@@ -140,7 +209,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:IMPLEMENTATION_WALKTHROUGH -->
-## 7. Implementation Walkthrough
+## 8. Implementation Walkthrough
 
 > **Filled by DEV — After Build**
 
@@ -165,7 +234,7 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:DEVIATIONS_FROM_FMN_PLAN -->
-## 8. Deviations From FMN-PLAN
+## 9. Deviations From FMN-PLAN
 
 > **Filled by DEV — After Build**
 > Record any deviation from the locked FMN-PLAN. Do not hide deviations.
@@ -189,7 +258,7 @@ If no deviation exists, write:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:DEPENDENCY_ENVIRONMENT_CHANGES -->
-## 9. Dependency / Environment Changes
+## 10. Dependency / Environment Changes
 
 > **Filled by DEV — After Build**
 
@@ -204,7 +273,7 @@ If none, write:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:DEVELOPER_VERIFICATION -->
-## 10. Developer Verification
+## 11. Developer Verification
 
 > **Filled by DEV — After Build**
 
@@ -220,7 +289,7 @@ DEV records checks performed before handing back to FMN.
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:GIT_CHANGE_EVIDENCE -->
-## 11. Git / Change Evidence
+## 12. Git / Change Evidence
 
 > **Filled by DEV — After Build**
 
@@ -237,7 +306,7 @@ Minimal physical trace. Mark N/A only if no material file changes exist.
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:ISSUES_ENCOUNTERED -->
-## 12. Issues Encountered
+## 13. Issues Encountered
 
 > **Filled by DEV — After Build**
 
@@ -252,7 +321,7 @@ If none, write:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:KNOWN_LIMITATIONS_TECH_DEBT -->
-## 13. Known Limitations / Technical Debt
+## 14. Known Limitations / Technical Debt
 
 > **Filled by DEV — After Build**
 
@@ -267,7 +336,7 @@ If none, write:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:DEV_COMPLETION_STATEMENT -->
-## 14. DEV Completion Statement
+## 15. DEV Completion Statement
 
 > **Filled by DEV — After Build**
 
@@ -292,7 +361,7 @@ If none, write:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:FMN_POST_BUILD_REVIEW -->
-## 15. FMN Post-Build Review
+## 16. FMN Post-Build Review
 
 > **Filled by FMN — After DEV completes. DEV must not write in this section.**
 
@@ -325,7 +394,7 @@ If none, write:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS -->
-## 16. Director Observation Report & Minor Requests
+## 17. Director Observation Report & Minor Requests
 
 > **Filled by DEV — transcribed from Director's direct chat report. Append-only.**
 
@@ -372,7 +441,7 @@ If none, write:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:DIRECTORS_SUMMARY -->
-## 17. Director's Summary
+## 18. Director's Summary
 
 > **Filled by DEV or FMN — Append-only.**
 > This is a concise, human-readable summary specifically for the Director. DEV and FMN may freely collaborate to fill this section.

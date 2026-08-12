@@ -11,6 +11,7 @@ import {
   lockActiveClose,
   lockActiveRoadmap,
   hasCleanGate3Chain,
+  describeGate3Blockers,
   hasGate35Score,
   arcScoreBand,
 } from '../engine/chain';
@@ -56,9 +57,17 @@ export function closeCommand(): Command {
         assertChainCanMutate(chain);
 
         if (!hasCleanGate3Chain(chain)) {
-          throw new Error(
-            'GATE 3 BLOCKED: Requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED (same version chain). Run: sigma exec lock'
-          );
+          const blockers = describeGate3Blockers(chain);
+          const lines = ['GATE 3 BLOCKED: the chain still has open work.'];
+          for (const reason of blockers) lines.push(`  ${reason}`);
+          lines.push('Every locked plan needs exactly one locked exec, and nothing may be left in DRAFT.');
+          if (blockers.some(r => r.startsWith('DRAFT FMN-PLAN'))) {
+            lines.push('Abandon what is no longer wanted: sigma plan supersede --v <version> --reason "..."');
+          }
+          if (blockers.some(r => r.includes('has no LOCKED DEV-EXEC'))) {
+            lines.push('Run: sigma exec new / sigma exec lock to finish an unpaired plan.');
+          }
+          throw new Error(lines.join('\n'));
         }
 
         if (!hasGate35Score(chain)) {

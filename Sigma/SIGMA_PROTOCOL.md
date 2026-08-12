@@ -382,6 +382,10 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 | Pre-condition | At least one `FMN-PLAN` with status `LOCKED` exists |
 | CLI error | `Gate 2 blocked: FMN-PLAN must be LOCKED before DEV-EXEC can be created.` |
 
+**Locking is no longer FIFO (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12).** `sigma plan lock` used to always lock the oldest DRAFT `FMN-PLAN`, with no way to select a different one or to discard a DRAFT that was no longer wanted. It now targets a specific version via `--v`: auto-resolved when exactly one DRAFT is open, required when more than one is open (listing every candidate), and rejected outright with no DRAFT to lock. Selection is explicit — creation order carries no meaning. `sigma exec lock` follows the identical pattern for DEV-EXEC.
+
+**Cardinality invariant: at most one non-final DEV-EXEC per FMN-PLAN.** Concurrent build workstreams are allowed *across* PLANs — two different LOCKED plans may each have their own DRAFT DEV-EXEC open at the same time — but never *within* one PLAN's execution lineage. The next EXEC is never an alternative to an existing one for the same plan; unfinished work continues by reopening and editing the same DRAFT DEV-EXEC file, not by creating a new one. `sigma exec new --plan <version>` enforces this per plan (not chain-wide, unlike the model this replaced): it refuses and points at the existing DRAFT when the targeted plan already has one. There is no direct way to discard a DRAFT DEV-EXEC on its own — the only exit is `sigma plan supersede` on its plan (which cascades the EXEC to `SUPERSEDED`), followed by a new plan version if the work should be retried. This keeps the DEV-EXEC version identical to its plan's version in every case — see Gate 3.
+
 ---
 
 ### Gate 3 — BUILD Evidence
@@ -389,8 +393,12 @@ Sigma has gates. A gate blocks an operation until its pre-condition is satisfied
 | Property | Value |
 | :--- | :--- |
 | Blocks | `sigma close new` |
-| Pre-condition | Full INTENT → PLAN → EXEC chain: active INTENT RATIFIED; at least one DEV-EXEC LOCKED whose `plan_version_ref` points to a LOCKED FMN-PLAN whose `intent_version_ref` points to that INTENT |
+| Pre-condition | Active INTENT RATIFIED; no FMN-PLAN and no DEV-EXEC left in DRAFT anywhere in the chain; every LOCKED FMN-PLAN has exactly one LOCKED DEV-EXEC referencing it (`plan_version_ref`) whose plan in turn references that INTENT |
 | CLI error (no chain) | `Gate 3 blocked: Requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED (same version chain).` |
+
+**Redefined for concurrent workstreams (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12).** Before this change Gate 3 only required *one* clean PLAN → EXEC chain, so a chain could close with an unrelated LOCKED plan that was never executed. It also read `exec.active_version` — a display pointer — to decide which EXEC to check, which broke down the moment more than one DEV-EXEC could be open at once (creating a second DRAFT EXEC could silently wipe out a Gate 3 that was already satisfied for a different plan). The redefinition removes both problems: Gate 3 no longer reads any pointer, and it is satisfied only once *every* LOCKED plan in the chain has been executed and locked, with nothing left open. `SUPERSEDED` plans are excluded from this requirement entirely — abandoning a plan via `sigma plan supersede` never blocks Gate 3, whether or not it ever had an exec. A DRAFT `FMN-PLAN` or DEV-EXEC left open anywhere in the chain — including one unrelated to the workstream the Director is trying to close — blocks Gate 3 until it is either completed (locked) or abandoned (`sigma plan supersede`).
+
+**EXEC version always equals its PLAN's version.** A DEV-EXEC's version is not independently allocated — `sigma exec new` always assigns it the exact version of the FMN-PLAN it executes. This holds because a FMN-PLAN can never acquire a second DEV-EXEC (see the cardinality invariant under Gate 2); the invariant is enforced at creation, not by validating existing chain data on read, so chains written before this change are unaffected.
 
 **INTENT SUPERSEDE cascade (PLAN-EVAL-01)**: `sigma intent supersede --v <version> --reason <reason> --director-confirm` is the *only* path to a `SUPERSEDED` DIR-INTENT — ratifying a new DIR-INTENT never supersedes the prior one automatically. Each chain file holds exactly one intent, so there is nothing else in the same file for a new DIR-INTENT to demote — a prior INTENT chain simply sits beside the new one, RATIFIED and untouched, until an explicit supersede targets it (see Section 5.1). Because the supersede claim is explicit and Director-confirmed, its effect is a full downward cascade rather than a soft flag:
 
@@ -488,8 +496,8 @@ Findings Section Authorization.
 | `project` | Project initialization, status, lifecycle management |
 | `session` | Session orientation — read-only runtime context for agents when role flow or Director request requires it |
 | `intent` | DIR-INTENT lifecycle (new, ratify, amendment, score, status, list) |
-| `plan` | FMN-PLAN lifecycle (new, lock, supersede, queue, status, list) |
-| `exec` | DEV-EXEC lifecycle (new, lock, supersede, status, list) |
+| `plan` | FMN-PLAN lifecycle (new, promote, lock `--v`, check `--v`, supersede, update, status, list) |
+| `exec` | DEV-EXEC lifecycle (new `--plan`, lock `--v`, check `--v`, status, list) |
 | `close` | DIR-CLOSE lifecycle (new, lock, status) |
 | `roadmap` | ROADMAP lifecycle (new, check, activate, render, list) |
 | `reference` | Sync and manage the project-wide Reference List (`update`) — Comprehensive Research source index |
@@ -526,7 +534,7 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 
 | Class | Commands | AI May Execute? | Requires Director Instruction? |
 | :--- | :--- | :---: | :---: |
-| Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check` | Yes | No |
+| Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check` | Yes | No |
 | Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `reference update`, `send` | Yes, within role boundary | Usually no |
 | Approval | `intent ratify`, `plan lock`, `exec lock`, `close lock`, `intent score`¹, `intent amendment`² | Only after Director approval | Yes |
 | Risk / Supersession | `intent supersede --director-confirm`, `plan supersede`, destructive/reset | Only after Director approval | Yes |

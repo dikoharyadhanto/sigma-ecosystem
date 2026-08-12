@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
-import { ChainState, OverrideEntry, readActiveChain, writeChain } from '../engine/chain';
+import { ChainState, OverrideEntry, readActiveChain, writeChain, resolveTargetVersion } from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { OVERRIDES_FILE } from '../config';
 
@@ -13,11 +13,35 @@ function appendOverrideEntry(projectRoot: string, entry: OverrideEntry): void {
   fs.appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf8');
 }
 
-function versionForArtifact(chain: ChainState, artifact: string): string | null {
+// PLAN-IMPL-MULTIDRAFT-LOCK §8.4 (Director directive 2026-08-12) — override
+// is a permanent, audited action, so the version it applies to may never be
+// inferred from a display pointer when more than one candidate is open
+// (§8.3's ambiguity rule, at its strictest here). DIR-INTENT is unambiguous
+// by construction (one intent per chain). FMN-PLAN/DEV-EXEC resolve against
+// their open DRAFTs and require --v once more than one exists.
+function versionForArtifact(chain: ChainState, artifact: string, explicit: string | undefined): string | null {
   if (artifact === 'DIR-INTENT') return chain.intent.version;
-  if (artifact === 'FMN-PLAN') return chain.plan.active_version;
-  if (artifact === 'DEV-EXEC') return chain.exec.active_version;
-  return null;
+
+  const versions = artifact === 'FMN-PLAN' ? chain.plan.versions
+    : artifact === 'DEV-EXEC' ? chain.exec.versions
+    : null;
+  if (!versions) return null;
+
+  const resolution = resolveTargetVersion(versions, explicit);
+  if (resolution.kind === 'ambiguous') {
+    const label = artifact === 'FMN-PLAN' ? 'FMN-PLANs' : 'DEV-EXECs';
+    throw new Error(
+      `${resolution.candidates.length} DRAFT ${label} are open: ${resolution.candidates.join(', ')}\n` +
+      'An override is a permanent, audited action — specify which version it applies to: ' +
+      `sigma override --v ${resolution.candidates[0]} --reason "..." --director-confirm`
+    );
+  }
+  if (resolution.kind === 'resolved') return resolution.version;
+
+  // No DRAFT open — fall back to the display pointer (matches prior
+  // behavior for chains with no plan/exec created yet, or only SUPERSEDED
+  // ones on record).
+  return artifact === 'FMN-PLAN' ? chain.plan.active_version : chain.exec.active_version;
 }
 
 function describeBlockedGate(chain: ChainState): { artifact: string; gate: string; description: string } | null {
@@ -58,7 +82,7 @@ function applyOverride(chain: ChainState, artifact: string): void {
 
 // ── Command handler ───────────────────────────────────────────────────────────
 
-function runOverride(opts: { reason?: string; dryRun?: boolean; directorConfirm?: boolean }): void {
+function runOverride(opts: { v?: string; reason?: string; dryRun?: boolean; directorConfirm?: boolean }): void {
   if (!opts.reason || opts.reason.trim().length === 0) {
     console.error('Error: --reason is required. Describe why this override is authorized.');
     console.error('Example: sigma override --reason "Director decision: ..." --director-confirm');
@@ -84,10 +108,15 @@ function runOverride(opts: { reason?: string; dryRun?: boolean; directorConfirm?
     return;
   }
 
+  // Resolved before any output beyond the blocker summary — an ambiguous
+  // target must fail the same way in --dry-run as it would for real, so the
+  // preview is trustworthy.
+  const version = versionForArtifact(chain, blocked.artifact, opts.v);
+
   console.log('\n=== Sigma Override ===\n');
   console.log(`Current phase:   ${chain.lifecycle_state}`);
   console.log(`Blocked gate:    ${blocked.gate}`);
-  console.log(`Artifact:        ${blocked.artifact}`);
+  console.log(`Artifact:        ${blocked.artifact}${version ? ` ${version}` : ''}`);
   console.log(`\nBlocker:         ${blocked.description}`);
   console.log(`\nOverride reason: ${reason}`);
 
@@ -104,7 +133,7 @@ function runOverride(opts: { reason?: string; dryRun?: boolean; directorConfirm?
     gate_bypassed: blocked.gate,
     reason,
     authorized_by: 'Director',
-    version: versionForArtifact(chain, blocked.artifact),
+    version,
   };
 
   applyOverride(chain, blocked.artifact);
@@ -123,10 +152,11 @@ export function overrideCommand(): Command {
   cmd.description('Bypass the current lifecycle gate under Director authority (recorded in Sigma/memory/overrides.jsonl)');
 
   cmd
+    .option('--v <version>', 'Artifact version this override applies to. Required when more than one DRAFT is open for the blocked artifact.')
     .option('--reason <reason>', 'Required. Describe why this override is authorized.')
     .option('--director-confirm', 'Required. Explicit Director authorization to execute the override.')
     .option('--dry-run', 'Show what would be bypassed without modifying state.')
-    .action((opts: { reason?: string; dryRun?: boolean; directorConfirm?: boolean }) => {
+    .action((opts: { v?: string; reason?: string; dryRun?: boolean; directorConfirm?: boolean }) => {
       try {
         runOverride(opts);
       } catch (e) {

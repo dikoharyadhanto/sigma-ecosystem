@@ -366,7 +366,15 @@ function runStatus(): void {
     };
     artifactLine('Intent Doc',         'DIR-INTENT', chain.intent.version,           chain.intent.state);
     artifactLine('Plan Doc',           'FMN-PLAN',   chain.plan.active_version,      chain.plan.active_state);
+    const openPlanDrafts = chain.plan.versions.filter(v => v.state === 'DRAFT');
+    if (openPlanDrafts.length > 1) {
+      console.log(`  [NOTE] ${openPlanDrafts.length} DRAFT FMN-PLANs are open: ${openPlanDrafts.map(v => v.version).join(', ')} — run: sigma plan status`);
+    }
     artifactLine('Execution Evidence', 'DEV-EXEC',   chain.exec.active_version,      chain.exec.active_state);
+    const openExecDrafts = chain.exec.versions.filter(v => v.state === 'DRAFT');
+    if (openExecDrafts.length > 1) {
+      console.log(`  [NOTE] ${openExecDrafts.length} DRAFT DEV-EXECs are open: ${openExecDrafts.map(v => v.version).join(', ')} — run: sigma exec status`);
+    }
     artifactLine('Closure Doc',        'DIR-CLOSE',  chain.close?.version ?? null,   chain.close?.state ?? null);
     artifactLine('Roadmap Doc',        'ROADMAP',    chain.roadmap?.version ?? null, chain.roadmap?.state ?? null);
 

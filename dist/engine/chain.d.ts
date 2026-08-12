@@ -156,6 +156,7 @@ export declare function createInitialChain(chainVersion: string, intentFilePath:
 export declare function hasRatifiedIntent(chain: ChainState): boolean;
 export declare function hasCleanGate2Chain(chain: ChainState): boolean;
 export declare function hasCleanGate3Chain(chain: ChainState): boolean;
+export declare function describeGate3Blockers(chain: ChainState): string[];
 export declare function validateChainSemantics(chain: ChainState): void;
 export declare function hasInvalidRuntime(chain: ChainState): boolean;
 export declare function getInvalidMarkers(chain: ChainState): InvalidMarker[];
@@ -173,7 +174,7 @@ export interface DoctorReport {
 }
 export declare function runDoctorReconciliation(chain: ChainState, overrides?: OverrideEntry[]): DoctorReport;
 export declare function nextPlanVersion(chain: ChainState, intentVersionRef: string): string;
-export declare function nextExecVersion(chain: ChainState, planVersionRef: string): string;
+export declare function nextExecVersion(_chain: ChainState, planVersionRef: string): string;
 export declare function ratifyIntent(chain: ChainState): void;
 export declare function certifyIntentDoc(chain: ChainState, absDocPath: string): void;
 export declare function isIntentDocUncertified(chain: ChainState, absDocPath: string): boolean;
@@ -194,13 +195,22 @@ export declare function registerRoadmapDraft(chain: ChainState, filePath: string
 export declare function lockActiveRoadmap(chain: ChainState): void;
 export declare function registerPlanDraft(chain: ChainState, version: string, filePath: string, intentVersionRef: string, title?: string, focus?: string): void;
 export declare function updatePlanMetadata(chain: ChainState, version: string, title?: string, focus?: string): void;
-export declare function lockOldestPlanDraft(chain: ChainState): string;
+export declare function lockPlanVersion(chain: ChainState, version: string): string;
+export type TargetResolution = {
+    kind: 'resolved';
+    version: string;
+} | {
+    kind: 'ambiguous';
+    candidates: string[];
+} | {
+    kind: 'empty';
+};
+export declare function resolveTargetVersion(versions: ArtifactVersion[], explicit: string | undefined): TargetResolution;
 export declare function registerPendingPlan(chain: ChainState, id: string, filePath: string, title?: string, focus?: string): void;
 export declare function promotePendingPlan(chain: ChainState, id: string, version: string, newFilePath: string, intentVersionRef: string, title?: string, focus?: string): void;
 export declare function supersedePlanVersion(chain: ChainState, version: string, reason: string): void;
-export declare function activatePlanDraft(chain: ChainState, version: string): void;
 export declare function registerExecDraft(chain: ChainState, version: string, filePath: string, planVersionRef: string): void;
-export declare function lockActiveExec(chain: ChainState): void;
+export declare function lockExecVersion(chain: ChainState, version: string): void;
 export declare function registerCloseDraft(chain: ChainState, filePath: string): void;
 export declare function lockActiveClose(chain: ChainState): void;
 export declare function getNextValidOperations(chain: ChainState): string[];

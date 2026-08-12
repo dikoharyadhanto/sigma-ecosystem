@@ -42,12 +42,6 @@ function getRoadmapPathIfEligible(projectRoot, chain) {
         return null;
     return path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
 }
-function getOldestDraftPlanVersion(chain) {
-    const drafts = chain.plan.versions
-        .filter(v => v.state === 'DRAFT')
-        .sort((a, b) => a.created_at.localeCompare(b.created_at));
-    return drafts[0]?.version ?? null;
-}
 function planDocPath(projectRoot, chain, version) {
     const entry = version
         ? chain.plan.versions.find(v => v.version === version)
@@ -55,6 +49,20 @@ function planDocPath(projectRoot, chain, version) {
     if (!entry)
         throw new Error(version ? `FMN-PLAN ${version} not found.` : 'No active FMN-PLAN found. Run: sigma plan new');
     return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'build', `FMN-PLAN-${entry.version}.md`));
+}
+// PLAN-IMPL-MULTIDRAFT-LOCK §8.3 (Director directive 2026-08-12) — no
+// command may act on an implicit target when ambiguity exists. `check`
+// still defaults to the active pointer when unambiguous (0 or 1 open
+// DRAFT), but must refuse and list candidates once more than one DRAFT is
+// open, exactly like `lock`.
+function assertPlanCheckUnambiguous(chain, explicit) {
+    if (explicit)
+        return;
+    const resolution = (0, chain_1.resolveTargetVersion)(chain.plan.versions, undefined);
+    if (resolution.kind === 'ambiguous') {
+        throw new Error(`${resolution.candidates.length} DRAFT FMN-PLANs are open: ${resolution.candidates.join(', ')}\n` +
+            `Specify which one to check: sigma plan check --v ${resolution.candidates[0]}`);
+    }
 }
 function planCommand() {
     const cmd = new commander_1.Command('plan');
@@ -124,21 +132,28 @@ function planCommand() {
         }
     });
     cmd.command('lock')
-        .description('Lock oldest DRAFT FMN-PLAN in FIFO order (opens Gate 2)')
-        .action(() => {
+        .description('Lock a DRAFT FMN-PLAN (opens Gate 2). Requires --v when more than one DRAFT is open.')
+        .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)')
+        .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
             (0, chain_1.assertChainCanMutate)(chain);
-            const lockTargetVersion = getOldestDraftPlanVersion(chain);
-            if (!lockTargetVersion) {
+            const resolution = (0, chain_1.resolveTargetVersion)(chain.plan.versions, opts.v);
+            if (resolution.kind === 'empty') {
                 throw new Error('No DRAFT FMN-PLAN to lock. Run: sigma plan new');
             }
+            if (resolution.kind === 'ambiguous') {
+                throw new Error(`${resolution.candidates.length} DRAFT FMN-PLANs are open: ${resolution.candidates.join(', ')}\n` +
+                    `Specify which one to lock: sigma plan lock --v ${resolution.candidates[0]}\n` +
+                    'Draft plans are no longer locked in creation order — selection is explicit.');
+            }
+            const lockTargetVersion = resolution.version;
             const absPath = planDocPath(projectRoot, chain, lockTargetVersion);
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             (0, docCheck_1.ensureSigmaDocEligible)(report, 'plan');
-            const version = (0, chain_1.lockOldestPlanDraft)(chain);
+            const version = (0, chain_1.lockPlanVersion)(chain, lockTargetVersion);
             (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
             console.log(`FMN-PLAN ${version} LOCKED. Gate 2 open. Next: sigma exec new`);
         }
@@ -147,26 +162,9 @@ function planCommand() {
             process.exit(1);
         }
     });
-    cmd.command('activate')
-        .description('Set an existing DRAFT FMN-PLAN version as the active plan (for display/status only; lock order remains FIFO)')
-        .requiredOption('--v <version>', 'DRAFT version to activate (e.g. v1.10)')
-        .action((opts) => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            (0, chain_1.assertChainCanMutate)(chain);
-            (0, chain_1.activatePlanDraft)(chain, opts.v);
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
-            console.log(`FMN-PLAN ${opts.v} set as active draft (lock order remains FIFO — sigma plan lock will lock the oldest DRAFT).`);
-        }
-        catch (e) {
-            console.error(e.message);
-            process.exit(1);
-        }
-    });
     cmd.command('supersede')
-        .description('Supersede a locked FMN-PLAN version (auto-supersedes all linked DEV-EXEC versions)')
-        .requiredOption('--v <version>', 'Version to supersede (e.g. v1)')
+        .description('Supersede an FMN-PLAN version, DRAFT or LOCKED (auto-supersedes any linked non-final DEV-EXEC)')
+        .requiredOption('--v <version>', 'Version to supersede (e.g. v1.2)')
         .requiredOption('--reason <reason>', 'Reason for superseding')
         .action((opts) => {
         try {
@@ -209,7 +207,7 @@ function planCommand() {
             const pending = chain.plan.pending.find(p => p.id === opts.id);
             if (!pending) {
                 throw new Error(`Pending plan ID "${opts.id}" not found.\n` +
-                    `Run: sigma plan queue   to list pending plans`);
+                    `Run: sigma plan status   to list pending plans`);
             }
             if (!(0, chain_1.getOperationalGate)(chain, 'gate_1_open') || chain.intent.state !== 'RATIFIED') {
                 throw new Error('GATE 1 BLOCKED: No ratified DIR-INTENT. Run: sigma intent ratify');
@@ -239,7 +237,7 @@ function planCommand() {
             if (!report.ok)
                 process.exit(1);
             console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${newVersion.replace(/^v/, '')}`);
-            console.log(`Run: sigma plan lock   to lock ${newVersion} when ready`);
+            console.log(`Run: sigma plan lock --v ${newVersion}   to lock it when ready`);
         }
         catch (e) {
             console.error(e.message);
@@ -248,11 +246,12 @@ function planCommand() {
     });
     cmd.command('check')
         .description('Validate an FMN-PLAN structure and markers')
-        .option('--v <version>', 'Check a specific FMN-PLAN version instead of the active one')
+        .option('--v <version>', 'Check a specific FMN-PLAN version. Required when more than one DRAFT is open.')
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            assertPlanCheckUnambiguous(chain, opts.v);
             const absPath = planDocPath(projectRoot, chain, opts.v);
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
@@ -264,88 +263,64 @@ function planCommand() {
             process.exit(1);
         }
     });
-    cmd.command('queue')
-        .description('Show the FIFO draft lock queue and pending plans (read-only diagnostic)')
-        .action(() => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            const drafts = chain.plan.versions
-                .filter(v => v.state === 'DRAFT')
-                .sort((a, b) => a.created_at.localeCompare(b.created_at));
-            const pending = chain.plan.pending;
-            console.log('\n=== FMN-PLAN Queue ===\n');
-            if (drafts.length === 0) {
-                console.log('Official Draft Queue: empty');
-            }
-            else {
-                console.log('Official Draft Queue (FIFO — oldest locks first):');
-                drafts.forEach((d, i) => {
-                    const date = d.created_at.slice(0, 10);
-                    console.log(`  ${i + 1}. FMN-PLAN ${d.version}  DRAFT  (created ${date})`);
-                });
-                console.log(`\nNext lock target: FMN-PLAN ${drafts[0].version}`);
-            }
-            console.log('');
-            if (pending.length === 0) {
-                console.log('Pending Plans: none');
-            }
-            else {
-                console.log('Pending Plans (not in lock queue):');
-                for (const p of pending) {
-                    const absPath = path_1.default.join(projectRoot, p.file);
-                    const title = p.title ?? readPendingTitle(absPath);
-                    const focus = p.focus ?? '(no focus)';
-                    const date = p.created_at.slice(0, 10);
-                    console.log(`  ${p.id} — ${title}  [${focus}]  (created ${date})`);
-                }
-            }
-            console.log('');
-            if (pending.length > 0) {
-                console.log(`Run: sigma plan promote --id ${pending[0].id}    to promote a pending plan to the draft queue`);
-            }
-            if (drafts.length > 0) {
-                console.log('Run: sigma plan lock                  to lock the oldest draft');
-            }
-            if (pending.length === 0 && drafts.length === 0) {
-                console.log('No plans in queue. Run: sigma plan new');
-            }
-            console.log('');
-        }
-        catch (e) {
-            console.error(e.message);
-            process.exit(1);
-        }
-    });
     cmd.command('status')
-        .description('Show active FMN-PLAN status')
+        .description('Show FMN-PLAN chain state: open DRAFTs, LOCKED plans with exec pairing, pending plans, Gate 2')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
             console.log('\n=== FMN-PLAN Status ===\n');
-            if (!chain.plan.active_version) {
-                console.log('No active PLAN. Run: sigma plan new');
+            const drafts = chain.plan.versions
+                .filter(v => v.state === 'DRAFT')
+                .sort((a, b) => a.created_at.localeCompare(b.created_at));
+            const locked = chain.plan.versions
+                .filter(v => v.state === 'LOCKED')
+                .sort((a, b) => a.created_at.localeCompare(b.created_at));
+            const supersededCount = chain.plan.versions.filter(v => v.state === 'SUPERSEDED').length;
+            if (drafts.length === 0) {
+                console.log('DRAFT: none');
             }
             else {
-                const active = chain.plan.versions.find(v => v.version === chain.plan.active_version);
-                console.log(`Version:          ${chain.plan.active_version}`);
-                console.log(`State:            ${chain.plan.active_state}`);
-                if (active?.intent_version_ref)
-                    console.log(`INTENT Ref:       ${active.intent_version_ref}`);
-                if (active?.locked_at)
-                    console.log(`Locked at:        ${active.locked_at}`);
-                if (active?.file)
-                    console.log(`File:             ${active.file}`);
+                console.log(`DRAFT (${drafts.length}):`);
+                for (const d of drafts) {
+                    console.log(`  ${d.version}  ${d.title ?? '(no title)'}  (created ${d.created_at.slice(0, 10)})`);
+                }
             }
-            const drafts = chain.plan.versions.filter(v => v.state === 'DRAFT');
-            if (drafts.length > 1) {
-                console.log(`\nDraft queue:      ${drafts.length} drafts (run: sigma plan queue)`);
+            console.log('');
+            if (locked.length === 0) {
+                console.log('LOCKED: none');
             }
-            if (chain.plan.pending.length > 0) {
-                console.log(`Pending plans:    ${chain.plan.pending.length} (run: sigma plan queue)`);
+            else {
+                console.log(`LOCKED (${locked.length}):`);
+                for (const p of locked) {
+                    const lockedExec = chain.exec.versions.find(e => e.plan_version_ref === p.version && e.state === 'LOCKED');
+                    const openExec = chain.exec.versions.find(e => e.plan_version_ref === p.version && e.state !== 'LOCKED' && e.state !== 'SUPERSEDED');
+                    const pairing = lockedExec
+                        ? `paired with DEV-EXEC ${lockedExec.version} (LOCKED)`
+                        : openExec
+                            ? `DEV-EXEC ${openExec.version} (${openExec.state}) — not yet locked`
+                            : 'no DEV-EXEC yet';
+                    console.log(`  ${p.version}  ${p.title ?? '(no title)'}  — ${pairing}`);
+                }
             }
-            console.log(`\nGate 2:           ${chain.gates.gate_2_open ? 'OPEN' : 'BLOCKED'}`);
+            console.log('');
+            if (chain.plan.pending.length === 0) {
+                console.log('Pending: none');
+            }
+            else {
+                console.log(`Pending (${chain.plan.pending.length}):`);
+                for (const p of chain.plan.pending) {
+                    const absPath = path_1.default.join(projectRoot, p.file);
+                    const title = p.title ?? readPendingTitle(absPath);
+                    const focus = p.focus ?? '(no focus)';
+                    console.log(`  ${p.id}  ${title}  [${focus}]  (created ${p.created_at.slice(0, 10)})`);
+                }
+                console.log(`Run: sigma plan promote --id ${chain.plan.pending[0].id}   to promote a pending plan`);
+            }
+            console.log(`\nGate 2: ${chain.gates.gate_2_open ? 'OPEN' : 'BLOCKED'}`);
+            if (supersededCount > 0) {
+                console.log(`(${supersededCount} SUPERSEDED plan(s) not shown above — run: sigma plan list)`);
+            }
             console.log('');
         }
         catch (e) {

@@ -628,18 +628,63 @@ export function hasCleanGate2Chain(chain: ChainState): boolean {
   );
 }
 
+// PLAN-IMPL-MULTIDRAFT-LOCK §7.1 (Director directive 2026-08-12) — replaces
+// the old single-chain definition ("the exec pointed to by active_version is
+// LOCKED and its plan is LOCKED"), which broke down once concurrent
+// workstreams became possible (registering a second DRAFT exec silently
+// wiped out a Gate 3 that was already satisfied for an unrelated plan — see
+// the plan's §1.1). No longer reads active_version at all: "INTENT is
+// RATIFIED, nothing is left in DRAFT in either domain, and every LOCKED
+// plan has exactly one LOCKED exec pointing at it." SUPERSEDED plans are
+// ignored entirely, with or without an exec — Director's explicit call.
 export function hasCleanGate3Chain(chain: ChainState): boolean {
-  const activeExec = chain.exec.versions.find(
-    v => v.version === chain.exec.active_version && v.state === 'LOCKED'
-  );
-  if (!activeExec?.plan_version_ref) return false;
+  if (chain.intent.state !== 'RATIFIED') return false;
 
-  const referencedPlan = chain.plan.versions.find(
-    v => v.version === activeExec.plan_version_ref && v.state === 'LOCKED'
-  );
-  if (!referencedPlan) return false;
+  if (chain.plan.versions.some(v => v.state === 'DRAFT')) return false;
+  if (chain.exec.versions.some(v => v.state === 'DRAFT')) return false;
 
-  return chain.intent.state === 'RATIFIED' && referencedPlan.intent_version_ref === chain.intent.version;
+  const activePlans = chain.plan.versions.filter(v => v.state === 'LOCKED');
+  if (activePlans.length === 0) return false;
+
+  return activePlans.every(plan => {
+    if (plan.intent_version_ref !== chain.intent.version) return false;
+    const pairs = chain.exec.versions.filter(
+      e => e.state === 'LOCKED' && e.plan_version_ref === plan.version
+    );
+    return pairs.length === 1;
+  });
+}
+
+// PLAN-IMPL-MULTIDRAFT-LOCK §11 (Director directive 2026-08-12) — Gate 3's
+// combined condition (§7.1 above) can fail for several independent
+// reasons at once now that concurrent workstreams are possible. A bare
+// "GATE 3 BLOCKED" forces the Director to guess; this names every entry
+// that is actually holding the gate closed, so `sigma close new` can
+// report it directly instead of the reader re-deriving it by hand.
+export function describeGate3Blockers(chain: ChainState): string[] {
+  const reasons: string[] = [];
+  if (chain.intent.state !== 'RATIFIED') {
+    reasons.push(`DIR-INTENT ${chain.intent.version} is not RATIFIED`);
+  }
+  for (const p of chain.plan.versions) {
+    if (p.state === 'DRAFT') reasons.push(`DRAFT FMN-PLAN: ${p.version}`);
+  }
+  for (const e of chain.exec.versions) {
+    if (e.state === 'DRAFT') reasons.push(`DRAFT DEV-EXEC: ${e.version} (plan ${e.plan_version_ref ?? '—'})`);
+  }
+  const lockedPlans = chain.plan.versions.filter(p => p.state === 'LOCKED');
+  if (lockedPlans.length === 0 && reasons.length === 0) {
+    reasons.push('no LOCKED FMN-PLAN exists yet');
+  }
+  for (const p of lockedPlans) {
+    const pairs = chain.exec.versions.filter(e => e.state === 'LOCKED' && e.plan_version_ref === p.version);
+    if (pairs.length === 0) {
+      reasons.push(`FMN-PLAN ${p.version} is LOCKED but has no LOCKED DEV-EXEC`);
+    } else if (pairs.length > 1) {
+      reasons.push(`FMN-PLAN ${p.version} has more than one LOCKED DEV-EXEC (${pairs.map(e => e.version).join(', ')}) — should be structurally impossible, run: sigma doctor`);
+    }
+  }
+  return reasons;
 }
 
 export function validateChainSemantics(chain: ChainState): void {
@@ -994,15 +1039,17 @@ export function nextPlanVersion(chain: ChainState, intentVersionRef: string): st
   return `v${planMajor}.${existingUnderMajor.length + 1}`;
 }
 
-// EXEC major must equal PLAN major; minor starts at 1
-export function nextExecVersion(chain: ChainState, planVersionRef: string): string {
-  const execMajor = parseMajorVersion(planVersionRef);
-  const highestExecMinor = chain.exec.versions
-    .filter(v => parseMajorVersion(v.version) === execMajor)
-    .reduce((highest, v) => Math.max(highest, parseMinorVersion(v.version)), 0);
-  const planMinorFloor = parseMinorVersion(planVersionRef) - 1;
-  const nextMinor = Math.max(highestExecMinor, planMinorFloor, 0) + 1;
-  return `v${execMajor}.${nextMinor}`;
+// PLAN-IMPL-MULTIDRAFT-LOCK §6.3 (Director directive 2026-08-12) — EXEC
+// version is always identical to the PLAN version it references, never
+// independently allocated. This is only safe because a PLAN can never
+// acquire a second EXEC: the only way an EXEC becomes SUPERSEDED is via
+// cascade from `plan supersede`/`intent supersede`, which always retires the
+// PLAN in the same step, and `exec new` only accepts LOCKED plans as
+// candidates (see the per-PLAN guard in exec.ts). So one PLAN version can
+// never produce two EXEC versions, and reusing the PLAN's version number
+// cannot collide.
+export function nextExecVersion(_chain: ChainState, planVersionRef: string): string {
+  return planVersionRef;
 }
 
 // ── INTENT Mutations ──────────────────────────────────────────────────────────
@@ -1258,6 +1305,13 @@ export function registerPlanDraft(
   chain.plan.versions.push(entry);
   chain.plan.active_version = version;
   chain.plan.active_state = 'DRAFT';
+
+  // PLAN-IMPL-MULTIDRAFT-LOCK §7.3 — a new DRAFT plan can close a Gate 3
+  // that was previously satisfied (the new Gate 3 definition requires zero
+  // open DRAFT work across both plan and exec). This function never touched
+  // gate_3_satisfied before; recomputing keeps the write internally
+  // consistent with validateChainSemantics().
+  chain.gates.gate_3_satisfied = hasCleanGate3Chain(chain);
 }
 
 export function updatePlanMetadata(chain: ChainState, version: string, title?: string, focus?: string): void {
@@ -1268,23 +1322,52 @@ export function updatePlanMetadata(chain: ChainState, version: string, title?: s
   entry.updated_at = new Date().toISOString();
 }
 
-export function lockOldestPlanDraft(chain: ChainState): string {
-  const drafts = chain.plan.versions
-    .filter(v => v.state === 'DRAFT')
-    .sort((a, b) => a.created_at.localeCompare(b.created_at));
-  if (drafts.length === 0) throw new Error('No DRAFT FMN-PLAN to lock. Run: sigma plan new');
-
-  const oldest = drafts[0];
+// PLAN-IMPL-MULTIDRAFT-LOCK §3 (Director directive 2026-08-12) — FIFO
+// lock order removed. `plan lock` now targets a specific DRAFT version
+// explicitly; the command layer resolves which version via
+// resolveTargetVersion() and only calls this once a single unambiguous
+// target is known.
+export function lockPlanVersion(chain: ChainState, version: string): string {
+  const target = chain.plan.versions.find(v => v.version === version);
+  if (!target) throw new Error(`FMN-PLAN ${version} not found. Run: sigma plan list`);
+  if (target.state !== 'DRAFT') {
+    throw new Error(`FMN-PLAN ${version} is in state "${target.state}"; lock requires DRAFT.`);
+  }
   const now = new Date().toISOString();
-  oldest.state = 'LOCKED';
-  oldest.locked_at = now;
-  oldest.updated_at = now;
+  target.state = 'LOCKED';
+  target.locked_at = now;
+  target.updated_at = now;
 
-  chain.plan.active_version = oldest.version;
+  chain.plan.active_version = version;
   chain.plan.active_state = 'LOCKED';
-  chain.gates.gate_2_open = true;
+  chain.gates.gate_2_open = hasCleanGate2Chain(chain);
+  chain.gates.gate_3_satisfied = hasCleanGate3Chain(chain);
 
-  return oldest.version;
+  return version;
+}
+
+// Resolves which DRAFT version a targeting command (`plan lock`, `exec
+// lock`, `plan check`, `exec check`) should act on, given an optional
+// explicit --v. Shared so every command applies the same ambiguity rule
+// (PLAN-IMPL-MULTIDRAFT-LOCK §8.3): zero DRAFT -> explicit "nothing to do"
+// signal, exactly one -> auto-resolved, more than one without --v ->
+// ambiguous (caller must reject and list candidates).
+export type TargetResolution =
+  | { kind: 'resolved'; version: string }
+  | { kind: 'ambiguous'; candidates: string[] }
+  | { kind: 'empty' };
+
+export function resolveTargetVersion(
+  versions: ArtifactVersion[],
+  explicit: string | undefined,
+): TargetResolution {
+  const drafts = versions.filter(v => v.state === 'DRAFT');
+  if (explicit) {
+    return { kind: 'resolved', version: explicit };
+  }
+  if (drafts.length === 0) return { kind: 'empty' };
+  if (drafts.length === 1) return { kind: 'resolved', version: drafts[0].version };
+  return { kind: 'ambiguous', candidates: drafts.map(v => v.version) };
 }
 
 export function registerPendingPlan(chain: ChainState, id: string, filePath: string, title?: string, focus?: string): void {
@@ -1322,13 +1405,25 @@ export function promotePendingPlan(
   chain.plan.versions.push(entry);
   chain.plan.active_version = version;
   chain.plan.active_state = 'DRAFT';
+
+  // PLAN-IMPL-MULTIDRAFT-LOCK §7.3 — same reasoning as registerPlanDraft():
+  // promotion is the moment a pending plan enters versions[] as a real
+  // DRAFT and can close Gate 3.
+  chain.gates.gate_3_satisfied = hasCleanGate3Chain(chain);
 }
 
+// PLAN-IMPL-MULTIDRAFT-LOCK §6.1 (Director directive 2026-08-12) — supersede
+// now accepts DRAFT as well as LOCKED, since it is the only exit for a
+// DRAFT plan the Director no longer wants (no `plan discard` — see the
+// plan's D-03). Only an already-SUPERSEDED target is rejected, to protect
+// the original supersede_reason from being silently overwritten.
 export function supersedePlanVersion(chain: ChainState, version: string, reason: string): void {
   const now = new Date().toISOString();
   const target = chain.plan.versions.find(v => v.version === version);
   if (!target) throw new Error(`PLAN version ${version} not found`);
-  if (target.state !== 'LOCKED') throw new Error(`PLAN ${version} is not LOCKED; cannot supersede`);
+  if (target.state === 'SUPERSEDED') {
+    throw new Error(`FMN-PLAN ${version} is already SUPERSEDED (reason: ${target.supersede_reason}).`);
+  }
   target.state = 'SUPERSEDED';
   target.supersede_reason = reason;
   target.updated_at = now;
@@ -1348,19 +1443,14 @@ export function supersedePlanVersion(chain: ChainState, version: string, reason:
       }
     }
   }
-}
 
-export function activatePlanDraft(chain: ChainState, version: string): void {
-  const target = chain.plan.versions.find(v => v.version === version);
-  if (!target) throw new Error(`PLAN version ${version} not found`);
-  if (target.state !== 'DRAFT') {
-    throw new Error(
-      `PLAN ${version} is in state "${target.state}"; activate requires a DRAFT version. ` +
-      `Use 'sigma plan supersede' to supersede a LOCKED version instead.`
-    );
-  }
-  chain.plan.active_version = version;
-  chain.plan.active_state = 'DRAFT';
+  // PLAN-IMPL-MULTIDRAFT-LOCK §1.3/§6.4 — supersede never recomputed gates
+  // before; superseding the last LOCKED plan left gate_2_open stale (true)
+  // until the next `sigma doctor` run, and the very next mutating command
+  // would fail validateChainSemantics(). Recomputed here so the write is
+  // always internally consistent.
+  chain.gates.gate_2_open = hasCleanGate2Chain(chain);
+  chain.gates.gate_3_satisfied = hasCleanGate3Chain(chain);
 }
 
 // ── EXEC Mutations ────────────────────────────────────────────────────────────
@@ -1368,15 +1458,17 @@ export function activatePlanDraft(chain: ChainState, version: string): void {
 // for ChainState.
 
 export function registerExecDraft(chain: ChainState, version: string, filePath: string, planVersionRef: string): void {
-  const execMajor = parseMajorVersion(version);
-  const planMajor = parseMajorVersion(planVersionRef);
   if (chain.exec.versions.some(v => v.version === version)) {
     throw new Error(`Duplicate DEV-EXEC version "${version}" already exists in progress-${chain.chain_version}.json`);
   }
-  if (execMajor !== planMajor) {
+  // PLAN-IMPL-MULTIDRAFT-LOCK §6.3 — EXEC version must now equal PLAN
+  // version exactly, not just share a major (nextExecVersion() only ever
+  // produces planVersionRef itself; this is a defensive check for anything
+  // that constructs a chain by hand, e.g. tests or reconstruct.ts).
+  if (version !== planVersionRef) {
     throw new Error(
-      `Version sync error: DEV-EXEC ${version} (major ${execMajor}) does not match FMN-PLAN ${planVersionRef} (major ${planMajor}). ` +
-      `EXEC major must equal PLAN major. Valid EXEC versions: v${planMajor}.1, v${planMajor}.2, ...`
+      `Version sync error: DEV-EXEC ${version} does not match FMN-PLAN ${planVersionRef}. ` +
+      `EXEC version must equal PLAN version exactly.`
     );
   }
   const now = new Date().toISOString();
@@ -1387,20 +1479,29 @@ export function registerExecDraft(chain: ChainState, version: string, filePath: 
   });
   chain.exec.active_version = version;
   chain.exec.active_state = 'DRAFT';
-  chain.gates.gate_3_satisfied = false;
+  // PLAN-IMPL-MULTIDRAFT-LOCK §7.3 — computed, not asserted: a new DRAFT
+  // exec always closes Gate 3 under the new definition (§7.1), but writing
+  // that as a bare `false` here is what made this function implicitly rely
+  // on "only one exec chain-wide" in the old single-workstream model.
+  chain.gates.gate_3_satisfied = hasCleanGate3Chain(chain);
 }
 
-export function lockActiveExec(chain: ChainState): void {
+// PLAN-IMPL-MULTIDRAFT-LOCK §5 (Director directive 2026-08-12) — targets a
+// specific DRAFT version explicitly, mirroring lockPlanVersion(). Replaces
+// lockActiveExec(), which always operated on exec.active_version and could
+// not coexist with concurrent DRAFT execs across different plans.
+export function lockExecVersion(chain: ChainState, version: string): void {
+  const target = chain.exec.versions.find(v => v.version === version);
+  if (!target) throw new Error(`DEV-EXEC ${version} not found. Run: sigma exec list`);
+  if (target.state !== 'DRAFT') {
+    throw new Error(`DEV-EXEC ${version} is in state "${target.state}"; lock requires DRAFT.`);
+  }
   const now = new Date().toISOString();
-  const activeVersion = chain.exec.active_version;
-  if (!activeVersion) throw new Error('No active EXEC version to lock');
+  target.state = 'LOCKED';
+  target.locked_at = now;
+  target.updated_at = now;
 
-  const active = chain.exec.versions.find(v => v.version === activeVersion);
-  if (!active) throw new Error(`EXEC version ${activeVersion} not found`);
-  active.state = 'LOCKED';
-  active.locked_at = now;
-  active.updated_at = now;
-
+  chain.exec.active_version = version;
   chain.exec.active_state = 'LOCKED';
   chain.gates.gate_3_satisfied = hasCleanGate3Chain(chain);
 }
@@ -1440,10 +1541,17 @@ export function lockActiveClose(chain: ChainState): void {
 // arbitration collapses to "exists and not SUPERSEDED" (PLAN-EVAL-01 §3.5);
 // no more `roadmap activate` suggestion (command removed).
 
+// PLAN-IMPL-MULTIDRAFT-LOCK §1.4/§8.2 (Director directive 2026-08-12) — was
+// reading chain.plan.active_state, a display pointer that can point at a
+// DRAFT even while a LOCKED plan (eligible for `exec new`) exists elsewhere
+// in the same chain; switched to hasActiveLockedPlan(), which checks the
+// real state. The FIFO-flavored "will lock X (oldest DRAFT)" hint is gone
+// along with FIFO itself (§3); `plan queue` is gone too (§8.2, absorbed
+// into `plan status`), so pending plans no longer get a dedicated hint here
+// — `plan status`/`session bootstrap` already surface them.
 export function getNextValidOperations(chain: ChainState): string[] {
   const ops: string[] = [];
   const intentRatified = chain.intent.state === 'RATIFIED';
-  const planLocked = chain.plan.active_state === 'LOCKED';
   const roadmapExists = chain.roadmap !== null && chain.roadmap.state !== 'SUPERSEDED';
 
   if (chain.intent.state === 'DRAFT') {
@@ -1458,15 +1566,13 @@ export function getNextValidOperations(chain: ChainState): string[] {
     ops.push('plan new');
   }
   const draftPlans = chain.plan.versions.filter(v => v.state === 'DRAFT');
-  if (draftPlans.length > 0) {
-    const oldest = draftPlans.sort((a, b) => a.created_at.localeCompare(b.created_at))[0];
-    ops.push(`plan lock    # will lock ${oldest.version} (oldest DRAFT)`);
-  }
-  if (chain.plan.pending.length > 0) {
-    ops.push('plan queue');
+  if (draftPlans.length === 1) {
+    ops.push(`plan lock    # will lock ${draftPlans[0].version}`);
+  } else if (draftPlans.length > 1) {
+    ops.push(`plan lock --v <version>    # ${draftPlans.length} DRAFT plans open, run: sigma plan status`);
   }
 
-  if (planLocked) {
+  if (hasActiveLockedPlan(chain)) {
     ops.push('exec new');
   }
 

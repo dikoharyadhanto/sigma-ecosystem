@@ -118,6 +118,24 @@ const DOC_SPECS = {
             'AUD_FINDINGS',
             'DIRECTORS_SUMMARY',
         ],
+        // Pre-requirement (PLAN-IMPL-MULTIDRAFT-LOCK §9.1/§9.3) — known-but-optional
+        // so FMN-PLAN docs predating this section keep passing check/lock
+        // unchanged. Promoting it to requiredSections is a separate future
+        // decision, not automatic once every project has migrated — same
+        // pattern as intent's AMENDMENT_HISTORY.
+        optionalSections: ['PRE_REQUIREMENT'],
+        sectionOrder: [
+            'SOURCE_ALIGNMENT',
+            'PRE_REQUIREMENT',
+            'WORK_ORDER_TASK_PLAN',
+            'ACCEPTANCE_CRITERIA',
+            'IMPLEMENTATION_CONSTRAINTS',
+            'PROTOCOL_OVERRIDES_EXPANSIONS',
+            'PRE_BUILD_TEST_CONTRACT',
+            'DEV_HANDOFF_INSTRUCTIONS',
+            'AUD_FINDINGS',
+            'DIRECTORS_SUMMARY',
+        ],
     },
     exec: {
         heading: 'Sigma Exec Check',
@@ -126,6 +144,29 @@ const DOC_SPECS = {
         requiredSections: [
             'SOURCE_PLAN_ALIGNMENT',
             'DEV_PRE_BUILD_ASSESSMENT',
+            'IMPLEMENTATION_APPROACH',
+            'FILES_COMPONENTS_TO_CHANGE',
+            'KEY_TECHNICAL_DECISIONS',
+            'FMN_PRE_BUILD_REVIEW',
+            'IMPLEMENTATION_WALKTHROUGH',
+            'DEVIATIONS_FROM_FMN_PLAN',
+            'DEPENDENCY_ENVIRONMENT_CHANGES',
+            'DEVELOPER_VERIFICATION',
+            'GIT_CHANGE_EVIDENCE',
+            'ISSUES_ENCOUNTERED',
+            'KNOWN_LIMITATIONS_TECH_DEBT',
+            'DEV_COMPLETION_STATEMENT',
+            'FMN_POST_BUILD_REVIEW',
+            'DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS',
+            'DIRECTORS_SUMMARY',
+        ],
+        // Technical Research (PLAN-IMPL-MULTIDRAFT-LOCK §9.2/§9.3) — same
+        // known-but-optional treatment as plan's PRE_REQUIREMENT above.
+        optionalSections: ['TECHNICAL_RESEARCH'],
+        sectionOrder: [
+            'SOURCE_PLAN_ALIGNMENT',
+            'DEV_PRE_BUILD_ASSESSMENT',
+            'TECHNICAL_RESEARCH',
             'IMPLEMENTATION_APPROACH',
             'FILES_COMPONENTS_TO_CHANGE',
             'KEY_TECHNICAL_DECISIONS',

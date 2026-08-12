@@ -41,7 +41,18 @@ function closeCommand() {
             const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
             (0, chain_1.assertChainCanMutate)(chain);
             if (!(0, chain_1.hasCleanGate3Chain)(chain)) {
-                throw new Error('GATE 3 BLOCKED: Requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED (same version chain). Run: sigma exec lock');
+                const blockers = (0, chain_1.describeGate3Blockers)(chain);
+                const lines = ['GATE 3 BLOCKED: the chain still has open work.'];
+                for (const reason of blockers)
+                    lines.push(`  ${reason}`);
+                lines.push('Every locked plan needs exactly one locked exec, and nothing may be left in DRAFT.');
+                if (blockers.some(r => r.startsWith('DRAFT FMN-PLAN'))) {
+                    lines.push('Abandon what is no longer wanted: sigma plan supersede --v <version> --reason "..."');
+                }
+                if (blockers.some(r => r.includes('has no LOCKED DEV-EXEC'))) {
+                    lines.push('Run: sigma exec new / sigma exec lock to finish an unpaired plan.');
+                }
+                throw new Error(lines.join('\n'));
             }
             if (!(0, chain_1.hasGate35Score)(chain)) {
                 throw new Error('GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. ' +

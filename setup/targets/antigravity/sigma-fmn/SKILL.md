@@ -52,6 +52,7 @@ If authorization is unclear, ask before executing.
 2. Fetch session orientation via Sigma MCP (`sigma_get_orientation`) when required by the direct planning evidence chain (or CLI fallback `sigma session bootstrap`).
 3. Brief the Director on pending plans, active roadmap direction, runtime blockers, and planning options.
 4. Stop until the Director selects the planning route.
+5. When more than one DRAFT FMN-PLAN is open (`sigma plan status`), surface every candidate version — never pick one to lock without the Director's explicit choice.
 
 ## Role Rules
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
+import path from 'path';
 import {
   setupTestEnv,
   runCli,
@@ -65,6 +66,24 @@ function makeDraftPlanWithIntent() {
   });
 }
 
+// PLAN-IMPL-MULTIDRAFT-LOCK §1.3 — same shape as makeLockedPlanNoExec() but
+// with a LOCKED roadmap, so a mutating command (`plan new`) run right after
+// supersede can actually succeed rather than tripping an unrelated Gate 1.5
+// error, making the gate-recompute regression test unambiguous.
+function makeLockedPlanNoExecWithRoadmap() {
+  const now = new Date().toISOString();
+  return makeChain('v1', {
+    lifecycle_state: 'BUILD',
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
+    plan: {
+      active_version: 'v1', active_state: 'LOCKED', pending: [],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+    },
+    gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
+  });
+}
+
 function makeLockedPlanWithMultipleExecs() {
   const now = new Date().toISOString();
   return makeChain('v1', {
@@ -106,15 +125,44 @@ describe('sigma plan supersede', () => {
     expect(result.stderr).toMatch(/not found/i);
   });
 
-  it('fails when the plan version is DRAFT, not LOCKED', () => {
+  // PLAN-IMPL-MULTIDRAFT-LOCK §6.1 (Director directive 2026-08-12) —
+  // supersede now accepts DRAFT: it is the only exit for a plan the
+  // Director no longer wants (no `plan discard`, no lock-then-supersede
+  // detour — see the plan's D-03/§1.5).
+  it('succeeds when the plan version is DRAFT — DRAFT is a valid supersede target', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeDraftPlanWithIntent());
 
-    const result = runCli('plan supersede --v v1 --reason "testing"', env.projectDir, env.homeDir);
+    const result = runCli('plan supersede --v v1 --reason "deprioritized"', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+
+    const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
+    const plan = data.plan as Record<string, unknown>;
+    const versions = plan.versions as Array<Record<string, unknown>>;
+    const v1 = versions.find(v => v.version === 'v1');
+    expect(v1?.state).toBe('SUPERSEDED');
+    expect(v1?.supersede_reason).toBe('deprioritized');
+  });
+
+  it('fails when the plan version is already SUPERSEDED, without overwriting the original reason', () => {
+    env = setupTestEnv();
+    stubProjectRootAnchor(env);
+    writeChainFixture(env, 'v1', makeLockedPlanNoExec());
+    runCli('plan supersede --v v1 --reason "original reason"', env.projectDir, env.homeDir);
+
+    const result = runCli('plan supersede --v v1 --reason "second attempt"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/not LOCKED/i);
+    expect(result.stderr).toMatch(/already SUPERSEDED/i);
+    expect(result.stderr).toMatch(/original reason/);
+
+    const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
+    const plan = data.plan as Record<string, unknown>;
+    const versions = plan.versions as Array<Record<string, unknown>>;
+    const v1 = versions.find(v => v.version === 'v1');
+    expect(v1?.supersede_reason).toBe('original reason');
   });
 
   // ── Core state mutations ────────────────────────────────────────────────────
@@ -244,6 +292,35 @@ describe('sigma plan supersede', () => {
     const statusResult = runCli('plan status', env.projectDir, env.homeDir);
 
     expect(statusResult.exitCode).toBe(0);
+  });
+
+  // PLAN-IMPL-MULTIDRAFT-LOCK §1.3/§6.4 (Director directive 2026-08-12) —
+  // supersede never recomputed gates before, so superseding the last LOCKED
+  // plan left gate_2_open stale (true) until the next `sigma doctor` run,
+  // and the very next *mutating* command would fail
+  // validateChainSemantics() with "gate is open without a LOCKED PLAN".
+  // `plan status` above is read-only and never exercised this path — this
+  // test uses a real mutating command (`plan new`) to prove the fix.
+  it('a mutating command after superseding the last LOCKED plan does not trip the stale gate_2_open bug', () => {
+    env = setupTestEnv();
+    stubProjectRootAnchor(env);
+    writeChainFixture(env, 'v1', makeLockedPlanNoExecWithRoadmap());
+    fs.writeFileSync(
+      path.join(env.projectDir, 'Sigma', 'build', 'ROADMAP-v1.md'),
+      '# ROADMAP v1\n\n<!-- SIGMA:RENDER:START:stage-overview -->\n<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->\n## 3. Stage Overview\n<!-- SIGMA:RENDER:END:stage-overview -->\n'
+    );
+
+    const supersedeResult = runCli('plan supersede --v v1 --reason "regression check"', env.projectDir, env.homeDir);
+    expect(supersedeResult.exitCode).toBe(0);
+
+    const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
+    const gates = data.gates as Record<string, unknown>;
+    expect(gates.gate_2_open).toBe(false);
+
+    const newPlanResult = runCli('plan new --title "Next stage" --focus "Next focus"', env.projectDir, env.homeDir);
+
+    expect(newPlanResult.exitCode).toBe(0);
+    expect(newPlanResult.stderr).not.toMatch(/gate is open without a LOCKED PLAN/i);
   });
 
   it('validates that active_state and active entry state are consistent after supersede', () => {

@@ -559,19 +559,17 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | roadmap  | `sigma roadmap list`               | List stages in the chain's `ROADMAP` with title, focus, and plan status        |
 | plan     | `sigma plan new`                   | Create an `FMN-PLAN` draft (requires ratified INTENT + existing ROADMAP)       |
 | plan     | `sigma plan new --pending`         | Stage a future plan without entering the version queue                         |
-| plan     | `sigma plan promote`               | Promote a pending plan into the official FIFO draft queue                      |
-| plan     | `sigma plan activate`              | Set an existing DRAFT version as the active plan (FIFO lock order unchanged)   |
-| plan     | `sigma plan queue`                 | Show the FIFO draft lock queue and pending plans (read-only)                   |
-| plan     | `sigma plan lock`                  | Lock the oldest DRAFT `FMN-PLAN` in FIFO order (opens Gate 2)                  |
-| plan     | `sigma plan check`                 | Validate `FMN-PLAN` structure and report lock readiness (read-only)            |
-| plan     | `sigma plan status`                | Show active plan version and state                                             |
+| plan     | `sigma plan promote`               | Promote a pending plan into the official draft queue                          |
+| plan     | `sigma plan lock [--v <ver>]`      | Lock a DRAFT `FMN-PLAN` (opens Gate 2); `--v` required when more than one DRAFT is open |
+| plan     | `sigma plan check [--v <ver>]`     | Validate `FMN-PLAN` structure and report lock readiness (read-only); `--v` required when ambiguous |
+| plan     | `sigma plan status`                | Show open DRAFTs, LOCKED plans with exec pairing, pending plans, Gate 2        |
 | plan     | `sigma plan list`                  | List plan versions                                                             |
 | plan     | `sigma plan update --v <ver>`      | Update stage title/focus for an existing plan (`--title`/`--focus`)            |
-| plan     | `sigma plan supersede`             | Supersede a locked plan version                                                |
-| exec     | `sigma exec new`                   | Create a `DEV-EXEC` draft                                                      |
-| exec     | `sigma exec lock`                  | Lock the active `DEV-EXEC` with Director approval                              |
-| exec     | `sigma exec check`                 | Validate `DEV-EXEC` structure and report lock readiness (read-only)            |
-| exec     | `sigma exec status`                | Show active execution version and state                                        |
+| plan     | `sigma plan supersede --v <ver>`   | Supersede a plan version, DRAFT or LOCKED (auto-cascades any linked non-final exec) |
+| exec     | `sigma exec new [--plan <ver>]`    | Create a `DEV-EXEC` draft for a LOCKED plan with no open exec (one exec per plan) |
+| exec     | `sigma exec lock [--v <ver>]`      | Lock a DRAFT `DEV-EXEC` (re-evaluates Gate 3); `--v` required when more than one DRAFT is open |
+| exec     | `sigma exec check [--v <ver>]`     | Validate `DEV-EXEC` structure and report lock readiness (read-only); `--v` required when ambiguous |
+| exec     | `sigma exec status`                | Show open DRAFTs with plan pairing, LOCKED execs, Gate 3                       |
 | exec     | `sigma exec list`                  | List execution versions                                                        |
 | close    | `sigma close new`                  | Create a `DIR-CLOSE` draft                                                     |
 | close    | `sigma close lock`                 | Lock the active `DIR-CLOSE` with Director approval                             |

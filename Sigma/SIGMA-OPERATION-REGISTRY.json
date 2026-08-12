@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-07-28T11:06:11.734457Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 54,
+  "total_operations": 52,
   "domains": [
     "close",
     "config",
@@ -464,35 +464,45 @@
       "action": "lock",
       "level": "semantic",
       "role": "director",
-      "description": "Lock the active FMN-PLAN. Gate: PLAN must be DRAFT. Sets gates.gate_2_open = true. Triggers decision memory harvest. No auto-supersede — FMN-PLAN is multi-active (manual supersede only).",
-      "inputs": [],
+      "description": "Lock a DRAFT FMN-PLAN. No more FIFO ordering — targets a specific version via --v, required whenever more than one DRAFT plan is open (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12). Auto-resolves when exactly one DRAFT exists. Sets gates.gate_2_open and recomputes gates.gate_3_satisfied. No auto-supersede — supersede is manual only (sigma plan supersede).",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "DRAFT version to lock. Required when more than one DRAFT FMN-PLAN is open; auto-resolved when exactly one exists."
+        }
+      ],
       "outputs": [
         {
           "type": "state_change",
-          "description": "plan.active_state = 'LOCKED'"
+          "description": "target plan.versions[].state = 'LOCKED'; plan.active_version/active_state updated"
         },
         {
           "type": "state_change",
-          "description": "gates.gate_2_open = true"
-        },
-        {
-          "type": "decision_harvest",
-          "description": "Decision memory harvest triggered from PLAN content"
+          "description": "gates.gate_2_open and gates.gate_3_satisfied recomputed"
         }
       ],
       "constraints": [
         {
           "type": "state",
-          "condition": "plan.active_state == 'DRAFT'",
-          "error_message": "Active FMN-PLAN is not in DRAFT state. Cannot lock."
+          "condition": "target version must be DRAFT",
+          "error_message": "FMN-PLAN <version> is in state \"<state>\"; lock requires DRAFT."
+        },
+        {
+          "type": "ambiguity",
+          "condition": "more than one DRAFT plan open and --v not provided",
+          "error_message": "N DRAFT FMN-PLANs are open: <versions>. Specify which one to lock: sigma plan lock --v <version>"
         }
       ],
       "gating": {
-        "pre_condition": "plan.active_state == 'DRAFT'",
-        "post_condition": "plan.active_state == 'LOCKED'; gates.gate_2_open == true"
+        "pre_condition": "exactly one target resolved (explicit --v or the sole DRAFT); target is DRAFT",
+        "post_condition": "target state == 'LOCKED'; gates.gate_2_open == true; gates.gate_3_satisfied recomputed"
       },
       "error_messages": {
-        "not_draft": "Active FMN-PLAN is not in DRAFT state. Cannot lock."
+        "not_draft": "FMN-PLAN <version> is in state \"<state>\"; lock requires DRAFT.",
+        "ambiguous": "N DRAFT FMN-PLANs are open: <versions>. Specify which one to lock: sigma plan lock --v <version>",
+        "none": "No DRAFT FMN-PLAN to lock. Run: sigma plan new"
       }
     },
     {
@@ -501,7 +511,7 @@
       "action": "supersede",
       "level": "semantic",
       "role": "director",
-      "description": "Explicitly supersede a locked FMN-PLAN version. Requires --v <version> and --reason <string>. Sets the target version state to SUPERSEDED. Does NOT remove the file. Does NOT auto-trigger — must be explicitly called.",
+      "description": "Explicitly supersede an FMN-PLAN version, DRAFT or LOCKED (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — DRAFT accepted since it is the only exit for a plan no longer wanted; no separate discard command). Requires --v <version> and --reason <string>. Sets the target version state to SUPERSEDED and auto-cascades any linked non-final DEV-EXEC. Recomputes gates.gate_2_open/gate_3_satisfied. Rejects a target already SUPERSEDED, to protect the original supersede_reason. Does NOT remove the file. Does NOT auto-trigger — must be explicitly called.",
       "inputs": [
         {
           "name": "--v",
@@ -530,17 +540,17 @@
         },
         {
           "type": "state",
-          "condition": "target version must be LOCKED",
-          "error_message": "Target FMN-PLAN version is not LOCKED. Only LOCKED versions can be superseded."
+          "condition": "target version must not already be SUPERSEDED",
+          "error_message": "FMN-PLAN <version> is already SUPERSEDED (reason: <original reason>)."
         }
       ],
       "gating": {
-        "pre_condition": "--v and --reason present; target version is LOCKED",
-        "post_condition": "target version state == 'SUPERSEDED'; supersede_reason recorded"
+        "pre_condition": "--v and --reason present; target version is DRAFT or LOCKED",
+        "post_condition": "target version state == 'SUPERSEDED'; supersede_reason recorded; linked non-final DEV-EXEC cascaded; gates recomputed"
       },
       "error_messages": {
         "missing_flags": "sigma plan supersede requires --v <version> and --reason <reason>",
-        "not_locked": "Target FMN-PLAN version is not LOCKED. Only LOCKED versions can be superseded."
+        "already_superseded": "FMN-PLAN <version> is already SUPERSEDED (reason: <original reason>)."
       }
     },
     {
@@ -549,12 +559,12 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show active FMN-PLAN version, state, intent_version_ref, gate_2 status, and STALE_INTENT flag.",
+      "description": "Show FMN-PLAN chain state: every open DRAFT, every LOCKED plan with its DEV-EXEC pairing, pending plans, and Gate 2 (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — replaces the old single active-pointer view; absorbs the removed `plan queue` command). Never reads plan.active_version as a selection authority.",
       "inputs": [],
       "outputs": [
         {
           "type": "display",
-          "description": "Active PLAN version, state, intent ref, gate_2 open, stale_intent flag"
+          "description": "Open DRAFT plans, LOCKED plans with exec pairing, pending plans, Gate 2 status"
         }
       ],
       "constraints": [
@@ -603,12 +613,19 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create a DEV-EXEC DRAFT from the template. Gate 2: gates.gate_2_open == true (FMN-PLAN must be LOCKED). Records plan_version_ref from the currently locked PLAN version. File named: build/DEV-EXEC-v{next_version}.md.",
-      "inputs": [],
+      "description": "Create a DEV-EXEC DRAFT from the template for a LOCKED FMN-PLAN with no open (non-final) exec — at most one non-final exec per plan (PLAN-IMPL-MULTIDRAFT-LOCK §4, Director-confirmed cardinality invariant, 2026-08-12; replaces the old chain-wide guard that blocked any new exec while any exec anywhere was non-final). --plan required when more than one LOCKED plan has no exec yet; auto-resolved when exactly one exists. EXEC version is always identical to the referenced PLAN version. File named: build/DEV-EXEC-{plan_version}.md.",
+      "inputs": [
+        {
+          "name": "--plan",
+          "type": "string",
+          "required": false,
+          "description": "LOCKED plan version to execute. Required when more than one unexecuted LOCKED plan exists."
+        }
+      ],
       "outputs": [
         {
           "type": "file",
-          "description": "Sigma/build/DEV-EXEC-v{version}.md (DRAFT)"
+          "description": "Sigma/build/DEV-EXEC-{plan_version}.md (DRAFT)"
         },
         {
           "type": "state_change",
@@ -620,14 +637,20 @@
           "type": "gate",
           "condition": "gates.gate_2_open == true",
           "error_message": "GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock"
+        },
+        {
+          "type": "cardinality",
+          "condition": "the targeted plan must not already have a non-final (non-LOCKED, non-SUPERSEDED) exec",
+          "error_message": "EXEC CONFLICT: FMN-PLAN <version> already has DEV-EXEC <version> in <state> state. A plan has at most one execution."
         }
       ],
       "gating": {
-        "pre_condition": "gates.gate_2_open == true (PLAN is LOCKED)",
-        "post_condition": "exec.active_state == 'DRAFT'; plan_version_ref recorded"
+        "pre_condition": "gates.gate_2_open == true; target plan has no open exec",
+        "post_condition": "exec.active_state == 'DRAFT'; plan_version_ref recorded; new exec version == plan version"
       },
       "error_messages": {
-        "gate_2_blocked": "GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock"
+        "gate_2_blocked": "GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock",
+        "plan_already_executing": "EXEC CONFLICT: FMN-PLAN <version> already has DEV-EXEC <version> in <state> state."
       }
     },
     {
@@ -636,35 +659,45 @@
       "action": "lock",
       "level": "semantic",
       "role": "director",
-      "description": "Lock the active DEV-EXEC. Gate: EXEC must be COMPLETED. Re-evaluates Gate 3 conditions and updates gates.gate_3_satisfied. Triggers decision memory harvest. No auto-supersede — DEV-EXEC is multi-active (manual supersede only).",
-      "inputs": [],
+      "description": "Lock a DRAFT DEV-EXEC. Targets a specific version via --v, required whenever more than one DRAFT exec is open (PLAN-IMPL-MULTIDRAFT-LOCK §5, Director directive 2026-08-12; replaces the old always-operate-on-active_version behavior, which could not coexist with concurrent DRAFT execs). Auto-resolves when exactly one DRAFT exists. Re-evaluates Gate 3 under the new definition: no DRAFT left in either plan or exec, and every LOCKED plan paired with exactly one LOCKED exec. No auto-supersede — supersede reaches DEV-EXEC only via cascade from `sigma plan supersede`.",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "DRAFT DEV-EXEC version to lock. Required when more than one DRAFT is open; auto-resolved when exactly one exists."
+        }
+      ],
       "outputs": [
         {
           "type": "state_change",
-          "description": "exec.active_state = 'LOCKED'"
+          "description": "target exec.versions[].state = 'LOCKED'; exec.active_version/active_state updated"
         },
         {
           "type": "state_change",
-          "description": "gates.gate_3_satisfied re-evaluated: true if full chain INTENT RATIFIED → PLAN LOCKED referencing it → this EXEC LOCKED referencing that PLAN"
-        },
-        {
-          "type": "decision_harvest",
-          "description": "Decision memory harvest triggered from EXEC content"
+          "description": "gates.gate_3_satisfied re-evaluated under the new definition (§7.1 of PLAN-IMPL-MULTIDRAFT-LOCK)"
         }
       ],
       "constraints": [
         {
           "type": "state",
-          "condition": "exec.active_state == 'COMPLETED'",
-          "error_message": "Active DEV-EXEC must be in COMPLETED state to lock. Run: sigma exec advance complete"
+          "condition": "target version must be DRAFT",
+          "error_message": "DEV-EXEC <version> is in state \"<state>\"; lock requires DRAFT."
+        },
+        {
+          "type": "ambiguity",
+          "condition": "more than one DRAFT exec open and --v not provided",
+          "error_message": "N DRAFT DEV-EXECs are open: <versions with plan refs>. Specify which one to lock: sigma exec lock --v <version>"
         }
       ],
       "gating": {
-        "pre_condition": "exec.active_state == 'COMPLETED'",
-        "post_condition": "exec.active_state == 'LOCKED'; gates.gate_3_satisfied re-evaluated"
+        "pre_condition": "exactly one target resolved (explicit --v or the sole DRAFT); target is DRAFT",
+        "post_condition": "target state == 'LOCKED'; gates.gate_3_satisfied re-evaluated"
       },
       "error_messages": {
-        "not_completed": "Active DEV-EXEC must be in COMPLETED state to lock. Run: sigma exec advance complete"
+        "not_draft": "DEV-EXEC <version> is in state \"<state>\"; lock requires DRAFT.",
+        "ambiguous": "N DRAFT DEV-EXECs are open: <versions with plan refs>. Specify which one to lock: sigma exec lock --v <version>",
+        "none": "No DRAFT DEV-EXEC to lock. Run: sigma exec new"
       }
     },
     {
@@ -673,12 +706,12 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show active DEV-EXEC version, state, plan_version_ref, gate_3 status, and STALE_INTENT flag.",
+      "description": "Show DEV-EXEC chain state: every open DRAFT with its plan pairing, every LOCKED exec, and Gate 3 (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — replaces the old single active-pointer view). Never reads exec.active_version as a selection authority.",
       "inputs": [],
       "outputs": [
         {
           "type": "display",
-          "description": "Active EXEC version, state, plan ref, gate_3_satisfied, stale_intent flag"
+          "description": "Open DRAFT execs with plan refs, LOCKED execs, Gate 3 status"
         }
       ],
       "constraints": [
@@ -1299,46 +1332,12 @@
       "error_messages": {}
     },
     {
-      "operation_id": "plan_activate",
-      "domain": "plan",
-      "action": "activate",
-      "level": "semantic",
-      "role": "any",
-      "description": "Set an existing DRAFT FMN-PLAN version as the active plan for display/status purposes only — FIFO lock order is unchanged; `plan lock` still locks the oldest DRAFT.",
-      "inputs": [
-        {
-          "name": "--v",
-          "type": "string",
-          "required": true,
-          "description": "DRAFT version to activate (e.g. v1.10)"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "state_change",
-          "description": "plan.active_version updated to the target DRAFT version"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "state",
-          "condition": "target version must exist and be DRAFT",
-          "error_message": "Version not found or not in DRAFT state"
-        }
-      ],
-      "gating": {
-        "pre_condition": "target plan version exists in DRAFT state",
-        "post_condition": "status/display commands report the new active plan; lock order still FIFO"
-      },
-      "error_messages": {}
-    },
-    {
       "operation_id": "plan_promote",
       "domain": "plan",
       "action": "promote",
       "level": "semantic",
       "role": "any",
-      "description": "Promote a pending plan into the official FIFO draft queue with an assigned version. Stage title/focus are written into the chain ROADMAP Stage Overview data.",
+      "description": "Promote a pending plan into the official draft queue with an assigned version (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — no longer FIFO; see plan_lock). Stage title/focus are written into the chain ROADMAP Stage Overview data.",
       "inputs": [
         {
           "name": "--id",
@@ -1362,7 +1361,7 @@
       "outputs": [
         {
           "type": "state_change",
-          "description": "Pending plan assigned a version and moved into the FIFO draft queue; ROADMAP stage row recorded"
+          "description": "Pending plan assigned a version and moved into the official draft queue; ROADMAP stage row recorded"
         }
       ],
       "constraints": [
@@ -1379,28 +1378,7 @@
       ],
       "gating": {
         "pre_condition": "pending plan exists; chain ROADMAP exists (Gate 1.5)",
-        "post_condition": "plan is an official DRAFT in FIFO lock order"
-      },
-      "error_messages": {}
-    },
-    {
-      "operation_id": "plan_queue",
-      "domain": "plan",
-      "action": "queue",
-      "level": "read_only",
-      "role": "any",
-      "description": "Show the FIFO draft lock queue and pending plans (read-only diagnostic).",
-      "inputs": [],
-      "outputs": [
-        {
-          "type": "display",
-          "description": "FIFO draft lock queue (next-to-lock first) and staged pending plans"
-        }
-      ],
-      "constraints": [],
-      "gating": {
-        "pre_condition": "none",
-        "post_condition": "none — read-only"
+        "post_condition": "plan is an official DRAFT, targetable by version via plan_lock's --v"
       },
       "error_messages": {}
     },
@@ -1616,13 +1594,13 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate a DEV-EXEC document structure and markers, and report Lock readiness for `sigma exec lock`. Read-only — never mutates state.",
+      "description": "Validate a DEV-EXEC document structure and markers, and report Lock readiness for `sigma exec lock`. Read-only — never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT exec is open (PLAN-IMPL-MULTIDRAFT-LOCK §8.3, Director directive 2026-08-12 — no command may act on an implicit target under ambiguity, including read-only ones).",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
           "required": false,
-          "description": "Check a specific DEV-EXEC version instead of the active one"
+          "description": "Check a specific DEV-EXEC version. Required when more than one DRAFT exec is open."
         }
       ],
       "outputs": [
@@ -1720,13 +1698,13 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate an FMN-PLAN document structure and markers, and report Lock readiness for `sigma plan lock`. Read-only — never mutates state.",
+      "description": "Validate an FMN-PLAN document structure and markers, and report Lock readiness for `sigma plan lock`. Read-only — never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT plan is open (PLAN-IMPL-MULTIDRAFT-LOCK §8.3, Director directive 2026-08-12 — no command may act on an implicit target under ambiguity, including read-only ones).",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
           "required": false,
-          "description": "Check a specific FMN-PLAN version instead of the active one"
+          "description": "Check a specific FMN-PLAN version. Required when more than one DRAFT plan is open."
         }
       ],
       "outputs": [

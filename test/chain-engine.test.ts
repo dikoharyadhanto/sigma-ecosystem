@@ -19,9 +19,9 @@ import {
   registerRoadmapDraft,
   lockActiveRoadmap,
   registerPlanDraft,
-  lockOldestPlanDraft,
+  lockPlanVersion,
   registerExecDraft,
-  lockActiveExec,
+  lockExecVersion,
   registerCloseDraft,
   lockActiveClose,
   hasCleanGate2Chain,
@@ -199,24 +199,24 @@ function fullyBuiltChain(): ChainState {
   const chain = lockedIntentChain();
   registerRoadmapDraft(chain, 'Sigma/build/ROADMAP-v1.md');
   registerPlanDraft(chain, 'v0.1', 'Sigma/build/FMN-PLAN-v0.1.md', 'v1', 'Title', 'Focus');
-  lockOldestPlanDraft(chain);
+  lockPlanVersion(chain, 'v0.1');
   registerExecDraft(chain, 'v0.1', 'Sigma/build/DEV-EXEC-v0.1.md', 'v0.1');
-  lockActiveExec(chain);
+  lockExecVersion(chain, 'v0.1');
   return chain;
 }
 
-describe('plan/exec gate progression (unchanged logic, retyped for ChainState)', () => {
+describe('plan/exec gate progression (targeted lock, PLAN-IMPL-MULTIDRAFT-LOCK §3/§5)', () => {
   it('gate_2_open opens on plan lock, gate_3_satisfied opens on exec lock', () => {
     const chain = lockedIntentChain();
     registerPlanDraft(chain, 'v0.1', 'Sigma/build/FMN-PLAN-v0.1.md', 'v1', 'Title', 'Focus');
     expect(hasCleanGate2Chain(chain)).toBe(false);
-    lockOldestPlanDraft(chain);
+    lockPlanVersion(chain, 'v0.1');
     expect(chain.gates.gate_2_open).toBe(true);
     expect(hasCleanGate2Chain(chain)).toBe(true);
 
     registerExecDraft(chain, 'v0.1', 'Sigma/build/DEV-EXEC-v0.1.md', 'v0.1');
     expect(hasCleanGate3Chain(chain)).toBe(false);
-    lockActiveExec(chain);
+    lockExecVersion(chain, 'v0.1');
     expect(chain.gates.gate_3_satisfied).toBe(true);
     expect(hasCleanGate3Chain(chain)).toBe(true);
   });
