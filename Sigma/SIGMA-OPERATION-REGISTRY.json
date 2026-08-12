@@ -80,12 +80,12 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Read progress-v<N>.json and display current lifecycle phase, active artifact versions and states, gate status (gate_1, gate_2, gate_3), STALE_INTENT warnings, and CLI-valid runtime operations.",
+      "description": "Read progress-v<N>.json and display current lifecycle phase, active artifact versions and states, gate status (gate_1, gate_2, gate_3), and CLI-valid runtime operations. The stale_intent/STALE_INTENT mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such warning exists.",
       "inputs": [],
       "outputs": [
         {
           "type": "display",
-          "description": "Lifecycle state, active artifact versions, gate flags, STALE_INTENT warnings"
+          "description": "Lifecycle state, active artifact versions, gate flags, open DRAFT counts for plan/exec when more than one is open"
         }
       ],
       "constraints": [
@@ -224,12 +224,12 @@
       "action": "bootstrap",
       "level": "read_only",
       "role": "any",
-      "description": "Load runtime state for session start: lifecycle phase, active artifact versions and states, pending gates, STALE_INTENT flags, CLI-valid runtime operations, and optional role-aware activation guidance. Read-only command; reference documents appear only when explicitly requested.",
+      "description": "Load runtime state for session start: lifecycle phase, active artifact versions and states, pending gates, CLI-valid runtime operations, and optional role-aware activation guidance. Read-only command; reference documents appear only when explicitly requested. The stale_intent/STALE_INTENT mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such flag exists.",
       "inputs": [],
       "outputs": [
         {
           "type": "display",
-          "description": "Session context: lifecycle state, active artifacts, gate status, STALE_INTENT flags, CLI-valid runtime operations, and optional role guidance"
+          "description": "Session context: lifecycle state, active artifacts, gate status, open DRAFT counts for plan/exec when more than one is open, CLI-valid runtime operations, and optional role guidance"
         }
       ],
       "constraints": [
@@ -262,13 +262,13 @@
         },
         {
           "type": "state_change",
-          "description": "intent.active_version set; intent.active_state = 'DRAFT'"
+          "description": "intent.state = 'DRAFT'; intent.version/file recorded (intent is a single object per chain, not a versions[] tracker — no active_version/active_state field exists)"
         }
       ],
       "constraints": [],
       "gating": {
         "pre_condition": "none",
-        "post_condition": "intent.active_state == 'DRAFT'"
+        "post_condition": "intent.state == 'DRAFT'"
       },
       "error_messages": {}
     },
@@ -377,7 +377,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show active DIR-INTENT version, state, ratified_at timestamp, and any STALE_INTENT propagation events.",
+      "description": "Show active DIR-INTENT version, state, and ratified_at timestamp. The stale_intent/STALE_INTENT mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such propagation exists.",
       "inputs": [],
       "outputs": [
         {
@@ -404,12 +404,12 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List all DIR-INTENT versions with states, ratified_at timestamps, and superseded_by references.",
+      "description": "List every chain (one row per progress-v<N>.json): chain version, intent state, lifecycle state, and Gate 1/2/3 status, marking the currently active chain. Not a versions[] listing within one chain — intent is a single object per chain file (PLAN-EVAL-01 Opsi C), so cross-chain history is the only listing that exists.",
       "inputs": [],
       "outputs": [
         {
           "type": "display",
-          "description": "All INTENT versions: version, state, timestamps, superseded_by"
+          "description": "One row per chain: version, intent state, lifecycle state, gate_1/gate_2/gate_3 status, active marker"
         }
       ],
       "constraints": [
@@ -586,12 +586,12 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List all FMN-PLAN versions with states, intent_version_refs, locked_at timestamps, and STALE_INTENT flags.",
+      "description": "List all FMN-PLAN versions with states, intent_version_refs, and created_at timestamps, plus pending plans. The stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such flag exists.",
       "inputs": [],
       "outputs": [
         {
           "type": "display",
-          "description": "All PLAN versions: version, state, intent ref, stale_intent, timestamps"
+          "description": "All PLAN versions: version, state, intent_version_ref, created_at; pending plans (id, file, created_at)"
         }
       ],
       "constraints": [
@@ -733,12 +733,12 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List all DEV-EXEC versions with states, plan_version_refs, locked_at timestamps, and STALE_INTENT flags.",
+      "description": "List all DEV-EXEC versions with states, plan_version_refs, and created_at timestamps. The stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such flag exists.",
       "inputs": [],
       "outputs": [
         {
           "type": "display",
-          "description": "All EXEC versions: version, state, plan ref, stale_intent, timestamps"
+          "description": "All EXEC versions: version, state, plan_version_ref, created_at"
         }
       ],
       "constraints": [
@@ -760,15 +760,8 @@
       "action": "new",
       "level": "semantic",
       "role": "director",
-      "description": "Create a DIR-CLOSE DRAFT from the template. Gate 3 chain: (1) active INTENT is RATIFIED; (2) at least one PLAN is LOCKED; (3) that PLAN's intent_version_ref points to the active LOCKED INTENT; (4) at least one EXEC is LOCKED; (5) that EXEC's plan_version_ref points to the qualifying PLAN. If the qualifying chain has stale_intent = true, CLI blocks — Director must pass --ack-stale-intent to proceed. Acknowledgment is recorded in the DIR-CLOSE DRAFT metadata. Sets lifecycle_state to CLOSE.",
-      "inputs": [
-        {
-          "name": "--ack-stale-intent",
-          "type": "flag",
-          "required": false,
-          "description": "Required (and only accepted) when the qualifying INTENT→PLAN→EXEC chain has stale_intent = true. Acknowledges stale chain and records it in DIR-CLOSE DRAFT metadata."
-        }
-      ],
+      "description": "Create a DIR-CLOSE DRAFT from the template. Gate 3 (PLAN-IMPL-MULTIDRAFT-LOCK §7.1, 2026-08-12): active INTENT RATIFIED, nothing left DRAFT in either plan or exec anywhere in the chain, and every LOCKED FMN-PLAN paired with exactly one LOCKED DEV-EXEC. Also requires Gate 3.5 (ARC Satisfaction Score >= 50). No --ack-stale-intent flag exists — the stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01; there is nothing to acknowledge. Sets lifecycle_state to CLOSE.",
+      "inputs": [],
       "outputs": [
         {
           "type": "file",
@@ -776,7 +769,7 @@
         },
         {
           "type": "state_change",
-          "description": "close.active_version set; close.active_state = 'DRAFT'"
+          "description": "chain.close = { version, state: 'DRAFT', ... } (close is a single object per chain, not a versions[] tracker — no active_version/active_state field exists)"
         },
         {
           "type": "state_change",
@@ -786,22 +779,22 @@
       "constraints": [
         {
           "type": "gate",
-          "condition": "Full chain: active INTENT RATIFIED → PLAN LOCKED referencing that INTENT → EXEC LOCKED referencing that PLAN",
-          "error_message": "GATE 3 BLOCKED: Requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED (same version chain)"
+          "condition": "hasCleanGate3Chain(chain): INTENT RATIFIED, no DRAFT plan/exec anywhere, every LOCKED plan paired with exactly one LOCKED exec",
+          "error_message": "GATE 3 BLOCKED: the chain still has open work. <specific blockers listed, e.g. \"DRAFT FMN-PLAN: v1.2\" or \"FMN-PLAN v1.1 is LOCKED but has no LOCKED DEV-EXEC\">"
         },
         {
-          "type": "stale",
-          "condition": "If chain has stale_intent = true, --ack-stale-intent flag must be present",
-          "error_message": "GATE 3 STALE: Qualifying chain has stale intent. Add --ack-stale-intent to acknowledge."
+          "type": "gate",
+          "condition": "hasGate35Score(chain): chain.intent.arc_score recorded and >= 50",
+          "error_message": "GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. Run: sigma intent score <n> --notes \"...\""
         }
       ],
       "gating": {
-        "pre_condition": "gate_3_satisfied == true OR (stale chain + --ack-stale-intent present)",
-        "post_condition": "close.active_state == 'DRAFT'; lifecycle_state == 'CLOSE'"
+        "pre_condition": "hasCleanGate3Chain(chain) == true; hasGate35Score(chain) == true",
+        "post_condition": "chain.close.state == 'DRAFT'; lifecycle_state == 'CLOSE'"
       },
       "error_messages": {
-        "gate_3_blocked": "GATE 3 BLOCKED: Requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED (same version chain)",
-        "gate_3_stale": "GATE 3 STALE: Qualifying chain has stale intent. Add --ack-stale-intent to acknowledge."
+        "gate_3_blocked": "GATE 3 BLOCKED: the chain still has open work. (message lists every specific blocking DRAFT/unpaired plan)",
+        "gate_3_5_blocked": "GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. Run: sigma intent score <n> --notes \"...\""
       }
     },
     {
@@ -810,32 +803,39 @@
       "action": "lock",
       "level": "semantic",
       "role": "director",
-      "description": "Lock the active DIR-CLOSE. Gate: CLOSE must be DRAFT. Auto-supersedes any prior LOCKED CLOSE (single-active policy). Transitions lifecycle_state to CLOSED. Triggers decision memory harvest.",
-      "inputs": [],
+      "description": "Lock the active DIR-CLOSE. Gate: chain.close.state must be DRAFT. Auto-locks the chain's ROADMAP as a side effect if it is still DRAFT (roadmap has no separate lock command — see 7 Gate rules / roadmap_new). Interactive APPROVE confirmation required unless --yes is passed. Transitions lifecycle_state to CLOSED. Does not supersede anything — there is no prior LOCKED DIR-CLOSE to supersede (registerCloseDraft's 1:1 guard already prevents a second non-superseded close from existing). No decision-harvest mechanism exists in the codebase.",
+      "inputs": [
+        {
+          "name": "--yes",
+          "type": "flag",
+          "required": false,
+          "description": "Skip the interactive APPROVE confirmation prompt."
+        }
+      ],
       "outputs": [
         {
           "type": "state_change",
-          "description": "close.active_state = 'LOCKED'; prior LOCKED version (if any) → 'SUPERSEDED'"
+          "description": "chain.close.state = 'LOCKED'; chain.close.locked_at recorded"
+        },
+        {
+          "type": "state_change",
+          "description": "chain.roadmap.state = 'LOCKED' if it was still DRAFT (side effect)"
         },
         {
           "type": "state_change",
           "description": "progress.lifecycle_state = 'CLOSED'"
-        },
-        {
-          "type": "decision_harvest",
-          "description": "Decision memory harvest triggered from DIR-CLOSE content"
         }
       ],
       "constraints": [
         {
           "type": "state",
-          "condition": "close.active_state == 'DRAFT'",
+          "condition": "chain.close.state == 'DRAFT'",
           "error_message": "Active DIR-CLOSE is not in DRAFT state. Cannot lock."
         }
       ],
       "gating": {
-        "pre_condition": "close.active_state == 'DRAFT'",
-        "post_condition": "close.active_state == 'LOCKED'; lifecycle_state == 'CLOSED'"
+        "pre_condition": "chain.close.state == 'DRAFT'",
+        "post_condition": "chain.close.state == 'LOCKED'; lifecycle_state == 'CLOSED'"
       },
       "error_messages": {
         "not_draft": "Active DIR-CLOSE is not in DRAFT state. Cannot lock."
@@ -847,12 +847,12 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show active DIR-CLOSE version, state, locked_at timestamp, and evidence chain references.",
+      "description": "Show DIR-CLOSE version, state, locked_at timestamp, and lifecycle_state (close is a single object per chain — no active_version/active_state field exists).",
       "inputs": [],
       "outputs": [
         {
           "type": "display",
-          "description": "Active CLOSE version, state, timestamps, evidence references"
+          "description": "CLOSE version, state, locked_at, file path, lifecycle_state"
         }
       ],
       "constraints": [
@@ -1016,7 +1016,7 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create the ROADMAP for the active chain from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/build/ and registers it in progress-v<N>.json as DRAFT — one ROADMAP per chain; `sigma roadmap lock` promotes it to LOCKED.",
+      "description": "Create the ROADMAP for the active chain from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/build/ and registers it in progress-v<N>.json as DRAFT — one ROADMAP per chain. There is no standalone `sigma roadmap lock` command; ROADMAP auto-locks as a side effect of `sigma close lock` (see close_lock).",
       "inputs": [],
       "outputs": [
         {

@@ -239,13 +239,28 @@ DIR-INTENT includes an optional **Comprehensive Research** section, marked NEEDE
 | Property | Value |
 | :--- | :--- |
 | Owner | FMN |
-| Authored by | FMN |
+| Authored by | FMN (all sections — see per-section source below) |
 | Phase | BUILD |
 | Storage | `Sigma/build/` |
 | Versioning | Tier 2 |
 | Auto-supersede | No (multi-active, manual supersede only) |
 
-A pure work order contract — 6 sections, all written before lock, all immutable after lock. Contains source alignment, work order, acceptance criteria, implementation constraints, pre-build test contract, and DEV handoff instructions.
+A build/test contract — **10 sections** (`Sigma/templates/FMN-PLAN-TEMPLATE.md`, authoritative source for this table — verify there before trusting a stale count anywhere else). Sections 1–8 are written before lock and immutable after lock; Section 9 is advisory and may be appended after lock; Section 10 is written before lock.
+
+| # | Section | Written | Immutable after lock? |
+| :--- | :--- | :--- | :--- |
+| 1 | Source Alignment | Before lock | Yes |
+| 2 | Pre-requirement | Before lock | Yes |
+| 3 | Work Order / Task Plan | Before lock | Yes |
+| 4 | Acceptance Criteria | Before lock | Yes |
+| 5 | Implementation Constraints | Before lock | Yes |
+| 6 | Protocol Overrides & Expansions | Before lock | Yes |
+| 7 | Pre-Build Test Contract | Before lock | Yes |
+| 8 | DEV Handoff Instructions | Before lock | Yes |
+| 9 | AUD Findings | Before or after lock | No — advisory, may be appended post-lock |
+| 10 | Director's Summary | Before lock | Yes |
+
+Section 9 is sourced from ARC or FMN, transcribing an AUD message or the Director relaying audit results directly — DEV must not write in this section. Every other section is FMN's own authorship.
 
 ---
 
@@ -254,13 +269,34 @@ A pure work order contract — 6 sections, all written before lock, all immutabl
 | Property | Value |
 | :--- | :--- |
 | Owner | DEV |
-| Authored by | DEV (Sections 1–12), FMN (Section 13), AUD (Section 14), Director (Sections 15–16) |
+| Authored by | DEV (most sections), FMN (pre-build and post-build review), Director (relayed through DEV in Section 17 — see per-section source below) |
 | Phase | BUILD |
 | Storage | `Sigma/build/` |
 | Versioning | Tier 2 |
 | Auto-supersede | No (multi-active, manual supersede only) |
 
-Single review document for the build cycle. DEV fills pre-build planning sections (1–4) and post-build evidence sections (5–12). FMN conducts review in Section 13 after DEV submits. AUD fills Section 14 if engaged. Director observations and decisions in Sections 15–16. Out-of-scope Director requests in Section 17.
+Single review document for the build cycle — **18 sections** (`Sigma/templates/DEV-EXEC-TEMPLATE.md`, authoritative source for this table). AUD owns no section in DEV-EXEC — AUD's review of build output happens through messaging (`sigma send`/`sigma inbox`) or an advisory review, not a reserved section here.
+
+| # | Section | Written by | Timing |
+| :--- | :--- | :--- | :--- |
+| 1 | Source Plan Alignment | DEV | Pre-build |
+| 2 | DEV Pre-Build Assessment | DEV | Pre-build |
+| 3 | Technical Research | DEV (sole discretion, no gate) | Pre-build |
+| 4 | Implementation Approach | DEV | Pre-build |
+| 5 | Files / Components To Change | DEV | Pre-build |
+| 6 | Key Technical Decisions | DEV | Pre-build |
+| 7 | FMN Pre-Build Review | FMN | Pre-build, after DEV Sections 1–6 |
+| 8 | Implementation Walkthrough | DEV | Post-build |
+| 9 | Deviations From FMN-PLAN | DEV | Post-build |
+| 10 | Dependency / Environment Changes | DEV | Post-build |
+| 11 | Developer Verification | DEV | Post-build |
+| 12 | Git / Change Evidence | DEV | Post-build |
+| 13 | Issues Encountered | DEV | Post-build |
+| 14 | Known Limitations / Technical Debt | DEV | Post-build |
+| 15 | DEV Completion Statement | DEV | Post-build |
+| 16 | FMN Post-Build Review | FMN | Post-build |
+| 17 | Director Observation Report & Minor Requests | DEV (transcribing Director's direct report) | Append-only |
+| 18 | Director's Summary | DEV or FMN | Append-only |
 
 State machine: DRAFT → LOCKED.
 
