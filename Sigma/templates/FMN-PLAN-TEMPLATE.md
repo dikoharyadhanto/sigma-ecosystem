@@ -70,13 +70,20 @@ Summarize how this plan serves the locked Director Intent.
 
 > Filled by FMN — Before lock.
 > Record any work in this plan that falls outside the scope originally
-> bounded by the locked Director Intent (e.g. an added build area, a
+> bounded by the ratified Director Intent (e.g. an added build area, a
 > relaxed constraint). This is the explicit place for scope
 > deviations/expansions — do not fold them into Implementation Constraints.
+>
+> **Status** is `NOTED` (default — recorded, not a claim that it's harmless
+> to DIR-INTENT), `AMENDMENT_REQUESTED` (escalated via
+> `Sigma/rules/ARC-RULE.md` §Amendment Request, outcome not yet final), or
+> `AMENDMENT_RATIFIED` (a real `AMD-NNN` already covers this — cite it in
+> Notes). This table is a snapshot as of lock — DIR-INTENT Section 14
+> (Amendment History) is the live record if status changes afterward.
 
-| Item | Justification | Approved By | Date |
-| :--- | :---          | :---        | :--- |
-| [...] | [...]        | [...]       | [...] |
+| Item | Justification | Status | Notes |
+| :--- | :---          | :---   | :---  |
+| [...] | [...]        | [...]  | [...] |
 
 If no override or expansion exists, write:
 

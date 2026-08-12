@@ -4,9 +4,13 @@
 // Read-only. Projects the ChainState artifact trackers. Deliberately returns
 // counts, not the full versions[] arrays (those can be large; the full history
 // is a future sigma_read_artifact concern).
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeArtifacts = computeArtifacts;
 exports.registerArtifactsTool = registerArtifactsTool;
+const path_1 = __importDefault(require("path"));
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 // Pure core (PLAN-IMPL-01 §4-A).
@@ -16,6 +20,7 @@ function computeArtifacts(root) {
     if ((0, chain_1.listChainVersions)(root).length === 0)
         return (0, shared_1.noProject)();
     const { chainVersion, data } = (0, chain_1.readActiveChain)(root);
+    const uncertified = !!(data.intent.file && (0, chain_1.isIntentDocUncertified)(data, path_1.default.join(root, data.intent.file)));
     return {
         active: true,
         active_chain: chainVersion,
@@ -24,6 +29,9 @@ function computeArtifacts(root) {
             state: data.intent.state,
             title: data.intent.title ?? null,
             focus: data.intent.focus ?? null,
+            // Amendment mechanism (Discussion 2026-08-11_0115 §5.3)
+            doc_uncertified: uncertified,
+            doc_uncertified_since: uncertified ? (data.intent.effective_amendment ?? 'ratification') : null,
         },
         roadmap: data.roadmap
             ? { version: data.roadmap.version, state: data.roadmap.state }
@@ -49,7 +57,7 @@ const zod_1 = require("zod");
 function registerArtifactsTool(server) {
     server.registerTool('sigma_list_artifacts', {
         title: 'List Sigma Artifacts',
-        description: 'Return the artifact tracker summary for the active chain: intent, roadmap, plan, exec, and close, each with version and state. Read-only. Accepts optional project_root parameter. Returns { active, active_chain, intent, roadmap, plan, exec, close, source }.',
+        description: 'Return the artifact tracker summary for the active chain: intent, roadmap, plan, exec, and close, each with version and state. intent also reports doc_uncertified — true when the DIR-INTENT file has been edited since its last ratify/amendment certification. Read-only. Accepts optional project_root parameter. Returns { active, active_chain, intent, roadmap, plan, exec, close, source }.',
         inputSchema: {
             project_root: zod_1.z
                 .string()

@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import fs from 'fs-extra';
 import path from 'path';
 import readline from 'readline';
 import {
@@ -18,6 +19,9 @@ import {
   arcScoreBand,
   hasGate35Score,
   recordArcScore,
+  certifyIntentDoc,
+  isIntentDocUncertified,
+  recordIntentAmendment,
 } from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
@@ -27,6 +31,8 @@ import {
   validateSigmaDocFile,
 } from '../utils/docCheck';
 import { renderIntentHistoryFile } from '../utils/intentHistory';
+import { renderAmendmentHistory } from '../utils/amendmentHistory';
+import { INTENT_AMENDMENT_LOG_FILE } from '../config';
 
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
 // onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
@@ -138,6 +144,7 @@ export function intentCommand(): Command {
         ensureSigmaDocEligible(report, 'intent');
         const version = chain.intent.version;
         ratifyIntent(chain);
+        certifyIntentDoc(chain, absPath); // Amendment mechanism — establishes the baseline hash a later edit is compared against
         writeChain(projectRoot, chainVersion, chain);
         renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — trigger 2/4
         console.log(`DIR-INTENT ${version} RATIFIED. Gate 1 open. Lifecycle → BUILD. Next: sigma roadmap new`);
@@ -158,6 +165,58 @@ export function intentCommand(): Command {
       console.error('Error: `sigma intent lock` has been removed. Use `sigma intent ratify`.');
       console.error('DIR-INTENT is ratified, not locked — see SIGMA_PROTOCOL §5.1.');
       process.exit(1);
+    });
+
+  // Amendment mechanism (Discussion 2026-08-11_0115 §3 item 4, Director
+  // directive 2026-08-12). Approval-class like `intent ratify`/`intent score`
+  // — no --director-confirm: the blast radius is one append-only entry on one
+  // chain, not the cross-domain cascade --director-confirm exists for
+  // (override, intent supersede). What Director authorizes here is the act of
+  // *recording* an amendment ARC has already classified as Operationalization
+  // — not a judgment on the content itself.
+  cmd.command('amendment')
+    .description('Record a Director-approved Amendment against a RATIFIED DIR-INTENT (Operationalization only — see SIGMA_PROTOCOL §5.1.1)')
+    .requiredOption('--change <change>', 'Free-text description of the change, commit-message style')
+    .option('--v <version>', 'Chain version to amend instead of the active one')
+    .action((opts: { change: string; v?: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const { chainVersion, data: chain } = opts.v
+          ? { chainVersion: opts.v, data: readChain(projectRoot, opts.v) }
+          : readActiveChain(projectRoot);
+        assertChainCanMutate(chain);
+
+        // Execution order matters: the entry must exist in chain.intent.amendments
+        // (so effective_amendment points at it) before Section 14 is rendered,
+        // and the hash must be computed AFTER rendering — otherwise the render
+        // itself would immediately trip UNCERTIFIED_EDIT on the document it just
+        // certified.
+        const entry = recordIntentAmendment(chain, opts.change);
+        const absPath = intentDocPath(projectRoot, chain);
+        renderAmendmentHistory(absPath, chain);
+        certifyIntentDoc(chain, absPath);
+        writeChain(projectRoot, chainVersion, chain);
+
+        fs.ensureFileSync(path.join(projectRoot, INTENT_AMENDMENT_LOG_FILE));
+        fs.appendFileSync(
+          path.join(projectRoot, INTENT_AMENDMENT_LOG_FILE),
+          JSON.stringify({
+            chain: chainVersion,
+            id: entry.id,
+            created_at: entry.created_at,
+            director_approved_at: entry.director_approved_at,
+            change: entry.change,
+            doc_sha256: chain.intent.certified_doc_sha256,
+          }) + '\n',
+        );
+
+        console.log(`${entry.id} recorded for DIR-INTENT ${chainVersion}.`);
+        console.log(`Change: ${entry.change}`);
+        console.log('Section 14 (Amendment History) re-rendered. Document re-certified.');
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
     });
 
   cmd.command('score <n>')
@@ -272,6 +331,10 @@ export function intentCommand(): Command {
         const absPath = intentDocPath(projectRoot, chain);
         const report = validateSigmaDocFile(absPath, 'intent');
         printSigmaDocReport(report, projectRoot);
+        if (isIntentDocUncertified(chain, absPath)) {
+          const since = chain.intent.effective_amendment ?? 'ratification';
+          console.log(`[WARNING] Doc state: UNCERTIFIED_EDIT — file edited after ${since} without a recorded amendment. Run: sigma intent amendment --change "..."`);
+        }
         if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
@@ -299,6 +362,10 @@ export function intentCommand(): Command {
         console.log(`State:      ${chain.intent.state}`);
         if (chain.intent.ratified_at) console.log(`Ratified at: ${chain.intent.ratified_at}`);
         if (chain.intent.file) console.log(`File:       ${chain.intent.file}`);
+        if (isIntentDocUncertified(chain, intentDocPath(projectRoot, chain))) {
+          const since = chain.intent.effective_amendment ?? 'ratification';
+          console.log(`Doc state:  UNCERTIFIED_EDIT (edited after ${since})`);
+        }
         console.log(`\nGate 1:     ${chain.gates.gate_1_open ? 'OPEN' : 'BLOCKED'}`);
         console.log('');
       } catch (e) {

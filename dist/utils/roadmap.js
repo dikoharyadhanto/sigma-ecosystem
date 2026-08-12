@@ -3,13 +3,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.removeSectionIfPresent = exports.replaceSection = void 0;
 exports.getStagePlansForRoadmap = getStagePlansForRoadmap;
 exports.generateStageOverview = generateStageOverview;
-exports.replaceSection = replaceSection;
-exports.removeSectionIfPresent = removeSectionIfPresent;
 exports.renderRoadmapFile = renderRoadmapFile;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const chain_1 = require("../engine/chain");
+const renderMarkers_1 = require("./renderMarkers");
+Object.defineProperty(exports, "replaceSection", { enumerable: true, get: function () { return renderMarkers_1.replaceSection; } });
+Object.defineProperty(exports, "removeSectionIfPresent", { enumerable: true, get: function () { return renderMarkers_1.removeSectionIfPresent; } });
 // PLAN-EVAL-01 Fase 3 — every entry in chain.plan.versions already belongs
 // to this chain's own INTENT by construction (registerPlanDraft() validates
 // planMajor === intentMajor - 1 against this chain's own intent at write
@@ -39,32 +41,6 @@ function generateStageOverview(chain) {
     });
     return [...header, ...rows].join('\n');
 }
-function replaceSection(content, name, replacement) {
-    const startDelim = `<!-- SIGMA:RENDER:START:${name} -->`;
-    const endDelim = `<!-- SIGMA:RENDER:END:${name} -->`;
-    const startIdx = content.indexOf(startDelim);
-    const endIdx = content.indexOf(endDelim);
-    if (startIdx === -1 || endIdx === -1) {
-        throw new Error(`Section delimiters not found for "${name}" in ROADMAP file. Template may need updating.`);
-    }
-    const before = content.substring(0, startIdx + startDelim.length);
-    const after = content.substring(endIdx);
-    return `${before}\n${replacement}\n${after}`;
-}
-function removeSectionIfPresent(content, name) {
-    const startDelim = `<!-- SIGMA:RENDER:START:${name} -->`;
-    const endDelim = `<!-- SIGMA:RENDER:END:${name} -->`;
-    const startIdx = content.indexOf(startDelim);
-    const endIdx = content.indexOf(endDelim);
-    if (startIdx === -1 || endIdx === -1)
-        return content;
-    if (endIdx < startIdx) {
-        throw new Error(`Section delimiters are out of order for "${name}" in ROADMAP file.`);
-    }
-    const before = content.substring(0, startIdx).replace(/[ \t]*\n?$/, '');
-    const after = content.substring(endIdx + endDelim.length).replace(/^\s*\n?/, '\n');
-    return `${before}${after}`;
-}
 // PLAN-EVAL-01 §3.5 — no more searching for the "ACTIVE" roadmap entry;
 // there is only ever one roadmap per chain, and it's rendered regardless of
 // its own lock state (DRAFT/LOCKED) since the Stage Overview table is
@@ -77,8 +53,8 @@ function renderRoadmapFile(roadmapPath, chain) {
         throw new Error('No ROADMAP found for this chain.');
     }
     let content = fs_extra_1.default.readFileSync(roadmapPath, 'utf8');
-    content = replaceSection(content, 'stage-overview', generateStageOverview(chain));
-    content = removeSectionIfPresent(content, 'plan-breakdown');
+    content = (0, renderMarkers_1.replaceSection)(content, 'stage-overview', generateStageOverview(chain));
+    content = (0, renderMarkers_1.removeSectionIfPresent)(content, 'plan-breakdown');
     fs_extra_1.default.writeFileSync(roadmapPath, content, 'utf8');
 }
 //# sourceMappingURL=roadmap.js.map

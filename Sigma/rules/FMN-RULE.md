@@ -34,7 +34,7 @@ FMN MUST ensure tasks are:
 - realistic,
 - aligned with Director Intent.
 
-FMN MUST NOT invent requirements beyond ratified `DIR-INTENT`.
+FMN MUST NOT invent requirements beyond ratified `DIR-INTENT`. This applies fully to the Sovereign layer (destination, values — see `SIGMA_PROTOCOL.md` §5.1.1) without exception. For the Operationalization layer, "beyond DIR-INTENT" means beyond its *last effective state*, not necessarily its literal on-disk text — a Director-approved Amendment (Section 14, `AMD-NNN`) legitimately moves that boundary without FMN having invented anything. If FMN believes DIR-INTENT itself, not just FMN-PLAN, needs to change to accommodate the Director's evolving realization of intent, that is an Amendment Request (`Sigma/rules/ARC-RULE.md` §Amendment Request) — not license to plan ahead of what is currently ratified.
 
 ---
 
@@ -161,9 +161,9 @@ FMN never becomes DEV. The role boundary exists to preserve governance integrity
 
 ### 2. FMN MUST NOT override DIR-INTENT
 
-FMN is subordinate to ratified `DIR-INTENT`.
+FMN is subordinate to ratified `DIR-INTENT` — both its Sovereign layer (destination, values) and its currently-effective Operationalization layer (concrete scope, requirements, constraints; see `SIGMA_PROTOCOL.md` §5.1.1). The two are not interchangeable in weight: Sovereign content is never FMN's to question the *validity* of, only to ask for clarification on; Operationalization content may legitimately move over time via Director-approved Amendment, and FMN reading a stale, un-amended text as immovable law is itself a governance failure — the same failure this taxonomy exists to catch.
 
-If FMN finds ambiguity, contradiction, unrealistic scope, or missing criteria, FMN must ask Director or ARC for clarification.
+If FMN finds ambiguity, contradiction, unrealistic scope, or missing criteria in Sovereign content, FMN must ask Director or ARC for clarification. If FMN believes an Operationalization item itself needs to change — not merely a PLAN-level detail — that is an Amendment Request (`Sigma/rules/ARC-RULE.md` §Amendment Request), not a private reinterpretation.
 
 FMN MUST NOT silently reinterpret Director intent.
 
@@ -255,10 +255,38 @@ FMN-PLAN contains exactly 9 sections — Sections 1-7 are pre-build and immutabl
 
 FMN MUST fill the Protocol Overrides & Expansions section whenever a plan
 introduces work outside the scope originally bounded by `DIR-INTENT` (e.g.
-an added build area, a relaxed constraint) — each entry must record the
-item, justification, who approved it, and the date. If no override or
-expansion exists, FMN should write: "No protocol overrides or scope
-expansions in this plan."
+an added build area, a relaxed constraint) — each entry records the item,
+the justification, a Status, and Notes:
+
+| Item | Justification | Status | Notes |
+| :--- | :--- | :--- | :--- |
+
+**Status vocabulary** — deliberately not "every override needs an Amendment"
+(that reintroduces exactly the heavyweight-process cost this whole model
+exists to avoid):
+
+- `NOTED` — default/common case. Recording the deviation and its rationale.
+  `NOTED` does **not** mean FMN has determined the deviation is harmless to
+  DIR-INTENT — that determination is deferred to ARC's Periodic
+  Re-evaluation, which reads accumulated `NOTED` entries across the chain as
+  raw evidence for cumulative drift. FMN records a fact; it does not get to
+  close the question of intent impact by choosing this status.
+- `AMENDMENT_REQUESTED` — escalated via `Sigma/rules/ARC-RULE.md` §Amendment
+  Request; outcome not yet final as of this PLAN's lock.
+- `AMENDMENT_RATIFIED` — a real `AMD-NNN` already exists (DIR-INTENT Section
+  14) and covers this override before the PLAN locks; cite the ID in Notes.
+
+If no override or expansion exists, FMN should write: "No protocol overrides
+or scope expansions in this plan."
+
+**This section is a snapshot, not a live field.** Section 5 is pre-build and
+immutable after lock, same as every other pre-build section — if an
+override's status changes after lock (e.g. `NOTED` later escalates to
+`AMENDMENT_RATIFIED`), that later table cannot be edited retroactively. The
+live, authoritative record of amendments is always DIR-INTENT Section 14,
+never any individual FMN-PLAN. This is the normal relationship between a
+work contract (FMN-PLAN, point-in-time) and a design document (DIR-INTENT,
+living) — not a defect to fix.
 
 Before assigning any new artifact ID (TASK-, AC-, TC-, RQ-, or similar
 numbered identifier), FMN MUST check the highest ID already minted for
@@ -312,9 +340,9 @@ DEV MUST NOT write in this section under any circumstance.
 
 ### With ARC
 
-FMN consumes locked `DIR-INTENT`.
+FMN consumes ratified `DIR-INTENT`.
 
-If strategic ambiguity prevents build planning, FMN must escalate to ARC or Director.
+If strategic ambiguity prevents build planning, FMN must escalate to ARC or Director. If the ambiguity is specifically that an Operationalization item in DIR-INTENT itself appears wrong or outdated — not just unclear — the escalation path is an Amendment Request (`ARC-RULE.md` §Amendment Request), not a private workaround in the PLAN.
 
 FMN must not create strategic intent itself.
 

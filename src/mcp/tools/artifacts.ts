@@ -4,8 +4,9 @@
 // counts, not the full versions[] arrays (those can be large; the full history
 // is a future sigma_read_artifact concern).
 
+import path from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { readActiveChain, listChainVersions } from '../../engine/chain';
+import { readActiveChain, listChainVersions, isIntentDocUncertified } from '../../engine/chain';
 import { resolveRoot, okText, noProject, SOURCE_ENGINE } from '../shared';
 
 // Pure core (PLAN-IMPL-01 §4-A).
@@ -14,6 +15,7 @@ export function computeArtifacts(root: string | null): unknown {
   if (listChainVersions(root).length === 0) return noProject();
 
   const { chainVersion, data } = readActiveChain(root);
+  const uncertified = !!(data.intent.file && isIntentDocUncertified(data, path.join(root, data.intent.file)));
 
   return {
     active: true,
@@ -23,6 +25,9 @@ export function computeArtifacts(root: string | null): unknown {
       state: data.intent.state,
       title: data.intent.title ?? null,
       focus: data.intent.focus ?? null,
+      // Amendment mechanism (Discussion 2026-08-11_0115 §5.3)
+      doc_uncertified: uncertified,
+      doc_uncertified_since: uncertified ? (data.intent.effective_amendment ?? 'ratification') : null,
     },
     roadmap: data.roadmap
       ? { version: data.roadmap.version, state: data.roadmap.state }
@@ -53,7 +58,7 @@ export function registerArtifactsTool(server: McpServer): void {
     {
       title: 'List Sigma Artifacts',
       description:
-        'Return the artifact tracker summary for the active chain: intent, roadmap, plan, exec, and close, each with version and state. Read-only. Accepts optional project_root parameter. Returns { active, active_chain, intent, roadmap, plan, exec, close, source }.',
+        'Return the artifact tracker summary for the active chain: intent, roadmap, plan, exec, and close, each with version and state. intent also reports doc_uncertified — true when the DIR-INTENT file has been edited since its last ratify/amendment certification. Read-only. Accepts optional project_root parameter. Returns { active, active_chain, intent, roadmap, plan, exec, close, source }.',
       inputSchema: {
         project_root: z
           .string()

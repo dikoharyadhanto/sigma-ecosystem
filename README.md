@@ -546,6 +546,7 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | session  | `sigma session bootstrap`          | Load project state at session start                                            |
 | intent   | `sigma intent new`                 | Create a `DIR-INTENT` draft                                                    |
 | intent   | `sigma intent ratify`              | Ratify the active `DIR-INTENT` with Director approval                          |
+| intent   | `sigma intent amendment --change`  | Record a Director-approved Amendment against a RATIFIED intent                 |
 | intent   | `sigma intent check`               | Validate `DIR-INTENT` structure and report lock readiness (read-only)          |
 | intent   | `sigma intent status`              | Show active intent version and state                                           |
 | intent   | `sigma intent list`                | List intent versions                                                           |

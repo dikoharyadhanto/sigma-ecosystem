@@ -34,6 +34,10 @@ exports.runDoctorReconciliation = runDoctorReconciliation;
 exports.nextPlanVersion = nextPlanVersion;
 exports.nextExecVersion = nextExecVersion;
 exports.ratifyIntent = ratifyIntent;
+exports.certifyIntentDoc = certifyIntentDoc;
+exports.isIntentDocUncertified = isIntentDocUncertified;
+exports.nextAmendmentId = nextAmendmentId;
+exports.recordIntentAmendment = recordIntentAmendment;
 exports.arcScoreBand = arcScoreBand;
 exports.hasGate35Score = hasGate35Score;
 exports.recordArcScore = recordArcScore;
@@ -55,6 +59,7 @@ exports.lockActiveClose = lockActiveClose;
 exports.getNextValidOperations = getNextValidOperations;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
+const crypto_1 = __importDefault(require("crypto"));
 const config_1 = require("../config");
 // ── Overrides (read by doctor.ts / override.ts) ─────────────────────────────
 function readOverrides(projectRoot) {
@@ -561,6 +566,14 @@ function runDoctorReconciliation(chain, overrides = []) {
         repaired.push(`schema_version migrated "${chain.schema_version}" → "${config_1.SCHEMA_VERSION}"`);
         chain.schema_version = config_1.SCHEMA_VERSION;
     }
+    // Deliberately NOT self-healed here, unlike every other auto-repair in this
+    // function: chain.intent.certified_doc_sha256 (Amendment mechanism —
+    // isIntentDocUncertified()). Doctor may report UNCERTIFIED_EDIT (via the
+    // command layer, which has the file path) but must never re-stamp the hash
+    // itself — that would silently certify an edit that never went through
+    // `sigma intent amendment`, which is exactly the loophole §2A's second
+    // clause exists to close. The only legitimate exits are a recorded
+    // amendment or discarding the edit (`git checkout`).
     // Auto-repair the known exec-new corruption pattern: a LOCKED exec and a
     // later DRAFT exec share the same version key. Unchanged from progress.ts.
     const execVersionsByKey = new Map();
@@ -733,6 +746,71 @@ function ratifyIntent(chain) {
     // (PLAN-EVAL-01 §3.4 — nothing else in this file to demote).
     chain.gates.gate_2_open = hasCleanGate2Chain(chain);
     chain.gates.gate_3_satisfied = hasCleanGate3Chain(chain);
+}
+// ── Amendment / Effective-State Certification ───────────────────────────────
+// Discussion 2026-08-11_0115 §5.2/5.3, Director directive 2026-08-12. Deliberately
+// separate from ratifyIntent() — that function stays a pure chain mutation with
+// no filesystem I/O (existing unit tests call it directly on in-memory chains
+// with no DIR-INTENT file on disk). Certification touches the actual artifact
+// file, so command layers (intent.ts) call it explicitly right after a
+// successful ratify or amendment, once the absolute doc path is known.
+// Stamps intent.certified_doc_sha256/certified_at from the DIR-INTENT file's
+// current on-disk bytes — the only two events allowed to make an edit
+// "effective" are ratification and a recorded amendment (§2A clause 2: no
+// other path may silently re-certify a document).
+function certifyIntentDoc(chain, absDocPath) {
+    const content = fs_extra_1.default.readFileSync(absDocPath);
+    chain.intent.certified_doc_sha256 = crypto_1.default.createHash('sha256').update(content).digest('hex');
+    chain.intent.certified_at = new Date().toISOString();
+}
+// True when the DIR-INTENT file's current bytes no longer match the last
+// certified hash — i.e. someone edited the ratified/amended document outside
+// `sigma intent amendment`. Never auto-heals (see runDoctorReconciliation()
+// comment) — the only legitimate ways out are a real amendment or `git
+// checkout` to discard the edit.
+function isIntentDocUncertified(chain, absDocPath) {
+    if (!chain.intent.certified_doc_sha256)
+        return false; // never certified yet (DRAFT, or a pre-Amendment-era chain) — nothing to compare against
+    if (!fs_extra_1.default.existsSync(absDocPath))
+        return false; // a missing file is a different, already-surfaced problem
+    const content = fs_extra_1.default.readFileSync(absDocPath);
+    const currentHash = crypto_1.default.createHash('sha256').update(content).digest('hex');
+    return currentHash !== chain.intent.certified_doc_sha256;
+}
+// Next "AMD-NNN" id — zero-padded, matching the PREFIX-NNN convention already
+// used by REQ-001/CON-001/ASM-001/RR-001 elsewhere in DIR-INTENT.
+function nextAmendmentId(chain) {
+    const n = (chain.intent.amendments?.length ?? 0) + 1;
+    return `AMD-${String(n).padStart(3, '0')}`;
+}
+// Pure schema mutation — appends one AmendmentEntry and advances
+// effective_amendment. Does not touch the filesystem: the command layer
+// (intent.ts) renders Section 14 and re-certifies the doc hash separately,
+// same division of responsibility as ratifyIntent()/certifyIntentDoc().
+function recordIntentAmendment(chain, change) {
+    if (chain.intent.state !== 'RATIFIED') {
+        throw new Error(`INTENT ${chain.intent.version} is in state "${chain.intent.state}"; amendment requires RATIFIED`);
+    }
+    const trimmed = change.trim();
+    if (!trimmed) {
+        throw new Error('--change cannot be empty');
+    }
+    // Section 14 is a pipe-table — same sanitization reason as
+    // assertRequiredIntentMetadata() for --title/--focus (intent.ts).
+    if (/[|\n\r]/.test(change)) {
+        throw new Error('--change cannot contain "|" or a newline (breaks the Amendment History table)');
+    }
+    const now = new Date().toISOString();
+    const entry = {
+        id: nextAmendmentId(chain),
+        created_at: now,
+        change: trimmed,
+        director_approved_at: now,
+    };
+    chain.intent.amendments = [...(chain.intent.amendments ?? []), entry];
+    chain.intent.effective_amendment = entry.id;
+    chain.intent.updated_at = now;
+    return entry;
 }
 // ── ARC Satisfaction Score (Gate 3.5, closure-authority PLAN-EVAL-02) ──────
 // Scale is tiered, not additive: 0-50 is output satisfaction (must be full

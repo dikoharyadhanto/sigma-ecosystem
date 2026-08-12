@@ -7,7 +7,17 @@ interface SigmaDocSpec {
   heading: string;
   expectedType: string;
   fallbackPath: string;
-  requiredSections: string[];
+  requiredSections: string[];   // missing → error, blocks lock/ratify
+  // Amendment mechanism (Fase 4) — known but not required: a document
+  // missing an optional section is still `ok`; one present is validated for
+  // order like any required section, but never triggers "unknown section
+  // marker" or "missing required section marker". Promoting an entry here
+  // into requiredSections is a separate, later decision (D-05) — not done
+  // automatically once every project has migrated.
+  optionalSections?: string[];
+  // Full expected order across required + optional. Defaults to
+  // requiredSections when omitted (every domain except intent today).
+  sectionOrder?: string[];
 }
 
 interface MarkerMatch {
@@ -125,6 +135,28 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
       'EXECUTION_DIRECTION_FOR_FMN',
       'AUD_FINDINGS_ADVISORY_ONLY',
       'FINAL_VALIDATION_CHECKLIST',
+    ],
+    // Amendment History (Fase 4) — known-but-optional so DIR-INTENT docs
+    // predating the Amendment mechanism keep passing check/ratify unchanged.
+    // sigma intent amendment auto-injects it into old docs on first use
+    // (amendmentHistory.ts); promoting it to requiredSections is a separate
+    // future decision (D-05), not automatic once every project has migrated.
+    optionalSections: ['AMENDMENT_HISTORY'],
+    sectionOrder: [
+      'INTENT_CORE',
+      'COMPREHENSIVE_RESEARCH',
+      'SUCCESS_DEFINITION',
+      'QUALITY_BAR',
+      'STRATEGIC_TRADE_OFFS',
+      'SCOPE_BOUNDARY',
+      'CONSTRAINTS_AND_PREFERENCES',
+      'TECHNICAL_AND_ARCHITECTURE_DIRECTION',
+      'FUNCTIONAL_REQUIREMENTS',
+      'RISK_AND_FAILURE_DEFINITION',
+      'EXECUTION_DIRECTION_FOR_FMN',
+      'AUD_FINDINGS_ADVISORY_ONLY',
+      'FINAL_VALIDATION_CHECKLIST',
+      'AMENDMENT_HISTORY',
     ],
   },
   roadmap: {
@@ -553,7 +585,8 @@ export function validateSigmaDocFile(
     }
   }
 
-  const unknownSectionIds = [...markerMap.keys()].filter(sectionId => !spec.requiredSections.includes(sectionId));
+  const knownSectionIds = [...spec.requiredSections, ...(spec.optionalSections ?? [])];
+  const unknownSectionIds = [...markerMap.keys()].filter(sectionId => !knownSectionIds.includes(sectionId));
   if (unknownSectionIds.length > 0) {
     warnings.push(`Unknown section markers found: ${unknownSectionIds.join(', ')}`);
   }
@@ -567,7 +600,7 @@ export function validateSigmaDocFile(
     }
   }
 
-  const orderedMarkers = spec.requiredSections
+  const orderedMarkers = (spec.sectionOrder ?? spec.requiredSections)
     .map(sectionId => markerMap.get(sectionId)?.[0] ?? null)
     .filter((marker): marker is SectionMarker => marker !== null);
   const isOrdered = orderedMarkers.every((marker, index) => {

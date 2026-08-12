@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.ACTIVATE_STATUS_FILE = exports.BRIDGE_STUBS = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
+exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.INTENT_AMENDMENT_LOG_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.ACTIVATE_STATUS_FILE = exports.BRIDGE_STUBS = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 exports.SIGMA_VERSION = '0.10.0';
@@ -32,6 +32,10 @@ exports.BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'R
 exports.ACTIVATE_STATUS_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'activate_status.json');
 exports.OVERRIDES_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'memory', 'overrides.jsonl');
 exports.OPERATIONS_LOG_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'logs', 'operations.jsonl');
+// Amendment mechanism (Discussion 2026-08-11_0115 §3 item 4) — append-only audit
+// trail for `sigma intent amendment`, mirroring operations.jsonl's role: never
+// itself the render source (chain.intent.amendments[] is), just a durable log.
+exports.INTENT_AMENDMENT_LOG_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'logs', 'intent_amendment.log');
 exports.OPERATION_REGISTRY_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'SIGMA-OPERATION-REGISTRY.json');
 exports.DOCUMENT_REGISTRY_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'SIGMA-REGISTRY.json');
 exports.PROJECT_CONFIG_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'project.config.json');

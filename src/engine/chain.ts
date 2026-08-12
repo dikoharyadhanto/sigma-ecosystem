@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import crypto from 'crypto';
 import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, OVERRIDES_FILE, SCHEMA_VERSION } from '../config';
 
 // PLAN-EVAL-01 (Core Storage & Schema Migration, Opsi C) — foundation module.
@@ -148,6 +149,21 @@ export type IntentState = 'DRAFT' | 'RATIFIED' | 'SUPERSEDED';
 export type RoadmapState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type CloseState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 
+// Amendment mechanism (Discussion 2026-08-11_0115, Director directive 2026-08-12).
+// One entry per `sigma intent amendment` call — append-only, rendered into
+// DIR-INTENT Section 14 (Amendment History) by generateAmendmentHistory().
+export interface AmendmentEntry {
+  id: string;                    // "AMD-001" — zero-padded, PREFIX-NNN
+  created_at: string;            // ISO, stamped when the command runs
+  change: string;                // free-text, commit-message style
+  // ISO, the instant Director authorized this amendment to run. Currently
+  // always equal to created_at (both stamped at command execution) — kept
+  // as a separate field because they answer different questions ("when was
+  // this recorded" vs. "when was this authorized"); a future asynchronous
+  // approval flow would need them to diverge without a schema migration.
+  director_approved_at: string;
+}
+
 export interface SingleIntentState {
   version: string; // == chain_version, always
   state: IntentState;
@@ -165,6 +181,12 @@ export interface SingleIntentState {
   arc_score?: number; // 0-100, raw — internal ARC reasoning number (closure-authority PLAN-EVAL-02)
   arc_score_notes?: string; // free-text rationale, same sanitization as title/focus
   arc_score_updated_at?: string; // ISO timestamp of last `sigma intent score`
+  // Amendment mechanism — all optional, chain files predating this feature
+  // stay valid without migration.
+  amendments?: AmendmentEntry[];       // append-only; source for Section 14 render
+  effective_amendment?: string | null; // last AMD-NNN this doc was certified against; null = certified at ratification, no amendment yet
+  certified_doc_sha256?: string;       // SHA-256 of the DIR-INTENT file at last ratify/amendment
+  certified_at?: string;               // ISO — when certified_doc_sha256 was last stamped
 }
 
 export interface SingleRoadmapState {
@@ -806,6 +828,15 @@ export function runDoctorReconciliation(chain: ChainState, overrides: OverrideEn
     chain.schema_version = SCHEMA_VERSION;
   }
 
+  // Deliberately NOT self-healed here, unlike every other auto-repair in this
+  // function: chain.intent.certified_doc_sha256 (Amendment mechanism —
+  // isIntentDocUncertified()). Doctor may report UNCERTIFIED_EDIT (via the
+  // command layer, which has the file path) but must never re-stamp the hash
+  // itself — that would silently certify an edit that never went through
+  // `sigma intent amendment`, which is exactly the loophole §2A's second
+  // clause exists to close. The only legitimate exits are a recorded
+  // amendment or discarding the edit (`git checkout`).
+
   // Auto-repair the known exec-new corruption pattern: a LOCKED exec and a
   // later DRAFT exec share the same version key. Unchanged from progress.ts.
   const execVersionsByKey = new Map<string, ArtifactVersion[]>();
@@ -999,6 +1030,75 @@ export function ratifyIntent(chain: ChainState): void {
   // (PLAN-EVAL-01 §3.4 — nothing else in this file to demote).
   chain.gates.gate_2_open = hasCleanGate2Chain(chain);
   chain.gates.gate_3_satisfied = hasCleanGate3Chain(chain);
+}
+
+// ── Amendment / Effective-State Certification ───────────────────────────────
+// Discussion 2026-08-11_0115 §5.2/5.3, Director directive 2026-08-12. Deliberately
+// separate from ratifyIntent() — that function stays a pure chain mutation with
+// no filesystem I/O (existing unit tests call it directly on in-memory chains
+// with no DIR-INTENT file on disk). Certification touches the actual artifact
+// file, so command layers (intent.ts) call it explicitly right after a
+// successful ratify or amendment, once the absolute doc path is known.
+
+// Stamps intent.certified_doc_sha256/certified_at from the DIR-INTENT file's
+// current on-disk bytes — the only two events allowed to make an edit
+// "effective" are ratification and a recorded amendment (§2A clause 2: no
+// other path may silently re-certify a document).
+export function certifyIntentDoc(chain: ChainState, absDocPath: string): void {
+  const content = fs.readFileSync(absDocPath);
+  chain.intent.certified_doc_sha256 = crypto.createHash('sha256').update(content).digest('hex');
+  chain.intent.certified_at = new Date().toISOString();
+}
+
+// True when the DIR-INTENT file's current bytes no longer match the last
+// certified hash — i.e. someone edited the ratified/amended document outside
+// `sigma intent amendment`. Never auto-heals (see runDoctorReconciliation()
+// comment) — the only legitimate ways out are a real amendment or `git
+// checkout` to discard the edit.
+export function isIntentDocUncertified(chain: ChainState, absDocPath: string): boolean {
+  if (!chain.intent.certified_doc_sha256) return false; // never certified yet (DRAFT, or a pre-Amendment-era chain) — nothing to compare against
+  if (!fs.existsSync(absDocPath)) return false; // a missing file is a different, already-surfaced problem
+  const content = fs.readFileSync(absDocPath);
+  const currentHash = crypto.createHash('sha256').update(content).digest('hex');
+  return currentHash !== chain.intent.certified_doc_sha256;
+}
+
+// Next "AMD-NNN" id — zero-padded, matching the PREFIX-NNN convention already
+// used by REQ-001/CON-001/ASM-001/RR-001 elsewhere in DIR-INTENT.
+export function nextAmendmentId(chain: ChainState): string {
+  const n = (chain.intent.amendments?.length ?? 0) + 1;
+  return `AMD-${String(n).padStart(3, '0')}`;
+}
+
+// Pure schema mutation — appends one AmendmentEntry and advances
+// effective_amendment. Does not touch the filesystem: the command layer
+// (intent.ts) renders Section 14 and re-certifies the doc hash separately,
+// same division of responsibility as ratifyIntent()/certifyIntentDoc().
+export function recordIntentAmendment(chain: ChainState, change: string): AmendmentEntry {
+  if (chain.intent.state !== 'RATIFIED') {
+    throw new Error(`INTENT ${chain.intent.version} is in state "${chain.intent.state}"; amendment requires RATIFIED`);
+  }
+  const trimmed = change.trim();
+  if (!trimmed) {
+    throw new Error('--change cannot be empty');
+  }
+  // Section 14 is a pipe-table — same sanitization reason as
+  // assertRequiredIntentMetadata() for --title/--focus (intent.ts).
+  if (/[|\n\r]/.test(change)) {
+    throw new Error('--change cannot contain "|" or a newline (breaks the Amendment History table)');
+  }
+
+  const now = new Date().toISOString();
+  const entry: AmendmentEntry = {
+    id: nextAmendmentId(chain),
+    created_at: now,
+    change: trimmed,
+    director_approved_at: now,
+  };
+  chain.intent.amendments = [...(chain.intent.amendments ?? []), entry];
+  chain.intent.effective_amendment = entry.id;
+  chain.intent.updated_at = now;
+  return entry;
 }
 
 // ── ARC Satisfaction Score (Gate 3.5, closure-authority PLAN-EVAL-02) ──────

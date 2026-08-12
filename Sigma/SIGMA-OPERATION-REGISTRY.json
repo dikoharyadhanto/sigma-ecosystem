@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-07-28T11:06:11.734457Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 53,
+  "total_operations": 54,
   "domains": [
     "close",
     "config",
@@ -308,6 +308,68 @@
       "error_messages": {
         "not_draft": "Active DIR-INTENT is not in DRAFT state. Cannot ratify."
       }
+    },
+    {
+      "operation_id": "intent_amendment",
+      "domain": "intent",
+      "action": "amendment",
+      "level": "semantic",
+      "role": "director",
+      "description": "Record a Director-approved Amendment against a RATIFIED DIR-INTENT — Operationalization content only, never Sovereign (see SIGMA_PROTOCOL.md §5.1.1). Appends one AMD-NNN entry to intent.amendments[], re-renders DIR-INTENT Section 14 (Amendment History), re-certifies the document hash (intent.certified_doc_sha256/certified_at), and appends an audit record to Sigma/logs/intent_amendment.log. Auto-injects the Section 14 skeleton into documents that predate the Amendment mechanism.",
+      "inputs": [
+        {
+          "name": "--change",
+          "type": "string",
+          "required": true,
+          "description": "Free-text description of the change, commit-message style. Must not contain \"|\" or a newline (breaks the Section 14 pipe-table)."
+        },
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "Chain version to amend instead of the active one"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "intent.amendments[] gains one AmendmentEntry {id, created_at, change, director_approved_at}; intent.effective_amendment updated to the new AMD-NNN"
+        },
+        {
+          "type": "state_change",
+          "description": "intent.certified_doc_sha256/certified_at re-stamped from the re-rendered DIR-INTENT file"
+        },
+        {
+          "type": "file",
+          "description": "DIR-INTENT Section 14 (Amendment History) re-rendered in place; every other section left untouched"
+        },
+        {
+          "type": "file",
+          "description": "Sigma/logs/intent_amendment.log gains one JSONL record"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "target chain intent.state == 'RATIFIED'",
+          "error_message": "INTENT <version> is in state \"<state>\"; amendment requires RATIFIED"
+        },
+        {
+          "type": "value",
+          "condition": "--change must not be empty/whitespace-only",
+          "error_message": "--change cannot be empty"
+        },
+        {
+          "type": "value",
+          "condition": "--change must not contain \"|\" or newline characters",
+          "error_message": "--change cannot contain \"|\" or a newline (breaks the Amendment History table)"
+        }
+      ],
+      "gating": {
+        "pre_condition": "target chain intent.state == 'RATIFIED'",
+        "post_condition": "AMD-NNN recorded; DIR-INTENT re-certified (UNCERTIFIED_EDIT cleared for this document if it was previously set)"
+      },
+      "error_messages": {}
     },
     {
       "operation_id": "intent_status",

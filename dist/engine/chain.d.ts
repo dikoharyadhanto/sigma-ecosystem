@@ -71,6 +71,12 @@ export declare function parseMinorVersion(version: string): number;
 export type IntentState = 'DRAFT' | 'RATIFIED' | 'SUPERSEDED';
 export type RoadmapState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type CloseState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
+export interface AmendmentEntry {
+    id: string;
+    created_at: string;
+    change: string;
+    director_approved_at: string;
+}
 export interface SingleIntentState {
     version: string;
     state: IntentState;
@@ -84,6 +90,10 @@ export interface SingleIntentState {
     arc_score?: number;
     arc_score_notes?: string;
     arc_score_updated_at?: string;
+    amendments?: AmendmentEntry[];
+    effective_amendment?: string | null;
+    certified_doc_sha256?: string;
+    certified_at?: string;
 }
 export interface SingleRoadmapState {
     version: string;
@@ -165,6 +175,10 @@ export declare function runDoctorReconciliation(chain: ChainState, overrides?: O
 export declare function nextPlanVersion(chain: ChainState, intentVersionRef: string): string;
 export declare function nextExecVersion(chain: ChainState, planVersionRef: string): string;
 export declare function ratifyIntent(chain: ChainState): void;
+export declare function certifyIntentDoc(chain: ChainState, absDocPath: string): void;
+export declare function isIntentDocUncertified(chain: ChainState, absDocPath: string): boolean;
+export declare function nextAmendmentId(chain: ChainState): string;
+export declare function recordIntentAmendment(chain: ChainState, change: string): AmendmentEntry;
 export declare function arcScoreBand(score: number): 'OUTPUT_INCOMPLETE' | 'SATISFIED_NEEDS_REVIEW' | 'SATISFIED_RECOMMENDED';
 export declare function hasGate35Score(chain: ChainState): boolean;
 export declare function recordArcScore(chain: ChainState, score: number, notes: string): void;

@@ -30,6 +30,10 @@ export const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md
 export const ACTIVATE_STATUS_FILE = path.join(PROJECT_SIGMA_DIR, 'activate_status.json');
 export const OVERRIDES_FILE = path.join(PROJECT_SIGMA_DIR, 'memory', 'overrides.jsonl');
 export const OPERATIONS_LOG_FILE = path.join(PROJECT_SIGMA_DIR, 'logs', 'operations.jsonl');
+// Amendment mechanism (Discussion 2026-08-11_0115 §3 item 4) — append-only audit
+// trail for `sigma intent amendment`, mirroring operations.jsonl's role: never
+// itself the render source (chain.intent.amendments[] is), just a durable log.
+export const INTENT_AMENDMENT_LOG_FILE = path.join(PROJECT_SIGMA_DIR, 'logs', 'intent_amendment.log');
 export const OPERATION_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-OPERATION-REGISTRY.json');
 export const DOCUMENT_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-REGISTRY.json');
 export const PROJECT_CONFIG_FILE = path.join(PROJECT_SIGMA_DIR, 'project.config.json');

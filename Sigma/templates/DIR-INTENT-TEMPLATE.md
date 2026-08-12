@@ -1,4 +1,4 @@
-<!-- SIGMA:DOC type=DIR_INTENT schema=3 -->
+<!-- SIGMA:DOC type=DIR_INTENT schema=4 -->
 # DIR-INTENT
 
 > **Purpose**: Captures Director intent, strategic constraints, execution direction, auditable assumptions, and minimum evidence requirements for a Sigma project.
@@ -513,3 +513,16 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 
 - [ ] If Comprehensive Research status = NEEDED, all four subsections are filled or explicitly marked N/A, and `reference-list.md` has real entries for this intent's research — not just leftover entries from earlier work.
 - [ ] If Comprehensive Research status = NEEDED, AUD Verificator Mode has reviewed source-tier compliance for the cited IDs and recorded a verdict in Section 12 — or the Director has explicitly accepted the risk of ratifying without that review.
+
+---
+
+<!-- SIGMA:DIR_INTENT:SECTION:AMENDMENT_HISTORY -->
+## 14. Amendment History
+
+> Auto-rendered by `sigma intent amendment`. Do not edit by hand — the
+> content between the delimiters is overwritten in full every time the
+> command runs. Operationalization content changes happen *in place* in
+> the relevant section above; this table is only the record of it.
+
+<!-- SIGMA:RENDER:START:amendment-history -->
+<!-- SIGMA:RENDER:END:amendment-history -->

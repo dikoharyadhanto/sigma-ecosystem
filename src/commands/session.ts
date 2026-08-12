@@ -1,8 +1,10 @@
 import { Command } from 'commander';
+import path from 'path';
 import {
   getGateStatusLabel,
   getInvalidWarningLines,
   hasInvalidRuntime,
+  isIntentDocUncertified,
 } from '../engine/chain';
 import {
   loadDocumentRegistry,
@@ -162,6 +164,10 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
   if (chain) {
     console.log('\n--- Artifact Status ---');
     console.log(artifactLine('Intent Doc',         'DIR-INTENT', fmtVersion(chain.intent.version),               chain.intent.state));
+    if (chain.intent.file && isIntentDocUncertified(chain, path.join(projectRoot, chain.intent.file))) {
+      const since = chain.intent.effective_amendment ?? 'ratification';
+      console.log(`  [WARNING] Doc state: UNCERTIFIED_EDIT (edited after ${since}) — see: sigma intent check`);
+    }
     console.log(artifactLine('Plan Doc',           'FMN-PLAN',   fmtVersion(chain.plan.active_version),          chain.plan.active_state));
     console.log(artifactLine('Execution Evidence', 'DEV-EXEC',   fmtVersion(chain.exec.active_version),          chain.exec.active_state));
     console.log(artifactLine('Closure Doc',        'DIR-CLOSE',  fmtVersion(chain.close?.version ?? null),       chain.close?.state ?? null));

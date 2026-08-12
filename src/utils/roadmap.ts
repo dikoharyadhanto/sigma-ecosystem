@@ -1,5 +1,12 @@
 import fs from 'fs-extra';
 import { ArtifactVersion, parseMinorVersion, ChainState } from '../engine/chain';
+import { replaceSection, removeSectionIfPresent } from './renderMarkers';
+
+// Re-exported for existing call sites/tests — the implementation moved to
+// renderMarkers.ts (PLAN-IMPL Fase 4) since the delimiter mechanism is no
+// longer ROADMAP-specific (DIR-INTENT Section 14 / Amendment History uses it
+// too). Behavior unchanged: both default to the "ROADMAP file" error label.
+export { replaceSection, removeSectionIfPresent };
 
 // PLAN-EVAL-01 Fase 3 — every entry in chain.plan.versions already belongs
 // to this chain's own INTENT by construction (registerPlanDraft() validates
@@ -32,34 +39,6 @@ export function generateStageOverview(chain: ChainState): string {
   });
 
   return [...header, ...rows].join('\n');
-}
-
-export function replaceSection(content: string, name: string, replacement: string): string {
-  const startDelim = `<!-- SIGMA:RENDER:START:${name} -->`;
-  const endDelim = `<!-- SIGMA:RENDER:END:${name} -->`;
-  const startIdx = content.indexOf(startDelim);
-  const endIdx = content.indexOf(endDelim);
-  if (startIdx === -1 || endIdx === -1) {
-    throw new Error(`Section delimiters not found for "${name}" in ROADMAP file. Template may need updating.`);
-  }
-  const before = content.substring(0, startIdx + startDelim.length);
-  const after = content.substring(endIdx);
-  return `${before}\n${replacement}\n${after}`;
-}
-
-export function removeSectionIfPresent(content: string, name: string): string {
-  const startDelim = `<!-- SIGMA:RENDER:START:${name} -->`;
-  const endDelim = `<!-- SIGMA:RENDER:END:${name} -->`;
-  const startIdx = content.indexOf(startDelim);
-  const endIdx = content.indexOf(endDelim);
-  if (startIdx === -1 || endIdx === -1) return content;
-  if (endIdx < startIdx) {
-    throw new Error(`Section delimiters are out of order for "${name}" in ROADMAP file.`);
-  }
-
-  const before = content.substring(0, startIdx).replace(/[ \t]*\n?$/, '');
-  const after = content.substring(endIdx + endDelim.length).replace(/^\s*\n?/, '\n');
-  return `${before}${after}`;
 }
 
 // PLAN-EVAL-01 §3.5 — no more searching for the "ACTIVE" roadmap entry;

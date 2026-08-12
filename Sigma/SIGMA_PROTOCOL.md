@@ -220,7 +220,13 @@ Ratifying DIR-INTENT locks in the Director's **destination and values** (Soverei
 
 The counterpart constraint carries equal weight: no Amendment may be used to silently alter, bypass, or reinterpret the Sovereign layer. A change that touches Sovereign content is never an Amendment — it is a new Intent Version, full stop.
 
-Every DIR-INTENT item in Section 6 (Scope Boundary) and Section 9 (Functional Requirements) is tagged Sovereign or Operationalization at authoring time (see the template's Tier Definitions, Section 1.6). Amendment mechanics (`sigma intent amendment`, Section 14 Amendment History, ARC's classification role) are specified separately once implemented — not yet part of this protocol version.
+Every DIR-INTENT item in Section 6 (Scope Boundary) and Section 9 (Functional Requirements) is tagged Sovereign or Operationalization at authoring time (see the template's Tier Definitions, Section 1.6). Item-level tagging is a template/rule-doc convention, deliberately not enforced by a CLI semantic validator — the classification judgment belongs to ARC, not a pattern match.
+
+**Mechanics**: `sigma intent amendment --change "<free text>"` (Approval-class, Director authorization required — see 16A) appends one `AMD-NNN` entry to the chain's `intent.amendments[]` and re-renders DIR-INTENT Section 14 (Amendment History) from it — a three-column table (`Amendment`, `Date`, `Change`), the same delimiter-render mechanism `sigma roadmap render` uses for ROADMAP's Stage Overview. The actual Operationalization edit happens in place, in the relevant section of the document; Section 14 is only the changelog. Non-retroactive: a ratified Amendment takes effect from its ratification date forward — it never retroactively validates work already built ahead of it.
+
+**Effective-state certification**: `sigma intent ratify` and `sigma intent amendment` are the only two commands that "certify" DIR-INTENT — each stamps `intent.certified_doc_sha256`/`certified_at` from the file's current bytes. Any DIR-INTENT edit that happens outside those two commands is detectable: the file's live hash no longer matches the certified one, and every effective-state consumer (`sigma intent status`, `sigma intent check`, `sigma session bootstrap`, MCP `sigma_get_orientation`/`sigma_list_artifacts`) surfaces this as `UNCERTIFIED_EDIT`. This is a warning, not a lock-blocking error — the only ways to clear it are a real Amendment or discarding the edit (`git checkout`); `sigma doctor` reports `UNCERTIFIED_EDIT` but never re-stamps the hash itself, since doing so would silently certify an edit that never went through Director-approved Amendment.
+
+**Classification is a prerequisite for every Amendment, regardless of origin** — FMN-requested, ARC-originated, or Director-proposed. See `Sigma/rules/ARC-RULE.md` §Amendment Request for the full flow (FMN's request path, ARC's classify-not-approve role, non-retroactivity, and structural placement relative to Petition/Admission Review).
 
 DIR-INTENT has two layers: **Intent Core** (sovereign — goals, vision, purpose; not AUD-challengeable) and **Challengeable sublayers** (route, assumptions, constraints, risk — all auditable).
 
@@ -481,7 +487,7 @@ Findings Section Authorization.
 | :--- | :--- |
 | `project` | Project initialization, status, lifecycle management |
 | `session` | Session orientation — read-only runtime context for agents when role flow or Director request requires it |
-| `intent` | DIR-INTENT lifecycle (new, ratify, score, status, list) |
+| `intent` | DIR-INTENT lifecycle (new, ratify, amendment, score, status, list) |
 | `plan` | FMN-PLAN lifecycle (new, lock, supersede, queue, status, list) |
 | `exec` | DEV-EXEC lifecycle (new, lock, supersede, status, list) |
 | `close` | DIR-CLOSE lifecycle (new, lock, status) |
@@ -522,10 +528,12 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 | :--- | :--- | :---: | :---: |
 | Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `plan queue`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check` | Yes | No |
 | Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `reference update`, `send` | Yes, within role boundary | Usually no |
-| Approval | `intent ratify`, `plan lock`, `exec lock`, `close lock`, `intent score`¹ | Only after Director approval | Yes |
+| Approval | `intent ratify`, `plan lock`, `exec lock`, `close lock`, `intent score`¹, `intent amendment`² | Only after Director approval | Yes |
 | Risk / Supersession | `intent supersede --director-confirm`, `plan supersede`, destructive/reset | Only after Director approval | Yes |
 
 ¹ `intent score` is Approval-class with a narrower scope than the others in its row: what the Director approves is the act of **committing** the score to `progress-v<N>.json` — not the **content** of the score itself, which ARC already reasoned through and reported in conversation beforehand (see `Sigma/rules/ARC-RULE.md` §ARC Satisfaction Score Methodology). Authorization language for this command is deliberately distinct from ordinary Approval phrasing (e.g. "catat skor", "masukkan skor ke sigma") — not "do you agree with this score."
+
+² `intent amendment` follows the same narrow-scope pattern as `intent score`: what the Director authorizes is the act of **recording** an Amendment whose classification (Sovereign vs. Operationalization) ARC has already performed independently — not a re-judgment of that classification. Unlike `intent supersede`, it does not require `--director-confirm`: the blast radius is a single append-only entry on one chain, not a cross-domain cascade.
 
 ### Explicit Approval Rule
 

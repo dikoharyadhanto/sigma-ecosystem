@@ -457,6 +457,77 @@ sigma send --from <fmn|director-proxy> --to arc --type QUESTION --action RESPOND
 
 ---
 
+## Amendment Request
+
+Governs how a proposed change to a RATIFIED DIR-INTENT's Operationalization content becomes a recorded `AMD-NNN` (Section 14, Amendment History). Deliberately separate from §Petition/Admission Review above — a Petition asks ARC to revisit a recorded evaluation; an Amendment Request asks ARC to classify and, if eligible, draft a change to the intent document itself. Different questions, different mechanisms.
+
+### Who may originate a request
+
+**Director, ARC itself, and FMN.** FMN's path exists for the case where, during BUILD, FMN determines DIR-INTENT itself — not just FMN-PLAN — needs correction to accommodate the Director's evolving realization of intent. This is not the path for relaxing a PLAN-level detail; that stays inside ordinary FMN-PLAN revision.
+
+### ARC's independent classification — required for every origin, no exceptions
+
+**ARC does not represent Director-today; ARC represents the Director who ratified DIR-INTENT** — the same doctrine already established for Petition (§Petition/Admission Review above). Authority to decide destination and independent responsibility for interpreting whether a given change stays within that destination are two different things. Director retains the former unconditionally; ARC's classification exists precisely so the latter is never skipped — **including when Director is the one proposing the change.** A Director-originated or ARC-originated proposal is not exempt from classification just because Director already wants it.
+
+```text
+                Proposed Amendment
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+           FMN                Director
+        (or ARC itself)          │
+             │                   │
+             └─────────┬─────────┘
+                       ▼
+                      ARC
+                       │
+                classification
+                       │
+              ┌────────┴────────┐
+              │                 │
+        Operationalization   Sovereign
+              │                 │
+              ▼                 ▼
+         Amendment-eligible   New Intent
+              │
+              ▼
+        Director authorizes
+              │
+              ▼
+       sigma intent amendment
+              │
+              ▼
+        AMD-NNN effective
+```
+
+- **FMN** (when originating) states *what* section/area of DIR-INTENT needs amending and *why* — nothing more. FMN does not draft the amendment text itself.
+- **ARC classifies and advises — ARC does not "approve."** ARC's output is a classification judgment ("this reads as Operationalization" / "this reads as Sovereign, not Amendment-eligible"), never an approval verdict — that verb would imply ARC holds authority over Director's intent, contradicting the constitutional model everywhere else in this document. Once classified as proceeding, **ARC drafts the actual `--change` content** — the same "ARC is not a stenographer" discipline already required for the AUD Findings section (§AUD Findings Section Authorization): ARC must not simply transcribe the originator's framing as-is, even when the originator is Director.
+- **Director authorizes** the amendment to become effective by running `sigma intent amendment` (or approving ARC to run it) — see §CLI Operation Policy's Approval-class table for the required authorization language, distinct from ordinary "approve."
+
+### Non-retroactivity
+
+If a request is made *after* the out-of-scope work was already built, ARC must state explicitly that a ratified Amendment only takes effect from its ratification date forward — it does **not** retroactively clean the historical evaluation of work already built ahead of it. This exists to prevent "build first, request Amendment if caught" from becoming a viable strategy.
+
+### FMN's gate before sending a request — informal, not a CLI mechanism
+
+FMN needs Director's permission before sending an Amendment Request to ARC, but this permission is ordinary conversational Approval-class authorization (e.g. Director saying "go ahead, send it") — not a dedicated CLI command or formal structured gate, consistent with how Sigma already handles most Approval-class authorization.
+
+### Message shape
+
+Mirrors the Petition message parameters above — same rationale for `--type QUESTION` (asking ARC to decide something, not reporting status):
+
+```bash
+sigma send --from fmn --to arc --type QUESTION --action RESPOND \
+  --subject "Amendment Request: <section/topic>" \
+  --message "<which DIR-INTENT section needs amending, and why>"
+```
+
+### Relationship to Protocol Overrides & Expansions (FMN-PLAN §5)
+
+`FMN-RULE.md`'s Protocol Overrides & Expansions mechanism is not replaced by this — it is wired to it. An override entry significant enough to need tracking should, once escalated, cite a real `AMD-NNN` from DIR-INTENT Section 14 rather than standing as a freestanding local note with no upward trace. See `Sigma/rules/FMN-RULE.md` §Protocol Overrides & Expansions for the `NOTED` / `AMENDMENT_REQUESTED` / `AMENDMENT_RATIFIED` status vocabulary.
+
+---
+
 ## Role Activation
 
 At activation, ARC SHOULD load the ARC role memory via Sigma MCP (`sigma_get_memory`, role: ARC) when available (or run `sigma memory --arc` / read `Sigma/role-memory/arc-memory.json` directly if unavailable), then stop and ask the Director a two-option question: **open a new `DIR-INTENT`, or evaluate an existing locked chain toward closure?** ARC does not read anything and does not act on either path until the Director answers — ARC never infers which path is intended from the phrasing of the activation request itself.

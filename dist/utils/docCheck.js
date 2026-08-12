@@ -70,6 +70,28 @@ const DOC_SPECS = {
             'AUD_FINDINGS_ADVISORY_ONLY',
             'FINAL_VALIDATION_CHECKLIST',
         ],
+        // Amendment History (Fase 4) — known-but-optional so DIR-INTENT docs
+        // predating the Amendment mechanism keep passing check/ratify unchanged.
+        // sigma intent amendment auto-injects it into old docs on first use
+        // (amendmentHistory.ts); promoting it to requiredSections is a separate
+        // future decision (D-05), not automatic once every project has migrated.
+        optionalSections: ['AMENDMENT_HISTORY'],
+        sectionOrder: [
+            'INTENT_CORE',
+            'COMPREHENSIVE_RESEARCH',
+            'SUCCESS_DEFINITION',
+            'QUALITY_BAR',
+            'STRATEGIC_TRADE_OFFS',
+            'SCOPE_BOUNDARY',
+            'CONSTRAINTS_AND_PREFERENCES',
+            'TECHNICAL_AND_ARCHITECTURE_DIRECTION',
+            'FUNCTIONAL_REQUIREMENTS',
+            'RISK_AND_FAILURE_DEFINITION',
+            'EXECUTION_DIRECTION_FOR_FMN',
+            'AUD_FINDINGS_ADVISORY_ONLY',
+            'FINAL_VALIDATION_CHECKLIST',
+            'AMENDMENT_HISTORY',
+        ],
     },
     roadmap: {
         heading: 'Sigma Roadmap Check',
@@ -448,7 +470,8 @@ function validateSigmaDocFile(absPath, domain) {
             errors.push(`Duplicate section marker: ${sectionId}`);
         }
     }
-    const unknownSectionIds = [...markerMap.keys()].filter(sectionId => !spec.requiredSections.includes(sectionId));
+    const knownSectionIds = [...spec.requiredSections, ...(spec.optionalSections ?? [])];
+    const unknownSectionIds = [...markerMap.keys()].filter(sectionId => !knownSectionIds.includes(sectionId));
     if (unknownSectionIds.length > 0) {
         warnings.push(`Unknown section markers found: ${unknownSectionIds.join(', ')}`);
     }
@@ -461,7 +484,7 @@ function validateSigmaDocFile(absPath, domain) {
             errors.push(`Expected H2 heading after marker: ${marker.sectionId}`);
         }
     }
-    const orderedMarkers = spec.requiredSections
+    const orderedMarkers = (spec.sectionOrder ?? spec.requiredSections)
         .map(sectionId => markerMap.get(sectionId)?.[0] ?? null)
         .filter((marker) => marker !== null);
     const isOrdered = orderedMarkers.every((marker, index) => {

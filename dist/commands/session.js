@@ -1,7 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sessionCommand = sessionCommand;
 const commander_1 = require("commander");
+const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const registry_1 = require("../engine/registry");
 const mailbox_1 = require("../engine/mailbox");
@@ -137,6 +141,10 @@ function runBootstrap(opts) {
     if (chain) {
         console.log('\n--- Artifact Status ---');
         console.log(artifactLine('Intent Doc', 'DIR-INTENT', fmtVersion(chain.intent.version), chain.intent.state));
+        if (chain.intent.file && (0, chain_1.isIntentDocUncertified)(chain, path_1.default.join(projectRoot, chain.intent.file))) {
+            const since = chain.intent.effective_amendment ?? 'ratification';
+            console.log(`  [WARNING] Doc state: UNCERTIFIED_EDIT (edited after ${since}) — see: sigma intent check`);
+        }
         console.log(artifactLine('Plan Doc', 'FMN-PLAN', fmtVersion(chain.plan.active_version), chain.plan.active_state));
         console.log(artifactLine('Execution Evidence', 'DEV-EXEC', fmtVersion(chain.exec.active_version), chain.exec.active_state));
         console.log(artifactLine('Closure Doc', 'DIR-CLOSE', fmtVersion(chain.close?.version ?? null), chain.close?.state ?? null));

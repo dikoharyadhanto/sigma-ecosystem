@@ -8,9 +8,11 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import path from 'path';
 import {
   getGateStatusLabel,
   getInvalidWarningLines,
+  isIntentDocUncertified,
   InvalidGateKey,
 } from '../../engine/chain';
 import { readIndex, getUnreadForRole } from '../../engine/mailbox';
@@ -57,6 +59,8 @@ export function computeOrientation(root: string | null, role?: SigmaRole): unkno
     }
   }
 
+  const intentDocUncertified = !!(chain?.intent.file && isIntentDocUncertified(chain, path.join(root, chain.intent.file)));
+
   return {
     active: true,
     phase: chain ? chain.lifecycle_state : null,
@@ -66,6 +70,11 @@ export function computeOrientation(root: string | null, role?: SigmaRole): unkno
     stale_intent_warnings: chain ? getInvalidWarningLines(chain) : [],
     blockers,
     inbox_unread: collectInboxUnread(root, role),
+    // Amendment mechanism (Discussion 2026-08-11_0115 §5.3) — true when the
+    // DIR-INTENT file's bytes no longer match the last certified hash (edited
+    // outside `sigma intent ratify`/`sigma intent amendment`).
+    intent_doc_uncertified: intentDocUncertified,
+    intent_doc_uncertified_since: intentDocUncertified ? (chain!.intent.effective_amendment ?? 'ratification') : null,
     source: SOURCE_ENGINE,
   };
 }
@@ -76,7 +85,7 @@ export function registerOrientationTool(server: McpServer): void {
     {
       title: 'Get Sigma Orientation',
       description:
-        'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, and unread inbox counts. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes the inbox counts to that role. Optional project_root sets the project directory. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, source }.',
+        'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, unread inbox counts, and DIR-INTENT certification state. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes the inbox counts to that role. Optional project_root sets the project directory. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, intent_doc_uncertified, intent_doc_uncertified_since, source }.',
       inputSchema: {
         role: z
           .enum(['ARC', 'FMN', 'DEV', 'AUD'])
