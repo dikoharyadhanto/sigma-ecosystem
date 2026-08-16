@@ -2,7 +2,7 @@
 
 **Sumber**: Evaluasi Professional Mode terhadap branch `feat/notion-integration` (commit `5cdc44c`), dilanjutkan diskusi desain dengan Director pada sesi ini (2026-08-16).
 **Tanggal**: 2026-08-16 · **Revisi 2**
-**Status**: **DISETUJUI — dikerjakan lebih dulu.** Scope direvisi mengikuti kebutuhan `PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816` (lihat §0.1), tapi eksekusi plan ini **tidak menunggu** Humanize selesai — Humanize yang menunggu fondasi ini.
+**Status**: **Fase 1–5 selesai diimplementasikan dan ter-commit** (`feat/notion-integration-v2`). Scope direvisi mengikuti kebutuhan `PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816` (lihat §0.1). Build bersih, 332 test lolos (321 lama + 16 baru khusus Notion). Belum di-push ke remote, belum di-merge ke `main`.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma. Repo `sigma-ecosystem` ini sendiri tidak Sigma-registered (tidak ada `Sigma/project.config.json` di root repo), jadi fitur ini tidak akan pernah dipakai untuk memurnikan `Sigma/` milik repo ini sendiri — target fitur adalah proyek konsumen `sigma-cli`.
 **Branch**: `feat/notion-integration-v2`, dibuat dari `main` (bukan dari `feat/notion-integration`). `feat/notion-integration` lama **dibiarkan utuh, tidak dihapus** — jadi bukti/referensi pola kesalahan yang harus dihindari di sini. `main` tidak disentuh dan tidak akan menerima merge sampai Director mengizinkan eksplisit.
 
@@ -131,13 +131,13 @@ Semua string CLI-facing (pesan error, dashboard template) di `notionService.ts`/
 
 ## 3. Fase Implementasi
 
-| Fase | Isi |
-| :--- | :--- |
-| **1 — Kredensial & config** | `~/.sigma/notion.credentials.json` (D-01), `NotionConfig` tanpa `auto_sync`, resolusi token global-first |
-| **2 — Engine sync** | Urutan append-then-delete (D-04), pagination push/fetch (D-05), resolusi via parent page (D-06) |
-| **3 — Purge & marker** | `.sigma-remote-state.json` (D-03), `purgeSigmaDir` syarat all-push-success, pesan error `findProjectRoot` diperkaya, resolver terpisah untuk command remote (D-02) |
-| **4 — CLI commands** | `setup`/`status`/`push`/`pull`/`pull-state`/`progress`, tanpa flag auto-sync (D-07), string Inggris (D-08) |
-| **5 — Test & dokumentasi** | Lihat §4. Update README/CLI summary bila ada |
+| Fase | Isi | Status |
+| :--- | :--- | :--- |
+| **1 — Kredensial & config** | `~/.sigma/notion.credentials.json` (D-01), `NotionConfig` tanpa `auto_sync`, resolusi token global-first | ✅ Selesai |
+| **2 — Engine sync** | Urutan append-then-delete (D-04), pagination push/fetch (D-05), resolusi via parent page (D-06) | ✅ Selesai |
+| **3 — Purge & marker** | `.sigma-remote-state.json` (D-03), `purgeSigmaDir` syarat all-push-success, pesan error `findProjectRoot` diperkaya, resolver terpisah untuk command remote (D-02) | ✅ Selesai |
+| **4 — CLI commands** | `setup`/`status`/`push`/`pull`/`pull-state`/`progress`, tanpa flag auto-sync (D-07), string Inggris (D-08). Orkestrasi `push` dipindah ke `runNotionPush()` di engine layer supaya syarat all-push-success (D-04 poin 5) bisa diuji langsung tanpa subprocess CLI | ✅ Selesai |
+| **5 — Test & dokumentasi** | 16 test (lihat §4, semua 6 kategori tertutup termasuk purge-gate & pesan error marker). README §Command Reference diperbarui dengan 6 command `notion` | ✅ Selesai |
 
 Urutan ini sengaja: Fase 3 (purge/marker) butuh Fase 2 (push yang reliable) sudah selesai duluan, supaya syarat "purge cuma setelah push sukses" punya push yang memang bisa dipercaya suksesnya.
 
@@ -147,12 +147,14 @@ Urutan ini sengaja: Fase 3 (purge/marker) butuh Fase 2 (push yang reliable) suda
 
 v1 kemarin: 322 test lolos tapi nol yang menyentuh jalur berisiko. Wajib ditambahkan di v2:
 
-1. **Delete-order test**: mock Notion API supaya append gagal di tengah — pastikan block lama TIDAK terhapus.
-2. **Pagination test**: dokumen > 100 block (push) dan halaman dengan `has_more: true` (fetch) — pastikan round-trip utuh, bukan terpotong.
-3. **Purge-gate test**: purge tidak boleh terjadi kalau salah satu dari push dashboard/artefak/state gagal.
-4. **Marker + error message test**: setelah purge, `findProjectRoot()` di direktori itu harus melempar pesan yang menyebut `sigma notion pull-state`, bukan pesan generic.
-5. **Regresi non-Notion**: test eksplisit bahwa `findProjectRoot()` **mengabaikan** `.sigma-identity.json` sendirian (tanpa `Sigma/activate_status.json`) — guard supaya bug v1 tidak masuk lagi tanpa sengaja di masa depan.
-6. **Credential isolation test**: token yang ditulis lewat `sigma notion setup` tidak pernah muncul di file mana pun di bawah root proyek (scan seluruh `Sigma/` + root project files).
+1. ✅ **Delete-order test**: mock Notion API supaya append gagal di tengah — pastikan block lama TIDAK terhapus. (2 test: gagal → tidak terhapus; sukses → baru terhapus)
+2. ✅ **Pagination test**: dokumen > 100 block (push, 150 item → 1 request awal + 1 PATCH lanjutan) dan halaman dengan `has_more: true` (fetch, 2 halaman teragregasi) — round-trip utuh, tidak terpotong.
+3. ✅ **Purge-gate test**: dashboard sukses + state gagal → tidak purge, tidak ada marker; keduanya sukses → purge terjadi, marker tertulis. Diuji langsung lewat `runNotionPush()` di engine layer (§3 Fase 4).
+4. ✅ **Marker + error message test**: setelah purge, `findProjectRoot()` melempar pesan yang menyebut `sigma notion pull-state`, bukan `sigma project start` — diverifikasi otomatis dan manual lewat reproduksi CLI end-to-end.
+5. ✅ **Regresi non-Notion**: `findProjectRoot()` melempar error kalau cuma `.sigma-identity.json` ada tanpa `Sigma/activate_status.json` — guard permanen terhadap bug v1.
+6. ✅ **Credential isolation test**: scan seluruh file di bawah root proyek, token tidak pernah ditemukan di manapun.
+
+Total: 16 test baru di `test/notion-integration.test.ts`, semua lolos. Suite penuh: 35 file / 332 test.
 
 ---
 

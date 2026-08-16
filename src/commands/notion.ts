@@ -6,16 +6,13 @@ import { getProjectId, writeGlobalNotionToken } from '../engine/notionCredential
 import {
   getResolvedNotionConfig,
   testNotionConnection,
-  syncProjectStateToNotion,
   fetchArtifactFromNotion,
-  pushStateToNotion,
   pullStateFromNotion,
   fetchRemoteProgressFromNotion,
   ensureGitignoreNotion,
-  purgeSigmaDir,
   findProjectRootForRemote,
+  runNotionPush,
 } from '../engine/notionService';
-import { resolveActiveChainVersion, readChain, readProjectIdentity } from '../engine/chain';
 
 export function notionCommand(): Command {
   const notion = new Command('notion').description('Sigma Notion remote governance dashboard & state backup');
@@ -124,57 +121,21 @@ export function notionCommand(): Command {
         process.exit(1);
       }
 
-      const resolved = getResolvedNotionConfig(root);
-      if (!resolved.enabled || !resolved.token) {
-        console.error(chalk.red('Error: Notion integration is not enabled or token is missing.'));
-        console.log('Run `sigma notion setup --token <secret_...> --parent-id <id>` first.');
-        process.exit(1);
-      }
-      if (!resolved.parent_page_id) {
-        console.error(chalk.red('Error: Notion parent_page_id is not configured.'));
-        console.log('Run `sigma notion setup --parent-id <id>`.');
+      console.log(chalk.blue('Pushing dashboard and state backup to Notion...'));
+      const res = await runNotionPush(root);
+
+      if (!res.success) {
+        console.error(chalk.red(`✖ Push failed: ${res.error}`));
+        if (res.dashboardUrl) console.log(chalk.gray(`  (Dashboard was pushed before the failure: ${res.dashboardUrl})`));
         process.exit(1);
       }
 
-      try {
-        const activeVersion = resolveActiveChainVersion(root);
-        const chain = readChain(root, activeVersion);
-        const identity = readProjectIdentity(root);
+      console.log(chalk.green('✓ Dashboard and state backup pushed.'));
+      if (res.dashboardUrl) console.log(chalk.cyan(`  URL: ${res.dashboardUrl}`));
 
-        console.log(chalk.blue(`Pushing dashboard (chain ${chain.chain_version}) to Notion...`));
-        const dashboardRes = await syncProjectStateToNotion(root, {
-          phase: chain.lifecycle_state,
-          active_chain: chain.chain_version,
-          gates: chain.gates,
-          projectName: identity.project_name,
-          projectId: identity.project_id,
-        });
-        if (!dashboardRes.success) {
-          console.error(chalk.red(`✖ Dashboard push failed: ${dashboardRes.error}`));
-          process.exit(1);
-        }
-        console.log(chalk.green('✓ Dashboard pushed.'));
-        if (dashboardRes.pageUrl) console.log(chalk.cyan(`  URL: ${dashboardRes.pageUrl}`));
-
-        console.log(chalk.blue('Backing up state JSON to Notion...'));
-        const stateRes = await pushStateToNotion(root, chain.chain_version);
-        if (!stateRes.success) {
-          console.error(chalk.red(`✖ State backup failed: ${stateRes.error}`));
-          process.exit(1);
-        }
-        console.log(chalk.green('✓ State JSON backed up.'));
-
-        const cleanLocal = resolved.clean_local;
-        if (cleanLocal) {
-          const purged = purgeSigmaDir(root, { chain_version: chain.chain_version, dashboard_url: dashboardRes.pageUrl });
-          if (purged) {
-            console.log(chalk.green('\n✓ Sigma/ purged locally — state is safely backed up in Notion.'));
-            console.log(chalk.gray('  Run `sigma notion pull-state` to restore on this or another device.'));
-          }
-        }
-      } catch (err: any) {
-        console.error(chalk.red(`Error reading chain state: ${err.message}`));
-        process.exit(1);
+      if (res.purged) {
+        console.log(chalk.green('\n✓ Sigma/ purged locally — state is safely backed up in Notion.'));
+        console.log(chalk.gray('  Run `sigma notion pull-state` to restore on this or another device.'));
       }
     });
 

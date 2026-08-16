@@ -61,4 +61,11 @@ export declare function syncProjectStateToNotion(projectRoot: string, state: {
     pageUrl?: string;
     error?: string;
 }>;
+export interface NotionPushResult {
+    success: boolean;
+    dashboardUrl?: string;
+    purged: boolean;
+    error?: string;
+}
+export declare function runNotionPush(projectRoot: string): Promise<NotionPushResult>;
 //# sourceMappingURL=notionService.d.ts.map

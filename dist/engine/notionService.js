@@ -16,10 +16,12 @@ exports.pushStateToNotion = pushStateToNotion;
 exports.pullStateFromNotion = pullStateFromNotion;
 exports.fetchRemoteProgressFromNotion = fetchRemoteProgressFromNotion;
 exports.syncProjectStateToNotion = syncProjectStateToNotion;
+exports.runNotionPush = runNotionPush;
 const path_1 = __importDefault(require("path"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const projectConfig_1 = require("./projectConfig");
 const notionCredentials_1 = require("./notionCredentials");
+const chain_1 = require("./chain");
 const config_1 = require("../config");
 const NOTION_API_VERSION = '2022-06-28';
 const NOTION_BASE_URL = 'https://api.notion.com/v1';
@@ -504,5 +506,41 @@ async function syncProjectStateToNotion(projectRoot, state) {
 > This dashboard reflects local Sigma state as of the last \`sigma notion push\`. It is not live — run \`sigma notion push\` again after significant governance events to refresh it.
 `;
     return syncArtifactToNotion(projectRoot, 'Governance Dashboard', state.active_chain || 'v1', markdown);
+}
+// D-04 point 5 — the orchestration `sigma notion push` runs: purge only
+// fires when every push in the sequence (dashboard, then state backup) has
+// already succeeded. Kept here rather than inline in commands/notion.ts so
+// the purge-gate rule is directly unit-testable against mocked fetch,
+// without having to drive it through a CLI subprocess.
+async function runNotionPush(projectRoot) {
+    const resolved = getResolvedNotionConfig(projectRoot);
+    if (!resolved.enabled || !resolved.token) {
+        return { success: false, purged: false, error: 'Notion integration is not enabled or token is missing.' };
+    }
+    if (!resolved.parent_page_id) {
+        return { success: false, purged: false, error: 'Notion parent_page_id is not configured.' };
+    }
+    const activeVersion = (0, chain_1.resolveActiveChainVersion)(projectRoot);
+    const chain = (0, chain_1.readChain)(projectRoot, activeVersion);
+    const identity = (0, chain_1.readProjectIdentity)(projectRoot);
+    const dashboardRes = await syncProjectStateToNotion(projectRoot, {
+        phase: chain.lifecycle_state,
+        active_chain: chain.chain_version,
+        gates: chain.gates,
+        projectName: identity.project_name,
+        projectId: identity.project_id,
+    });
+    if (!dashboardRes.success) {
+        return { success: false, purged: false, error: dashboardRes.error };
+    }
+    const stateRes = await pushStateToNotion(projectRoot, chain.chain_version);
+    if (!stateRes.success) {
+        return { success: false, purged: false, error: stateRes.error, dashboardUrl: dashboardRes.pageUrl };
+    }
+    let purged = false;
+    if (resolved.clean_local) {
+        purged = purgeSigmaDir(projectRoot, { chain_version: chain.chain_version, dashboard_url: dashboardRes.pageUrl });
+    }
+    return { success: true, dashboardUrl: dashboardRes.pageUrl, purged };
 }
 //# sourceMappingURL=notionService.js.map

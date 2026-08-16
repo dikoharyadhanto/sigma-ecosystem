@@ -10,10 +10,12 @@ import {
   fetchArtifactFromNotion,
   purgeSigmaDir,
   findProjectRootForRemote,
+  runNotionPush,
 } from '../src/engine/notionService';
 import { writeGlobalNotionToken, getProjectId } from '../src/engine/notionCredentials';
 import { readProjectConfig, writeProjectConfig } from '../src/engine/projectConfig';
 import { findProjectRoot } from '../src/utils/fs';
+import { makeChain } from './helpers';
 
 const SCHEMA_VERSION = '1.1.0';
 
@@ -45,6 +47,11 @@ describe('Notion Integration Engine (v2)', () => {
 
     const projectId = getProjectId(projectDir)!;
     writeGlobalNotionToken(projectId, 'secret_test_token');
+
+    // Minimal valid chain so runNotionPush() (resolveActiveChainVersion +
+    // readChain) has something to read.
+    fs.writeJsonSync(path.join(projectDir, 'Sigma', 'progress-v1.json'), makeChain('v1'));
+    fs.writeJsonSync(path.join(projectDir, 'Sigma', 'activate_status.json'), { active_chain: 'v1' });
   });
 
   afterEach(() => {
@@ -271,6 +278,68 @@ const x = 42;
 
     it('still resolves normally when Sigma/activate_status.json is present', () => {
       expect(findProjectRoot(projectDir)).toBe(projectDir);
+    });
+
+    it('points to `sigma notion pull-state` instead of `sigma project start` once the remote marker exists', () => {
+      purgeSigmaDir(projectDir, { chain_version: 'v1' });
+      expect(() => findProjectRoot(projectDir)).toThrow(/sigma notion pull-state/);
+      expect(() => findProjectRoot(projectDir)).not.toThrow(/sigma project start/);
+    });
+  });
+
+  describe('D-04 point 5 — purge only fires when every push in the sequence succeeds', () => {
+    it('does not purge Sigma/ when the dashboard push succeeds but the state backup push fails', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string, opts: any) => {
+          if (url.includes('/blocks/parent-page-123/children') && opts.method === 'GET') {
+            return jsonResponse({ results: [] }); // nothing exists yet, everything goes through create
+          }
+          if (url.endsWith('/pages') && opts.method === 'POST') {
+            const body = JSON.parse(opts.body);
+            const title: string = body.properties.title.title[0].text.content;
+            if (title.startsWith('Chain State')) {
+              return { ok: false, status: 500, statusText: 'Internal Error', json: async () => ({ message: 'state push failed' }) };
+            }
+            return jsonResponse({ id: 'new-page-1', url: `https://notion.so/${title.replace(/\s+/g, '-')}` });
+          }
+          return jsonResponse({});
+        })
+      );
+
+      const res = await runNotionPush(projectDir);
+
+      expect(res.success).toBe(false);
+      expect(res.purged).toBe(false);
+      // Dashboard push happened first and did succeed — its URL should
+      // still surface to the caller even though the overall push failed.
+      expect(res.dashboardUrl).toContain('Governance-Dashboard');
+      expect(fs.existsSync(path.join(projectDir, 'Sigma'))).toBe(true);
+      expect(fs.existsSync(path.join(projectDir, '.sigma-remote-state.json'))).toBe(false);
+    });
+
+    it('purges Sigma/ only after both the dashboard and the state backup succeed', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string, opts: any) => {
+          if (url.includes('/blocks/parent-page-123/children') && opts.method === 'GET') {
+            return jsonResponse({ results: [] });
+          }
+          if (url.endsWith('/pages') && opts.method === 'POST') {
+            const body = JSON.parse(opts.body);
+            const title: string = body.properties.title.title[0].text.content;
+            return jsonResponse({ id: `page-${title}`, url: `https://notion.so/${title.replace(/\s+/g, '-')}` });
+          }
+          return jsonResponse({});
+        })
+      );
+
+      const res = await runNotionPush(projectDir);
+
+      expect(res.success).toBe(true);
+      expect(res.purged).toBe(true);
+      expect(fs.existsSync(path.join(projectDir, 'Sigma'))).toBe(false);
+      expect(fs.existsSync(path.join(projectDir, '.sigma-remote-state.json'))).toBe(true);
     });
   });
 });

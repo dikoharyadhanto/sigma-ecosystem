@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { readProjectConfig, NotionConfig } from './projectConfig';
 import { resolveNotionToken } from './notionCredentials';
+import { resolveActiveChainVersion, readChain, readProjectIdentity } from './chain';
 import { PROJECT_IDENTITY_FILE, PROJECT_REMOTE_STATE_FILE, PROJECT_SIGMA_DIR } from '../config';
 
 const NOTION_API_VERSION = '2022-06-28';
@@ -572,4 +573,53 @@ export async function syncProjectStateToNotion(
 `;
 
   return syncArtifactToNotion(projectRoot, 'Governance Dashboard', state.active_chain || 'v1', markdown);
+}
+
+export interface NotionPushResult {
+  success: boolean;
+  dashboardUrl?: string;
+  purged: boolean;
+  error?: string;
+}
+
+// D-04 point 5 — the orchestration `sigma notion push` runs: purge only
+// fires when every push in the sequence (dashboard, then state backup) has
+// already succeeded. Kept here rather than inline in commands/notion.ts so
+// the purge-gate rule is directly unit-testable against mocked fetch,
+// without having to drive it through a CLI subprocess.
+export async function runNotionPush(projectRoot: string): Promise<NotionPushResult> {
+  const resolved = getResolvedNotionConfig(projectRoot);
+  if (!resolved.enabled || !resolved.token) {
+    return { success: false, purged: false, error: 'Notion integration is not enabled or token is missing.' };
+  }
+  if (!resolved.parent_page_id) {
+    return { success: false, purged: false, error: 'Notion parent_page_id is not configured.' };
+  }
+
+  const activeVersion = resolveActiveChainVersion(projectRoot);
+  const chain = readChain(projectRoot, activeVersion);
+  const identity = readProjectIdentity(projectRoot);
+
+  const dashboardRes = await syncProjectStateToNotion(projectRoot, {
+    phase: chain.lifecycle_state,
+    active_chain: chain.chain_version,
+    gates: chain.gates,
+    projectName: identity.project_name,
+    projectId: identity.project_id,
+  });
+  if (!dashboardRes.success) {
+    return { success: false, purged: false, error: dashboardRes.error };
+  }
+
+  const stateRes = await pushStateToNotion(projectRoot, chain.chain_version);
+  if (!stateRes.success) {
+    return { success: false, purged: false, error: stateRes.error, dashboardUrl: dashboardRes.pageUrl };
+  }
+
+  let purged = false;
+  if (resolved.clean_local) {
+    purged = purgeSigmaDir(projectRoot, { chain_version: chain.chain_version, dashboard_url: dashboardRes.pageUrl });
+  }
+
+  return { success: true, dashboardUrl: dashboardRes.pageUrl, purged };
 }
