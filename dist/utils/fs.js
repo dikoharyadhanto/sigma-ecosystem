@@ -31,13 +31,36 @@ function fileExists(filePath) {
 // unconditionally wrote activate_status.json too (done in Fase 4).
 function findProjectRoot(startDir = process.cwd()) {
     let current = path_1.default.resolve(startDir);
+    // PLAN-IMPL-NOTION-REMOTE-GOVERNANCE-INTEGRATION-V2 D-03 — only tracked to
+    // enrich the error message below. Does not change anchor/success behavior
+    // at all: a directory with this marker but no activate_status.json still
+    // fails to resolve, exactly as before this field existed.
+    let remoteStateMarkerPath;
     while (true) {
         const candidate = path_1.default.join(current, config_1.ACTIVATE_STATUS_FILE);
         if (fs_extra_1.default.existsSync(candidate)) {
             return current;
         }
+        if (!remoteStateMarkerPath) {
+            const markerCandidate = path_1.default.join(current, config_1.PROJECT_REMOTE_STATE_FILE);
+            if (fs_extra_1.default.existsSync(markerCandidate)) {
+                remoteStateMarkerPath = markerCandidate;
+            }
+        }
         const parent = path_1.default.dirname(current);
         if (parent === current) {
+            if (remoteStateMarkerPath) {
+                try {
+                    const marker = fs_extra_1.default.readJsonSync(remoteStateMarkerPath);
+                    throw new Error(`This project's Sigma state was moved to Notion on ${marker.pushed_at} (chain ${marker.chain_version}). ` +
+                        'Run: sigma notion pull-state — to restore it before continuing.');
+                }
+                catch (err) {
+                    if (err instanceof Error && err.message.startsWith("This project's Sigma state was moved"))
+                        throw err;
+                    // Marker exists but is unreadable — fall through to the generic error.
+                }
+            }
             throw new Error('Not inside a Sigma project. No Sigma/activate_status.json found in this directory or any parent. ' +
                 'Run: sigma project start');
         }

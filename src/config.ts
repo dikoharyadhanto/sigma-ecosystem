@@ -17,10 +17,21 @@ export const GLOBAL_RULES_DIR = path.join(GLOBAL_SIGMA_DIR, 'rules');
 export const GLOBAL_GOVERNANCE_DIR = path.join(GLOBAL_SIGMA_DIR, 'governance');
 export const GLOBAL_BRIDGE_DIR = path.join(GLOBAL_SIGMA_DIR, 'bridge');
 export const GLOBAL_CONFIG_FILE = path.join(GLOBAL_SIGMA_DIR, 'sigma.config.json');
+// PLAN-IMPL-NOTION-REMOTE-GOVERNANCE-INTEGRATION-V2 D-01 — Notion tokens are
+// per-machine secrets, never project-local. Keyed by project_id inside this
+// file so one machine can hold credentials for multiple Sigma projects.
+// Never referenced from any path under a project root, and never written to
+// anything git can see.
+export const GLOBAL_NOTION_CREDENTIALS_FILE = path.join(GLOBAL_SIGMA_DIR, 'notion.credentials.json');
 
 export const PROJECT_SIGMA_DIR = 'Sigma';
 // Root-level (sibling to Sigma/), not inside it — so identity survives even if Sigma/ itself is corrupted.
 export const PROJECT_IDENTITY_FILE = '.sigma-identity.json';
+// D-03 — written only after a confirmed-successful Notion push that purges
+// Sigma/ locally. Root-level, same reasoning as PROJECT_IDENTITY_FILE: must
+// survive the purge it documents. Deliberately NOT an anchor for the shared
+// findProjectRoot() — see notionService.ts's own resolver.
+export const PROJECT_REMOTE_STATE_FILE = '.sigma-remote-state.json';
 
 // Bridge stub filenames — AI tool instruction files written at project root.
 export const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
