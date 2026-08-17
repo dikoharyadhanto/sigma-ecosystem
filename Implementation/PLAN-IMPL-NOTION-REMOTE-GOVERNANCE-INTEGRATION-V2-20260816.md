@@ -1,8 +1,8 @@
 # PLAN-IMPL — Notion Remote Governance Integration (v2 — Rancang Ulang)
 
 **Sumber**: Evaluasi Professional Mode terhadap branch `feat/notion-integration` (commit `5cdc44c`), dilanjutkan diskusi desain dengan Director pada sesi ini (2026-08-16).
-**Tanggal**: 2026-08-16 · **Revisi 2**
-**Status**: **Fase 1–5 selesai diimplementasikan dan ter-commit** (`feat/notion-integration-v2`). Scope direvisi mengikuti kebutuhan `PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816` (lihat §0.1). Build bersih, 332 test lolos (321 lama + 16 baru khusus Notion). Belum di-push ke remote, belum di-merge ke `main`.
+**Tanggal**: 2026-08-16 · **Revisi 3**
+**Status**: **Fase 1–5 selesai diimplementasikan dan ter-commit** (`feat/notion-integration-v2`). Scope direvisi mengikuti kebutuhan `PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816` (lihat §0.1). Build bersih, 332 test lolos (321 lama + 16 baru khusus Notion). Belum di-push ke remote, belum di-merge ke `main`. **Fase 6 baru ditambahkan** (§0.2) — desain ulang tampilan Dashboard di Notion, ditulis sebagai plan, belum dikerjakan.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma. Repo `sigma-ecosystem` ini sendiri tidak Sigma-registered (tidak ada `Sigma/project.config.json` di root repo), jadi fitur ini tidak akan pernah dipakai untuk memurnikan `Sigma/` milik repo ini sendiri — target fitur adalah proyek konsumen `sigma-cli`.
 **Branch**: `feat/notion-integration-v2`, dibuat dari `main` (bukan dari `feat/notion-integration`). `feat/notion-integration` lama **dibiarkan utuh, tidak dihapus** — jadi bukti/referensi pola kesalahan yang harus dihindari di sini. `main` tidak disentuh dan tidak akan menerima merge sampai Director mengizinkan eksplisit.
 
@@ -20,6 +20,23 @@ Director memutuskan: Notion bukan lagi tempat baca artefak AI-readable apa adany
 | Nama field config | `notion.enabled` (satu-satunya) | Tetap `notion.enabled` untuk "Notion terkonfigurasi & terkoneksi" (dipakai plan ini). Humanize akan pakai nama **berbeda** untuk gate wajibnya (mis. `notion_humanize_gate.enabled`) supaya dua flag yang mirip nama tapi beda arti tidak tertukar — lihat §5 Humanize plan poin 5, sekarang terselesaikan di sisi v2 dengan tidak menyentuh `notion.enabled` sama sekali |
 
 Konsekuensi: `sigma notion pull <type> <version>` tetap ada sebagai command generik (menerima `<type>` apa saja), tapi sampai Humanize rilis, satu-satunya konten yang benar-benar terkirim ke Notion lewat jalur default hanyalah dashboard dan state JSON — bukan dokumen artefak. Ini konsisten dengan prinsip "Notion cuma berisi apa yang layak dibaca manusia" sejak hari pertama v2 jalan, bukan ditambal belakangan.
+
+---
+
+## 0.2 Revisi 3 — desain ulang tampilan Dashboard di Notion (2026-08-16, ditulis dulu, dikerjakan nanti)
+
+Director menunjukkan screenshot halaman "Sigma Governance Dashboard" dari workspace Notion-nya. Diverifikasi: halaman itu peninggalan E2E test branch **lama** (`feat/notion-integration`, sebelum rancang ulang) — teks "Proyek Uji Coba Integrasi Notion - Sigma Remote Governance" dan "PROJECT ID: SIGMA-NOTION" adalah string hardcode dari template lama, bukan output `syncProjectStateToNotion` versi v2. Template v2 yang sekarang jalan sudah jauh lebih sederhana lewat D-08 (konsistensi bahasa): cuma judul, baris project/chain/phase, tiga baris status gate, satu catatan — tanpa emoji, tanpa tabel artefak, tanpa kotak panduan CLI.
+
+Director meminta tampilan Dashboard didesain ulang secara visual. Dicatat sebagai **Fase 6** di plan yang sudah ada ini (§3), bukan plan terpisah — scope-nya murni presentasi di atas primitif yang sudah selesai (Fase 1–5), tidak butuh mekanisme transport, gate, atau schema baru.
+
+**Cakupan**: cuma halaman Dashboard (`syncProjectStateToNotion`). **Bukan** dokumen Human (`DIR-INTENT-HUMAN`/`PLAN-EXEC-HUMAN`/`DIR-CLOSE-HUMAN`) — itu tetap diatur penuh oleh `PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816`, termasuk larangan total istilah Sigma (§2.6 plan itu). Dashboard sebaliknya tetap **Sigma-facing by design** (boleh menyebut Gate 1/2/3, RATIFIED/LOCKED, dst. — dikecualikan eksplisit dari larangan istilah, lihat §2.7 plan Humanize), jadi kebebasan desainnya tidak dibatasi aturan yang sama dengan dokumen Human. Kalau nanti Director ingin bahasa visual Dashboard diselaraskan dengan dokumen Human, itu keputusan terpisah yang menunggu Fase 7 (template) plan Humanize — tidak diasumsikan di sini.
+
+**Pendekatan kerja** (belum dimulai — "nanti saja" per arahan Director):
+
+1. Prototipe visual langsung di halaman Notion Director, lewat akses Notion MCP yang tersedia di sesi kerja ini (bukan lewat CLI `sigma notion push`) — iterasi cepat tanpa investasi kode, Director melihat dan menyetujui bentuknya lebih dulu.
+2. Begitu satu desain disetujui, terjemahkan jadi markdown template baru di `syncProjectStateToNotion` ([`src/engine/notionService.ts:549`](../src/engine/notionService.ts#L549) di branch `feat/notion-integration-v2`).
+3. Kalau desain yang disetujui butuh tipe block Notion yang belum didukung `markdownToNotionBlocks` (mis. toggle, column, callout berwarna sesuai status gate) — parser diperluas untuk block itu saja, bukan ditulis ulang. Perbaikan D-04/D-05/D-06 (urutan sync, pagination, resolusi lewat parent page) tidak perlu disentuh — itu independen dari isi/tampilan konten yang dikirim.
+4. Test baru kalau parser diperluas: satu test per tipe block baru, mengikuti pola test parser yang sudah ada di `test/notion-integration.test.ts`.
 
 ---
 
@@ -138,8 +155,9 @@ Semua string CLI-facing (pesan error, dashboard template) di `notionService.ts`/
 | **3 — Purge & marker** | `.sigma-remote-state.json` (D-03), `purgeSigmaDir` syarat all-push-success, pesan error `findProjectRoot` diperkaya, resolver terpisah untuk command remote (D-02) | ✅ Selesai |
 | **4 — CLI commands** | `setup`/`status`/`push`/`pull`/`pull-state`/`progress`, tanpa flag auto-sync (D-07), string Inggris (D-08). Orkestrasi `push` dipindah ke `runNotionPush()` di engine layer supaya syarat all-push-success (D-04 poin 5) bisa diuji langsung tanpa subprocess CLI | ✅ Selesai |
 | **5 — Test & dokumentasi** | 16 test (lihat §4, semua 6 kategori tertutup termasuk purge-gate & pesan error marker). README §Command Reference diperbarui dengan 6 command `notion` | ✅ Selesai |
+| **6 — Desain ulang tampilan Dashboard** | Prototipe visual di Notion (via MCP), lalu tuangkan ke template `syncProjectStateToNotion` + perluasan `markdownToNotionBlocks` bila perlu tipe block baru (§0.2) | Belum dimulai — menunggu waktu Director |
 
-Urutan ini sengaja: Fase 3 (purge/marker) butuh Fase 2 (push yang reliable) sudah selesai duluan, supaya syarat "purge cuma setelah push sukses" punya push yang memang bisa dipercaya suksesnya.
+Urutan ini sengaja: Fase 3 (purge/marker) butuh Fase 2 (push yang reliable) sudah selesai duluan, supaya syarat "purge cuma setelah push sukses" punya push yang memang bisa dipercaya suksesnya. Fase 6 tidak bergantung pada fase lain dan tidak menghalangi apa pun — murni pekerjaan presentasi yang bisa dikerjakan kapan saja dipilih Director.
 
 ---
 
