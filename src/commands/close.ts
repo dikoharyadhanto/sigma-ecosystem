@@ -17,6 +17,7 @@ import {
 } from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
+import { readProjectConfig } from '../engine/projectConfig';
 import {
   ensureSigmaDocEligible,
   printSigmaDocReport,
@@ -75,6 +76,24 @@ export function closeCommand(): Command {
             'GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. ' +
             'Run: sigma intent score <n> --notes "..."'
           );
+        }
+
+        // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.4/§4 Fase 6 (CR-01) — same
+        // enforcement point pattern as `plan new`: never at `exec lock`
+        // itself. Only the latest LOCKED exec is checked here (the intent's
+        // own humanize status was already this chain's `plan new` gate).
+        const humanizeGate = readProjectConfig(projectRoot).notion_humanize_gate;
+        if (humanizeGate?.enabled) {
+          const latestLockedExec = chain.exec.versions
+            .filter(v => v.state === 'LOCKED')
+            .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+          if (latestLockedExec && !latestLockedExec.human?.pushed_to_notion_at) {
+            throw new Error(
+              `HUMANIZE GATE BLOCKED (notion_humanize_gate.enabled): DEV-EXEC ${latestLockedExec.version} ` +
+              'has no human projection pushed to Notion yet.\n' +
+              `  Run: sigma exec humanize --v ${latestLockedExec.version}   (then)   sigma notion push`
+            );
+          }
         }
 
         const version = chain.chain_version;

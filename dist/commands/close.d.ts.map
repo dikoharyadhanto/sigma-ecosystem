@@ -1,1 +1,1 @@
-{"version":3,"file":"close.d.ts","sourceRoot":"","sources":["../../src/commands/close.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AA8CpC,wBAAgB,YAAY,IAAI,OAAO,CAqNtC"}
+{"version":3,"file":"close.d.ts","sourceRoot":"","sources":["../../src/commands/close.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AA+CpC,wBAAgB,YAAY,IAAI,OAAO,CAuOtC"}

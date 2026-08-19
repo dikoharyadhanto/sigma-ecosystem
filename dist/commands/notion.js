@@ -10,6 +10,7 @@ const fs_1 = require("../utils/fs");
 const projectConfig_1 = require("../engine/projectConfig");
 const notionCredentials_1 = require("../engine/notionCredentials");
 const notionService_1 = require("../engine/notionService");
+const humanizePush_1 = require("../engine/humanizePush");
 function notionCommand() {
     const notion = new commander_1.Command('notion').description('Sigma Notion remote governance dashboard & state backup');
     notion
@@ -165,12 +166,38 @@ function notionCommand() {
     });
     notion
         .command('push')
-        .description('Push the governance dashboard and state backup to Notion (manual — never triggered automatically)')
+        .description('Push generated human artifacts, the governance dashboard, and state backup to Notion (manual — never triggered automatically)')
         .action(async () => {
         const root = (0, fs_1.findProjectRoot)(process.cwd());
         if (!root) {
             console.error(chalk_1.default.red('Error: Not inside a Sigma project.'));
             process.exit(1);
+        }
+        // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.7/§4 Fase 4/6 — human
+        // artifacts push first, before anything that could purge Sigma/human/
+        // out from under it. A failure here (terminology leak, fidelity gap)
+        // stops the whole command — dashboard/state push and any purge are
+        // skipped, same "nothing purges unless everything succeeded" rule as
+        // D-04 point 5 already applies to dashboard+state.
+        const humanResults = await (0, humanizePush_1.pushAllHumanArtifacts)(root);
+        if (humanResults.length > 0) {
+            console.log(chalk_1.default.blue(`Pushing ${humanResults.length} human artifact(s) to Notion...`));
+            for (const r of humanResults) {
+                if (r.success) {
+                    console.log(chalk_1.default.green(`✓ ${r.target.artifactType} ${r.target.version} pushed.`));
+                    if (r.pageUrl)
+                        console.log(chalk_1.default.cyan(`  URL: ${r.pageUrl}`));
+                }
+                else {
+                    console.error(chalk_1.default.red(`✖ ${r.target.artifactType} ${r.target.version} failed:`));
+                    console.error(chalk_1.default.red(`  ${r.error}`));
+                }
+            }
+            if (humanResults.some(r => !r.success)) {
+                console.error(chalk_1.default.red('\nOne or more human artifacts failed to push. Dashboard/state push skipped.'));
+                process.exit(1);
+            }
+            console.log('');
         }
         console.log(chalk_1.default.blue('Pushing dashboard and state backup to Notion...'));
         const res = await (0, notionService_1.runNotionPush)(root);

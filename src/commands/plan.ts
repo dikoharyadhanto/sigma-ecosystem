@@ -19,6 +19,7 @@ import {
 import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { renderRoadmapFile } from '../utils/roadmap';
+import { readProjectConfig } from '../engine/projectConfig';
 import {
   ensureSigmaDocEligible,
   printSigmaDocReport,
@@ -127,6 +128,38 @@ export function planCommand(): Command {
             'Gate 1.5 blocked: A ROADMAP must exist for this chain before FMN-PLAN can be created.\n' +
             'Run: sigma roadmap new'
           );
+        }
+
+        // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.4/§4 Fase 6 (CR-01) — checked
+        // here, never at `intent ratify`/`exec lock` themselves (that would
+        // recreate the circular dependency the audit found: a command
+        // gated on a requirement it alone can satisfy). Two things get
+        // checked because this command is the enforcement point for BOTH:
+        // the RATIFIED intent that opened this chain, and — on a second or
+        // later plan iteration — the most recently LOCKED exec.
+        const humanizeGate = readProjectConfig(projectRoot).notion_humanize_gate;
+        if (humanizeGate?.enabled) {
+          const blockers: string[] = [];
+          if (!chain.intent.human?.pushed_to_notion_at) {
+            blockers.push(
+              `DIR-INTENT ${chain.intent.version} has no human projection pushed to Notion yet.\n` +
+              '    Run: sigma intent humanize   (then)   sigma notion push'
+            );
+          }
+          const latestLockedExec = chain.exec.versions
+            .filter(v => v.state === 'LOCKED')
+            .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+          if (latestLockedExec && !latestLockedExec.human?.pushed_to_notion_at) {
+            blockers.push(
+              `DEV-EXEC ${latestLockedExec.version} has no human projection pushed to Notion yet.\n` +
+              `    Run: sigma exec humanize --v ${latestLockedExec.version}   (then)   sigma notion push`
+            );
+          }
+          if (blockers.length > 0) {
+            throw new Error(
+              'HUMANIZE GATE BLOCKED (notion_humanize_gate.enabled):\n  - ' + blockers.join('\n  - ')
+            );
+          }
         }
 
         const intentVersionRef = chain.intent.version;
