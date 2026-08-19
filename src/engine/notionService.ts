@@ -336,7 +336,14 @@ export async function syncArtifactToNotion(
   projectRoot: string,
   artifactType: string,
   version: string,
-  contentMarkdown: string
+  contentMarkdown: string,
+  // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.6 — the default "{artifactType} -
+  // {version}" title is fine for Sigma-facing pages (Dashboard, Chain
+  // State), but human artifact titles must never leak Sigma vocabulary the
+  // way "DIR-INTENT-HUMAN - v1" would — the body can be scanned and
+  // cleaned, but a page title never goes through that scan. Callers pushing
+  // a human artifact pass a pre-built human-facing title here instead.
+  titleOverride?: string
 ): Promise<{ success: boolean; pageUrl?: string; error?: string }> {
   const config = getResolvedNotionConfig(projectRoot);
   if (!config.enabled || !config.token) {
@@ -346,7 +353,7 @@ export async function syncArtifactToNotion(
     return { success: false, error: 'Notion parent_page_id is not configured. Run `sigma notion setup --parent-id <id>`.' };
   }
 
-  const title = `${artifactType} - ${version}`;
+  const title = titleOverride ?? `${artifactType} - ${version}`;
   const blocks = markdownToNotionBlocks(contentMarkdown);
 
   try {
@@ -418,15 +425,13 @@ export async function syncArtifactToNotion(
 // human artifacts; humanizePush.ts decides *when* to call this.
 export async function deleteNotionPageByTitle(
   projectRoot: string,
-  artifactType: string,
-  version: string
+  title: string
 ): Promise<{ deleted: boolean; error?: string }> {
   const config = getResolvedNotionConfig(projectRoot);
   if (!config.enabled || !config.token || !config.parent_page_id) {
     return { deleted: false, error: 'Notion integration is not configured or enabled.' };
   }
 
-  const title = `${artifactType} - ${version}`;
   try {
     const pageId = await findChildPageId(config.token, config.parent_page_id, title);
     if (!pageId) {

@@ -311,7 +311,14 @@ async function listAllBlockChildren(token, blockId) {
     } while (cursor);
     return results;
 }
-async function syncArtifactToNotion(projectRoot, artifactType, version, contentMarkdown) {
+async function syncArtifactToNotion(projectRoot, artifactType, version, contentMarkdown, 
+// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.6 — the default "{artifactType} -
+// {version}" title is fine for Sigma-facing pages (Dashboard, Chain
+// State), but human artifact titles must never leak Sigma vocabulary the
+// way "DIR-INTENT-HUMAN - v1" would — the body can be scanned and
+// cleaned, but a page title never goes through that scan. Callers pushing
+// a human artifact pass a pre-built human-facing title here instead.
+titleOverride) {
     const config = getResolvedNotionConfig(projectRoot);
     if (!config.enabled || !config.token) {
         return { success: false, error: 'Notion integration is not configured or enabled.' };
@@ -319,7 +326,7 @@ async function syncArtifactToNotion(projectRoot, artifactType, version, contentM
     if (!config.parent_page_id) {
         return { success: false, error: 'Notion parent_page_id is not configured. Run `sigma notion setup --parent-id <id>`.' };
     }
-    const title = `${artifactType} - ${version}`;
+    const title = titleOverride ?? `${artifactType} - ${version}`;
     const blocks = markdownToNotionBlocks(contentMarkdown);
     try {
         const existingPageId = await findChildPageId(config.token, config.parent_page_id, title);
@@ -378,12 +385,11 @@ async function syncArtifactToNotion(projectRoot, artifactType, version, contentM
 // equivalent and is what every Notion client surfaces as "delete" anyway.
 // Generic by design — takes a title, knows nothing about SUPERSEDED or
 // human artifacts; humanizePush.ts decides *when* to call this.
-async function deleteNotionPageByTitle(projectRoot, artifactType, version) {
+async function deleteNotionPageByTitle(projectRoot, title) {
     const config = getResolvedNotionConfig(projectRoot);
     if (!config.enabled || !config.token || !config.parent_page_id) {
         return { deleted: false, error: 'Notion integration is not configured or enabled.' };
     }
-    const title = `${artifactType} - ${version}`;
     try {
         const pageId = await findChildPageId(config.token, config.parent_page_id, title);
         if (!pageId) {

@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { ChainState, readActiveChain, readChain, listChainVersions, writeChain } from './chain';
+import { ChainState, readActiveChain, readChain, listChainVersions, writeChain, readProjectIdentity } from './chain';
 import { syncArtifactToNotion, deleteNotionPageByTitle } from './notionService';
 import { stripTemplateInstructions, scanForSigmaTerminology, loadTerminologyList } from './terminologyScanner';
 import {
@@ -35,6 +35,17 @@ export interface HumanArtifactPushResult {
   success: boolean;
   pageUrl?: string;
   error?: string;
+}
+
+// §2.6 — the Notion-facing title, distinct from `target.artifactType`
+// (which stays the internal Sigma label, used only in CLI output — never
+// published). No "Sigma", no artifact codes, matches the terminology
+// mapping's own vocabulary (DIR-INTENT -> "Project Brief", DEV-EXEC ->
+// "Delivery"). Version stays in the title for lookup uniqueness across
+// superseded history; a bare version tag isn't Sigma-specific vocabulary.
+export function computeHumanNotionTitle(kind: HumanArtifactPushTarget['kind'], version: string, projectName: string): string {
+  const label = kind === 'intent' ? 'Project Brief' : kind === 'exec' ? 'Delivery Summary' : 'Closing Summary';
+  return `${projectName} — ${label} (${version})`;
 }
 
 function humanPaths(prefix: string, version: string): { humanRelPath: string; ledgerRelPath: string } {
@@ -154,7 +165,9 @@ export async function pushHumanArtifact(projectRoot: string, target: HumanArtifa
     };
   }
 
-  const pushRes = await syncArtifactToNotion(projectRoot, target.artifactType, target.version, cleaned);
+  const identity = readProjectIdentity(projectRoot);
+  const notionTitle = computeHumanNotionTitle(target.kind, target.version, identity.project_name);
+  const pushRes = await syncArtifactToNotion(projectRoot, target.artifactType, target.version, cleaned, notionTitle);
   if (!pushRes.success) {
     return { target, success: false, error: pushRes.error };
   }
@@ -205,18 +218,18 @@ export interface ReconcileResult {
   error?: string;
 }
 
-function supersededCandidatesForChain(chain: ChainState): { artifactType: string; version: string }[] {
-  const candidates: { artifactType: string; version: string }[] = [];
+function supersededCandidatesForChain(chain: ChainState): { kind: HumanArtifactPushTarget['kind']; artifactType: string; version: string }[] {
+  const candidates: { kind: HumanArtifactPushTarget['kind']; artifactType: string; version: string }[] = [];
   if (chain.intent.state === 'SUPERSEDED' && chain.intent.human) {
-    candidates.push({ artifactType: 'DIR-INTENT-HUMAN', version: chain.intent.version });
+    candidates.push({ kind: 'intent', artifactType: 'DIR-INTENT-HUMAN', version: chain.intent.version });
   }
   for (const execEntry of chain.exec.versions) {
     if (execEntry.state === 'SUPERSEDED' && execEntry.human) {
-      candidates.push({ artifactType: 'PLAN-EXEC-HUMAN', version: execEntry.version });
+      candidates.push({ kind: 'exec', artifactType: 'PLAN-EXEC-HUMAN', version: execEntry.version });
     }
   }
   if (chain.close?.state === 'SUPERSEDED' && chain.close.human) {
-    candidates.push({ artifactType: 'DIR-CLOSE-HUMAN', version: chain.close.version });
+    candidates.push({ kind: 'close', artifactType: 'DIR-CLOSE-HUMAN', version: chain.close.version });
   }
   return candidates;
 }
@@ -236,11 +249,13 @@ function supersededCandidatesForChain(chain: ChainState): { artifactType: string
 // scenario should silently skip cleanup.
 export async function reconcileSupersededHumanArtifacts(projectRoot: string): Promise<ReconcileResult[]> {
   const results: ReconcileResult[] = [];
+  const identity = readProjectIdentity(projectRoot);
 
   for (const version of listChainVersions(projectRoot)) {
     const chain = readChain(projectRoot, version);
     for (const c of supersededCandidatesForChain(chain)) {
-      const res = await deleteNotionPageByTitle(projectRoot, c.artifactType, c.version);
+      const title = computeHumanNotionTitle(c.kind, c.version, identity.project_name);
+      const res = await deleteNotionPageByTitle(projectRoot, title);
       results.push({ artifactType: c.artifactType, version: c.version, deleted: res.deleted, error: res.error });
     }
   }

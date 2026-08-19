@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.computeHumanNotionTitle = computeHumanNotionTitle;
 exports.collectHumanPushTargets = collectHumanPushTargets;
 exports.pushHumanArtifact = pushHumanArtifact;
 exports.pushAllHumanArtifacts = pushAllHumanArtifacts;
@@ -13,6 +14,16 @@ const chain_1 = require("./chain");
 const notionService_1 = require("./notionService");
 const terminologyScanner_1 = require("./terminologyScanner");
 const fidelityCoverage_1 = require("./fidelityCoverage");
+// §2.6 — the Notion-facing title, distinct from `target.artifactType`
+// (which stays the internal Sigma label, used only in CLI output — never
+// published). No "Sigma", no artifact codes, matches the terminology
+// mapping's own vocabulary (DIR-INTENT -> "Project Brief", DEV-EXEC ->
+// "Delivery"). Version stays in the title for lookup uniqueness across
+// superseded history; a bare version tag isn't Sigma-specific vocabulary.
+function computeHumanNotionTitle(kind, version, projectName) {
+    const label = kind === 'intent' ? 'Project Brief' : kind === 'exec' ? 'Delivery Summary' : 'Closing Summary';
+    return `${projectName} — ${label} (${version})`;
+}
 function humanPaths(prefix, version) {
     return {
         humanRelPath: path_1.default.join('Sigma', 'human', `${prefix}-${version}.md`),
@@ -119,7 +130,9 @@ async function pushHumanArtifact(projectRoot, target) {
             error: `Fidelity Ledger coverage incomplete for ${target.humanRelPath} — push blocked:\n${list}`,
         };
     }
-    const pushRes = await (0, notionService_1.syncArtifactToNotion)(projectRoot, target.artifactType, target.version, cleaned);
+    const identity = (0, chain_1.readProjectIdentity)(projectRoot);
+    const notionTitle = computeHumanNotionTitle(target.kind, target.version, identity.project_name);
+    const pushRes = await (0, notionService_1.syncArtifactToNotion)(projectRoot, target.artifactType, target.version, cleaned, notionTitle);
     if (!pushRes.success) {
         return { target, success: false, error: pushRes.error };
     }
@@ -164,15 +177,15 @@ async function pushAllHumanArtifacts(projectRoot) {
 function supersededCandidatesForChain(chain) {
     const candidates = [];
     if (chain.intent.state === 'SUPERSEDED' && chain.intent.human) {
-        candidates.push({ artifactType: 'DIR-INTENT-HUMAN', version: chain.intent.version });
+        candidates.push({ kind: 'intent', artifactType: 'DIR-INTENT-HUMAN', version: chain.intent.version });
     }
     for (const execEntry of chain.exec.versions) {
         if (execEntry.state === 'SUPERSEDED' && execEntry.human) {
-            candidates.push({ artifactType: 'PLAN-EXEC-HUMAN', version: execEntry.version });
+            candidates.push({ kind: 'exec', artifactType: 'PLAN-EXEC-HUMAN', version: execEntry.version });
         }
     }
     if (chain.close?.state === 'SUPERSEDED' && chain.close.human) {
-        candidates.push({ artifactType: 'DIR-CLOSE-HUMAN', version: chain.close.version });
+        candidates.push({ kind: 'close', artifactType: 'DIR-CLOSE-HUMAN', version: chain.close.version });
     }
     return candidates;
 }
@@ -191,10 +204,12 @@ function supersededCandidatesForChain(chain) {
 // scenario should silently skip cleanup.
 async function reconcileSupersededHumanArtifacts(projectRoot) {
     const results = [];
+    const identity = (0, chain_1.readProjectIdentity)(projectRoot);
     for (const version of (0, chain_1.listChainVersions)(projectRoot)) {
         const chain = (0, chain_1.readChain)(projectRoot, version);
         for (const c of supersededCandidatesForChain(chain)) {
-            const res = await (0, notionService_1.deleteNotionPageByTitle)(projectRoot, c.artifactType, c.version);
+            const title = computeHumanNotionTitle(c.kind, c.version, identity.project_name);
+            const res = await (0, notionService_1.deleteNotionPageByTitle)(projectRoot, title);
             results.push({ artifactType: c.artifactType, version: c.version, deleted: res.deleted, error: res.error });
         }
     }

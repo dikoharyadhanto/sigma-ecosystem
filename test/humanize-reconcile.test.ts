@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import path from 'path';
 import fs from 'fs-extra';
 import os from 'os';
-import { collectHumanPushTargets, reconcileSupersededHumanArtifacts } from '../src/engine/humanizePush';
+import { collectHumanPushTargets, reconcileSupersededHumanArtifacts, computeHumanNotionTitle } from '../src/engine/humanizePush';
+import { scanForSigmaTerminology } from '../src/engine/terminologyScanner';
 import { readProjectConfig, writeProjectConfig } from '../src/engine/projectConfig';
 import { writeGlobalNotionToken, getProjectId } from '../src/engine/notionCredentials';
 import { makeChain } from './helpers';
@@ -48,6 +49,28 @@ describe('collectHumanPushTargets() excludes SUPERSEDED sources', () => {
   });
 });
 
+describe('computeHumanNotionTitle() — never leaks Sigma terminology into a published page title', () => {
+  // The bug this guards: syncArtifactToNotion() previously always built the
+  // page title as "{artifactType} - {version}" — for a human artifact that
+  // meant a literal "DIR-INTENT-HUMAN - v1" title, visible on the page
+  // itself, even though the terminology scanner only ever checks body
+  // content. A title is never scanned; it must be clean by construction.
+  const defaultTerms = require('../Sigma/rules/sigma_terminology.default.json').terms as string[];
+
+  it('produces a title with no Sigma terminology for each artifact kind', () => {
+    for (const kind of ['intent', 'exec', 'close'] as const) {
+      const title = computeHumanNotionTitle(kind, 'v1', 'Acme Project');
+      expect(scanForSigmaTerminology(title, defaultTerms)).toEqual([]);
+    }
+  });
+
+  it('includes the project name and version for lookup uniqueness', () => {
+    expect(computeHumanNotionTitle('intent', 'v2', 'Acme Project')).toBe('Acme Project — Project Brief (v2)');
+    expect(computeHumanNotionTitle('exec', 'v1.1', 'Acme Project')).toBe('Acme Project — Delivery Summary (v1.1)');
+    expect(computeHumanNotionTitle('close', 'v1', 'Acme Project')).toBe('Acme Project — Closing Summary (v1)');
+  });
+});
+
 describe('reconcileSupersededHumanArtifacts()', () => {
   let projectDir: string;
   let homeDir: string;
@@ -86,7 +109,9 @@ describe('reconcileSupersededHumanArtifacts()', () => {
     let archivedId: string | undefined;
     vi.stubGlobal('fetch', vi.fn(async (url: string, opts: any) => {
       if (url.includes('/blocks/parent-page-123/children')) {
-        return jsonResponse({ results: [{ type: 'child_page', id: 'page-xyz', child_page: { title: 'DIR-INTENT-HUMAN - v1' } }] });
+        // Human-friendly title (§2.6) — never the raw "DIR-INTENT-HUMAN - v1"
+        // form, which would leak Sigma vocabulary into a published page title.
+        return jsonResponse({ results: [{ type: 'child_page', id: 'page-xyz', child_page: { title: 'Test — Project Brief (v1)' } }] });
       }
       if (url.includes('/pages/page-xyz') && opts.method === 'PATCH') {
         archivedId = 'page-xyz';

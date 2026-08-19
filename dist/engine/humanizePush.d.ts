@@ -15,6 +15,7 @@ export interface HumanArtifactPushResult {
     pageUrl?: string;
     error?: string;
 }
+export declare function computeHumanNotionTitle(kind: HumanArtifactPushTarget['kind'], version: string, projectName: string): string;
 export declare function collectHumanPushTargets(chain: ChainState): HumanArtifactPushTarget[];
 export declare function pushHumanArtifact(projectRoot: string, target: HumanArtifactPushTarget): Promise<HumanArtifactPushResult>;
 export declare function pushAllHumanArtifacts(projectRoot: string): Promise<HumanArtifactPushResult[]>;
