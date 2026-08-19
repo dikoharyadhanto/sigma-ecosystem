@@ -3,12 +3,13 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 
+import { SCHEMA_VERSION } from '../src/config';
+
 const CLI = path.resolve(__dirname, '..', 'dist', 'cli.js');
-// Mirrors src/config.ts SCHEMA_VERSION (1.1.0 since the RATIFIED rename,
-// Director directive 2026-08-12) — real code (project.ts) writes this same
-// value into .sigma-identity.json, so fixtures should match what a fresh
-// `sigma project start` actually produces.
-const SCHEMA_VERSION = '1.1.0';
+// Previously a hardcoded local mirror of src/config.ts's SCHEMA_VERSION —
+// drifted out of sync on the 1.2.0 bump (PLAN-IMPL-SIGMA-HUMANIZE-OPERATION
+// §4 Fase 2) and broke fixtures silently. Imported directly now so this
+// can't happen again.
 
 export interface CliResult {
   stdout: string;

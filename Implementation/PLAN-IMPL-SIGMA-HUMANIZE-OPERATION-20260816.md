@@ -315,7 +315,7 @@ Cakupan wajibnya **tetap hanya di titik lock final** (`intent ratify`, `exec loc
 
 | Fase | Isi | Status |
 | :--- | :--- | :--- |
-| **1 — Skema & config** | Field `notion_humanize_gate.enabled` di `project.config.json`; prompt wajib di `project start`; command `notion enable/disable --director-confirm` | Belum dimulai |
+| **1 — Skema & config** | Field `notion_humanize_gate.enabled` di `project.config.json`; prompt wajib di `project start`; command `notion enable/disable --director-confirm` | ✅ Selesai (`8703d34`, branch `feat/sigma-humanize-operation`) |
 | **2 — Struktur artefak human** | Konvensi penamaan/lokasi file — `Sigma/human/` (dikunci, lihat §6 poin 2 dan `PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816`), extension `chain.ts`/`progress-v<N>.json` untuk melacak state humanize (mis. `intent.human: {...}`, `exec.human: {...}` per pasangan versi) | Belum dimulai |
 | **3 — Command `humanize`** | `sigma intent humanize` (ARC) dan `sigma exec humanize` (FMN/DEV, menggabungkan PLAN+EXEC) — scaffold dari sumber RATIFIED/LOCKED, guard menolak jalan kalau sumber masih DRAFT; menghasilkan **dua file**: dokumen human (dipublikasikan) + `.fidelity.md` companion (Source Fidelity Ledger, lokal-only — CR-05, §2.3); output CLI otomatis mengonfirmasi pembacaan skill `/humanize` (§2.8) tanpa Director perlu memanggilnya sendiri | Belum dimulai |
 | **4 — Reconcile-on-push** | Perbandingan chain state (versi LOCKED/SUPERSEDED) vs halaman Notion di bawah parent page; hapus halaman yang sumbernya SUPERSEDED — dijalankan saat push, bukan seketika saat supersede (CR-03, §2.5) | Belum dimulai |

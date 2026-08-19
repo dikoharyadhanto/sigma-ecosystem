@@ -16,8 +16,7 @@ import { writeGlobalNotionToken, getProjectId } from '../src/engine/notionCreden
 import { readProjectConfig, writeProjectConfig } from '../src/engine/projectConfig';
 import { findProjectRoot } from '../src/utils/fs';
 import { makeChain } from './helpers';
-
-const SCHEMA_VERSION = '1.1.0';
+import { SCHEMA_VERSION } from '../src/config';
 
 describe('Notion Integration Engine (v2)', () => {
   let projectDir: string;

@@ -14,7 +14,14 @@ exports.SIGMA_VERSION = '0.10.0';
 // binary reading a chain already written with "RATIFIED" would otherwise
 // silently treat the intent as not-locked instead of surfacing a clear
 // INVALID (schema-too-new) marker. See isNewerSchema().
-exports.SCHEMA_VERSION = '1.1.0';
+// 1.2.0 — PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §4 Fase 2: adds optional
+// `human` (HumanArtifactState) to SingleIntentState, ArtifactVersion, and
+// SingleCloseState. Purely additive — an older binary reading a chain
+// written with this field simply doesn't see it, no INVALID risk in that
+// direction. Bumped anyway to follow the established convention (this
+// constant also stamps project.config.json/.sigma-identity.json, which
+// didn't change shape — see chain.ts's own note on that coupling).
+exports.SCHEMA_VERSION = '1.2.0';
 exports.GLOBAL_SIGMA_DIR = path_1.default.join(os_1.default.homedir(), '.sigma');
 exports.GLOBAL_TEMPLATES_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'templates');
 exports.GLOBAL_RULES_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'rules');

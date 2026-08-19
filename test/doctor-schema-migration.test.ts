@@ -8,6 +8,7 @@ import {
   chainPath,
   TestEnv,
 } from './helpers';
+import { SCHEMA_VERSION } from '../src/config';
 
 // Coverage for the RATIFIED rename's doctor migration (Director directive
 // 2026-08-12, PLAN-IMPL-RATIFIED-AND-INTENT-AMENDMENT-20260812.md §3.7):
@@ -47,13 +48,15 @@ describe('sigma doctor — RATIFIED schema migration', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Migrated to RATIFIED schema.*"LOCKED".*"RATIFIED"/);
     expect(result.stdout).toMatch(/Migrated to RATIFIED schema.*locked_at.*ratified_at/);
-    expect(result.stdout).toMatch(/schema_version migrated "1\.0\.0".*"1\.1\.0"/);
+    expect(result.stdout).toMatch(
+      new RegExp(`schema_version migrated "1\\.0\\.0".*"${SCHEMA_VERSION.replace(/\./g, '\\.')}"`)
+    );
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     expect(data.intent.state).toBe('RATIFIED');
     expect(data.intent.ratified_at).toBeTruthy();
     expect(data.intent.locked_at).toBeUndefined();
-    expect(data.schema_version).toBe('1.1.0');
+    expect(data.schema_version).toBe(SCHEMA_VERSION);
   });
 
   it('is idempotent — a second doctor run reports no further migration', () => {
@@ -84,9 +87,9 @@ describe('sigma doctor — RATIFIED schema migration', () => {
     const v1 = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     const v2 = fs.readJsonSync(chainPath(env, 'v2')) as Record<string, any>;
     expect(v1.intent.state).toBe('RATIFIED');
-    expect(v1.schema_version).toBe('1.1.0');
+    expect(v1.schema_version).toBe(SCHEMA_VERSION);
     expect(v2.intent.state).toBe('RATIFIED');
-    expect(v2.schema_version).toBe('1.1.0');
+    expect(v2.schema_version).toBe(SCHEMA_VERSION);
   });
 
   it('does not touch a chain already on the current schema (no false-positive migration report)', () => {
@@ -94,7 +97,7 @@ describe('sigma doctor — RATIFIED schema migration', () => {
     stubProjectRootAnchor(env);
     const now = new Date().toISOString();
     writeChainFixture(env, 'v1', {
-      schema_version: '1.1.0', chain_version: 'v1', created_at: now, updated_at: now,
+      schema_version: SCHEMA_VERSION, chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'BUILD',
       intent: { version: 'v1', state: 'RATIFIED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, ratified_at: now },
       roadmap: null,

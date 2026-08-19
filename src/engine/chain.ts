@@ -21,6 +21,21 @@ import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, OVERRID
 
 export type LifecycleState = 'DESIGN' | 'BUILD' | 'CLOSE' | 'CLOSED';
 
+// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §4 Fase 2 — tracks whether a human
+// projection has been generated/pushed for one locked/ratified source
+// artifact. Not itself governance state (it never affects gates.*), just a
+// record `sigma plan new`/`sigma close new` read when notion_humanize_gate
+// is enabled (§3.4) to decide whether to block. `version` mirrors the
+// parent artifact's version — kept explicit here (rather than assumed) so
+// the field reads correctly even in isolation, e.g. inside a Fidelity
+// Ledger cross-reference or a `sigma doctor` report.
+export interface HumanArtifactState {
+  version: string;
+  generated_at: string;
+  pushed_to_notion_at?: string;
+  notion_page_url?: string;
+}
+
 export interface ArtifactVersion {
   version: string;
   state: string;
@@ -34,6 +49,10 @@ export interface ArtifactVersion {
   plan_version_ref?: string;
   title?: string;
   focus?: string;
+  // Only ever populated on an `exec` entry — `sigma exec humanize` produces
+  // one PLAN-EXEC-HUMAN document per plan+exec version pair (§2.1), tracked
+  // against the exec side since exec always mirrors its plan's version.
+  human?: HumanArtifactState;
 }
 
 export interface ArtifactTracker {
@@ -187,6 +206,8 @@ export interface SingleIntentState {
   effective_amendment?: string | null; // last AMD-NNN this doc was certified against; null = certified at ratification, no amendment yet
   certified_doc_sha256?: string;       // SHA-256 of the DIR-INTENT file at last ratify/amendment
   certified_at?: string;               // ISO — when certified_doc_sha256 was last stamped
+  // `sigma intent humanize` output for this RATIFIED intent — see HumanArtifactState.
+  human?: HumanArtifactState;
 }
 
 export interface SingleRoadmapState {
@@ -210,6 +231,8 @@ export interface SingleCloseState {
   locked_at?: string;
   supersede_reason?: string;
   // intent_version_ref intentionally omitted — same reasoning as roadmap.
+  // `sigma close humanize` output for this LOCKED close — see HumanArtifactState.
+  human?: HumanArtifactState;
 }
 
 export interface ChainState {
