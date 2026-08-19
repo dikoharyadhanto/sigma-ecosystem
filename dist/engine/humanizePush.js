@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.collectHumanPushTargets = collectHumanPushTargets;
 exports.pushHumanArtifact = pushHumanArtifact;
 exports.pushAllHumanArtifacts = pushAllHumanArtifacts;
+exports.reconcileSupersededHumanArtifacts = reconcileSupersededHumanArtifacts;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("./chain");
@@ -26,7 +27,11 @@ function humanPaths(prefix, version) {
 // happened once."
 function collectHumanPushTargets(chain) {
     const targets = [];
-    if (chain.intent.human) {
+    // SUPERSEDED entries are excluded here on purpose — those get deleted by
+    // reconcileSupersededHumanArtifacts(), not re-pushed. Re-syncing a
+    // SUPERSEDED artifact's content right before deleting it would be wasted
+    // work at best and a race at worst.
+    if (chain.intent.human && chain.intent.state !== 'SUPERSEDED') {
         const { humanRelPath, ledgerRelPath } = humanPaths('DIR-INTENT-HUMAN', chain.intent.version);
         targets.push({
             kind: 'intent',
@@ -39,7 +44,7 @@ function collectHumanPushTargets(chain) {
         });
     }
     for (const execEntry of chain.exec.versions) {
-        if (!execEntry.human)
+        if (!execEntry.human || execEntry.state === 'SUPERSEDED')
             continue;
         const { humanRelPath, ledgerRelPath } = humanPaths('PLAN-EXEC-HUMAN', execEntry.version);
         const planEntry = execEntry.plan_version_ref
@@ -59,7 +64,7 @@ function collectHumanPushTargets(chain) {
             coverageConfig: fidelityCoverage_1.PLAN_EXEC_COVERAGE_CONFIG,
         });
     }
-    if (chain.close?.human) {
+    if (chain.close?.human && chain.close.state !== 'SUPERSEDED') {
         const { humanRelPath, ledgerRelPath } = humanPaths('DIR-CLOSE-HUMAN', chain.close.version);
         targets.push({
             kind: 'close',
@@ -154,6 +159,45 @@ async function pushAllHumanArtifacts(projectRoot) {
         }
     }
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+    return results;
+}
+function supersededCandidatesForChain(chain) {
+    const candidates = [];
+    if (chain.intent.state === 'SUPERSEDED' && chain.intent.human) {
+        candidates.push({ artifactType: 'DIR-INTENT-HUMAN', version: chain.intent.version });
+    }
+    for (const execEntry of chain.exec.versions) {
+        if (execEntry.state === 'SUPERSEDED' && execEntry.human) {
+            candidates.push({ artifactType: 'PLAN-EXEC-HUMAN', version: execEntry.version });
+        }
+    }
+    if (chain.close?.state === 'SUPERSEDED' && chain.close.human) {
+        candidates.push({ artifactType: 'DIR-CLOSE-HUMAN', version: chain.close.version });
+    }
+    return candidates;
+}
+// §2.5 — Notion must never keep showing a human artifact whose source is
+// SUPERSEDED locally. Not a hook on `intent supersede`/`plan supersede`
+// (that would give a core governance command a network dependency,
+// contradicting plan v2 §1) — deliberately checked here, at push time,
+// covering only artifacts that were actually pushed at least once
+// (chain.*.human present).
+//
+// Scans every chain on disk, not just the active one — `intent supersede
+// --v <version>` routinely targets a chain other than the currently active
+// one (Director opens v2, leaving v1 SUPERSEDED but still on disk), and a
+// project can end up with zero eligible "active" chain at all (every chain
+// SUPERSEDED — resolveActiveChainVersion() throws in that case). Neither
+// scenario should silently skip cleanup.
+async function reconcileSupersededHumanArtifacts(projectRoot) {
+    const results = [];
+    for (const version of (0, chain_1.listChainVersions)(projectRoot)) {
+        const chain = (0, chain_1.readChain)(projectRoot, version);
+        for (const c of supersededCandidatesForChain(chain)) {
+            const res = await (0, notionService_1.deleteNotionPageByTitle)(projectRoot, c.artifactType, c.version);
+            results.push({ artifactType: c.artifactType, version: c.version, deleted: res.deleted, error: res.error });
+        }
+    }
     return results;
 }
 //# sourceMappingURL=humanizePush.js.map

@@ -410,6 +410,43 @@ export async function syncArtifactToNotion(
   }
 }
 
+// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.5 — reconcile-on-push primitive.
+// Notion has no true delete via API; archiving (PATCH .../pages/{id}
+// {archived:true}) moves the page to trash, which is the closest
+// equivalent and is what every Notion client surfaces as "delete" anyway.
+// Generic by design — takes a title, knows nothing about SUPERSEDED or
+// human artifacts; humanizePush.ts decides *when* to call this.
+export async function deleteNotionPageByTitle(
+  projectRoot: string,
+  artifactType: string,
+  version: string
+): Promise<{ deleted: boolean; error?: string }> {
+  const config = getResolvedNotionConfig(projectRoot);
+  if (!config.enabled || !config.token || !config.parent_page_id) {
+    return { deleted: false, error: 'Notion integration is not configured or enabled.' };
+  }
+
+  const title = `${artifactType} - ${version}`;
+  try {
+    const pageId = await findChildPageId(config.token, config.parent_page_id, title);
+    if (!pageId) {
+      return { deleted: false }; // nothing to delete — not an error, page was never pushed or already gone
+    }
+    const res = await fetch(`${NOTION_BASE_URL}/pages/${pageId}`, {
+      method: 'PATCH',
+      headers: notionHeaders(config.token),
+      body: JSON.stringify({ archived: true }),
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return { deleted: false, error: (errJson as any)?.message || `Failed to archive "${title}".` };
+    }
+    return { deleted: true };
+  } catch (err: any) {
+    return { deleted: false, error: err.message || 'Failed to reach Notion.' };
+  }
+}
+
 export async function fetchArtifactFromNotion(
   projectRoot: string,
   artifactType: string,

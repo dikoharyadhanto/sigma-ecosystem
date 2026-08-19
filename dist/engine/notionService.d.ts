@@ -29,6 +29,10 @@ export declare function syncArtifactToNotion(projectRoot: string, artifactType: 
     pageUrl?: string;
     error?: string;
 }>;
+export declare function deleteNotionPageByTitle(projectRoot: string, artifactType: string, version: string): Promise<{
+    deleted: boolean;
+    error?: string;
+}>;
 export declare function fetchArtifactFromNotion(projectRoot: string, artifactType: string, version: string): Promise<{
     success: boolean;
     contentMarkdown?: string;

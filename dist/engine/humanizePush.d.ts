@@ -18,4 +18,11 @@ export interface HumanArtifactPushResult {
 export declare function collectHumanPushTargets(chain: ChainState): HumanArtifactPushTarget[];
 export declare function pushHumanArtifact(projectRoot: string, target: HumanArtifactPushTarget): Promise<HumanArtifactPushResult>;
 export declare function pushAllHumanArtifacts(projectRoot: string): Promise<HumanArtifactPushResult[]>;
+export interface ReconcileResult {
+    artifactType: string;
+    version: string;
+    deleted: boolean;
+    error?: string;
+}
+export declare function reconcileSupersededHumanArtifacts(projectRoot: string): Promise<ReconcileResult[]>;
 //# sourceMappingURL=humanizePush.d.ts.map

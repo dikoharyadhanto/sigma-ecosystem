@@ -12,6 +12,7 @@ exports.testNotionConnection = testNotionConnection;
 exports.isNotionApiDetectable = isNotionApiDetectable;
 exports.markdownToNotionBlocks = markdownToNotionBlocks;
 exports.syncArtifactToNotion = syncArtifactToNotion;
+exports.deleteNotionPageByTitle = deleteNotionPageByTitle;
 exports.fetchArtifactFromNotion = fetchArtifactFromNotion;
 exports.pushStateToNotion = pushStateToNotion;
 exports.pullStateFromNotion = pullStateFromNotion;
@@ -369,6 +370,38 @@ async function syncArtifactToNotion(projectRoot, artifactType, version, contentM
     }
     catch (err) {
         return { success: false, error: err.message || 'Failed to reach Notion.' };
+    }
+}
+// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.5 — reconcile-on-push primitive.
+// Notion has no true delete via API; archiving (PATCH .../pages/{id}
+// {archived:true}) moves the page to trash, which is the closest
+// equivalent and is what every Notion client surfaces as "delete" anyway.
+// Generic by design — takes a title, knows nothing about SUPERSEDED or
+// human artifacts; humanizePush.ts decides *when* to call this.
+async function deleteNotionPageByTitle(projectRoot, artifactType, version) {
+    const config = getResolvedNotionConfig(projectRoot);
+    if (!config.enabled || !config.token || !config.parent_page_id) {
+        return { deleted: false, error: 'Notion integration is not configured or enabled.' };
+    }
+    const title = `${artifactType} - ${version}`;
+    try {
+        const pageId = await findChildPageId(config.token, config.parent_page_id, title);
+        if (!pageId) {
+            return { deleted: false }; // nothing to delete — not an error, page was never pushed or already gone
+        }
+        const res = await fetch(`${NOTION_BASE_URL}/pages/${pageId}`, {
+            method: 'PATCH',
+            headers: notionHeaders(config.token),
+            body: JSON.stringify({ archived: true }),
+        });
+        if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            return { deleted: false, error: errJson?.message || `Failed to archive "${title}".` };
+        }
+        return { deleted: true };
+    }
+    catch (err) {
+        return { deleted: false, error: err.message || 'Failed to reach Notion.' };
     }
 }
 async function fetchArtifactFromNotion(projectRoot, artifactType, version) {

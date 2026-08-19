@@ -13,7 +13,7 @@ import {
   findProjectRootForRemote,
   runNotionPush,
 } from '../engine/notionService';
-import { pushAllHumanArtifacts } from '../engine/humanizePush';
+import { pushAllHumanArtifacts, reconcileSupersededHumanArtifacts } from '../engine/humanizePush';
 
 export function notionCommand(): Command {
   const notion = new Command('notion').description('Sigma Notion remote governance dashboard & state backup');
@@ -206,6 +206,25 @@ export function notionCommand(): Command {
           process.exit(1);
         }
         console.log('');
+      }
+
+      // §2.5 — clean up Notion pages whose source is now SUPERSEDED. Only
+      // ever touches artifacts that were actually pushed at least once;
+      // never a hook on `intent supersede`/`plan supersede` themselves.
+      const reconcileResults = await reconcileSupersededHumanArtifacts(root);
+      const reconciledDeletes = reconcileResults.filter(r => r.deleted);
+      const reconcileErrors = reconcileResults.filter(r => r.error);
+      if (reconciledDeletes.length > 0) {
+        console.log(chalk.blue(`Removing ${reconciledDeletes.length} superseded human artifact page(s) from Notion...`));
+        for (const r of reconciledDeletes) {
+          console.log(chalk.green(`✓ ${r.artifactType} ${r.version} archived in Notion (source is SUPERSEDED).`));
+        }
+        console.log('');
+      }
+      if (reconcileErrors.length > 0) {
+        for (const r of reconcileErrors) {
+          console.error(chalk.yellow(`⚠ Could not reconcile ${r.artifactType} ${r.version}: ${r.error}`));
+        }
       }
 
       console.log(chalk.blue('Pushing dashboard and state backup to Notion...'));

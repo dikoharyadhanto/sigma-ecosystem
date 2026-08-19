@@ -199,6 +199,24 @@ function notionCommand() {
             }
             console.log('');
         }
+        // §2.5 — clean up Notion pages whose source is now SUPERSEDED. Only
+        // ever touches artifacts that were actually pushed at least once;
+        // never a hook on `intent supersede`/`plan supersede` themselves.
+        const reconcileResults = await (0, humanizePush_1.reconcileSupersededHumanArtifacts)(root);
+        const reconciledDeletes = reconcileResults.filter(r => r.deleted);
+        const reconcileErrors = reconcileResults.filter(r => r.error);
+        if (reconciledDeletes.length > 0) {
+            console.log(chalk_1.default.blue(`Removing ${reconciledDeletes.length} superseded human artifact page(s) from Notion...`));
+            for (const r of reconciledDeletes) {
+                console.log(chalk_1.default.green(`✓ ${r.artifactType} ${r.version} archived in Notion (source is SUPERSEDED).`));
+            }
+            console.log('');
+        }
+        if (reconcileErrors.length > 0) {
+            for (const r of reconcileErrors) {
+                console.error(chalk_1.default.yellow(`⚠ Could not reconcile ${r.artifactType} ${r.version}: ${r.error}`));
+            }
+        }
         console.log(chalk_1.default.blue('Pushing dashboard and state backup to Notion...'));
         const res = await (0, notionService_1.runNotionPush)(root);
         if (!res.success) {

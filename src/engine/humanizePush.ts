@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { ChainState, readActiveChain, writeChain } from './chain';
-import { syncArtifactToNotion } from './notionService';
+import { ChainState, readActiveChain, readChain, listChainVersions, writeChain } from './chain';
+import { syncArtifactToNotion, deleteNotionPageByTitle } from './notionService';
 import { stripTemplateInstructions, scanForSigmaTerminology, loadTerminologyList } from './terminologyScanner';
 import {
   checkFidelityCoverage,
@@ -53,7 +53,11 @@ function humanPaths(prefix: string, version: string): { humanRelPath: string; le
 export function collectHumanPushTargets(chain: ChainState): HumanArtifactPushTarget[] {
   const targets: HumanArtifactPushTarget[] = [];
 
-  if (chain.intent.human) {
+  // SUPERSEDED entries are excluded here on purpose — those get deleted by
+  // reconcileSupersededHumanArtifacts(), not re-pushed. Re-syncing a
+  // SUPERSEDED artifact's content right before deleting it would be wasted
+  // work at best and a race at worst.
+  if (chain.intent.human && chain.intent.state !== 'SUPERSEDED') {
     const { humanRelPath, ledgerRelPath } = humanPaths('DIR-INTENT-HUMAN', chain.intent.version);
     targets.push({
       kind: 'intent',
@@ -67,7 +71,7 @@ export function collectHumanPushTargets(chain: ChainState): HumanArtifactPushTar
   }
 
   for (const execEntry of chain.exec.versions) {
-    if (!execEntry.human) continue;
+    if (!execEntry.human || execEntry.state === 'SUPERSEDED') continue;
     const { humanRelPath, ledgerRelPath } = humanPaths('PLAN-EXEC-HUMAN', execEntry.version);
     const planEntry = execEntry.plan_version_ref
       ? chain.plan.versions.find(v => v.version === execEntry.plan_version_ref)
@@ -87,7 +91,7 @@ export function collectHumanPushTargets(chain: ChainState): HumanArtifactPushTar
     });
   }
 
-  if (chain.close?.human) {
+  if (chain.close?.human && chain.close.state !== 'SUPERSEDED') {
     const { humanRelPath, ledgerRelPath } = humanPaths('DIR-CLOSE-HUMAN', chain.close.version);
     targets.push({
       kind: 'close',
@@ -191,5 +195,55 @@ export async function pushAllHumanArtifacts(projectRoot: string): Promise<HumanA
   }
 
   writeChain(projectRoot, chainVersion, chain);
+  return results;
+}
+
+export interface ReconcileResult {
+  artifactType: string;
+  version: string;
+  deleted: boolean;
+  error?: string;
+}
+
+function supersededCandidatesForChain(chain: ChainState): { artifactType: string; version: string }[] {
+  const candidates: { artifactType: string; version: string }[] = [];
+  if (chain.intent.state === 'SUPERSEDED' && chain.intent.human) {
+    candidates.push({ artifactType: 'DIR-INTENT-HUMAN', version: chain.intent.version });
+  }
+  for (const execEntry of chain.exec.versions) {
+    if (execEntry.state === 'SUPERSEDED' && execEntry.human) {
+      candidates.push({ artifactType: 'PLAN-EXEC-HUMAN', version: execEntry.version });
+    }
+  }
+  if (chain.close?.state === 'SUPERSEDED' && chain.close.human) {
+    candidates.push({ artifactType: 'DIR-CLOSE-HUMAN', version: chain.close.version });
+  }
+  return candidates;
+}
+
+// §2.5 — Notion must never keep showing a human artifact whose source is
+// SUPERSEDED locally. Not a hook on `intent supersede`/`plan supersede`
+// (that would give a core governance command a network dependency,
+// contradicting plan v2 §1) — deliberately checked here, at push time,
+// covering only artifacts that were actually pushed at least once
+// (chain.*.human present).
+//
+// Scans every chain on disk, not just the active one — `intent supersede
+// --v <version>` routinely targets a chain other than the currently active
+// one (Director opens v2, leaving v1 SUPERSEDED but still on disk), and a
+// project can end up with zero eligible "active" chain at all (every chain
+// SUPERSEDED — resolveActiveChainVersion() throws in that case). Neither
+// scenario should silently skip cleanup.
+export async function reconcileSupersededHumanArtifacts(projectRoot: string): Promise<ReconcileResult[]> {
+  const results: ReconcileResult[] = [];
+
+  for (const version of listChainVersions(projectRoot)) {
+    const chain = readChain(projectRoot, version);
+    for (const c of supersededCandidatesForChain(chain)) {
+      const res = await deleteNotionPageByTitle(projectRoot, c.artifactType, c.version);
+      results.push({ artifactType: c.artifactType, version: c.version, deleted: res.deleted, error: res.error });
+    }
+  }
+
   return results;
 }
