@@ -1,5 +1,5 @@
 ---
-name: humanize
+name: sigma-humanize
 description: "Rewrite or draft content for a human reader — comprehension-first, no manufactured certainty, no AI writing tics"
 ---
 

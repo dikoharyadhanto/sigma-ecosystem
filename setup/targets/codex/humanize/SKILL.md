@@ -1,6 +1,6 @@
 ---
 name: humanize
-description: "Rewrite or draft content for a human reader — comprehension-first, no manufactured certainty, no AI writing tics"
+description: Rewrite or draft content for a human reader — comprehension-first, no manufactured certainty, no AI writing tics
 ---
 
 # /humanize — Writing For a Human Reader
@@ -19,7 +19,7 @@ This is a universal, general-purpose writing-style skill.
 
 It is not a governance role. It does not switch roles, create Sigma artifacts, lock artifacts, or touch project state. It is not scoped to any single document type, folder, or system — it applies whenever the Director wants content written or rewritten for a human reader.
 
-It may be invoked by any active role without switching roles. The active role remains active after `/humanize` is applied.
+It may be invoked by any active role without switching roles. The active role remains active after `#humanize` is applied.
 
 Scope is broader than Sigma governance documents: a Discussion note, an email, a project brief, a section of any file — anything the Director points this skill at.
 
@@ -32,14 +32,14 @@ This skill produces separate documents derived from those artifacts — `DIR-INT
 ## Activation
 
 ```text
-/humanize
-/humanize <file or section>
-/humanize this
-create file <path> with /humanize
-update this file <path> with /humanize
+#humanize
+#humanize <file or section>
+#humanize this
+create file <path> with #humanize
+update this file <path> with #humanize
 ```
 
-Applies to whatever the Director indicates — the current draft in progress, a named file, or a specific section. The skill combines naturally with an ordinary file request rather than requiring its own separate step: "create file `docs/onboarding.md` with /humanize" drafts new content directly in this style from the start; "update this file `README.md` with /humanize" rewrites existing content in place, applying Preserve/Compress/Rephrase/Infer (below) to what's already there. If the target is ambiguous, ask once rather than guessing.
+Applies to whatever the Director indicates — the current draft in progress, a named file, or a specific section. The skill combines naturally with an ordinary file request rather than requiring its own separate step: "create file `docs/onboarding.md` with #humanize" drafts new content directly in this style from the start; "update this file `README.md` with #humanize" rewrites existing content in place, applying Preserve/Compress/Rephrase/Infer (below) to what's already there. If the target is ambiguous, ask once rather than guessing.
 
 ## Target Audience & Purpose
 
