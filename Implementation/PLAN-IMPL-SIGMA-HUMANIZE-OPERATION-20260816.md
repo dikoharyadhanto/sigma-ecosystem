@@ -99,7 +99,11 @@ Tiga kelas perlakuan konten:
 **Mekanisme penegakan — direvisi (CR-02, audit ChatGPT-AUD)**: versi sebelumnya ("Preserved From Source" diisi bebas oleh AI yang sama yang mengompresi) adalah self-attestation, bukan bukti yang bisa direview independen — dan bahkan dengan kutipan literal, tidak menjawab pertanyaan cakupan: item source yang tidak disebut sama sekali di section itu bisa jadi sengaja di-Compress/Omit, atau terlupakan, dan dua kondisi itu tidak bisa dibedakan hanya dari daftar yang AI pilih sendiri. Diganti dua lapis:
 
 1. **Kutipan verbatim wajib untuk kelas Preserve.** Bukan parafrase — redaksi asli disalin apa adanya. Contoh: `CON-007 preserved: "IDCloudHost deployment is mandatory. GCP is explicitly prohibited."` — bukan "constraint deployment dipertahankan".
-2. **Coverage check deterministik, bukan cuma daftar pilihan AI.** Setiap item berID di source yang tabelnya sudah terstruktur (`CON-*`, `RR-*`, `REQ-*`, `ASM-*` — lihat template `DIR-INTENT`/`FMN-PLAN`) wajib disebut **minimal sekali** di section fidelity human doc, apa pun klasifikasinya (Preserve dengan kutipan / Compress dengan catatan singkat / Omit dengan alasan). Fungsi baru `checkFidelityCoverage(sourceContent, humanContent): string[]` — parse ID dari tabel terstruktur source, cross-check kemunculannya di section fidelity human doc, kembalikan daftar ID yang sama sekali tidak disebut (kosong kalau lengkap). Deterministik (pattern-match ID, bukan penilaian AI), sama semangatnya dengan `scanForSigmaTerminology` (§2.7) — membuktikan **tidak ada yang terlewat tanpa jejak**, bukan membuktikan tiap klasifikasi itu benar (itu tetap keputusan AI/reviewer, di luar jangkauan mekanisme deterministik — full semantic diff disepakati bersama ChatGPT-AUD sebagai over-engineering untuk masalah ini).
+2. **Coverage check deterministik, bukan cuma daftar pilihan AI.** Setiap item material di source wajib disebut **minimal sekali** di section fidelity human doc, apa pun klasifikasinya (Preserve dengan kutipan / Compress dengan catatan / Omit dengan alasan) — berlaku untuk **semua** konten material, bukan cuma yang berID formal (koreksi dari audit eksternal terhadap `DIR-INTENT-HUMAN-TEMPLATE.md`: draf pertama cuma menandai section yang ditampilkan, diam soal yang dibuang — HR-01). Fungsi `checkFidelityCoverage(sourceContent, humanContent): string[]` menegakkan dua kelas:
+   - **ID berstruktur**: `CON-*`, `RR-*`, `REQ-*`, `ASM-*`, **dan `SC-*`/`OS-*`/`NG-*`** (ID Scope Boundary — sempat tidak masuk daftar, celah yang sama dengan yang ditemukan di templatenya) — parse dari tabel terstruktur source, cross-check kemunculan di ledger.
+   - **Dimensi bernama tetap, tanpa ID**: empat baris Quality Bar (Security / UX Trust / UI-Product Packaging / Performance-Cost, `DIR-INTENT` §4) — dicek by name, bukan pattern ID, karena bentuknya bukan tabel ber-ID. Diperlakukan setara: wajib disebut di ledger, tidak boleh diam-diam hilang.
+
+   Kembalikan daftar item yang sama sekali tidak disebut (kosong kalau lengkap). Deterministik, sama semangatnya dengan `scanForSigmaTerminology` (§2.7) — membuktikan **tidak ada yang terlewat tanpa jejak**, bukan membuktikan tiap klasifikasi itu benar (itu tetap keputusan AI/reviewer, di luar jangkauan mekanisme deterministik — full semantic diff disepakati bersama ChatGPT-AUD sebagai over-engineering untuk masalah ini).
 
 Section ini di human doc diberi nama **"Source Fidelity Ledger"** (dari "Preserved From Source" — nama lama menyiratkan cuma mencatat yang dipertahankan, padahal sekarang wajib menjelaskan **semua** ID, termasuk yang dibuang).
 
@@ -110,26 +114,27 @@ Section ini di human doc diberi nama **"Source Fidelity Ledger"** (dari "Preserv
 
 Push (§2.7) cuma membaca file utama; `checkFidelityCoverage()` membaca kedua file (source asli + file `.fidelity.md`) sebelum push diizinkan jalan.
 
-### 2.4 PLAN-EXEC-HUMAN — daftar section final
+### 2.4 PLAN-EXEC-HUMAN — daftar section, direvisi (audit eksternal, dua pass)
 
-Disepakati lewat diskusi Director + Professional Mode sesi ini (2026-08-16), memakai metodologi tiga kelas di §2.3 (Preserve/Compress/Omit) sebagai dasar pemetaan dari section sumber. Sembilan section, urutan pembacaan alami (rencana → hasil → status → yang tidak sesuai rencana):
+**Draf sebelumnya cacat dan sudah diperbaiki.** Audit eksternal dua-pass menemukan: (Pass 1) seluruh sepuluh sitasi section di tabel ini bergeser konsisten +1 terhadap `FMN-PLAN-TEMPLATE.md`/`DEV-EXEC-TEMPLATE.md` yang sebenarnya (section baru disisipkan di sumber — `Pre-requirement`, `Technical Research` — setelah tabel ini ditulis, tidak pernah diverifikasi ulang), satu sitasi (`§7 Dependency`) tidak pernah ada dengan nama itu sama sekali, "Verification & Status" mencampur dua vocabulary verdict berbeda (status self-report DEV vs verdict independen FMN) tanpa aturan rekonsiliasi, dan "Observation Report" diam soal apakah tiap temuan itu **sudah diperbaiki atau belum** — bukan cuma memuat komplainnya. (Pass 2, UX) urutan sepuluh section membenam status di posisi ke-6 dari 10, padahal itu jawaban paling dicari pembaca; `Input Data Requirement` di posisi 2 memutus alur naratif; empat section "masalah" berturutan (Deviation/Issues/Known Limitation) tidak punya sinyal mana yang material. Kedua pass diterima penuh — detail verifikasi di §7.2.
 
-| # | Section human | Diambil dari mana | Kelas |
+Section sekarang, urutan direstrukturisasi (identitas tiap section dipertahankan, cuma urutan/penggabungan yang berubah — bukan menghapus apa pun yang sudah dikunci):
+
+| # | Section human | Diambil dari mana (dikoreksi) | Kelas |
 | :--- | :--- | :--- | :--- |
-| 1 | **Overview** | `FMN-PLAN` §9 + `DEV-EXEC` §17 Director's Summary — bagian overview-nya saja, keduanya sudah ditulis ringkas & human-readable by design | Preserve (disatukan, tidak ditulis ulang dari nol) |
-| 2 | **Input Data Requirement** | `FMN-PLAN` §4 Implementation Constraints / §7 Dependency terkait data — kebutuhan data/input sebagai prasyarat kerja | Compress |
-| 3 | **Work Order** | `FMN-PLAN` §2 Work Order/Task Plan | Preserve (ringkas, tetap section sendiri — bukan dikompres jadi satu dengan Acceptance Criteria) |
-| 4 | **Acceptance Criteria** | `FMN-PLAN` §3 Acceptance Criteria | Preserve — versi taktis dari Success Definition di level chain |
-| 5 | **Implementation Approach** | `DEV-EXEC` §2/§3 Implementation Approach — "apa yang dibangun/diubah" + rationale. **Bukan** "Implementation Walkthrough" (How It Works/Main Flow) — itu mechanism-level, tetap dibuang per §2.2 | Compress, sub-bagian teknis tunduk aturan scope/risk-relevant §2.2 |
-| 6 | **Verification & Status** | `DEV-EXEC` §10 Developer Verification (ringkas pass/fail) + §14 DEV Completion Statement + §15 FMN Post-Build Review verdict — **disederhanakan jadi 3 status**: `Implemented` / `Partially Implemented` / `Not Yet Implemented` (bukan 4 state asli IMPLEMENTED/PARTIALLY_IMPLEMENTED/BLOCKED/NEEDS_FMN_REVIEW — BLOCKED dan NEEDS_FMN_REVIEW sama-sama masuk "Not Yet Implemented" dari sudut pandang manusia) | **Preserve** — jawaban langsung "apakah ini beres", tidak boleh kabur |
-| 7 | **Deviation** | `DEV-EXEC` §8 Deviations From FMN-PLAN | **Preserve** — substansi tidak boleh dilunakkan; kalau tidak ada, tulis polos |
-| 8 | **Issues Encountered** | `DEV-EXEC` §12 Issues Encountered | Compress, tapi masalah signifikan tetap disebutkan |
-| 9 | **Known Limitation** | `DEV-EXEC` §13 Known Limitations / Technical Debt | **Preserve** — risk-relevant |
-| 10 | **Observation Report** | `DEV-EXEC` §16 Director Observation Report & Minor Requests | **Preserve** — suara Director sendiri yang sudah tercatat, tidak boleh disentuh apalagi dibuang |
+| 1 | **Overview** | `FMN-PLAN` §10 Director's Summary + `DEV-EXEC` §18 Director's Summary — bagian overview-nya saja. **Wajib menyatakan status pakai vocabulary 3-kata yang sama dengan section 2** (delivered/partially delivered/not yet delivered), supaya Overview dan Status tidak bisa diam-diam berbeda cerita | Preserve (disatukan, tidak ditulis ulang dari nol) |
+| 2 | **Status** *(pindah dari posisi 6, sebelumnya "Verification & Status")* | `DEV-EXEC` §11 Developer Verification + §15 DEV Completion Statement (self-report DEV) + §16 FMN Post-Build Review verdict (verdict independen FMN). **Aturan rekonsiliasi eksplisit** (menutup celah yang ditemukan audit): kalau §16 sudah terisi, **verdict FMN yang menang** — `READY_FOR_LOCK`→Implemented, `NEEDS_DEV_UPDATE`/`REVISION_REQUIRED`→Not Yet Implemented, `COMPLETE_WITH_RISK`→Partially Implemented. Kalau §16 belum terisi, pakai status self-report DEV (§15) sebagai fallback, **dan Fidelity Ledger wajib mencatat bahwa ini fallback, belum direview independen** — tidak boleh diam | **Preserve** — jawaban langsung "apakah ini beres", tidak boleh kabur |
+| 3 | **What Was Asked** *(gabungan Work Order + Acceptance Criteria, dua sub-bagian eksplisit supaya tidak jadi restatement yang sama)* | `FMN-PLAN` §3 Work Order/Task Plan ("the ask" — satu kalimat) + §4 Acceptance Criteria ("how success was checked" — hanya kondisi yang bisa dicek, bukan mengulang §3 dengan kata lain) | Preserve — versi taktis dari Success Definition di level chain |
+| 4 | **What Was Built** *(sebelumnya "Implementation Approach")* | `DEV-EXEC` §4 Implementation Approach — "apa yang dibangun/diubah" + rationale. **Bukan** "Implementation Walkthrough" (How It Works/Main Flow) — itu mechanism-level, tetap dibuang per §2.2 | Compress, sub-bagian teknis tunduk aturan scope/risk-relevant §2.2 |
+| 5 | **What Had To Be True First** *(pindah dari posisi 2 ke sini — sesudah pembaca tahu tujuan & hasil, prasyarat baru terasa relevan, bukan menyela)* | `FMN-PLAN` §5 Implementation Constraints + §2.2 Output Requirement — kebutuhan data/input sebagai prasyarat kerja | Compress. **Catatan cakupan**: §5 Implementation Constraints tidak punya kolom ID di source — `checkFidelityCoverage()` tidak bisa mem-parsing baris ini secara mekanis (lihat §7.2 poin 4); cakupannya bergantung sepenuhnya pada review manual lewat Ledger, bukan gerbang otomatis |
+| 6 | **Open Items** *(konsolidasi Deviation + Issues Encountered + Known Limitation jadi satu section, tiga sub-heading — pembaca yang mau lihat "apa yang belum sempurna" baca satu section, bukan tiga)* | `DEV-EXEC` §9 Deviations From FMN-PLAN, §13 Issues Encountered, §14 Known Limitations / Technical Debt | **Preserve** untuk Deviation dan Known Limitation (substansi tidak boleh dilunakkan); Compress untuk Issues Encountered (masalah signifikan tetap disebutkan) |
+| 7 | **Feedback From Testing** *(rename dari "Observation Report" — nama lama terdengar seperti artefak QA internal, lolos scanner terminologi mekanis tapi tetap melanggar tujuan §2.6: pembaca awam harus paham tanpa hambatan)* | `DEV-EXEC` §17 — **ketiga sub-bagiannya**: Observation Report, Minor Requests, **dan DEV Implementation Follow-up** (status resolusi tiap item: Fixed/Explained/Accepted/Deferred) — draf sebelumnya cuma mengambil komplainnya, diam soal apakah sudah diperbaiki, itu pelanggaran HR-01 (§2.3) sendiri | **Preserve** — suara Director sendiri yang sudah tercatat, tidak boleh disentuh apalagi dibuang; status resolusi tiap item wajib ikut, bukan cuma temuannya |
 
-**Dibuang total** (prosedural/AI-oriented, tidak menambah pemahaman manusia atas hasil): Source Alignment, DEV Pre-Build Assessment, FMN Pre-Build Review (checkpoint sebelum eksekusi — tidak relevan begitu siklus selesai), Protocol Overrides & Expansions, Git/Change Evidence, Files/Components To Change, AUD Findings (default omit; naik jadi Preserve kalau verdict-nya bukan PASS bersih — itu sinyal risiko, bukan detail prosedural).
+Satu baris status singkat langsung di bawah judul dokumen (mis. "Status: Partially delivered") direkomendasikan sebagai tambahan template, independen dari urutan section — menjawab masalah "status tersembunyi" bahkan sebelum pembaca mulai baca section manapun.
 
-"Evidence layer" yang tadinya jadi pertanyaan terbuka **terjawab lewat section #6** — bukan section terpisah, cukup dipadatkan ke level kesimpulan (lulus/gagal, apa yang terbukti), bukan transkrip command mentah.
+**Dibuang total** (prosedural/AI-oriented, tidak menambah pemahaman manusia atas hasil): Source Alignment, DEV Pre-Build Assessment, Technical Research, FMN Pre-Build Review (checkpoint sebelum eksekusi — tidak relevan begitu siklus selesai), Protocol Overrides & Expansions, Git/Change Evidence, Files/Components To Change, AUD Findings (default omit; naik jadi Preserve kalau verdict-nya bukan PASS bersih — itu sinyal risiko, bukan detail prosedural).
+
+"Evidence layer" yang tadinya jadi pertanyaan terbuka **terjawab lewat section #2 (Status)** — bukan section terpisah, cukup dipadatkan ke level kesimpulan (lulus/gagal, apa yang terbukti), bukan transkrip command mentah.
 
 ### 2.5 Dokumen superseded hilang dari Notion — lewat rekonsiliasi saat push berikutnya, bukan langsung (CR-03, audit ChatGPT-AUD)
 
@@ -179,10 +184,13 @@ Keputusan Director: **push ke Notion untuk human artifact wajib melalui pemindai
 
 Konsekuensi berantai (direvisi mengikuti CR-01, lihat §3.4): gagal-scan → gagal-push → requirement "human projection tersedia" tidak terpenuhi → transisi lifecycle berikutnya (bukan lock/ratify artefak itu sendiri) terblokir mekanis. Ini mengubah aturan "tanpa istilah Sigma" dari sekadar checklist self-review (§2.3, masih bisa lolos kalau AI-nya lalai) jadi gerbang mekanis yang tidak bisa dilewati tanpa benar-benar membersihkan dokumennya.
 
-Gerbang push sebelum ke Notion sekarang dua lapis, bukan satu — keduanya harus lolos:
+Pipeline pre-push untuk human artifact sekarang tiga tahap, bukan satu, **urutan ini mengikat**:
 
-1. `scanForSigmaTerminology()` — nol istilah Sigma di dokumen yang dipublikasikan (di bawah).
-2. `checkFidelityCoverage()` (§2.3, CR-02) — nol ID source yang tidak tercatat di Source Fidelity Ledger.
+0. **`stripTemplateInstructions(content): { cleaned: string; strippedLines: number }`** — hapus setiap baris yang diawali `>` (blockquote markdown) sebelum tahap manapun lain jalan. Aman secara struktural, bukan cocok-kata: keempat template human (§7) sengaja menulis seluruh instruksi sebagai blockquote dan seluruh konten asli sebagai paragraf biasa di bawah placeholder `[...]` — jadi `>` di dokumen manapun yang dihasilkan dari template ini pasti sisa instruksi, tidak pernah konten sungguhan. **Wajib jalan duluan**: instruksi template sendiri penuh istilah Sigma (sengaja diizinkan karena tidak pernah terbit) — kalau scanner terminologi jalan sebelum stripping, setiap dokumen baru akan selalu gagal gara-gara instruksinya sendiri. CLI mencetak ringkasan singkat (mis. `Stripped 9 instructional line(s) from DIR-INTENT-HUMAN-v1.md before push.`) — transparan, bukan diam-diam.
+1. `scanForSigmaTerminology()`, terhadap hasil stripping — nol istilah Sigma di dokumen yang dipublikasikan.
+2. `checkFidelityCoverage()` (§2.3, CR-02), terhadap hasil stripping — nol ID/dimensi source yang tidak tercatat di Source Fidelity Ledger.
+
+**Aturan mengikat untuk template human ke depan**: sintaks blockquote (`>`) di keempat template ini dicadangkan eksklusif untuk instruksi AI-facing. Kalau ada kebutuhan legit menulis blockquote sebagai konten yang benar-benar dipublikasikan (mis. kutipan), itu tidak boleh pakai `>` — harus format lain (mis. italic atau paragraf biasa dengan atribusi inline) supaya tidak ikut terhapus stripping.
 
 **Desain teknis** (mengikuti pola layering plan v2 — primitif generik tidak boleh tahu soal semantik human-artifact):
 
@@ -313,7 +321,8 @@ Cakupan wajibnya **tetap hanya di titik lock final** (`intent ratify`, `exec loc
 | **4 — Reconcile-on-push** | Perbandingan chain state (versi LOCKED/SUPERSEDED) vs halaman Notion di bawah parent page; hapus halaman yang sumbernya SUPERSEDED — dijalankan saat push, bukan seketika saat supersede (CR-03, §2.5) | Belum dimulai |
 | **5 — Terminology registry & scanner** | `Sigma/rules/sigma_terminology.default.json` (bundled, disinkron `project sync`) + `Sigma/sigma_terminology.custom.json` (project-local, di luar `rules/`, diedit langsung oleh AI atas permintaan Director — §2.6); `scanForSigmaTerminology(content, terminology)` generik menerima daftar gabungan; wired ke jalur push human artifact sebelum `syncArtifactToNotion`; pesan gagal spesifik-per-istilah | Belum dimulai |
 | **5b — `sigma scan --file`** | Command top-level mandiri (§2.10), read-only, pakai scanner yang sama dari Fase 5; guard pengecualian file artefak Sigma (pola nama file, sama seperti "Out Of Scope" skill `/humanize`) | Belum dimulai |
-| **5c — Fidelity coverage checker (CR-02)** | `checkFidelityCoverage(sourceContent, humanContent): string[]` — parse ID (`CON-*`/`RR-*`/`REQ-*`/`ASM-*`) dari source, cross-check kemunculan di file `.fidelity.md`; wired sebagai gerbang kedua sebelum push, sejajar dengan scanner terminologi (§2.7) | Belum dimulai |
+| **5a — Template instruction stripping** | `stripTemplateInstructions(content)` — hapus baris blockquote (`>`) sebelum tahap lain jalan (§2.7 tahap 0); wajib paling duluan di pipeline pre-push | Belum dimulai |
+| **5c — Fidelity coverage checker (CR-02, mekanisme diperbaiki §7.4)** | `checkFidelityCoverage(sourceContent, humanContent, idPatterns): string[]` — dua mode, bukan satu. **Mode ID**: pola per tipe dokumen sumber — DIR-INTENT: `CON-*`/`RR-*`/`REQ-*`/`ASM-*`/`SC-*`/`OS-*`/`NG-*` + 4 dimensi Quality Bar bernama tetap; FMN-PLAN+DEV-EXEC: `TASK-*`/`AC-*`/`TC-*`/`OBS-*`/`REQ-*` (namespace `REQ-*` dari Minor Requests `DEV-EXEC` §17, disambiguasi dari file asalnya — beda arti dari `REQ-*` DIR-INTENT). **Mode rekonsiliasi baris** (baru — menutup celah `DIR-CLOSE` yang nol ID sama sekali di seluruh templatenya, dan sebagian `FMN-PLAN` Implementation Constraints): untuk tabel tanpa kolom ID, hitung baris di source, wajib jumlah sama di Ledger yang mereferensikan `<Nama Tabel> #<nomor>` (kolom Ledger sekarang `Source Reference`, bukan `Source ID`). **Tidak ada lagi tabel yang lolos tanpa dicek** — sebelumnya tabel tanpa ID cuma didokumentasikan sebagai batasan (`checkFidelityCoverage` diam soal itu, coverage box jadi vacuously true); sekarang keduanya (ID dan baris) benar-benar diverifikasi. Wired sebagai tahap ketiga sebelum push, setelah stripping (5a) dan scanner terminologi (§2.7) | Belum dimulai |
 | **6 — Gate enforcement (direvisi, CR-01)** | `sigma plan check`/`sigma plan new` (untuk intent) dan `sigma close check`/`sigma close new` **plus** `sigma plan new` iterasi berikut (untuk exec) diperluas: kalau `notion_humanize_gate.enabled`, requirement baru "Human version generated & pushed to Notion" untuk sumber RATIFIED/LOCKED yang relevan — **bukan** di `intent ratify`/`exec lock` itu sendiri (lihat §3.4). Otomatis terblokir kalau Fase 5/5c gagal-scan/gagal-coverage | Belum dimulai |
 | **7 — Template & style rule** | 3 template (`DIR-INTENT-HUMAN`, `PLAN-EXEC-HUMAN`, `DIR-CLOSE-HUMAN`) hasil kolaborasi ChatGPT-AUD, sesuai batas §2.2/§2.3/§2.4/§2.6; fidelity checklist + larangan terminologi dibakar ke template; gaya penulisan mengikuti skill `/humanize` yang sudah ada (§2.8, `setup/targets/claude_code/humanize.md`) — bukan file rule terpisah; judul halaman Notion diganti jadi human-friendly | `DIR-INTENT-HUMAN`/`PLAN-EXEC-HUMAN` siap dikerjakan (daftar section terkunci, §2.4); `DIR-CLOSE-HUMAN` masih menunggu pemetaan section (§6 poin 1b) |
 | **8 — Test & dokumentasi** | Guard DRAFT-source, gate block/unblock di `plan new`/`close new` (bukan di `ratify`/`lock` — regresi eksplisit CR-01: `intent ratify` tidak pernah gagal karena status humanize), non-retroaktif toggle, reconcile-on-push, scanner terminologi + coverage checker (positif & negatif case, termasuk ID yang sengaja Compress/Omit vs yang terlewat), update `SIGMA_PROTOCOL.md`/registry | Belum dimulai |
@@ -335,50 +344,75 @@ Empat file baru ditulis di `Sigma/templates/`, mengikuti konvensi penamaan bundl
 
 Prinsip desain yang sama dipakai di keempatnya:
 
-- Instruksi (blockquote `>`) boleh menyebut istilah Sigma bebas — itu panduan untuk AI yang mengisi template, tidak pernah ikut terbit. Konten aktual di area placeholder `[...]` harus nol istilah Sigma (§2.6), diperiksa mekanis oleh `scanForSigmaTerminology()` sebelum push.
+- Instruksi (blockquote `>`) boleh menyebut istilah Sigma bebas — itu panduan untuk AI yang mengisi template, tidak pernah ikut terbit. Konten aktual di area placeholder `[...]` harus nol istilah Sigma (§2.6), diperiksa mekanis oleh `scanForSigmaTerminology()` sebelum push. **`>` dicadangkan eksklusif untuk instruksi** — dihapus mekanis oleh `stripTemplateInstructions()` sebelum push (§2.7 tahap 0); konten yang benar-benar dipublikasikan tidak boleh pernah ditulis sebagai blockquote.
 - Tiap section instruksinya menyebut eksplisit section sumber mana yang dipetakan, dan kelasnya (Preserve/Compress/Omit, §2.3).
 - Ditulis mengikuti aturan gaya skill `/humanize` (§2.8) — passive voice, tanpa "X bukan Y", decision-first, tanpa parenthetical, dst.
 
-### 7.1 `DIR-INTENT-HUMAN-TEMPLATE.md`
+### 7.1 `DIR-INTENT-HUMAN-TEMPLATE.md` — Draf v2, direvisi setelah audit eksternal
 
-Dipetakan dari `DIR-INTENT-TEMPLATE.md` (12 section) memakai aturan cakupan §2.2 (Overview + Sovereign layer + diagram ROADMAP, technical layer dibuang kecuali scope/risk-relevant). Enam section:
+**Draf v1 dipetakan dari referensi yang salah** — instance proyek lama (`CanopySense/Sigma/design/DIR-INTENT-v1.md`, schema lawas) alih-alih sumber kanonis sebenarnya di repo ini (`Sigma/templates/DIR-INTENT-TEMPLATE.md`, schema=4, 14 section, bukan 12). Audit eksternal ChatGPT-AUD menemukan ini lewat gejalanya (Quality Bar dan tiering Sovereign/Operationalization hilang total), diverifikasi langsung ke source setelahnya — keduanya memang ada di kanonis dan bahkan lebih mengikat dari dugaan awal (Quality Bar adalah **hard ratify gate** di §13.1 template asli, bukan sekadar konten penting). Verdict audit: `REVISE`, tiga required revision (HR-01/02/03) — semua diterima dan diterapkan di draf v2 ini.
+
+Section, memakai aturan cakupan §2.2 (Overview + Sovereign layer + diagram ROADMAP) yang sekarang diperjelas dengan **coverage rule eksplisit** (HR-01): setiap item material di source harus direpresentasikan, dilebur ke section yang relevan, atau dicatat Omit dengan alasan di Fidelity Ledger — tidak boleh diam:
 
 | # | Section human | Dari mana | Kelas |
 | :--- | :--- | :--- | :--- |
 | 1 | Overview | §1.1–1.5 Intent Core, dipadatkan jadi narasi | Preserve |
-| 2 | Success Definition | §2 Success Definition | Preserve |
-| 3 | Scope Boundary | §4 Scope Boundary + constraint Non-negotiable dari §5 yang secara substansi jadi batas scope (mis. platform yang dilarang) | Preserve |
-| 4 | Strategic Trade-Offs | §3 Strategic Trade-Offs | Preserve (sudah naratif by design) |
-| 5 | Risk & Primary Failure Concern | §8.1–8.2, §8.4 | Preserve |
-| 6 | Roadmap Overview | Diagram Stage Overview dari `ROADMAP-v<N>.md` (`sigma roadmap render`) | Compress ke ringkasan stage, bukan diagram penuh |
+| 2 | Goals | §3 Success Definition | Preserve |
+| 2a | Goals → Minimum Acceptable Standard | §4 Quality Bar (HR-02) — dilebur sebagai sub-bagian Goals, bukan section baru; dimensi yang tidak dimasukkan wajib tercatat Omit di Ledger | Preserve per dimensi yang material |
+| 3 | Scope | §6 Scope Boundary + constraint Non-negotiable dari §7 yang secara substansi jadi batas scope + Functional Requirement §9 bertier **Sovereign** yang materially mengubah janji proyek (HR-03) | Preserve |
+| 4 | Priorities | §5 Strategic Trade-Offs | Preserve (sudah naratif by design) |
+| 5 | Main Risk | §10.1, 10.2, 10.4 Risk & Failure Definition, + "Must Not Happen" dari Quality Bar §4 yang belum tercakup di atas | Preserve |
+| 6 | Plan Overview | Diagram Stage Overview dari `ROADMAP-v<N>.md`, + komitmen material (bukan checklist proses) dari Execution Direction for FMN §11.1/11.4 (Finding 4) | Compress untuk roadmap; Preserve untuk komitmen material yang ditemukan |
+| 7 | Independent Review Notes | §12 AUD Findings | Default Omit, naik jadi Preserve kalau verdict bukan PASS bersih |
 
-**Dibuang secara default**: §5 Constraints & Preferences (non-scope-defining), §6 Technical & Architecture Direction, §7 Functional Requirements (versi taktisnya sudah tercakup di `PLAN-EXEC-HUMAN`), §9 Execution Direction for FMN, §11 Final Validation Checklist. §10 AUD Findings ikut aturan yang sama dengan `PLAN-EXEC-HUMAN` (§2.4): default omit, naik jadi Preserve kalau verdict bukan PASS bersih.
+**Dibuang secara default** (murni proses/mekanisme, tanpa komitmen material di dalamnya): §2 Comprehensive Research, §7 Constraints & Preferences yang non-scope-defining, §8 Technical & Architecture Direction, §9 Functional Requirements bertier **Operationalization**, §11.2/§11.3 (checklist FMN — bukan §11.1/§11.4, lihat baris 6 di atas), §13 Final Validation Checklist, §14 Amendment History.
 
-**Catatan**: pengecualian §7 Functional Requirements dari cakupan Human belum eksplisit dibahas Director sebelumnya — saya terapkan dengan penalaran "sudah tercakup di PLAN-EXEC-HUMAN saat kerja benar-benar mulai", tapi ini keputusan yang layak dicek ulang saat review bersama ChatGPT-AUD.
+**Temuan tambahan saat verifikasi ulang** (di luar cakupan template ini, dicatat untuk kesadaran Director): `FMN-PLAN-TEMPLATE.md` §1 Source Alignment tidak punya bullet eksplisit "Quality Bar preserved" walau `DIR-INTENT` §11.3 mewajibkan FMN-PLAN membawanya — kemungkinan celah di template kanonis itu sendiri, belum disentuh. Ini juga berarti `PLAN-EXEC-HUMAN-TEMPLATE.md` berpotensi punya masalah HR-02 yang sama begitu diaudit.
 
-### 7.2 `PLAN-EXEC-HUMAN-TEMPLATE.md`
+### 7.2 `PLAN-EXEC-HUMAN-TEMPLATE.md` — Draf v2, direvisi setelah audit dua-pass
 
-Mengikuti persis 10 section yang sudah dikunci di §2.4 — tidak ada perubahan pemetaan, cuma dituangkan jadi file template nyata dengan instruksi per section.
+**Draf v1 punya sitasi section yang salah di seluruh baris** — diverifikasi manual, dikonfirmasi: semua sitasi bergeser +1 terhadap `FMN-PLAN-TEMPLATE.md`/`DEV-EXEC-TEMPLATE.md` yang sebenarnya (persis pola kesalahan yang sama dengan `DIR-INTENT-HUMAN` draf v1 — bekerja dari peta section yang tidak diverifikasi ulang ke source terkini), plus satu sitasi (`FMN-PLAN §7 Dependency`) yang sama sekali tidak ada. Contoh `CON-007` yang dipakai berulang untuk menjustifikasi CR-02 juga ternyata tidak cocok struktur — tabel sumbernya (`Implementation Constraints`) tidak punya kolom ID sama sekali.
 
-### 7.3 `DIR-CLOSE-HUMAN-TEMPLATE.md` — pemetaan baru (menutup §6 poin 1b)
+Dua defect logika juga ditemukan: "Verification & Status" mencampur dua vocabulary verdict (self-report DEV vs verdict independen FMN) tanpa aturan siapa menang kalau beda; "Observation Report" cuma mengambil temuannya, diam soal status resolusi tiap item — pelanggaran langsung terhadap HR-01 (§2.3) yang saya tulis sendiri dua revisi sebelumnya.
 
-Dipetakan dari `DIR-CLOSE-TEMPLATE.md` (9 section + 3 appendix) memakai metodologi §2.3 yang sama. Sesuai dugaan di §2.1 ("lebih banyak Preserve, lebih sedikit Compress") — closure story (§2 sumber) sudah naratif by design. Tujuh section:
+Audit pass kedua (perspektif pembaca, menguji dengan mengisi template pakai contoh fiktif dan membacanya sebagai pembaca dingin) menemukan masalah urutan: status (yang paling dicari pembaca) terkubur di posisi 6 dari 10; prasyarat kerja di posisi 2 memutus alur naratif tepat setelah Overview; empat section "masalah" berturutan tanpa sinyal mana yang material.
+
+Semua diterima dan diperbaiki — pemetaan terkoreksi + restrukturisasi lengkap ada di §2.4 (direvisi). Section sekarang 7 heading (dari 10), beberapa dengan sub-bagian, tidak ada identitas section yang hilang — cuma digabung/dipindah posisi.
+
+### 7.3 `DIR-CLOSE-HUMAN-TEMPLATE.md` — Draf v2, direvisi setelah audit
+
+**Draf v1 punya tiga cacat struktural**, ditemukan audit eksternal, semua dikonfirmasi terhadap `DIR-CLOSE-TEMPLATE.md`:
+
+1. **"What's Next" diam-diam membuang setengah sub-section sumbernya.** §8 New Intent Boundary di source punya 6 sub-bagian; instruksi draf v1 cuma menangkap 2. Yang hilang termasuk **"Do Not Carry Forward As Hidden Debt"** — sub-bagian yang secara spesifik dirancang mencegah pembaca salah mengira "sengaja di luar scope selamanya" sebagai "sekadar ditunda". Membuangnya menghidupkan lagi ambiguitas yang sub-bagian itu dibuat untuk menutup — kegagalan false-closure/false-completeness yang tepat.
+2. **Template mengasumsikan closure diterima, padahal source tidak menjamin itu.** §1 Closure Decision di source punya 6 opsi, cuma 2 di antaranya benar-benar "diterima" (`CLOSE_ACCEPTED`/`CLOSE_ACCEPTED_WITH_LIMITATIONS`) — sisanya (`DO_NOT_CLOSE`, `OPEN_NEW_PLAN`, `UPDATE_CURRENT_EXEC`) itu non-closure. Gate humanize (§2.1) cuma mengecek status lock, bukan nilai Decision — jadi `sigma close humanize` bisa saja dijalankan terhadap `DIR-CLOSE` yang LOCKED tapi Decision-nya `DO_NOT_CLOSE`. Judul "Closing Summary" dan section "Closure Statement" draf v1 salah merepresentasikan kasus itu lewat strukturnya sendiri, bukan lewat kesalahan konten.
+3. **Tidak ada penanda keputusan yang dipaksa eksplisit** — beda dari `PLAN-EXEC-HUMAN`'s Status (checkbox wajib), di sini Decision (6 opsi) + Closure Confidence (3 level) cuma dilebur ke prosa bebas di Overview, tanpa pagar struktural terhadap pelunakan.
+
+Dipetakan ulang dari `DIR-CLOSE-TEMPLATE.md` (9 section + 3 appendix). Delapan section:
 
 | # | Section human | Dari mana | Kelas |
 | :--- | :--- | :--- | :--- |
-| 1 | Overview | §1 One-Paragraph Closure Statement + inti §2 (mulai/berakhir) | Preserve |
+| 0 | **Badge keputusan** (baris tunggal di bawah judul) | §1 Closure Decision, dipetakan ke istilah manusia: `CLOSE_ACCEPTED`→"Closed", `CLOSE_ACCEPTED_WITH_LIMITATIONS`→"Closed with limitations", `DO_NOT_CLOSE`→"Not closed", `OPEN_NEW_PLAN`/`UPDATE_CURRENT_EXEC`→"Not closed — [alasan singkat]" | **Preserve, dipaksa eksplisit** — pola sama dengan badge Status di `PLAN-EXEC-HUMAN` §2.4, menutup Finding 3 |
+| 1 | Overview | §1 One-Paragraph Closure Statement + inti §2 (mulai/berakhir). **Wajib pakai vocabulary yang sama dengan badge** — tidak boleh berbeda cerita | Preserve |
 | 2 | Project Story | §2 Human Project Story, seluruhnya | Preserve (sudah naratif by design, minim rephrase) |
 | 3 | What Was Delivered | §3 Delivered State (primary value, capability map, outcome utama) | Preserve untuk outcome; Compress untuk capability map |
-| 4 | Intent Satisfaction | §4, drop tabel ID-heavy, pertahankan Plain-Language Satisfaction Statement | Preserve statement, Compress tabel jadi prosa |
-| 5 | Known Limitations | §6 Known Limitations and Accepted Risks | Preserve — risk-relevant, sama prinsip dengan `PLAN-EXEC-HUMAN` §2.4 item 9 |
-| 6 | What's Next | §8 New Intent Boundary (belum dikirim/ditunda + kenapa jadi intent baru) | Preserve — menetapkan ekspektasi pembaca soal apa yang belum selesai |
-| 7 | Closure Statement | §9 Final Director Decision — Reason + Closure Sentence | Preserve — suara Director sendiri, sama perlakuannya dengan Observation Report di `PLAN-EXEC-HUMAN` §2.4 item 10, tidak boleh dilunakkan |
+| 4 | Did It Meet the Goal | §4, drop tabel ID-heavy, pertahankan Plain-Language Satisfaction Statement | Preserve statement, Compress tabel jadi prosa |
+| 5 | Known Limitations | §6 Known Limitations and Accepted Risks | Preserve — risk-relevant |
+| 6 | What's Next — dipecah dua bagian eksplisit (menutup Finding 1) | **"Coming Later"**: §8 Not Delivered/Deferred + Work That Must Move To A New Intent + Why This Is New Intent Work. **"Deliberately Out of Scope"**: §8 Explicit Non-Scope Preserved + Do Not Carry Forward As Hidden Debt — pembaca harus bisa bedakan "akan datang" dari "sengaja tidak pernah", bukan digabung jadi satu daftar ambigu | Preserve, kedua bagian |
+| 7 | Closure Statement | §9 Final Director Decision — Reason + Closure Sentence. **Kalau badge di atas bukan "Closed"/"Closed with limitations"**, section ini reframe jadi status/next-step statement, bukan pura-pura closure terjadi | Preserve — suara Director sendiri, tidak boleh dilunakkan |
 
-**Dibuang total**: §5 Evidence Map (audit/artifact-trail, prosedural — sejajar dengan Git/Change Evidence yang dibuang dari `PLAN-EXEC-HUMAN`), §7 Operational Handoff (technical/ops, dibuang default per aturan §2.2 kecuali ada butir yang scope/risk-relevant — mis. Security/Access Notes tertentu, dinilai kasus per kasus), Appendix A/B/C (audit trail murni).
+**Dibuang total**: §5 Evidence Map (audit/artifact-trail, prosedural), Appendix A/B/C (audit trail murni). §7 Operational Handoff dibuang default **dengan pengecekan eksplisit** (menutup Finding 4 — draf v1 cuma mencatat pengecualian di plan tapi templatenya sendiri tidak pernah menyuruh AI mengecek): instruksi template sekarang secara eksplisit meminta AI membaca Security/Access Notes sebelum membuang seluruh §7, bukan cuma catatan di dokumen plan yang tidak pernah dieksekusi.
 
-### 7.4 `HUMAN-FIDELITY-LEDGER-TEMPLATE.md`
+### 7.4 `HUMAN-FIDELITY-LEDGER-TEMPLATE.md` — Draf v2, mekanisme coverage diperbaiki (bukan cuma templatenya)
 
-Satu struktur companion yang dipakai ketiga tipe (CR-02/CR-05, §2.3) — tidak perlu tiga versi terpisah karena bentuknya sama: daftar ID dari source, klasifikasi, kutipan verbatim/catatan/alasan. File dihasilkan berpasangan dengan tiap dokumen human (`<TYPE>-HUMAN-v<N>.fidelity.md`), tidak pernah ikut terbit ke Notion.
+**Cacat yang ditemukan lebih dalam dari sekadar template**: audit memverifikasi seluruh tabel di `DIR-CLOSE-TEMPLATE.md` (Delivered Capability Map, Intent Satisfaction, Known Limitations, Deviations, Evidence Map, ketiga Appendix) — **tidak satu pun punya kolom ID**. `checkFidelityCoverage()` seperti dispesifikasikan sebelumnya (parse ID `CON-*`/dst.) tidak akan menemukan apa pun untuk tipe dokumen ini — coverage check jadi *vacuously true*: nol ID diwajibkan, nol ID ada, kotak tercentang, padahal tidak ada yang benar-benar diverifikasi. Itu lebih berbahaya dari tidak ada mekanisme sama sekali, karena terlihat seperti sudah diaudit padahal tidak. Masalah sama juga sebagian berlaku untuk `PLAN-EXEC-HUMAN` (`Implementation Constraints` tanpa ID, §2.4 baris 5).
+
+**Perbaikan mekanisme** (bukan cuma dokumentasi batasan seperti revisi sebelumnya — sekarang benar-benar menutup celahnya):
+
+- Kolom Ledger `Source ID` diganti **`Source Reference`**, menerima dua bentuk: ID formal (`CON-007`) **atau** fallback `<Nama Tabel> #<nomor baris>` (mis. `Known Limitations #2`) untuk tabel tanpa ID.
+- `checkFidelityCoverage()` dapat mode kedua untuk tabel tanpa ID: **rekonsiliasi jumlah baris** — hitung baris di tiap tabel bernama di source, wajib ada jumlah entri yang sama di Ledger yang mereferensikan nama tabel itu (via fallback reference di atas). Ini tetap deterministik (menghitung baris itu mekanis) walau tidak bisa memverifikasi baris mana cocok dengan kutipan mana secara otomatis — kombinasi dengan kewajiban kutipan verbatim tetap memberi reviewer manusia sesuatu nyata untuk dicek silang.
+- **Tidak ada lagi tabel yang "tidak tercakup dalam diam".** Tiap tabel bersumber, ber-ID atau tidak, sekarang punya jalur coverage yang jelas — kalau memang jumlah baris source dan Ledger tidak cocok, gagal terdeteksi, sama seperti ID yang hilang.
+
+Satu struktur companion dipakai ketiga tipe (CR-02/CR-05, §2.3) — bentuknya tetap sama (referensi source, klasifikasi, kutipan verbatim/catatan/alasan), cuma kolom kuncinya sekarang menerima ID maupun fallback baris. File dihasilkan berpasangan dengan tiap dokumen human (`<TYPE>-HUMAN-v<N>.fidelity.md`), tidak pernah ikut terbit ke Notion.
 
 ---
 
