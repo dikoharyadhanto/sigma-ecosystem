@@ -152,6 +152,20 @@ export async function testNotionConnection(
   }
 }
 
+// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.1 — `sigma project start`'s
+// notion_humanize_gate prompt auto-falls back to OFF when this returns
+// false, instead of asking a question the Director couldn't act on yet.
+// Only the env var path is checkable here: at `project start` time
+// .sigma-identity.json hasn't been written, so resolveNotionToken()'s
+// project-keyed lookup in the global credentials file can never resolve
+// anything — env var is the only real signal available this early.
+export async function isNotionApiDetectable(): Promise<boolean> {
+  const token = process.env.NOTION_TOKEN;
+  if (!token) return false;
+  const result = await testNotionConnection(token);
+  return result.success;
+}
+
 function chunkRichText(text: string, maxLength = 2000): Array<any> {
   const chunks: Array<any> = [];
   for (let i = 0; i < text.length; i += maxLength) {

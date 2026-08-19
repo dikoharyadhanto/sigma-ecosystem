@@ -18,6 +18,9 @@ const DEFAULTS = {
         enabled: false,
         clean_local: false,
     },
+    notion_humanize_gate: {
+        enabled: false,
+    },
 };
 function readProjectConfig(projectRoot) {
     const filePath = path_1.default.join(projectRoot, config_1.PROJECT_CONFIG_FILE);
@@ -45,6 +48,9 @@ function createDefaultProjectConfig(lang = 'English') {
         notion: {
             enabled: false,
             clean_local: false,
+        },
+        notion_humanize_gate: {
+            enabled: false,
         },
     };
 }

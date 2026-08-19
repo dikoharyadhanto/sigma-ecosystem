@@ -81,6 +81,65 @@ export function notionCommand(): Command {
       if (existingNotion.database_id) console.log(`  Database ID: ${existingNotion.database_id} (reserved, not yet used)`);
     });
 
+  // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.2 — toggling the humanize gate
+  // mid-project requires Director Authorization Language, same tier as
+  // `intent supersede`/`override` — never a plain config edit. Not
+  // retroactive: this only changes what `sigma plan new`/`sigma close new`
+  // check from this point on, it never rewrites past chain state. Every
+  // invocation is captured by the existing automatic operations.jsonl log,
+  // so no separate audit trail mechanism is needed here.
+  notion
+    .command('enable')
+    .description('Turn on the Notion humanize gate for this project (requires --director-confirm)')
+    .option('--director-confirm', 'Required. Explicit Director authorization to change the humanize gate.')
+    .option('--reason <text>', 'Optional. Why the gate is being turned on.')
+    .action((options: { directorConfirm?: boolean; reason?: string }) => {
+      const root = findProjectRoot(process.cwd());
+      if (!root) {
+        console.error(chalk.red('Error: Not inside a Sigma project.'));
+        process.exit(1);
+      }
+      if (!options.directorConfirm) {
+        console.error(chalk.red('Error: --director-confirm is required to change the humanize gate.'));
+        console.error('Example: sigma notion enable --director-confirm --reason "..."');
+        process.exit(1);
+      }
+
+      const cfg = readProjectConfig(root);
+      cfg.notion_humanize_gate = { enabled: true };
+      writeProjectConfig(root, cfg);
+
+      console.log(chalk.green('✓ Notion humanize gate: ON'));
+      console.log(chalk.gray('  Applies from now on — does not retroactively affect artifacts already locked.'));
+      if (options.reason) console.log(chalk.gray(`  Reason: ${options.reason}`));
+    });
+
+  notion
+    .command('disable')
+    .description('Turn off the Notion humanize gate for this project (requires --director-confirm)')
+    .option('--director-confirm', 'Required. Explicit Director authorization to change the humanize gate.')
+    .option('--reason <text>', 'Optional. Why the gate is being turned off.')
+    .action((options: { directorConfirm?: boolean; reason?: string }) => {
+      const root = findProjectRoot(process.cwd());
+      if (!root) {
+        console.error(chalk.red('Error: Not inside a Sigma project.'));
+        process.exit(1);
+      }
+      if (!options.directorConfirm) {
+        console.error(chalk.red('Error: --director-confirm is required to change the humanize gate.'));
+        console.error('Example: sigma notion disable --director-confirm --reason "..."');
+        process.exit(1);
+      }
+
+      const cfg = readProjectConfig(root);
+      cfg.notion_humanize_gate = { enabled: false };
+      writeProjectConfig(root, cfg);
+
+      console.log(chalk.green('✓ Notion humanize gate: OFF'));
+      console.log(chalk.gray('  Applies from now on — does not retroactively affect artifacts already locked.'));
+      if (options.reason) console.log(chalk.gray(`  Reason: ${options.reason}`));
+    });
+
   notion
     .command('status')
     .description('Check Notion API connection and active configuration')
@@ -92,8 +151,10 @@ export function notionCommand(): Command {
       }
 
       const resolved = getResolvedNotionConfig(root);
+      const cfg = readProjectConfig(root);
       console.log(chalk.bold('\n--- Notion Integration Status ---'));
       console.log(`Status: ${resolved.enabled ? chalk.green('ACTIVE') : chalk.yellow('DISABLED')}`);
+      console.log(`Humanize Gate: ${cfg.notion_humanize_gate?.enabled ? chalk.green('ON') : chalk.gray('OFF')}`);
       console.log(`Clean Local: ${resolved.clean_local ? chalk.green('ON') : chalk.gray('OFF')}`);
       console.log(`Token Source: ${process.env.NOTION_TOKEN ? 'Environment (NOTION_TOKEN)' : resolved.token ? '~/.sigma/notion.credentials.json' : 'None'}`);
       if (resolved.parent_page_id) console.log(`Parent Page ID: ${resolved.parent_page_id}`);

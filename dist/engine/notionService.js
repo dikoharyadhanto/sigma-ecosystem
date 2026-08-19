@@ -9,6 +9,7 @@ exports.findProjectRootForRemote = findProjectRootForRemote;
 exports.clearRemoteStateMarker = clearRemoteStateMarker;
 exports.purgeSigmaDir = purgeSigmaDir;
 exports.testNotionConnection = testNotionConnection;
+exports.isNotionApiDetectable = isNotionApiDetectable;
 exports.markdownToNotionBlocks = markdownToNotionBlocks;
 exports.syncArtifactToNotion = syncArtifactToNotion;
 exports.fetchArtifactFromNotion = fetchArtifactFromNotion;
@@ -133,6 +134,20 @@ async function testNotionConnection(token) {
     catch (err) {
         return { success: false, error: err.message || 'Failed to connect to Notion API.' };
     }
+}
+// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.1 — `sigma project start`'s
+// notion_humanize_gate prompt auto-falls back to OFF when this returns
+// false, instead of asking a question the Director couldn't act on yet.
+// Only the env var path is checkable here: at `project start` time
+// .sigma-identity.json hasn't been written, so resolveNotionToken()'s
+// project-keyed lookup in the global credentials file can never resolve
+// anything — env var is the only real signal available this early.
+async function isNotionApiDetectable() {
+    const token = process.env.NOTION_TOKEN;
+    if (!token)
+        return false;
+    const result = await testNotionConnection(token);
+    return result.success;
 }
 function chunkRichText(text, maxLength = 2000) {
     const chunks = [];

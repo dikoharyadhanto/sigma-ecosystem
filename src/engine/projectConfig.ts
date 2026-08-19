@@ -15,12 +15,24 @@ export interface NotionConfig {
   clean_local?: boolean;
 }
 
+// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3 — deliberately a separate field from
+// `notion.enabled` above (that one means "Notion is configured/connected"),
+// so the two never get confused despite similar names. This one governs
+// whether the humanize+push Lock Requirement (§3.4) applies at all — it can
+// be true even if `notion` isn't configured yet (the requirement just can't
+// be satisfied until it is), and false even if `notion` is fully configured
+// (Director opted the gate off).
+export interface NotionHumanizeGateConfig {
+  enabled: boolean;
+}
+
 export interface ProjectConfig {
   schema_version: string;
   document_language: string;
   interaction_language: string;
   output_document_language: string;
   notion?: NotionConfig;
+  notion_humanize_gate?: NotionHumanizeGateConfig;
 }
 
 const DEFAULTS: ProjectConfig = {
@@ -31,6 +43,9 @@ const DEFAULTS: ProjectConfig = {
   notion: {
     enabled: false,
     clean_local: false,
+  },
+  notion_humanize_gate: {
+    enabled: false,
   },
 };
 
@@ -60,6 +75,9 @@ export function createDefaultProjectConfig(lang = 'English'): ProjectConfig {
     notion: {
       enabled: false,
       clean_local: false,
+    },
+    notion_humanize_gate: {
+      enabled: false,
     },
   };
 }

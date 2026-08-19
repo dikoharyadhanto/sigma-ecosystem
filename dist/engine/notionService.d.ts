@@ -22,6 +22,7 @@ export declare function testNotionConnection(token: string): Promise<{
     workspaceName?: string;
     error?: string;
 }>;
+export declare function isNotionApiDetectable(): Promise<boolean>;
 export declare function markdownToNotionBlocks(markdownText: string): Array<any>;
 export declare function syncArtifactToNotion(projectRoot: string, artifactType: string, version: string, contentMarkdown: string): Promise<{
     success: boolean;
