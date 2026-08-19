@@ -154,6 +154,64 @@ function execCommand() {
             process.exit(1);
         }
     });
+    // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.1/§4 Fase 3 — one PLAN-EXEC-HUMAN
+    // document per plan+exec version pair, keyed on the exec side (exec
+    // always mirrors its plan's version — nextExecVersion() guarantees it).
+    // Requires the exec to be LOCKED, same reasoning as `intent humanize`
+    // requiring RATIFIED: never scaffold a human projection whose source can
+    // still change out from under it. `exec lock` itself is never gated on
+    // this (§3.4 / CR-01 — the gate belongs at the next `plan new`/`close new`).
+    cmd.command('humanize')
+        .description('Generate a human-readable projection of a LOCKED plan+exec pair for Notion (Sigma Humanize Operation)')
+        .option('--v <version>', 'EXEC version to humanize instead of the active one')
+        .option('--force', 'Overwrite an already-generated human projection for this version')
+        .action((opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            const execEntry = opts.v
+                ? chain.exec.versions.find(v => v.version === opts.v)
+                : chain.exec.versions.find(v => v.version === chain.exec.active_version);
+            if (!execEntry) {
+                throw new Error(opts.v ? `DEV-EXEC ${opts.v} not found.` : 'No active DEV-EXEC found. Run: sigma exec new');
+            }
+            if (execEntry.state !== 'LOCKED') {
+                throw new Error(`DEV-EXEC ${execEntry.version} is in state "${execEntry.state}"; humanize requires LOCKED.\n` +
+                    `Run: sigma exec lock --v ${execEntry.version}`);
+            }
+            const planEntry = execEntry.plan_version_ref
+                ? chain.plan.versions.find(v => v.version === execEntry.plan_version_ref)
+                : undefined;
+            if (!planEntry || planEntry.state !== 'LOCKED') {
+                throw new Error(`DEV-EXEC ${execEntry.version}'s referenced FMN-PLAN (${execEntry.plan_version_ref ?? 'none'}) ` +
+                    `is not LOCKED. A plan+exec pair must both be LOCKED before humanize can run.`);
+            }
+            if (execEntry.human && !opts.force) {
+                throw new Error(`A human projection for DEV-EXEC ${execEntry.version} already exists ` +
+                    `(generated ${execEntry.human.generated_at}).\n` +
+                    'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.');
+            }
+            const humanRelPath = path_1.default.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.md`);
+            const ledgerRelPath = path_1.default.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.fidelity.md`);
+            (0, artifacts_1.copyTemplateToArtifact)('PLAN-EXEC-HUMAN-TEMPLATE.md', path_1.default.join(projectRoot, humanRelPath));
+            (0, artifacts_1.copyTemplateToArtifact)('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path_1.default.join(projectRoot, ledgerRelPath));
+            execEntry.human = {
+                version: execEntry.version,
+                generated_at: new Date().toISOString(),
+            };
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+            console.log(`Created: ${humanRelPath} (sources: FMN-PLAN ${planEntry.version} + DEV-EXEC ${execEntry.version})`);
+            console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
+            console.log('');
+            console.log('Reading /humanize writing rules (setup/targets/claude_code/humanize.md)...');
+            console.log(`Drafting ${humanRelPath} using /humanize style rules.`);
+            console.log('Fill in both files, then run: sigma notion push');
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
     cmd.command('check')
         .description('Validate a DEV-EXEC structure and markers')
         .option('--v <version>', 'Check a specific DEV-EXEC version. Required when more than one DRAFT is open.')

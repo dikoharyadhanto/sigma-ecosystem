@@ -138,6 +138,52 @@ function closeCommand() {
             process.exit(1);
         }
     });
+    // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.1/§4 Fase 3. Requires DIR-CLOSE
+    // LOCKED — never scaffold a human projection from a closure decision that
+    // could still change. `close lock` itself is never gated on this (§3.4 /
+    // CR-01): there is no "next" governance command after CLOSE to gate, so
+    // unlike intent/exec this one has no enforcement point at all yet — see
+    // plan §6 poin 1c (open: who runs this, and whether it needs a gate).
+    cmd.command('humanize')
+        .description('Generate a human-readable projection of a LOCKED DIR-CLOSE for Notion (Sigma Humanize Operation)')
+        .option('--force', 'Overwrite an already-generated human projection for this version')
+        .action((opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            if (!chain.close) {
+                throw new Error('No active DIR-CLOSE found. Run: sigma close new');
+            }
+            if (chain.close.state !== 'LOCKED') {
+                throw new Error(`DIR-CLOSE ${chain.close.version} is in state "${chain.close.state}"; humanize requires LOCKED.\n` +
+                    'Run: sigma close lock');
+            }
+            if (chain.close.human && !opts.force) {
+                throw new Error(`A human projection for DIR-CLOSE ${chain.close.version} already exists ` +
+                    `(generated ${chain.close.human.generated_at}).\n` +
+                    'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.');
+            }
+            const humanRelPath = path_1.default.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.md`);
+            const ledgerRelPath = path_1.default.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.fidelity.md`);
+            (0, artifacts_1.copyTemplateToArtifact)('DIR-CLOSE-HUMAN-TEMPLATE.md', path_1.default.join(projectRoot, humanRelPath));
+            (0, artifacts_1.copyTemplateToArtifact)('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path_1.default.join(projectRoot, ledgerRelPath));
+            chain.close.human = {
+                version: chain.close.version,
+                generated_at: new Date().toISOString(),
+            };
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+            console.log(`Created: ${humanRelPath}`);
+            console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
+            console.log('');
+            console.log('Reading /humanize writing rules (setup/targets/claude_code/humanize.md)...');
+            console.log(`Drafting ${humanRelPath} using /humanize style rules.`);
+            console.log('Fill in both files, then run: sigma notion push');
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
     cmd.command('check')
         .description('Validate a DIR-CLOSE structure and markers')
         .option('--v <version>', 'Check the DIR-CLOSE of a specific chain instead of the active one')
