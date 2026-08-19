@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-07-03T17:44:56.000Z",
-  "description": "Sigma Document Registry — permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE) are tracked in progress-v<N>.json, not here.",
-  "total_documents": 17,
+  "generated_at": "2026-08-19T10:02:21.533Z",
+  "description": "Sigma Document Registry \u2014 permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE) are tracked in progress-v<N>.json, not here.",
+  "total_documents": 18,
   "authority_model": {
     "description": "Two separate, non-conflatable authority axes.",
     "semantic_authority": {
@@ -29,7 +29,7 @@
       "location": "Sigma/",
       "authority_tier": "constitutional",
       "owner": "Director",
-      "lifecycle": "living — amended only by Director constitutional amendment (Article VIII)",
+      "lifecycle": "living \u2014 amended only by Director constitutional amendment (Article VIII)",
       "mandatory_when": [
         "governance_conflict",
         "constitutional_amendment",
@@ -44,7 +44,7 @@
       "location": "Sigma/",
       "authority_tier": "operational_governance",
       "owner": "Director",
-      "lifecycle": "living — extended per phase; never replaced wholesale",
+      "lifecycle": "living \u2014 extended per phase; never replaced wholesale",
       "mandatory_when": [
         "governance_conflict",
         "document_navigation",
@@ -109,7 +109,7 @@
       "location": "Sigma/",
       "authority_tier": "agent_rule",
       "owner": "Director",
-      "lifecycle": "stable — updated when ARC role definition changes",
+      "lifecycle": "stable \u2014 updated when ARC role definition changes",
       "mandatory_when": [
         "session_bootstrap_arc_role",
         "role_boundary_violation"
@@ -124,12 +124,12 @@
       "location": "Sigma/",
       "authority_tier": "agent_rule",
       "owner": "Director",
-      "lifecycle": "stable — updated when AUD role definition changes",
+      "lifecycle": "stable \u2014 updated when AUD role definition changes",
       "mandatory_when": [
         "session_bootstrap_aud_role",
         "role_boundary_violation"
       ],
-      "description": "AUD role rule file. Defines AUD responsibilities, permissions, audit scope, and advisory-only constraint. AUD role: brutal auditor, advisory only — not an approval gate. Created in Phase 2.",
+      "description": "AUD role rule file. Defines AUD responsibilities, permissions, audit scope, and advisory-only constraint. AUD role: brutal auditor, advisory only \u2014 not an approval gate. Created in Phase 2.",
       "tolerate_missing": true,
       "missing_behavior": "Warn on session_bootstrap when AUD role active; do not error on read-only operations."
     },
@@ -139,7 +139,7 @@
       "location": "Sigma/",
       "authority_tier": "agent_rule",
       "owner": "Director",
-      "lifecycle": "stable — updated when FMN role definition changes",
+      "lifecycle": "stable \u2014 updated when FMN role definition changes",
       "mandatory_when": [
         "session_bootstrap_fmn_role",
         "role_boundary_violation"
@@ -154,7 +154,7 @@
       "location": "Sigma/",
       "authority_tier": "agent_rule",
       "owner": "Director",
-      "lifecycle": "stable — updated when DEV role definition changes",
+      "lifecycle": "stable \u2014 updated when DEV role definition changes",
       "mandatory_when": [
         "session_bootstrap_dev_role",
         "role_boundary_violation"
@@ -169,7 +169,7 @@
       "location": "project root",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "stable — updated when Claude-specific configuration changes",
+      "lifecycle": "stable \u2014 updated when Claude-specific configuration changes",
       "mandatory_when": [
         "role_boundary_violation"
       ],
@@ -183,7 +183,7 @@
       "location": "project root",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "stable — updated when Gemini-specific configuration changes",
+      "lifecycle": "stable \u2014 updated when Gemini-specific configuration changes",
       "mandatory_when": [
         "role_boundary_violation"
       ],
@@ -197,7 +197,7 @@
       "location": "project root",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "stable — updated when general agent configuration changes",
+      "lifecycle": "stable \u2014 updated when general agent configuration changes",
       "mandatory_when": [
         "role_boundary_violation"
       ],
@@ -211,7 +211,7 @@
       "location": "Sigma/",
       "authority_tier": "runtime_state",
       "owner": "CLI (Director-gated writes)",
-      "lifecycle": "runtime — read before every CLI operation; written after every state-mutating operation",
+      "lifecycle": "runtime \u2014 read before every CLI operation; written after every state-mutating operation",
       "mandatory_when": [
         "every_cli_operation"
       ],
@@ -225,7 +225,7 @@
       "location": "Sigma/",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "stable — updated when ARC role activation memory changes",
+      "lifecycle": "stable \u2014 updated when ARC role activation memory changes",
       "mandatory_when": [
         "session_bootstrap_arc_role"
       ],
@@ -239,7 +239,7 @@
       "location": "Sigma/",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "stable — updated when FMN role activation memory changes",
+      "lifecycle": "stable \u2014 updated when FMN role activation memory changes",
       "mandatory_when": [
         "session_bootstrap_fmn_role"
       ],
@@ -253,7 +253,7 @@
       "location": "Sigma/",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "stable — updated when DEV role activation memory changes",
+      "lifecycle": "stable \u2014 updated when DEV role activation memory changes",
       "mandatory_when": [
         "session_bootstrap_dev_role"
       ],
@@ -267,7 +267,7 @@
       "location": "Sigma/",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "stable — updated when AUD role activation memory changes",
+      "lifecycle": "stable \u2014 updated when AUD role activation memory changes",
       "mandatory_when": [
         "session_bootstrap_aud_role"
       ],
@@ -281,11 +281,12 @@
       "location": "Sigma/",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "stable — updated when artifact structure changes; templates are embedded by Phase 3 CLI",
+      "lifecycle": "stable \u2014 updated when artifact structure changes; templates are embedded by Phase 3 CLI",
       "mandatory_when": [
-        "artifact_creation"
+        "artifact_creation",
+        "humanize_scaffold"
       ],
-      "description": "Canonical Markdown templates for all Sigma artifacts, MSG, and the Reference List. Seven files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, ROADMAP-TEMPLATE.md, MSG-TEMPLATE.md, REFERENCE-LIST-TEMPLATE.md. CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma roadmap new, sigma send, and the one-time sigma project start / sigma reference update scaffolding of reference-list.md.",
+      "description": "Canonical Markdown templates for all Sigma artifacts, MSG, and the Reference List, plus the human-projection templates the Sigma Humanize Operation scaffolds from RATIFIED/LOCKED sources. Eleven files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, ROADMAP-TEMPLATE.md, MSG-TEMPLATE.md, REFERENCE-LIST-TEMPLATE.md, DIR-INTENT-HUMAN-TEMPLATE.md, PLAN-EXEC-HUMAN-TEMPLATE.md, DIR-CLOSE-HUMAN-TEMPLATE.md, HUMAN-FIDELITY-LEDGER-TEMPLATE.md. CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma roadmap new, sigma send, sigma intent/exec/close humanize, and the one-time sigma project start / sigma reference update scaffolding of reference-list.md.",
       "tolerate_missing": true,
       "missing_behavior": "Warn on artifact creation commands; CLI may fall back to inline templates if folder is missing."
     },
@@ -295,7 +296,7 @@
       "location": "Sigma/",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "runtime — created on first sigma config set; absent = defaults apply",
+      "lifecycle": "runtime \u2014 created on first sigma config set; absent = defaults apply",
       "mandatory_when": [
         "session_bootstrap"
       ],
@@ -309,14 +310,29 @@
       "location": "Sigma/",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "project-wide, cumulative — created once by sigma project start; never versioned per DIR-INTENT",
+      "lifecycle": "project-wide, cumulative \u2014 created once by sigma project start; never versioned per DIR-INTENT",
       "mandatory_when": [
         "comprehensive_research_needed",
         "artifact_creation"
       ],
-      "description": "Project-wide source index for DIR-INTENT's Comprehensive Research section. Three tables (Local Artifact, Website Link, Online Source Data), each row carrying an ID (LA/WL/OS + sequential number) that DIR-INTENT cites by ID only. Local Artifact rows are synced from Sigma/reference/data/ via sigma reference update, which also auto-assigns the next LA id; Website Link and Online Source Data rows are always manual. Not tracked in progress-v<N>.json — no lifecycle state, no lock, no gate.",
+      "description": "Project-wide source index for DIR-INTENT's Comprehensive Research section. Three tables (Local Artifact, Website Link, Online Source Data), each row carrying an ID (LA/WL/OS + sequential number) that DIR-INTENT cites by ID only. Local Artifact rows are synced from Sigma/reference/data/ via sigma reference update, which also auto-assigns the next LA id; Website Link and Online Source Data rows are always manual. Not tracked in progress-v<N>.json \u2014 no lifecycle state, no lock, no gate.",
       "tolerate_missing": true,
       "missing_behavior": "sigma reference update self-heals a missing file by scaffolding it from REFERENCE-LIST-TEMPLATE.md before syncing."
+    },
+    {
+      "document_id": "sigma_terminology_registry",
+      "file": "rules/sigma_terminology.default.json",
+      "location": "Sigma/",
+      "authority_tier": "agent_config",
+      "owner": "Director",
+      "lifecycle": "stable \u2014 bundled and synced like the role rule files; edited at the sigma-ecosystem source, never per-project. Project-specific additions go in Sigma/sigma_terminology.custom.json instead (not registered here \u2014 project-local, never synced).",
+      "mandatory_when": [
+        "humanize_push",
+        "terminology_scan"
+      ],
+      "description": "Bundled list of Sigma vocabulary (DIR-INTENT, FMN-PLAN, RATIFIED, Gate 1-3, role names, the word \"Sigma\" itself, etc.) that must never appear in a published human artifact. Read by scanForSigmaTerminology() / loadTerminologyList(), consumed by both the blocking pre-push gate (sigma notion push) and the standalone sigma scan --file command \u2014 see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816 \u00a72.6/\u00a72.7/\u00a72.10.",
+      "tolerate_missing": true,
+      "missing_behavior": "Terminology scan runs against an empty list (or only the project-local custom file) \u2014 no findings are possible, which silently weakens the gate rather than failing loudly. Treat a missing default file as a setup defect."
     }
   ]
 }
