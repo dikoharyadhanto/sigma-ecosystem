@@ -50,7 +50,7 @@ function collectHumanPushTargets(chain) {
             version: chain.intent.version,
             humanRelPath,
             ledgerRelPath,
-            sourceRelPaths: [chain.intent.file ?? path_1.default.join('Sigma', 'design', `DIR-INTENT-${chain.intent.version}.md`)],
+            sourceRelPaths: [chain.intent.file ?? path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`)],
             coverageConfig: fidelityCoverage_1.DIR_INTENT_COVERAGE_CONFIG,
         });
     }
@@ -62,8 +62,8 @@ function collectHumanPushTargets(chain) {
             ? chain.plan.versions.find(v => v.version === execEntry.plan_version_ref)
             : undefined;
         const sourceRelPaths = [
-            planEntry?.file ?? (execEntry.plan_version_ref ? path_1.default.join('Sigma', 'build', `FMN-PLAN-${execEntry.plan_version_ref}.md`) : undefined),
-            execEntry.file ?? path_1.default.join('Sigma', 'build', `DEV-EXEC-${execEntry.version}.md`),
+            planEntry?.file ?? (execEntry.plan_version_ref ? path_1.default.join('Sigma', 'contract', `FMN-PLAN-${execEntry.plan_version_ref}.md`) : undefined),
+            execEntry.file ?? path_1.default.join('Sigma', 'evidence', `DEV-EXEC-${execEntry.version}.md`),
         ].filter((p) => Boolean(p));
         targets.push({
             kind: 'exec',

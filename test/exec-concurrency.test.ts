@@ -24,18 +24,18 @@ function makeChainWithOneOpenExecOnePlanFree() {
   const now = new Date().toISOString();
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: 'v1.2', active_state: 'LOCKED', pending: [],
       versions: [
-        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
-        { version: 'v1.2', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.2', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
       ],
     },
     exec: {
       active_version: 'v1.1', active_state: 'DRAFT',
       versions: [
-        { version: 'v1.1', state: 'DRAFT', file: 'Sigma/build/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1.1' },
+        { version: 'v1.1', state: 'DRAFT', file: 'Sigma/evidence/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1.1' },
       ],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
@@ -48,19 +48,19 @@ function makeChainWithTwoOpenExecs() {
   const now = new Date().toISOString();
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: 'v1.2', active_state: 'LOCKED', pending: [],
       versions: [
-        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
-        { version: 'v1.2', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.2', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
       ],
     },
     exec: {
       active_version: 'v1.2', active_state: 'DRAFT',
       versions: [
-        { version: 'v1.1', state: 'DRAFT', file: 'Sigma/build/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1.1' },
-        { version: 'v1.2', state: 'DRAFT', file: 'Sigma/build/DEV-EXEC-v1.2.md', created_at: now, updated_at: now, plan_version_ref: 'v1.2' },
+        { version: 'v1.1', state: 'DRAFT', file: 'Sigma/evidence/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1.1' },
+        { version: 'v1.2', state: 'DRAFT', file: 'Sigma/evidence/DEV-EXEC-v1.2.md', created_at: now, updated_at: now, plan_version_ref: 'v1.2' },
       ],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
@@ -73,19 +73,19 @@ function makeChainWithThreePlansOneOpenExec() {
   const now = new Date().toISOString();
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: 'v1.3', active_state: 'LOCKED', pending: [],
       versions: [
-        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
-        { version: 'v1.2', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
-        { version: 'v1.3', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.3.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.2', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.3', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.3.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
       ],
     },
     exec: {
       active_version: 'v1.1', active_state: 'DRAFT',
       versions: [
-        { version: 'v1.1', state: 'DRAFT', file: 'Sigma/build/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1.1' },
+        { version: 'v1.1', state: 'DRAFT', file: 'Sigma/evidence/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1.1' },
       ],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
@@ -176,7 +176,7 @@ describe('sigma exec lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK 
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithTwoOpenExecs());
-    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v1.1.md'), validExecDoc('v1.1', 'v1.1'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v1.1.md'), validExecDoc('v1.1', 'v1.1'));
 
     const result = runCli('exec lock --v v1.1', env.projectDir, env.homeDir);
 
@@ -211,7 +211,7 @@ describe('sigma exec check — ambiguity guard (PLAN-IMPL-MULTIDRAFT-LOCK §8.3)
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithTwoOpenExecs());
-    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v1.2.md'), validExecDoc('v1.2', 'v1.2'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v1.2.md'), validExecDoc('v1.2', 'v1.2'));
 
     const result = runCli('exec check --v v1.2', env.projectDir, env.homeDir);
 

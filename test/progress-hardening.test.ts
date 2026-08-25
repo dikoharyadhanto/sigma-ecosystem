@@ -33,7 +33,7 @@ describe('Progress hardening', () => {
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'DESIGN',
-      intent: { version: 'v9', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now },
+      intent: { version: 'v9', state: 'DRAFT', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },
@@ -56,7 +56,7 @@ describe('Progress hardening', () => {
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'DESIGN',
-      intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now },
+      intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },
@@ -78,7 +78,7 @@ describe('Progress hardening', () => {
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'DESIGN',
-      intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now },
+      intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },
@@ -102,7 +102,7 @@ describe('Progress hardening', () => {
     writeChainFixture(env, 'v2', {
       schema_version: '1.0.0', chain_version: 'v2', created_at: now, updated_at: now,
       lifecycle_state: 'DESIGN',
-      intent: { version: 'v2', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v2.md', created_at: now, updated_at: now },
+      intent: { version: 'v2', state: 'DRAFT', file: 'Sigma/charter/DIR-INTENT-v2.md', created_at: now, updated_at: now },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },
@@ -111,7 +111,7 @@ describe('Progress hardening', () => {
     }, { activate: true });
 
     fs.writeFileSync(
-      path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v2.md'),
+      path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v2.md'),
       validIntentDoc('v2')
     );
 

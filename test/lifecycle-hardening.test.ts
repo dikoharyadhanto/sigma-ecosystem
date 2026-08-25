@@ -80,7 +80,7 @@ describe('Lifecycle hardening coverage', () => {
       planVersions.push({
         version: `v1.${minor}`,
         state: 'LOCKED',
-        file: `Sigma/build/FMN-PLAN-v1.${minor}.md`,
+        file: `Sigma/contract/FMN-PLAN-v1.${minor}.md`,
         created_at: now,
         updated_at: now,
         locked_at: now,
@@ -89,7 +89,7 @@ describe('Lifecycle hardening coverage', () => {
       execVersions.push({
         version: `v1.${minor}`,
         state: 'LOCKED',
-        file: `Sigma/build/DEV-EXEC-v1.${minor}.md`,
+        file: `Sigma/evidence/DEV-EXEC-v1.${minor}.md`,
         created_at: now,
         updated_at: now,
         locked_at: now,
@@ -100,7 +100,7 @@ describe('Lifecycle hardening coverage', () => {
     planVersions.push({
       version: 'v1.33',
       state: 'SUPERSEDED',
-      file: 'Sigma/build/FMN-PLAN-v1.33.md',
+      file: 'Sigma/contract/FMN-PLAN-v1.33.md',
       created_at: now,
       updated_at: now,
       supersede_reason: 'replaced before execution',
@@ -109,7 +109,7 @@ describe('Lifecycle hardening coverage', () => {
     planVersions.push({
       version: 'v1.34',
       state: 'LOCKED',
-      file: 'Sigma/build/FMN-PLAN-v1.34.md',
+      file: 'Sigma/contract/FMN-PLAN-v1.34.md',
       created_at: now,
       updated_at: now,
       locked_at: now,
@@ -118,7 +118,7 @@ describe('Lifecycle hardening coverage', () => {
     execVersions.push({
       version: 'v1.34',
       state: 'LOCKED',
-      file: 'Sigma/build/DEV-EXEC-v1.34.md',
+      file: 'Sigma/evidence/DEV-EXEC-v1.34.md',
       created_at: now,
       updated_at: now,
       locked_at: now,
@@ -127,7 +127,7 @@ describe('Lifecycle hardening coverage', () => {
     planVersions.push({
       version: 'v1.35',
       state: 'LOCKED',
-      file: 'Sigma/build/FMN-PLAN-v1.35.md',
+      file: 'Sigma/contract/FMN-PLAN-v1.35.md',
       created_at: now,
       updated_at: now,
       locked_at: now,
@@ -138,7 +138,7 @@ describe('Lifecycle hardening coverage', () => {
     // doesn't need to start at v1).
     const chain = makeChain('v2', {
       lifecycle_state: 'BUILD',
-      intent: { version: 'v2', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v2.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v2', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v2.md', created_at: now, updated_at: now, locked_at: now },
       plan: { active_version: 'v1.35', active_state: 'LOCKED', pending: [], versions: planVersions },
       exec: { active_version: 'v1.34', active_state: 'LOCKED', versions: execVersions },
       gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
@@ -148,7 +148,7 @@ describe('Lifecycle hardening coverage', () => {
     const result = runCli('exec new', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/Created: Sigma[\\/]build[\\/]DEV-EXEC-v1\.35\.md/);
+    expect(result.stdout).toMatch(/Created: Sigma[\\/]evidence[\\/]DEV-EXEC-v1\.35\.md/);
     const updated = fs.readJsonSync(chainPath(env, 'v2')) as Record<string, any>;
     expect(updated.exec.versions.filter((v: Record<string, unknown>) => v.version === 'v1.34')).toHaveLength(1);
     expect(updated.exec.versions.some((v: Record<string, unknown>) => v.version === 'v1.35' && v.plan_version_ref === 'v1.35')).toBe(true);
@@ -158,7 +158,7 @@ describe('Lifecycle hardening coverage', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithLockedPlan());
-    const target = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v1.1.md');
+    const target = path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v1.1.md');
     fs.writeFileSync(target, 'locked evidence must survive');
 
     const result = runCli('exec new', env.projectDir, env.homeDir);

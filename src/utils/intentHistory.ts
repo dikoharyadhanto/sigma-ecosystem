@@ -15,8 +15,17 @@ import { ChainState, arcScoreBand, listChainVersions, readChain } from '../engin
 // overwritten on every `sigma intent score` re-run. Full assessment history is not
 // duplicated here; it already lives in Sigma/logs/operations.jsonl by design.
 
+// PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816 — new projects render to
+// Sigma/charter/; a project whose file already exists at the old
+// Sigma/design/ location keeps being updated there in place, so upgrading
+// the binary on an existing project never forks its history into two
+// files. Checked on every call rather than cached, since this is a cheap
+// existsSync and the file is meant to be re-rendered on essentially every
+// intent mutation anyway.
 export function intentHistoryPath(projectRoot: string): string {
-  return path.join(projectRoot, PROJECT_SIGMA_DIR, 'design', 'intent-history.md');
+  const legacyPath = path.join(projectRoot, PROJECT_SIGMA_DIR, 'design', 'intent-history.md');
+  if (fs.existsSync(legacyPath)) return legacyPath;
+  return path.join(projectRoot, PROJECT_SIGMA_DIR, 'charter', 'intent-history.md');
 }
 
 export function generateIntentHistoryContent(chains: ChainState[]): string {

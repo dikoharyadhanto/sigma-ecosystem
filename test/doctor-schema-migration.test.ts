@@ -24,7 +24,7 @@ function legacyRatifiedChain(version: string) {
   return {
     schema_version: '1.0.0', chain_version: version, created_at: now, updated_at: now,
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'LOCKED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    intent: { version, state: 'LOCKED', file: `Sigma/charter/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, locked_at: now },
     roadmap: null,
     plan: { active_version: null, active_state: null, versions: [], pending: [] },
     exec: { active_version: null, active_state: null, versions: [] },
@@ -99,7 +99,7 @@ describe('sigma doctor — RATIFIED schema migration', () => {
     writeChainFixture(env, 'v1', {
       schema_version: SCHEMA_VERSION, chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'RATIFIED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, ratified_at: now },
+      intent: { version: 'v1', state: 'RATIFIED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, ratified_at: now },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },

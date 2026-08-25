@@ -170,11 +170,11 @@ describe('sigma scan --file (CLI)', () => {
     stubProjectRootAnchor(env);
     stubProjectIdentity(env);
     seedTerminology(env);
-    const artifactPath = path.join(env.sigmaDir, 'design', 'DIR-INTENT-v1.md');
+    const artifactPath = path.join(env.sigmaDir, 'charter', 'DIR-INTENT-v1.md');
     fs.ensureDirSync(path.dirname(artifactPath));
     fs.writeFileSync(artifactPath, 'RATIFIED intent content, full of Sigma vocabulary by design.');
 
-    const result = runCli(`scan --file Sigma/design/DIR-INTENT-v1.md`, env.projectDir, env.homeDir);
+    const result = runCli(`scan --file Sigma/charter/DIR-INTENT-v1.md`, env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Skipped: DIR-INTENT-v1\.md is a Sigma artifact file/);

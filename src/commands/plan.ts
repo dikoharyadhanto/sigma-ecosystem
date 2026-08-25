@@ -54,7 +54,7 @@ function assertRequiredStageMetadata(title: string | undefined, focus: string | 
 // new` once it exists and hasn't been cascaded to SUPERSEDED.
 function getRoadmapPathIfEligible(projectRoot: string, chain: ChainState): string | null {
   if (!chain.roadmap || chain.roadmap.state === 'SUPERSEDED') return null;
-  return path.join(projectRoot, chain.roadmap.file ?? path.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
+  return path.join(projectRoot, chain.roadmap.file ?? path.join('Sigma', 'roadmap', `ROADMAP-${chain.roadmap.version}.md`));
 }
 
 function planDocPath(projectRoot: string, chain: ChainState, version?: string): string {
@@ -62,7 +62,7 @@ function planDocPath(projectRoot: string, chain: ChainState, version?: string): 
     ? chain.plan.versions.find(v => v.version === version)
     : chain.plan.versions.find(v => v.version === chain.plan.active_version);
   if (!entry) throw new Error(version ? `FMN-PLAN ${version} not found.` : 'No active FMN-PLAN found. Run: sigma plan new');
-  return path.join(projectRoot, entry.file ?? path.join('Sigma', 'build', `FMN-PLAN-${entry.version}.md`));
+  return path.join(projectRoot, entry.file ?? path.join('Sigma', 'contract', `FMN-PLAN-${entry.version}.md`));
 }
 
 // PLAN-IMPL-MULTIDRAFT-LOCK §8.3 (Director directive 2026-08-12) — no
@@ -164,7 +164,7 @@ export function planCommand(): Command {
 
         const intentVersionRef = chain.intent.version;
         const version = nextPlanVersion(chain, intentVersionRef);
-        const relPath = path.join('Sigma', 'build', `FMN-PLAN-${version}.md`);
+        const relPath = path.join('Sigma', 'contract', `FMN-PLAN-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
 
         // Artifact writes first, writeChain last
@@ -247,7 +247,7 @@ export function planCommand(): Command {
         if (chain.roadmap) {
           const roadmapPath = path.join(
             projectRoot,
-            chain.roadmap.file ?? path.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`),
+            chain.roadmap.file ?? path.join('Sigma', 'roadmap', `ROADMAP-${chain.roadmap.version}.md`),
           );
           if (fs.existsSync(roadmapPath)) {
             renderRoadmapFile(roadmapPath, chain);
@@ -295,7 +295,7 @@ export function planCommand(): Command {
         // Compute next version before any writes
         const newVersion = nextPlanVersion(chain, chain.intent.version);
         const oldAbsPath = path.join(projectRoot, pending.file);
-        const newRelPath = path.join('Sigma', 'build', `FMN-PLAN-${newVersion}.md`);
+        const newRelPath = path.join('Sigma', 'contract', `FMN-PLAN-${newVersion}.md`);
         const newAbsPath = path.join(projectRoot, newRelPath);
 
         // Artifact writes first: rename file
@@ -430,7 +430,7 @@ export function planCommand(): Command {
         if (!chain.roadmap) {
           throw new Error('No ROADMAP found for this chain. Run: sigma roadmap new');
         }
-        const roadmapAbsPath = path.join(projectRoot, chain.roadmap.file ?? path.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
+        const roadmapAbsPath = path.join(projectRoot, chain.roadmap.file ?? path.join('Sigma', 'roadmap', `ROADMAP-${chain.roadmap.version}.md`));
 
         updatePlanMetadata(chain, opts.v, opts.title, opts.focus);
         writeChain(projectRoot, chainVersion, chain);

@@ -20,17 +20,17 @@ function makeLockedPlanWithExec(opts: {
   const execState = opts.execState ?? 'LOCKED';
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: 'v1', active_state: 'LOCKED', pending: [],
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     exec: {
       active_version: 'v1.1',
       active_state: execState,
       versions: [
         {
-          version: 'v1.1', state: execState, file: 'Sigma/build/DEV-EXEC-v1.1.md',
+          version: 'v1.1', state: execState, file: 'Sigma/evidence/DEV-EXEC-v1.1.md',
           created_at: now, updated_at: now, plan_version_ref: 'v1',
           ...(execState === 'LOCKED' ? { locked_at: now } : {}),
         },
@@ -44,10 +44,10 @@ function makeLockedPlanNoExec() {
   const now = new Date().toISOString();
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: 'v1', active_state: 'LOCKED', pending: [],
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
   });
@@ -57,10 +57,10 @@ function makeDraftPlanWithIntent() {
   const now = new Date().toISOString();
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: 'v1', active_state: 'DRAFT', pending: [],
-      versions: [{ version: 'v1', state: 'DRAFT', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, intent_version_ref: 'v1' }],
+      versions: [{ version: 'v1', state: 'DRAFT', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, intent_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
   });
@@ -74,11 +74,11 @@ function makeLockedPlanNoExecWithRoadmap() {
   const now = new Date().toISOString();
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
-    roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/roadmap/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: 'v1', active_state: 'LOCKED', pending: [],
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
   });
@@ -88,17 +88,17 @@ function makeLockedPlanWithMultipleExecs() {
   const now = new Date().toISOString();
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: 'v1', active_state: 'LOCKED', pending: [],
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     exec: {
       active_version: 'v1.2',
       active_state: 'LOCKED',
       versions: [
-        { version: 'v1.1', state: 'SUPERSEDED', file: 'Sigma/build/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1', supersede_reason: 'old' },
-        { version: 'v1.2', state: 'LOCKED',     file: 'Sigma/build/DEV-EXEC-v1.2.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' },
+        { version: 'v1.1', state: 'SUPERSEDED', file: 'Sigma/evidence/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1', supersede_reason: 'old' },
+        { version: 'v1.2', state: 'LOCKED',     file: 'Sigma/evidence/DEV-EXEC-v1.2.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' },
       ],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
@@ -306,7 +306,7 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExecWithRoadmap());
     fs.writeFileSync(
-      path.join(env.projectDir, 'Sigma', 'build', 'ROADMAP-v1.md'),
+      path.join(env.projectDir, 'Sigma', 'roadmap', 'ROADMAP-v1.md'),
       '# ROADMAP v1\n\n<!-- SIGMA:RENDER:START:stage-overview -->\n<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->\n## 3. Stage Overview\n<!-- SIGMA:RENDER:END:stage-overview -->\n'
     );
 

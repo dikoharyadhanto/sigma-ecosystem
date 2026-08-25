@@ -19,7 +19,7 @@ function chainWithDraftPlan() {
   const now = new Date().toISOString();
   chain.plan = {
     active_version: 'v1', active_state: 'DRAFT', pending: [],
-    versions: [{ version: 'v1', state: 'DRAFT', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, intent_version_ref: 'v1' }],
+    versions: [{ version: 'v1', state: 'DRAFT', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, intent_version_ref: 'v1' }],
   };
   return chain;
 }
@@ -68,7 +68,7 @@ describe('sigma override survives sigma doctor while still in force', () => {
     const pivoted = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     pivoted.plan.versions[0].state = 'SUPERSEDED';
     pivoted.plan.versions[0].supersede_reason = 'Replaced by v2 during normal planning';
-    pivoted.plan.versions.push({ version: 'v2', state: 'DRAFT', file: 'Sigma/build/FMN-PLAN-v2.md', created_at: now, updated_at: now, intent_version_ref: 'v1' });
+    pivoted.plan.versions.push({ version: 'v2', state: 'DRAFT', file: 'Sigma/contract/FMN-PLAN-v2.md', created_at: now, updated_at: now, intent_version_ref: 'v1' });
     pivoted.plan.active_version = 'v2';
     pivoted.plan.active_state = 'DRAFT';
     fs.writeJsonSync(chainPath(env, 'v1'), pivoted, { spaces: 2 });

@@ -29,7 +29,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },
@@ -59,7 +59,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
     // reference (PLAN-EVAL-01 §5).
     chain.plan = {
       active_version: 'v1.1', active_state: 'LOCKED', pending: [],
-      versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v9' }],
+      versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v9' }],
     };
     chain.gates = { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false };
     writeChainFixture(env, 'v1', chain);
@@ -82,7 +82,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
     const now = new Date().toISOString();
     chain.plan = {
       active_version: 'v1.1', active_state: 'LOCKED', pending: [],
-      versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v9' }],
+      versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v9' }],
     };
     chain.gates = { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false };
     writeChainFixture(env, 'v1', chain);
@@ -122,7 +122,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
     const result = runCli('exec new', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/Created: Sigma[\\/]build[\\/]DEV-EXEC-v1\.1\.md/);
+    expect(result.stdout).toMatch(/Created: Sigma[\\/]evidence[\\/]DEV-EXEC-v1\.1\.md/);
     const updated = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     expect(updated.exec.versions).toHaveLength(1);
   });
@@ -135,7 +135,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
     chain.exec.versions.push({
       version: 'v0.1',
       state: 'DRAFT',
-      file: 'Sigma/build/DEV-EXEC-v0.1.md',
+      file: 'Sigma/evidence/DEV-EXEC-v0.1.md',
       created_at: now,
       updated_at: now,
       plan_version_ref: 'v0.1',

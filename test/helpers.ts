@@ -60,7 +60,7 @@ export function setupTestEnv(): TestEnv {
 
   // Project Sigma/ structure
   const sigmaDir = path.join(projectDir, 'Sigma');
-  for (const sub of ['design', 'build', 'close', 'rules', 'logs', 'memory']) {
+  for (const sub of ['charter', 'contract', 'roadmap', 'evidence', 'close', 'human', 'notes', 'rules', 'logs', 'memory']) {
     fs.mkdirSync(path.join(sigmaDir, sub), { recursive: true });
   }
 
@@ -136,7 +136,7 @@ function baseChain(version: string): Record<string, unknown> {
     created_at: now,
     updated_at: now,
     lifecycle_state: 'DESIGN',
-    intent: { version, state: 'DRAFT', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now },
+    intent: { version, state: 'DRAFT', file: `Sigma/charter/DIR-INTENT-${version}.md`, created_at: now, updated_at: now },
     roadmap: null,
     plan: { active_version: null, active_state: null, versions: [], pending: [] },
     exec: { active_version: null, active_state: null, versions: [] },
@@ -157,7 +157,7 @@ export function makeChainWithLockedIntent(version = 'v1'): object {
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
+    intent: { version, state: 'RATIFIED', file: `Sigma/charter/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
     gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
   });
 }
@@ -173,15 +173,15 @@ export function makeChainWithFullBuiltCycle(version = 'v1', planExecVersion = 'v
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
-    roadmap: { version, state: 'LOCKED', file: `Sigma/build/ROADMAP-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    intent: { version, state: 'RATIFIED', file: `Sigma/charter/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
+    roadmap: { version, state: 'LOCKED', file: `Sigma/roadmap/ROADMAP-${version}.md`, created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: planExecVersion, active_state: 'LOCKED', pending: [],
-      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/contract/FMN-PLAN-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
     },
     exec: {
       active_version: planExecVersion, active_state: 'LOCKED',
-      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/build/DEV-EXEC-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, plan_version_ref: planExecVersion }],
+      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/evidence/DEV-EXEC-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, plan_version_ref: planExecVersion }],
     },
     close: { version, state: 'DRAFT', file: `Sigma/close/DIR-CLOSE-${version}.md`, created_at: now, updated_at: now },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
@@ -194,11 +194,11 @@ export function makeChainWithLockedPlan(version = 'v1', planVersion = 'v1.1'): o
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
-    roadmap: { version, state: 'LOCKED', file: `Sigma/build/ROADMAP-${version}.md`, created_at: now, updated_at: now, locked_at: now },
+    intent: { version, state: 'RATIFIED', file: `Sigma/charter/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
+    roadmap: { version, state: 'LOCKED', file: `Sigma/roadmap/ROADMAP-${version}.md`, created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: planVersion, active_state: 'LOCKED', pending: [],
-      versions: [{ version: planVersion, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${planVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+      versions: [{ version: planVersion, state: 'LOCKED', file: `Sigma/contract/FMN-PLAN-${planVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
   });
@@ -214,16 +214,16 @@ export function makeChainWithLockedExec(version = 'v1', planExecVersion = 'v1.1'
   return makeChain(version, {
     lifecycle_state: 'BUILD',
     intent: {
-      version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now,
+      version, state: 'RATIFIED', file: `Sigma/charter/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now,
       ...(arcScore !== undefined ? { arc_score: arcScore, arc_score_notes: 'test fixture', arc_score_updated_at: now } : {}),
     },
     plan: {
       active_version: planExecVersion, active_state: 'LOCKED', pending: [],
-      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/contract/FMN-PLAN-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
     },
     exec: {
       active_version: planExecVersion, active_state: 'LOCKED',
-      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/build/DEV-EXEC-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, plan_version_ref: planExecVersion }],
+      versions: [{ version: planExecVersion, state: 'LOCKED', file: `Sigma/evidence/DEV-EXEC-${planExecVersion}.md`, created_at: now, updated_at: now, locked_at: now, plan_version_ref: planExecVersion }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
   });
@@ -236,14 +236,14 @@ export function makeChainWithDraftExec(version = 'v1'): object {
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
+    intent: { version, state: 'RATIFIED', file: `Sigma/charter/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
     plan: {
       active_version: version, active_state: 'LOCKED', pending: [],
-      versions: [{ version, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${version}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+      versions: [{ version, state: 'LOCKED', file: `Sigma/contract/FMN-PLAN-${version}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
     },
     exec: {
       active_version: 'v0.1', active_state: 'DRAFT',
-      versions: [{ version: 'v0.1', state: 'DRAFT', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, plan_version_ref: version }],
+      versions: [{ version: 'v0.1', state: 'DRAFT', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, plan_version_ref: version }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
   });
@@ -255,14 +255,14 @@ export function makeChainWithDraftClose(version = 'v1'): object {
   const now = new Date().toISOString();
   return makeChain(version, {
     lifecycle_state: 'BUILD',
-    intent: { version, state: 'RATIFIED', file: `Sigma/design/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
+    intent: { version, state: 'RATIFIED', file: `Sigma/charter/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
     plan: {
       active_version: version, active_state: 'LOCKED', pending: [],
-      versions: [{ version, state: 'LOCKED', file: `Sigma/build/FMN-PLAN-${version}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+      versions: [{ version, state: 'LOCKED', file: `Sigma/contract/FMN-PLAN-${version}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
     },
     exec: {
       active_version: 'v0.1', active_state: 'LOCKED',
-      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: version }],
+      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: version }],
     },
     close: { version, state: 'DRAFT', file: `Sigma/close/DIR-CLOSE-${version}.md`, created_at: now, updated_at: now },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
@@ -298,7 +298,7 @@ export function makeProgressWithDraftIntent() {
     intent: {
       active_version: 'v1',
       active_state: 'DRAFT',
-      versions: [{ version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now }],
+      versions: [{ version: 'v1', state: 'DRAFT', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now }],
     },
     gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false },
   });
@@ -311,7 +311,7 @@ export function makeProgressWithLockedIntent() {
     intent: {
       active_version: 'v1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
     },
     gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
   });
@@ -324,12 +324,12 @@ export function makeProgressWithLockedPlan() {
     intent: {
       active_version: 'v1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
     },
     plan: {
       active_version: 'v1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
   });
@@ -342,17 +342,17 @@ export function makeProgressWithLockedExec() {
     intent: {
       active_version: 'v1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
     },
     plan: {
       active_version: 'v1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     exec: {
       active_version: 'v0.1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' }],
+      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
   });
@@ -681,17 +681,17 @@ export function makeProgressWithDraftExec() {
     intent: {
       active_version: 'v1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
     },
     plan: {
       active_version: 'v1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     exec: {
       active_version: 'v0.1',
       active_state: 'DRAFT',
-      versions: [{ version: 'v0.1', state: 'DRAFT', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1' }],
+      versions: [{ version: 'v0.1', state: 'DRAFT', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
   });
@@ -704,17 +704,17 @@ export function makeProgressWithDraftClose() {
     intent: {
       active_version: 'v1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now }],
     },
     plan: {
       active_version: 'v1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     exec: {
       active_version: 'v0.1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' }],
+      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' }],
     },
     close: {
       active_version: 'v1',
@@ -733,19 +733,19 @@ export function makeProgressWithDraftIntentAfterLockedChain() {
       active_version: 'v2',
       active_state: 'DRAFT',
       versions: [
-        { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
-        { version: 'v2', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v2.md', created_at: now, updated_at: now },
+        { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+        { version: 'v2', state: 'DRAFT', file: 'Sigma/charter/DIR-INTENT-v2.md', created_at: now, updated_at: now },
       ],
     },
     plan: {
       active_version: 'v1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     exec: {
       active_version: 'v0.1',
       active_state: 'LOCKED',
-      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' }],
+      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
   });

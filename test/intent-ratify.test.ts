@@ -23,7 +23,7 @@ describe('Intent ratify mutation', () => {
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
 
     // Create a stub intent file so the harvester does not fail
-    const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    const intentFile = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, validIntentDoc('v1'));
 
     const result = runCli('intent ratify', env.projectDir, env.homeDir);
@@ -64,7 +64,7 @@ describe('Intent lock tombstone', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
-    const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    const intentFile = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, validIntentDoc('v1'));
 
     const before = fs.readFileSync(chainPath(env, 'v1'), 'utf8');

@@ -24,16 +24,16 @@ function makeChainWithMultiplePlanDrafts() {
   const now = new Date().toISOString();
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
-    roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/roadmap/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: 'v1.3',
       active_state: 'DRAFT',
       pending: [],
       versions: [
-        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
-        { version: 'v1.2', state: 'DRAFT',  file: 'Sigma/build/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, intent_version_ref: 'v1' },
-        { version: 'v1.3', state: 'DRAFT',  file: 'Sigma/build/FMN-PLAN-v1.3.md', created_at: now, updated_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.2', state: 'DRAFT',  file: 'Sigma/contract/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.3', state: 'DRAFT',  file: 'Sigma/contract/FMN-PLAN-v1.3.md', created_at: now, updated_at: now, intent_version_ref: 'v1' },
       ],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
@@ -44,14 +44,14 @@ function makeChainWithSingleDraftPlan() {
   const now = new Date().toISOString();
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     // No roadmap — used by the Gate 1.5 tests below.
     plan: {
       active_version: 'v1.1',
       active_state: 'DRAFT',
       pending: [],
       versions: [
-        { version: 'v1.1', state: 'DRAFT', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.1', state: 'DRAFT', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, intent_version_ref: 'v1' },
       ],
     },
     gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
@@ -62,14 +62,14 @@ function makeChainWithNoDraftPlan() {
   const now = new Date().toISOString();
   return makeChain('v1', {
     lifecycle_state: 'BUILD',
-    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
-    roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
+    intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+    roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/roadmap/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
       active_version: 'v1.1',
       active_state: 'LOCKED',
       pending: [],
       versions: [
-        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
       ],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
@@ -125,7 +125,7 @@ describe('sigma plan lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK 
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
-    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.1.md'), validPlanDoc('v1.1'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md'), validPlanDoc('v1.1'));
 
     const result = runCli('plan lock', env.projectDir, env.homeDir);
 
@@ -158,7 +158,7 @@ describe('sigma plan lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK 
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
-    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.2.md'), validPlanDoc('v1.2'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.2.md'), validPlanDoc('v1.2'));
 
     const result = runCli('plan lock --v v1.2', env.projectDir, env.homeDir);
 
@@ -177,7 +177,7 @@ describe('sigma plan lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK 
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
-    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.1.md'), validPlanDoc('v1.1'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md'), validPlanDoc('v1.1'));
 
     const result = runCli('plan lock --v v1.1', env.projectDir, env.homeDir);
 
@@ -218,7 +218,7 @@ describe('sigma plan check — ambiguity guard (PLAN-IMPL-MULTIDRAFT-LOCK §8.3)
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
-    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.2.md'), validPlanDoc('v1.2'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.2.md'), validPlanDoc('v1.2'));
 
     const result = runCli('plan check --v v1.2', env.projectDir, env.homeDir);
 
@@ -229,7 +229,7 @@ describe('sigma plan check — ambiguity guard (PLAN-IMPL-MULTIDRAFT-LOCK §8.3)
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
-    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.1.md'), validPlanDoc('v1.1'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md'), validPlanDoc('v1.1'));
 
     const result = runCli('plan check', env.projectDir, env.homeDir);
 
@@ -246,7 +246,7 @@ describe('AUD Advisory Verdict gate on plan lock', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
-    const planFile = path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.1.md');
+    const planFile = path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md');
     fs.writeFileSync(planFile, validPlanDoc('v1.1').replace('- [x] PASS', ''));
 
     const result = runCli('plan lock', env.projectDir, env.homeDir);
@@ -259,7 +259,7 @@ describe('AUD Advisory Verdict gate on plan lock', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
-    const planFile = path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.1.md');
+    const planFile = path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md');
     fs.writeFileSync(
       planFile,
       validPlanDoc('v1.1').replace(

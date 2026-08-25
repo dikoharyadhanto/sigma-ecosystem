@@ -28,16 +28,16 @@ import {
 // melainkan sebagai chain yang gagal divalidasi").
 
 function lockedIntentChain(version = 'v1'): ChainState {
-  const chain = createInitialChain(version, `Sigma/design/DIR-INTENT-${version}.md`);
+  const chain = createInitialChain(version, `Sigma/charter/DIR-INTENT-${version}.md`);
   ratifyIntent(chain);
   return chain;
 }
 
 // Builds one fully-closed PLAN/EXEC pair (v0.1) on the given chain.
 function closeOnePair(chain: ChainState, minor: string): void {
-  registerPlanDraft(chain, `v0.${minor}`, `Sigma/build/FMN-PLAN-v0.${minor}.md`, 'v1');
+  registerPlanDraft(chain, `v0.${minor}`, `Sigma/contract/FMN-PLAN-v0.${minor}.md`, 'v1');
   lockPlanVersion(chain, `v0.${minor}`);
-  registerExecDraft(chain, `v0.${minor}`, `Sigma/build/DEV-EXEC-v0.${minor}.md`, `v0.${minor}`);
+  registerExecDraft(chain, `v0.${minor}`, `Sigma/evidence/DEV-EXEC-v0.${minor}.md`, `v0.${minor}`);
   lockExecVersion(chain, `v0.${minor}`);
 }
 
@@ -63,7 +63,7 @@ describe('hasCleanGate3Chain — new definition (PLAN-IMPL-MULTIDRAFT-LOCK §7.1
     closeOnePair(chain, '1');
     expect(hasCleanGate3Chain(chain)).toBe(true);
 
-    registerPlanDraft(chain, 'v0.2', 'Sigma/build/FMN-PLAN-v0.2.md', 'v1');
+    registerPlanDraft(chain, 'v0.2', 'Sigma/contract/FMN-PLAN-v0.2.md', 'v1');
     expect(hasCleanGate3Chain(chain)).toBe(false);
   });
 
@@ -72,9 +72,9 @@ describe('hasCleanGate3Chain — new definition (PLAN-IMPL-MULTIDRAFT-LOCK §7.1
     closeOnePair(chain, '1');
     expect(hasCleanGate3Chain(chain)).toBe(true);
 
-    registerPlanDraft(chain, 'v0.2', 'Sigma/build/FMN-PLAN-v0.2.md', 'v1');
+    registerPlanDraft(chain, 'v0.2', 'Sigma/contract/FMN-PLAN-v0.2.md', 'v1');
     lockPlanVersion(chain, 'v0.2');
-    registerExecDraft(chain, 'v0.2', 'Sigma/build/DEV-EXEC-v0.2.md', 'v0.2');
+    registerExecDraft(chain, 'v0.2', 'Sigma/evidence/DEV-EXEC-v0.2.md', 'v0.2');
     // v0.2's exec is deliberately left DRAFT here.
     expect(hasCleanGate3Chain(chain)).toBe(false);
   });
@@ -91,7 +91,7 @@ describe('hasCleanGate3Chain — new definition (PLAN-IMPL-MULTIDRAFT-LOCK §7.1
     closeOnePair(chain, '1');
     expect(hasCleanGate3Chain(chain)).toBe(true);
 
-    registerPlanDraft(chain, 'v0.2', 'Sigma/build/FMN-PLAN-v0.2.md', 'v1');
+    registerPlanDraft(chain, 'v0.2', 'Sigma/contract/FMN-PLAN-v0.2.md', 'v1');
     lockPlanVersion(chain, 'v0.2');
     supersedePlanVersion(chain, 'v0.2', 'deprioritized, no exec was ever started');
 
@@ -113,7 +113,7 @@ describe('Gate 3 recompute at every mutation point (PLAN-IMPL-MULTIDRAFT-LOCK §
     closeOnePair(chain, '1');
     expect(chain.gates.gate_3_satisfied).toBe(true);
 
-    registerPlanDraft(chain, 'v0.2', 'Sigma/build/FMN-PLAN-v0.2.md', 'v1');
+    registerPlanDraft(chain, 'v0.2', 'Sigma/contract/FMN-PLAN-v0.2.md', 'v1');
     expect(chain.gates.gate_3_satisfied).toBe(false);
   });
 
@@ -121,7 +121,7 @@ describe('Gate 3 recompute at every mutation point (PLAN-IMPL-MULTIDRAFT-LOCK §
     const chain = lockedIntentChain();
     closeOnePair(chain, '1');
 
-    registerPlanDraft(chain, 'v0.2', 'Sigma/build/FMN-PLAN-v0.2.md', 'v1');
+    registerPlanDraft(chain, 'v0.2', 'Sigma/contract/FMN-PLAN-v0.2.md', 'v1');
     lockPlanVersion(chain, 'v0.2');
     expect(chain.gates.gate_3_satisfied).toBe(false);
 
@@ -131,9 +131,9 @@ describe('Gate 3 recompute at every mutation point (PLAN-IMPL-MULTIDRAFT-LOCK §
 
   it('lockExecVersion can open Gate 3 by completing the last open pairing', () => {
     const chain = lockedIntentChain();
-    registerPlanDraft(chain, 'v0.1', 'Sigma/build/FMN-PLAN-v0.1.md', 'v1');
+    registerPlanDraft(chain, 'v0.1', 'Sigma/contract/FMN-PLAN-v0.1.md', 'v1');
     lockPlanVersion(chain, 'v0.1');
-    registerExecDraft(chain, 'v0.1', 'Sigma/build/DEV-EXEC-v0.1.md', 'v0.1');
+    registerExecDraft(chain, 'v0.1', 'Sigma/evidence/DEV-EXEC-v0.1.md', 'v0.1');
     expect(chain.gates.gate_3_satisfied).toBe(false);
 
     lockExecVersion(chain, 'v0.1');
@@ -145,9 +145,9 @@ describe('Gate 3 recompute at every mutation point (PLAN-IMPL-MULTIDRAFT-LOCK §
     closeOnePair(chain, '1');
     expect(chain.gates.gate_3_satisfied).toBe(true);
 
-    registerPlanDraft(chain, 'v0.2', 'Sigma/build/FMN-PLAN-v0.2.md', 'v1');
+    registerPlanDraft(chain, 'v0.2', 'Sigma/contract/FMN-PLAN-v0.2.md', 'v1');
     lockPlanVersion(chain, 'v0.2');
-    registerExecDraft(chain, 'v0.2', 'Sigma/build/DEV-EXEC-v0.2.md', 'v0.2');
+    registerExecDraft(chain, 'v0.2', 'Sigma/evidence/DEV-EXEC-v0.2.md', 'v0.2');
     expect(chain.gates.gate_3_satisfied).toBe(false);
   });
 });
@@ -164,19 +164,19 @@ describe('sigma doctor repairs gate_3_satisfied to match the new definition (PLA
     writeChainFixture(env, 'v1', {
       schema_version: '1.1.0', chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
       roadmap: null,
       plan: {
         active_version: 'v0.2', active_state: 'LOCKED', pending: [],
         versions: [
-          { version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
-          { version: 'v0.2', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v0.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+          { version: 'v0.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+          { version: 'v0.2', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v0.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
         ],
       },
       exec: {
         active_version: 'v0.1', active_state: 'LOCKED',
         versions: [
-          { version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v0.1' },
+          { version: 'v0.1', state: 'LOCKED', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v0.1' },
         ],
       },
       close: null,
@@ -198,10 +198,10 @@ describe('sigma doctor repairs gate_3_satisfied to match the new definition (PLA
 describe('describeGate3Blockers — names every entry holding the gate closed (PLAN-IMPL-MULTIDRAFT-LOCK §11)', () => {
   it('reports each DRAFT plan and DRAFT exec by version', () => {
     const chain = lockedIntentChain();
-    registerPlanDraft(chain, 'v0.1', 'Sigma/build/FMN-PLAN-v0.1.md', 'v1');
-    registerPlanDraft(chain, 'v0.2', 'Sigma/build/FMN-PLAN-v0.2.md', 'v1');
+    registerPlanDraft(chain, 'v0.1', 'Sigma/contract/FMN-PLAN-v0.1.md', 'v1');
+    registerPlanDraft(chain, 'v0.2', 'Sigma/contract/FMN-PLAN-v0.2.md', 'v1');
     lockPlanVersion(chain, 'v0.2');
-    registerExecDraft(chain, 'v0.2', 'Sigma/build/DEV-EXEC-v0.2.md', 'v0.2');
+    registerExecDraft(chain, 'v0.2', 'Sigma/evidence/DEV-EXEC-v0.2.md', 'v0.2');
 
     const blockers = describeGate3Blockers(chain);
     expect(blockers).toContain('DRAFT FMN-PLAN: v0.1');
@@ -210,7 +210,7 @@ describe('describeGate3Blockers — names every entry holding the gate closed (P
 
   it('reports a LOCKED plan with no LOCKED exec pairing', () => {
     const chain = lockedIntentChain();
-    registerPlanDraft(chain, 'v0.1', 'Sigma/build/FMN-PLAN-v0.1.md', 'v1');
+    registerPlanDraft(chain, 'v0.1', 'Sigma/contract/FMN-PLAN-v0.1.md', 'v1');
     lockPlanVersion(chain, 'v0.1');
 
     const blockers = describeGate3Blockers(chain);
@@ -219,9 +219,9 @@ describe('describeGate3Blockers — names every entry holding the gate closed (P
 
   it('reports nothing when the chain is clean', () => {
     const chain = lockedIntentChain();
-    registerPlanDraft(chain, 'v0.1', 'Sigma/build/FMN-PLAN-v0.1.md', 'v1');
+    registerPlanDraft(chain, 'v0.1', 'Sigma/contract/FMN-PLAN-v0.1.md', 'v1');
     lockPlanVersion(chain, 'v0.1');
-    registerExecDraft(chain, 'v0.1', 'Sigma/build/DEV-EXEC-v0.1.md', 'v0.1');
+    registerExecDraft(chain, 'v0.1', 'Sigma/evidence/DEV-EXEC-v0.1.md', 'v0.1');
     lockExecVersion(chain, 'v0.1');
 
     expect(describeGate3Blockers(chain)).toEqual([]);
@@ -241,12 +241,12 @@ describe('sigma close new — Gate 3 blocked message names the specific blockers
     writeChainFixture(env, 'v1', {
       schema_version: '1.1.0', chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
       roadmap: null,
       plan: {
         active_version: 'v0.1', active_state: 'LOCKED', pending: [],
         versions: [
-          { version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+          { version: 'v0.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
         ],
       },
       exec: { active_version: null, active_state: null, versions: [] },
@@ -269,19 +269,19 @@ describe('sigma close new — Gate 3 blocked message names the specific blockers
     writeChainFixture(env, 'v1', {
       schema_version: '1.1.0', chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
       roadmap: null,
       plan: {
         active_version: 'v0.2', active_state: 'DRAFT', pending: [],
         versions: [
-          { version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
-          { version: 'v0.2', state: 'DRAFT', file: 'Sigma/build/FMN-PLAN-v0.2.md', created_at: now, updated_at: now, intent_version_ref: 'v1' },
+          { version: 'v0.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+          { version: 'v0.2', state: 'DRAFT', file: 'Sigma/contract/FMN-PLAN-v0.2.md', created_at: now, updated_at: now, intent_version_ref: 'v1' },
         ],
       },
       exec: {
         active_version: 'v0.1', active_state: 'LOCKED',
         versions: [
-          { version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v0.1' },
+          { version: 'v0.1', state: 'LOCKED', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v0.1' },
         ],
       },
       close: null,

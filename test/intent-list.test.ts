@@ -96,7 +96,7 @@ describe('sigma intent check --v — cross-chain resolution (PLAN-EVAL-01 §3.7)
     writeChainFixture(env, 'v2', makeChainWithDraftIntent('v2'), { activate: true });
 
     fs.writeFileSync(
-      path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md'),
+      path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md'),
       validIntentDoc('v1')
     );
 

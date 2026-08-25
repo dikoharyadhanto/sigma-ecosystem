@@ -50,7 +50,7 @@ function promptApprove(message: string): Promise<boolean> {
 }
 
 function intentDocPath(projectRoot: string, chain: ChainState): string {
-  return path.join(projectRoot, chain.intent.file ?? path.join('Sigma', 'design', `DIR-INTENT-${chain.intent.version}.md`));
+  return path.join(projectRoot, chain.intent.file ?? path.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`));
 }
 
 // PLAN-EVAL-06 §6.2 — intent-history.md is a plain pipe-split table, and
@@ -107,7 +107,7 @@ export function intentCommand(): Command {
         }
 
         const chainVersion = nextChainVersion(projectRoot);
-        const relPath = path.join('Sigma', 'design', `DIR-INTENT-${chainVersion}.md`);
+        const relPath = path.join('Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`);
         const absPath = path.join(projectRoot, relPath);
         copyTemplateToArtifact('DIR-INTENT-TEMPLATE.md', absPath);
 

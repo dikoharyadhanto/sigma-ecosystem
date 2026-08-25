@@ -56,7 +56,16 @@ export const OPERATION_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-OPERA
 export const DOCUMENT_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'SIGMA-REGISTRY.json');
 export const PROJECT_CONFIG_FILE = path.join(PROJECT_SIGMA_DIR, 'project.config.json');
 
-export const SUBFOLDERS = ['design', 'build', 'close', 'rules', 'logs', 'memory', 'role-memory', 'reference'];
+// PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816 §2.1/§3.1 — design/build
+// renamed and split: design -> charter (DIR-INTENT), build -> contract
+// (FMN-PLAN) + roadmap (ROADMAP) + evidence (DEV-EXEC). close/rules/logs/
+// memory/role-memory/reference unchanged (§3.2 — out of scope). human/notes
+// are new (Sigma Humanize Operation's *-HUMAN docs and free-form notes).
+// New projects only (§2.2) — a chain's stored entry.file always wins over
+// any folder-name-derived fallback (see findProjectRoot()'s callers in
+// intent.ts/plan.ts/exec.ts/roadmap.ts), so existing projects created under
+// the old names are unaffected without migration.
+export const SUBFOLDERS = ['charter', 'contract', 'roadmap', 'evidence', 'close', 'human', 'notes', 'rules', 'logs', 'memory', 'role-memory', 'reference'];
 
 export const MESSAGES_DIR = path.join(PROJECT_SIGMA_DIR, 'messages');
 export const MESSAGES_INDEX_FILE = path.join(MESSAGES_DIR, 'index.json');

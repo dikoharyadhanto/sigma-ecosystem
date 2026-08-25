@@ -21,7 +21,7 @@ const docCheck_1 = require("../utils/docCheck");
 function roadmapDocPath(projectRoot, chain) {
     if (!chain.roadmap)
         throw new Error('No ROADMAP found for this chain. Run: sigma roadmap new');
-    return path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
+    return path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'roadmap', `ROADMAP-${chain.roadmap.version}.md`));
 }
 // ── Command ───────────────────────────────────────────────────────────────────
 function roadmapCommand() {
@@ -38,7 +38,7 @@ function roadmapCommand() {
                 throw new Error('ROADMAP requires a ratified DIR-INTENT. Run: sigma intent ratify');
             }
             const version = chain.chain_version;
-            const relPath = path_1.default.join('Sigma', 'build', `ROADMAP-${version}.md`);
+            const relPath = path_1.default.join('Sigma', 'roadmap', `ROADMAP-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
             (0, artifacts_1.copyTemplateToArtifact)('ROADMAP-TEMPLATE.md', absPath);
             (0, chain_1.registerRoadmapDraft)(chain, relPath);

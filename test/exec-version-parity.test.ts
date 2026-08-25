@@ -28,7 +28,7 @@ import {
 // produce EXEC v1.3 for a PLAN v1.1 executed after PLAN v1.2).
 
 function lockedIntentChain(version = 'v1'): ChainState {
-  const chain = createInitialChain(version, `Sigma/design/DIR-INTENT-${version}.md`);
+  const chain = createInitialChain(version, `Sigma/charter/DIR-INTENT-${version}.md`);
   ratifyIntent(chain);
   return chain;
 }
@@ -43,18 +43,18 @@ describe('nextExecVersion — identity with the referenced PLAN version', () => 
 describe('registerExecDraft — version invariant guards (PLAN-IMPL-MULTIDRAFT-LOCK §6.3)', () => {
   it('throws when the EXEC version does not exactly equal the PLAN version it references', () => {
     const chain = lockedIntentChain();
-    registerPlanDraft(chain, 'v0.1', 'Sigma/build/FMN-PLAN-v0.1.md', 'v1');
+    registerPlanDraft(chain, 'v0.1', 'Sigma/contract/FMN-PLAN-v0.1.md', 'v1');
     lockPlanVersion(chain, 'v0.1');
-    expect(() => registerExecDraft(chain, 'v0.2', 'Sigma/build/DEV-EXEC-v0.2.md', 'v0.1'))
+    expect(() => registerExecDraft(chain, 'v0.2', 'Sigma/evidence/DEV-EXEC-v0.2.md', 'v0.1'))
       .toThrow(/EXEC version must equal PLAN version exactly/);
   });
 
   it('still rejects a duplicate EXEC version — defensive guard retained', () => {
     const chain = lockedIntentChain();
-    registerPlanDraft(chain, 'v0.1', 'Sigma/build/FMN-PLAN-v0.1.md', 'v1');
+    registerPlanDraft(chain, 'v0.1', 'Sigma/contract/FMN-PLAN-v0.1.md', 'v1');
     lockPlanVersion(chain, 'v0.1');
-    registerExecDraft(chain, 'v0.1', 'Sigma/build/DEV-EXEC-v0.1.md', 'v0.1');
-    expect(() => registerExecDraft(chain, 'v0.1', 'Sigma/build/DEV-EXEC-v0.1.md', 'v0.1'))
+    registerExecDraft(chain, 'v0.1', 'Sigma/evidence/DEV-EXEC-v0.1.md', 'v0.1');
+    expect(() => registerExecDraft(chain, 'v0.1', 'Sigma/evidence/DEV-EXEC-v0.1.md', 'v0.1'))
       .toThrow(/Duplicate DEV-EXEC version/);
   });
 });
@@ -70,10 +70,10 @@ describe('sigma exec new — EXEC version always equals PLAN version (CLI end-to
     const now = new Date().toISOString();
     writeChainFixture(env, 'v1', makeChain('v1', {
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
       plan: {
         active_version: 'v1.1', active_state: 'LOCKED', pending: [],
-        versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+        versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
       },
       gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
     }));
@@ -95,12 +95,12 @@ describe('sigma exec new — EXEC version always equals PLAN version (CLI end-to
     const now = new Date().toISOString();
     writeChainFixture(env, 'v1', makeChain('v1', {
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
       plan: {
         active_version: 'v1.2', active_state: 'LOCKED', pending: [],
         versions: [
-          { version: 'v1.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
-          { version: 'v1.2', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+          { version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+          { version: 'v1.2', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
         ],
       },
       gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
@@ -134,20 +134,20 @@ describe('sigma exec new — EXEC version always equals PLAN version (CLI end-to
     const now = new Date().toISOString();
     writeChainFixture(env, 'v1', makeChain('v1', {
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
-      roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/roadmap/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
       plan: {
         active_version: 'v0.1', active_state: 'LOCKED', pending: [],
-        versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+        versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
       },
       exec: {
         active_version: 'v0.1', active_state: 'DRAFT',
-        versions: [{ version: 'v0.1', state: 'DRAFT', file: 'Sigma/build/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, plan_version_ref: 'v0.1' }],
+        versions: [{ version: 'v0.1', state: 'DRAFT', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, plan_version_ref: 'v0.1' }],
       },
       gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
     }));
     fs.writeFileSync(
-      path.join(env.projectDir, 'Sigma', 'build', 'ROADMAP-v1.md'),
+      path.join(env.projectDir, 'Sigma', 'roadmap', 'ROADMAP-v1.md'),
       '# ROADMAP v1\n\n<!-- SIGMA:RENDER:START:stage-overview -->\n<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->\n## 3. Stage Overview\n<!-- SIGMA:RENDER:END:stage-overview -->\n'
     );
 
@@ -165,7 +165,7 @@ describe('sigma exec new — EXEC version always equals PLAN version (CLI end-to
 
     // Satisfy the AUD verdict gate, then lock it.
     fs.writeFileSync(
-      path.join(env.projectDir, 'Sigma', 'build', `FMN-PLAN-${newPlanVersion}.md`),
+      path.join(env.projectDir, 'Sigma', 'contract', `FMN-PLAN-${newPlanVersion}.md`),
       validPlanDoc(newPlanVersion)
     );
     const planLock = runCli(`plan lock --v ${newPlanVersion}`, env.projectDir, env.homeDir);

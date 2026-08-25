@@ -54,7 +54,7 @@ const DOC_SPECS = {
     intent: {
         heading: 'Sigma Intent Check',
         expectedType: 'DIR_INTENT',
-        fallbackPath: path_1.default.join('Sigma', 'design', 'DIR-INTENT.md'),
+        fallbackPath: path_1.default.join('Sigma', 'charter', 'DIR-INTENT.md'),
         requiredSections: [
             'INTENT_CORE',
             'COMPREHENSIVE_RESEARCH',
@@ -96,7 +96,7 @@ const DOC_SPECS = {
     roadmap: {
         heading: 'Sigma Roadmap Check',
         expectedType: 'ROADMAP',
-        fallbackPath: path_1.default.join('Sigma', 'build', 'ROADMAP.md'),
+        fallbackPath: path_1.default.join('Sigma', 'roadmap', 'ROADMAP.md'),
         requiredSections: [
             'OVERVIEW',
             'CORE_PROCESS_FLOW',
@@ -106,7 +106,7 @@ const DOC_SPECS = {
     plan: {
         heading: 'Sigma Plan Check',
         expectedType: 'FMN_PLAN',
-        fallbackPath: path_1.default.join('Sigma', 'build', 'FMN-PLAN.md'),
+        fallbackPath: path_1.default.join('Sigma', 'contract', 'FMN-PLAN.md'),
         requiredSections: [
             'SOURCE_ALIGNMENT',
             'WORK_ORDER_TASK_PLAN',
@@ -140,7 +140,7 @@ const DOC_SPECS = {
     exec: {
         heading: 'Sigma Exec Check',
         expectedType: 'DEV_EXEC',
-        fallbackPath: path_1.default.join('Sigma', 'build', 'DEV-EXEC.md'),
+        fallbackPath: path_1.default.join('Sigma', 'evidence', 'DEV-EXEC.md'),
         requiredSections: [
             'SOURCE_PLAN_ALIGNMENT',
             'DEV_PRE_BUILD_ASSESSMENT',

@@ -208,6 +208,15 @@ describe('sigma doctor --reconstruct — PLAN-EVAL-07 metadata preservation', ()
     writeArtifact(env.sigmaDir, 'close', 'DIR-CLOSE-v1.md', 'DIR_CLOSE');
 
     const existing = makeChainWithFullBuiltCycle('v1', 'v0.1') as any;
+    // This test models an old-style project (writeArtifact calls above use
+    // the pre-rename 'design'/'build' folders) — override the fixture's
+    // now-new-by-default file paths to match what's actually on disk, or
+    // the "trust wholesale" comparison sees a path mismatch and falls back
+    // to ambiguous-state handling instead of the clean-trust path under test.
+    existing.intent.file = 'Sigma/design/DIR-INTENT-v1.md';
+    existing.roadmap.file = 'Sigma/build/ROADMAP-v1.md';
+    existing.plan.versions[0].file = 'Sigma/build/FMN-PLAN-v0.1.md';
+    existing.exec.versions[0].file = 'Sigma/build/DEV-EXEC-v0.1.md';
     existing.plan.versions[0].title = 'Fondasi Template';
     existing.plan.versions[0].focus = 'Riset awal';
     writeChainFixture(env, 'v1', existing, { activate: false });
@@ -239,18 +248,18 @@ describe('sigma doctor --reconstruct — PLAN-EVAL-07 metadata preservation', ()
     const now = new Date().toISOString();
     const existing = makeChain('v1', {
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
-      roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/roadmap/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
       plan: {
         active_version: 'v0.2', active_state: 'LOCKED', pending: [],
         versions: [
-          { version: 'v0.1', state: 'SUPERSEDED', file: 'Sigma/build/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, supersede_reason: 'superseded by v0.2', intent_version_ref: 'v1', title: 'Draft awal', focus: 'Draf pertama' },
-          { version: 'v0.2', state: 'LOCKED', file: 'Sigma/build/FMN-PLAN-v0.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1', title: 'Versi final', focus: 'Revisi akhir' },
+          { version: 'v0.1', state: 'SUPERSEDED', file: 'Sigma/contract/FMN-PLAN-v0.1.md', created_at: now, updated_at: now, supersede_reason: 'superseded by v0.2', intent_version_ref: 'v1', title: 'Draft awal', focus: 'Draf pertama' },
+          { version: 'v0.2', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v0.2.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1', title: 'Versi final', focus: 'Revisi akhir' },
         ],
       },
       exec: {
         active_version: 'v0.2', active_state: 'LOCKED',
-        versions: [{ version: 'v0.2', state: 'LOCKED', file: 'Sigma/build/DEV-EXEC-v0.2.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v0.2' }],
+        versions: [{ version: 'v0.2', state: 'LOCKED', file: 'Sigma/evidence/DEV-EXEC-v0.2.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v0.2' }],
       },
       gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
     });
@@ -300,7 +309,7 @@ describe('sigma doctor --all-versions (reconciliation only, no --reconstruct)', 
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },
@@ -310,7 +319,7 @@ describe('sigma doctor --all-versions (reconciliation only, no --reconstruct)', 
     writeChainFixture(env, 'v2', {
       schema_version: '1.0.0', chain_version: 'v2', created_at: now, updated_at: now,
       lifecycle_state: 'BUILD',
-      intent: { version: 'v2', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v2.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v2', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v2.md', created_at: now, updated_at: now, locked_at: now },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },

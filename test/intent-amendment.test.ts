@@ -20,7 +20,7 @@ import {
 // that backs it.
 
 function intentDocFile(env: TestEnv, version = 'v1'): string {
-  return path.join(env.projectDir, 'Sigma', 'design', `DIR-INTENT-${version}.md`);
+  return path.join(env.projectDir, 'Sigma', 'charter', `DIR-INTENT-${version}.md`);
 }
 
 function sha256(content: string): string {

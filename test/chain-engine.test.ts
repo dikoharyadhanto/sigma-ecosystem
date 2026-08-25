@@ -47,7 +47,7 @@ afterEach(() => {
 
 describe('createInitialChain', () => {
   it('produces a chain with intent DRAFT already set, roadmap/close null', () => {
-    const chain = createInitialChain('v1', 'Sigma/design/DIR-INTENT-v1.md');
+    const chain = createInitialChain('v1', 'Sigma/charter/DIR-INTENT-v1.md');
     expect(chain.chain_version).toBe('v1');
     expect(chain.intent).toMatchObject({ version: 'v1', state: 'DRAFT' });
     expect(chain.roadmap).toBeNull();
@@ -147,7 +147,7 @@ describe('resolveActiveChainVersion — invariant: exactly one ACTIVE chain (DIS
 
 describe('readActiveChain / writeChain round-trip', () => {
   it('reads back exactly what was written, resolved via the manifest', () => {
-    const chain = createInitialChain('v1', 'Sigma/design/DIR-INTENT-v1.md');
+    const chain = createInitialChain('v1', 'Sigma/charter/DIR-INTENT-v1.md');
     writeChain(projectRoot, 'v1', chain);
     writeActivateStatus(projectRoot, 'v1');
     const result = readActiveChain(projectRoot);
@@ -157,7 +157,7 @@ describe('readActiveChain / writeChain round-trip', () => {
 });
 
 function lockedIntentChain(version = 'v1'): ChainState {
-  const chain = createInitialChain(version, `Sigma/design/DIR-INTENT-${version}.md`);
+  const chain = createInitialChain(version, `Sigma/charter/DIR-INTENT-${version}.md`);
   ratifyIntent(chain);
   return chain;
 }
@@ -181,14 +181,14 @@ describe('ratifyIntent', () => {
 describe('roadmap: 1:1 guard replaces ACTIVE/INACTIVE arbitration (PLAN-EVAL-01 §3.5)', () => {
   it('registerRoadmapDraft rejects a second roadmap while the first is still live', () => {
     const chain = lockedIntentChain();
-    registerRoadmapDraft(chain, 'Sigma/build/ROADMAP-v1.md');
-    expect(() => registerRoadmapDraft(chain, 'Sigma/build/ROADMAP-v1-again.md')).toThrow(/already exists/);
+    registerRoadmapDraft(chain, 'Sigma/roadmap/ROADMAP-v1.md');
+    expect(() => registerRoadmapDraft(chain, 'Sigma/roadmap/ROADMAP-v1-again.md')).toThrow(/already exists/);
   });
 
   it('lockActiveRoadmap requires an existing DRAFT roadmap', () => {
     const chain = lockedIntentChain();
     expect(() => lockActiveRoadmap(chain)).toThrow(/No ROADMAP/);
-    registerRoadmapDraft(chain, 'Sigma/build/ROADMAP-v1.md');
+    registerRoadmapDraft(chain, 'Sigma/roadmap/ROADMAP-v1.md');
     lockActiveRoadmap(chain);
     expect(chain.roadmap?.state).toBe('LOCKED');
     expect(chain.roadmap?.locked_at).toBeTruthy();
@@ -197,10 +197,10 @@ describe('roadmap: 1:1 guard replaces ACTIVE/INACTIVE arbitration (PLAN-EVAL-01 
 
 function fullyBuiltChain(): ChainState {
   const chain = lockedIntentChain();
-  registerRoadmapDraft(chain, 'Sigma/build/ROADMAP-v1.md');
-  registerPlanDraft(chain, 'v0.1', 'Sigma/build/FMN-PLAN-v0.1.md', 'v1', 'Title', 'Focus');
+  registerRoadmapDraft(chain, 'Sigma/roadmap/ROADMAP-v1.md');
+  registerPlanDraft(chain, 'v0.1', 'Sigma/contract/FMN-PLAN-v0.1.md', 'v1', 'Title', 'Focus');
   lockPlanVersion(chain, 'v0.1');
-  registerExecDraft(chain, 'v0.1', 'Sigma/build/DEV-EXEC-v0.1.md', 'v0.1');
+  registerExecDraft(chain, 'v0.1', 'Sigma/evidence/DEV-EXEC-v0.1.md', 'v0.1');
   lockExecVersion(chain, 'v0.1');
   return chain;
 }
@@ -208,13 +208,13 @@ function fullyBuiltChain(): ChainState {
 describe('plan/exec gate progression (targeted lock, PLAN-IMPL-MULTIDRAFT-LOCK §3/§5)', () => {
   it('gate_2_open opens on plan lock, gate_3_satisfied opens on exec lock', () => {
     const chain = lockedIntentChain();
-    registerPlanDraft(chain, 'v0.1', 'Sigma/build/FMN-PLAN-v0.1.md', 'v1', 'Title', 'Focus');
+    registerPlanDraft(chain, 'v0.1', 'Sigma/contract/FMN-PLAN-v0.1.md', 'v1', 'Title', 'Focus');
     expect(hasCleanGate2Chain(chain)).toBe(false);
     lockPlanVersion(chain, 'v0.1');
     expect(chain.gates.gate_2_open).toBe(true);
     expect(hasCleanGate2Chain(chain)).toBe(true);
 
-    registerExecDraft(chain, 'v0.1', 'Sigma/build/DEV-EXEC-v0.1.md', 'v0.1');
+    registerExecDraft(chain, 'v0.1', 'Sigma/evidence/DEV-EXEC-v0.1.md', 'v0.1');
     expect(hasCleanGate3Chain(chain)).toBe(false);
     lockExecVersion(chain, 'v0.1');
     expect(chain.gates.gate_3_satisfied).toBe(true);

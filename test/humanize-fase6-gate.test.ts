@@ -23,7 +23,7 @@ import {
 function chainWithRoadmap(version = 'v1') {
   const chain = makeChainWithLockedIntent(version) as any;
   const now = new Date().toISOString();
-  chain.roadmap = { version, state: 'LOCKED', file: `Sigma/build/ROADMAP-${version}.md`, created_at: now, updated_at: now, locked_at: now };
+  chain.roadmap = { version, state: 'LOCKED', file: `Sigma/roadmap/ROADMAP-${version}.md`, created_at: now, updated_at: now, locked_at: now };
   return chain;
 }
 
@@ -32,7 +32,7 @@ function chainWithRoadmap(version = 'v1') {
 // succeed and reach that step.
 function writeRoadmapFile(env: TestEnv, version = 'v1') {
   const src = path.join(__dirname, '..', 'Sigma', 'templates', 'ROADMAP-TEMPLATE.md');
-  const dest = path.join(env.projectDir, 'Sigma', 'build', `ROADMAP-${version}.md`);
+  const dest = path.join(env.projectDir, 'Sigma', 'roadmap', `ROADMAP-${version}.md`);
   fs.ensureDirSync(path.dirname(dest));
   fs.copySync(src, dest);
 }
@@ -73,7 +73,7 @@ describe('humanize gate — CR-01 regression: ratify/lock are never blocked', ()
     writeChainFixture(env, 'v1', {
       schema_version: '1.2.0', chain_version: 'v1', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       lifecycle_state: 'DESIGN',
-      intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },
@@ -84,7 +84,7 @@ describe('humanize gate — CR-01 regression: ratify/lock are never blocked', ()
     enableHumanizeGate(env);
     // A valid intent doc is required for `ratify`'s own structural check —
     // independent of the humanize gate being tested here.
-    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md'), validIntentDoc('v1'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md'), validIntentDoc('v1'));
 
     const result = runCli('intent ratify', env.projectDir, env.homeDir);
 
@@ -148,7 +148,7 @@ describe('humanize gate — second plan new also checks the latest LOCKED exec',
   it('blocks a follow-on plan new when the prior LOCKED exec has no pushed human projection', () => {
     env = setupTestEnv();
     const chain = makeChainWithLockedExec('v1', 'v1.1') as any;
-    chain.roadmap = { version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), locked_at: new Date().toISOString() };
+    chain.roadmap = { version: 'v1', state: 'LOCKED', file: 'Sigma/roadmap/ROADMAP-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), locked_at: new Date().toISOString() };
     chain.intent.human = { version: 'v1', generated_at: new Date().toISOString(), pushed_to_notion_at: new Date().toISOString() };
     // exec.versions[0].human intentionally left unset.
     writeChainFixture(env, 'v1', chain);
@@ -165,7 +165,7 @@ describe('humanize gate — second plan new also checks the latest LOCKED exec',
   it('succeeds when both intent and the latest locked exec are pushed', () => {
     env = setupTestEnv();
     const chain = makeChainWithLockedExec('v1', 'v1.1') as any;
-    chain.roadmap = { version: 'v1', state: 'LOCKED', file: 'Sigma/build/ROADMAP-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), locked_at: new Date().toISOString() };
+    chain.roadmap = { version: 'v1', state: 'LOCKED', file: 'Sigma/roadmap/ROADMAP-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), locked_at: new Date().toISOString() };
     chain.intent.human = { version: 'v1', generated_at: new Date().toISOString(), pushed_to_notion_at: new Date().toISOString() };
     chain.exec.versions[0].human = { version: 'v1.1', generated_at: new Date().toISOString(), pushed_to_notion_at: new Date().toISOString() };
     writeChainFixture(env, 'v1', chain);
@@ -217,7 +217,7 @@ describe('humanize gate — close new checks the latest LOCKED exec', () => {
     stubProjectIdentity(env);
     enableHumanizeGate(env);
     fs.ensureDirSync(path.join(env.projectDir, 'Sigma', 'build'));
-    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v0.1.md'), validExecDoc('v0.1', 'v1'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md'), validExecDoc('v0.1', 'v1'));
 
     const result = runCli('exec lock --v v0.1', env.projectDir, env.homeDir);
 
