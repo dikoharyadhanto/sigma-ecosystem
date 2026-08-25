@@ -9,7 +9,14 @@ export const SIGMA_VERSION = '0.10.0';
 // binary reading a chain already written with "RATIFIED" would otherwise
 // silently treat the intent as not-locked instead of surfacing a clear
 // INVALID (schema-too-new) marker. See isNewerSchema().
-export const SCHEMA_VERSION = '1.1.0';
+// 1.2.0 — PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §4 Fase 2: adds optional
+// `human` (HumanArtifactState) to SingleIntentState, ArtifactVersion, and
+// SingleCloseState. Purely additive — an older binary reading a chain
+// written with this field simply doesn't see it, no INVALID risk in that
+// direction. Bumped anyway to follow the established convention (this
+// constant also stamps project.config.json/.sigma-identity.json, which
+// didn't change shape — see chain.ts's own note on that coupling).
+export const SCHEMA_VERSION = '1.2.0';
 
 export const GLOBAL_SIGMA_DIR = path.join(os.homedir(), '.sigma');
 export const GLOBAL_TEMPLATES_DIR = path.join(GLOBAL_SIGMA_DIR, 'templates');
@@ -17,10 +24,21 @@ export const GLOBAL_RULES_DIR = path.join(GLOBAL_SIGMA_DIR, 'rules');
 export const GLOBAL_GOVERNANCE_DIR = path.join(GLOBAL_SIGMA_DIR, 'governance');
 export const GLOBAL_BRIDGE_DIR = path.join(GLOBAL_SIGMA_DIR, 'bridge');
 export const GLOBAL_CONFIG_FILE = path.join(GLOBAL_SIGMA_DIR, 'sigma.config.json');
+// PLAN-IMPL-NOTION-REMOTE-GOVERNANCE-INTEGRATION-V2 D-01 — Notion tokens are
+// per-machine secrets, never project-local. Keyed by project_id inside this
+// file so one machine can hold credentials for multiple Sigma projects.
+// Never referenced from any path under a project root, and never written to
+// anything git can see.
+export const GLOBAL_NOTION_CREDENTIALS_FILE = path.join(GLOBAL_SIGMA_DIR, 'notion.credentials.json');
 
 export const PROJECT_SIGMA_DIR = 'Sigma';
 // Root-level (sibling to Sigma/), not inside it — so identity survives even if Sigma/ itself is corrupted.
 export const PROJECT_IDENTITY_FILE = '.sigma-identity.json';
+// D-03 — written only after a confirmed-successful Notion push that purges
+// Sigma/ locally. Root-level, same reasoning as PROJECT_IDENTITY_FILE: must
+// survive the purge it documents. Deliberately NOT an anchor for the shared
+// findProjectRoot() — see notionService.ts's own resolver.
+export const PROJECT_REMOTE_STATE_FILE = '.sigma-remote-state.json';
 
 // Bridge stub filenames — AI tool instruction files written at project root.
 export const BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];

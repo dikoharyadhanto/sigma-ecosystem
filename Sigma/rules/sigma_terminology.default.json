@@ -1,0 +1,27 @@
+{
+  "_comment": "Bundled Sigma vocabulary registry — see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816 §2.6/§2.10. Copied into every project's Sigma/rules/ via `sigma project start`/`sigma project sync`, same as ARC-RULE.md etc. Do not edit per-project — edit the source at Sigma/rules/sigma_terminology.default.json in the sigma-ecosystem repo and re-run `sigma setup update`. For project-specific additions, use Sigma/sigma_terminology.custom.json instead (never overwritten by sync).",
+  "terms": [
+    "DIR-INTENT",
+    "FMN-PLAN",
+    "DEV-EXEC",
+    "DIR-CLOSE",
+    "ROADMAP",
+    "RATIFIED",
+    "LOCKED",
+    "DRAFT",
+    "SUPERSEDED",
+    "Gate 1",
+    "Gate 2",
+    "Gate 3",
+    "ARC",
+    "FMN",
+    "DEV",
+    "AUD",
+    "Sigma",
+    "chain_version",
+    "progress-v",
+    "notion_humanize_gate",
+    "Fidelity Ledger",
+    "humanize"
+  ]
+}

@@ -39,10 +39,10 @@ const BUNDLE_BRIDGE_DIR = path.join(SETUP_TARGETS_DIR, 'bridge');
 const BUNDLE_HOOKS_DIR = path.join(SETUP_TARGETS_DIR, 'hooks');
 
 const ROLE_FILES: Record<string, Record<string, string>> = {
-  claudeCode:  { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
-  codex:       { arc: 'arc',    fmn: 'fmn',    dev: 'dev',    aud: 'aud',    report: 'report',    sigmaTest: 'sigma-test'    },
-  reasonix:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md' },
-  antigravity: { arc: 'sigma-arc', fmn: 'sigma-fmn', dev: 'sigma-dev', aud: 'sigma-aud', report: 'sigma-report', sigmaTest: 'sigma-test' },
+  claudeCode:  { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md', humanize: 'humanize.md' },
+  codex:       { arc: 'arc',    fmn: 'fmn',    dev: 'dev',    aud: 'aud',    report: 'report',    sigmaTest: 'sigma-test',    humanize: 'humanize'    },
+  reasonix:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md', humanize: 'humanize.md' },
+  antigravity: { arc: 'sigma-arc', fmn: 'sigma-fmn', dev: 'sigma-dev', aud: 'sigma-aud', report: 'sigma-report', sigmaTest: 'sigma-test', humanize: 'sigma-humanize' },
   cursor:      { sigma: 'SIGMA.mdc' },
 };
 

@@ -14,6 +14,13 @@ const DEFAULTS = {
     document_language: 'English',
     interaction_language: 'English',
     output_document_language: 'English',
+    notion: {
+        enabled: false,
+        clean_local: false,
+    },
+    notion_humanize_gate: {
+        enabled: false,
+    },
 };
 function readProjectConfig(projectRoot) {
     const filePath = path_1.default.join(projectRoot, config_1.PROJECT_CONFIG_FILE);
@@ -38,6 +45,13 @@ function createDefaultProjectConfig(lang = 'English') {
         document_language: lang,
         interaction_language: lang,
         output_document_language: lang,
+        notion: {
+            enabled: false,
+            clean_local: false,
+        },
+        notion_humanize_gate: {
+            enabled: false,
+        },
     };
 }
 //# sourceMappingURL=projectConfig.js.map

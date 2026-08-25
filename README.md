@@ -594,6 +594,14 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | setup    | `sigma setup install`              | Install Sigma globally to `~/.sigma/`, deploy skill files + hook               |
 | setup    | `sigma setup update`               | Update global templates/governance and redeploy skill files + hook             |
 | setup    | `sigma setup uninstall --confirm`  | Remove `~/.sigma/`, deployed skill files, and the hook entry (global only)     |
+| notion   | `sigma notion setup --token <t> --parent-id <id>` | Configure Notion integration; token is stored per-machine in `~/.sigma/notion.credentials.json`, never inside the project |
+| notion   | `sigma notion status`              | Check Notion API connection and active configuration                          |
+| notion   | `sigma notion push`                | Push the governance dashboard + state backup to Notion (manual only — never triggered by lock/ratify) |
+| notion   | `sigma notion pull-state [chain]`  | Restore local state from Notion (e.g. after switching devices)                |
+| notion   | `sigma notion pull <type> <version>` | Fetch a single page from Notion by type + version (read-only preview)       |
+| notion   | `sigma notion progress [chain]`    | Read progress & gate status from Notion without a local `Sigma/` directory     |
+
+`sigma notion push` never sends raw `DIR-INTENT`/`FMN-PLAN`/`DEV-EXEC` markdown — Notion only ever holds the dashboard and a machine-readable state backup. Human-readable artifact content is planned separately under the Sigma Humanize Operation.
 
 ---
 

@@ -17,6 +17,8 @@ import { memoryCommand } from './commands/memory';
 import { doctorCommand } from './commands/doctor';
 import { referenceCommand } from './commands/reference';
 import { reportCommand } from './commands/report';
+import { notionCommand } from './commands/notion';
+import { scanCommand } from './commands/scan';
 import { appendOperationLogEntry } from './utils/operationLog';
 
 const program = new Command();
@@ -43,6 +45,8 @@ program.addCommand(memoryCommand());
 program.addCommand(doctorCommand());
 program.addCommand(referenceCommand());
 program.addCommand(reportCommand());
+program.addCommand(notionCommand());
+program.addCommand(scanCommand());
 
 program.on('command:*', (operands: string[]) => {
   console.error(`Unknown command: sigma ${operands.join(' ')}`);

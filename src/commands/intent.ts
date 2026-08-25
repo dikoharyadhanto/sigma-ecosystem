@@ -154,6 +154,61 @@ export function intentCommand(): Command {
       }
     });
 
+  // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.1/§4 Fase 3 — scaffolds the human
+  // projection + its (never-published) Fidelity Ledger from a RATIFIED
+  // intent. Mirrors `intent new`'s scaffold shape, but writes no DRAFT
+  // governance state — chain.intent.human is a bookkeeping record, not a
+  // gate transition, and `intent ratify` itself is never gated on this (§3.4
+  // / CR-01: the gate belongs at `plan new`, not here).
+  cmd.command('humanize')
+    .description('Generate a human-readable projection of a RATIFIED DIR-INTENT for Notion (Sigma Humanize Operation)')
+    .option('--v <version>', 'Chain version to humanize instead of the active one')
+    .option('--force', 'Overwrite an already-generated human projection for this version')
+    .action((opts: { v?: string; force?: boolean }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const { chainVersion, data: chain } = opts.v
+          ? { chainVersion: opts.v, data: readChain(projectRoot, opts.v) }
+          : readActiveChain(projectRoot);
+
+        if (chain.intent.state !== 'RATIFIED') {
+          throw new Error(
+            `INTENT ${chain.intent.version} is in state "${chain.intent.state}"; humanize requires RATIFIED.\n` +
+            'Run: sigma intent ratify'
+          );
+        }
+
+        if (chain.intent.human && !opts.force) {
+          throw new Error(
+            `A human projection for INTENT ${chain.intent.version} already exists ` +
+            `(generated ${chain.intent.human.generated_at}).\n` +
+            'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.'
+          );
+        }
+
+        const humanRelPath = path.join('Sigma', 'human', `DIR-INTENT-HUMAN-${chain.intent.version}.md`);
+        const ledgerRelPath = path.join('Sigma', 'human', `DIR-INTENT-HUMAN-${chain.intent.version}.fidelity.md`);
+        copyTemplateToArtifact('DIR-INTENT-HUMAN-TEMPLATE.md', path.join(projectRoot, humanRelPath));
+        copyTemplateToArtifact('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path.join(projectRoot, ledgerRelPath));
+
+        chain.intent.human = {
+          version: chain.intent.version,
+          generated_at: new Date().toISOString(),
+        };
+        writeChain(projectRoot, chainVersion, chain);
+
+        console.log(`Created: ${humanRelPath}`);
+        console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
+        console.log('');
+        console.log('Reading /humanize writing rules (setup/targets/claude_code/humanize.md)...');
+        console.log(`Drafting ${humanRelPath} using /humanize style rules.`);
+        console.log('Fill in both files, then run: sigma notion push');
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
   // Tombstone — `sigma intent lock` was renamed to `sigma intent ratify`
   // (Director directive 2026-08-12), removed outright with no alias. This
   // does not ratify anything; it exists only so the old command name fails

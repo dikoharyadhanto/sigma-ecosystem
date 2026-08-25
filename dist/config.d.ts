@@ -1,13 +1,15 @@
 export declare const SIGMA_VERSION = "0.10.0";
-export declare const SCHEMA_VERSION = "1.1.0";
+export declare const SCHEMA_VERSION = "1.2.0";
 export declare const GLOBAL_SIGMA_DIR: string;
 export declare const GLOBAL_TEMPLATES_DIR: string;
 export declare const GLOBAL_RULES_DIR: string;
 export declare const GLOBAL_GOVERNANCE_DIR: string;
 export declare const GLOBAL_BRIDGE_DIR: string;
 export declare const GLOBAL_CONFIG_FILE: string;
+export declare const GLOBAL_NOTION_CREDENTIALS_FILE: string;
 export declare const PROJECT_SIGMA_DIR = "Sigma";
 export declare const PROJECT_IDENTITY_FILE = ".sigma-identity.json";
+export declare const PROJECT_REMOTE_STATE_FILE = ".sigma-remote-state.json";
 export declare const BRIDGE_STUBS: string[];
 export declare const ACTIVATE_STATUS_FILE: string;
 export declare const OVERRIDES_FILE: string;

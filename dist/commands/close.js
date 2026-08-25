@@ -10,6 +10,7 @@ const readline_1 = __importDefault(require("readline"));
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
+const projectConfig_1 = require("../engine/projectConfig");
 const docCheck_1 = require("../utils/docCheck");
 // PLAN-EVAL-01 Fase 3 — `close lock` already auto-locks the chain's roadmap
 // as a side effect *before* this migration (see `lockActiveRoadmap` call
@@ -57,6 +58,21 @@ function closeCommand() {
             if (!(0, chain_1.hasGate35Score)(chain)) {
                 throw new Error('GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. ' +
                     'Run: sigma intent score <n> --notes "..."');
+            }
+            // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.4/§4 Fase 6 (CR-01) — same
+            // enforcement point pattern as `plan new`: never at `exec lock`
+            // itself. Only the latest LOCKED exec is checked here (the intent's
+            // own humanize status was already this chain's `plan new` gate).
+            const humanizeGate = (0, projectConfig_1.readProjectConfig)(projectRoot).notion_humanize_gate;
+            if (humanizeGate?.enabled) {
+                const latestLockedExec = chain.exec.versions
+                    .filter(v => v.state === 'LOCKED')
+                    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+                if (latestLockedExec && !latestLockedExec.human?.pushed_to_notion_at) {
+                    throw new Error(`HUMANIZE GATE BLOCKED (notion_humanize_gate.enabled): DEV-EXEC ${latestLockedExec.version} ` +
+                        'has no human projection pushed to Notion yet.\n' +
+                        `  Run: sigma exec humanize --v ${latestLockedExec.version}   (then)   sigma notion push`);
+                }
             }
             const version = chain.chain_version;
             const relPath = path_1.default.join('Sigma', 'close', `DIR-CLOSE-${version}.md`);
@@ -132,6 +148,52 @@ function closeCommand() {
                 console.log(`ROADMAP ${roadmapToLock.version} LOCKED.`);
             }
             console.log(`DIR-CLOSE ${closeVersion} LOCKED. Lifecycle → CLOSED. Project is complete.`);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
+    // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.1/§4 Fase 3. Requires DIR-CLOSE
+    // LOCKED — never scaffold a human projection from a closure decision that
+    // could still change. `close lock` itself is never gated on this (§3.4 /
+    // CR-01): there is no "next" governance command after CLOSE to gate, so
+    // unlike intent/exec this one has no enforcement point at all yet — see
+    // plan §6 poin 1c (open: who runs this, and whether it needs a gate).
+    cmd.command('humanize')
+        .description('Generate a human-readable projection of a LOCKED DIR-CLOSE for Notion (Sigma Humanize Operation)')
+        .option('--force', 'Overwrite an already-generated human projection for this version')
+        .action((opts) => {
+        try {
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            if (!chain.close) {
+                throw new Error('No active DIR-CLOSE found. Run: sigma close new');
+            }
+            if (chain.close.state !== 'LOCKED') {
+                throw new Error(`DIR-CLOSE ${chain.close.version} is in state "${chain.close.state}"; humanize requires LOCKED.\n` +
+                    'Run: sigma close lock');
+            }
+            if (chain.close.human && !opts.force) {
+                throw new Error(`A human projection for DIR-CLOSE ${chain.close.version} already exists ` +
+                    `(generated ${chain.close.human.generated_at}).\n` +
+                    'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.');
+            }
+            const humanRelPath = path_1.default.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.md`);
+            const ledgerRelPath = path_1.default.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.fidelity.md`);
+            (0, artifacts_1.copyTemplateToArtifact)('DIR-CLOSE-HUMAN-TEMPLATE.md', path_1.default.join(projectRoot, humanRelPath));
+            (0, artifacts_1.copyTemplateToArtifact)('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path_1.default.join(projectRoot, ledgerRelPath));
+            chain.close.human = {
+                version: chain.close.version,
+                generated_at: new Date().toISOString(),
+            };
+            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+            console.log(`Created: ${humanRelPath}`);
+            console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
+            console.log('');
+            console.log('Reading /humanize writing rules (setup/targets/claude_code/humanize.md)...');
+            console.log(`Drafting ${humanRelPath} using /humanize style rules.`);
+            console.log('Fill in both files, then run: sigma notion push');
         }
         catch (e) {
             console.error(e.message);
