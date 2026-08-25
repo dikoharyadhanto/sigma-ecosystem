@@ -47,7 +47,7 @@ describe('sigma doctor --recovery', () => {
       // structurally-representable corruption for a single-object intent
       // (the old "active_state disagrees with versions[]" scenario no
       // longer exists, PLAN-EVAL-01 §3.4).
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },

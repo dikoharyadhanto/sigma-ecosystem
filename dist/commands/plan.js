@@ -41,7 +41,7 @@ function assertRequiredStageMetadata(title, focus, command) {
 function getRoadmapPathIfEligible(projectRoot, chain) {
     if (!chain.roadmap || chain.roadmap.state === 'SUPERSEDED')
         return null;
-    return path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
+    return path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'roadmap', `ROADMAP-${chain.roadmap.version}.md`));
 }
 function planDocPath(projectRoot, chain, version) {
     const entry = version
@@ -49,7 +49,7 @@ function planDocPath(projectRoot, chain, version) {
         : chain.plan.versions.find(v => v.version === chain.plan.active_version);
     if (!entry)
         throw new Error(version ? `FMN-PLAN ${version} not found.` : 'No active FMN-PLAN found. Run: sigma plan new');
-    return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'build', `FMN-PLAN-${entry.version}.md`));
+    return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'contract', `FMN-PLAN-${entry.version}.md`));
 }
 // PLAN-IMPL-MULTIDRAFT-LOCK §8.3 (Director directive 2026-08-12) — no
 // command may act on an implicit target when ambiguity exists. `check`
@@ -136,7 +136,7 @@ function planCommand() {
             }
             const intentVersionRef = chain.intent.version;
             const version = (0, chain_1.nextPlanVersion)(chain, intentVersionRef);
-            const relPath = path_1.default.join('Sigma', 'build', `FMN-PLAN-${version}.md`);
+            const relPath = path_1.default.join('Sigma', 'contract', `FMN-PLAN-${version}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
             // Artifact writes first, writeChain last
             (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath);
@@ -207,7 +207,7 @@ function planCommand() {
                 console.log(`Auto-superseded DEV-EXEC: ${cascadedExecs.join(', ')}`);
             }
             if (chain.roadmap) {
-                const roadmapPath = path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
+                const roadmapPath = path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'roadmap', `ROADMAP-${chain.roadmap.version}.md`));
                 if (fs_extra_1.default.existsSync(roadmapPath)) {
                     (0, roadmap_1.renderRoadmapFile)(roadmapPath, chain);
                     console.log(`ROADMAP ${chain.roadmap.version} re-rendered with SUPERSEDED status.`);
@@ -246,7 +246,7 @@ function planCommand() {
             // Compute next version before any writes
             const newVersion = (0, chain_1.nextPlanVersion)(chain, chain.intent.version);
             const oldAbsPath = path_1.default.join(projectRoot, pending.file);
-            const newRelPath = path_1.default.join('Sigma', 'build', `FMN-PLAN-${newVersion}.md`);
+            const newRelPath = path_1.default.join('Sigma', 'contract', `FMN-PLAN-${newVersion}.md`);
             const newAbsPath = path_1.default.join(projectRoot, newRelPath);
             // Artifact writes first: rename file
             fs_extra_1.default.ensureDirSync(path_1.default.dirname(newAbsPath));
@@ -374,7 +374,7 @@ function planCommand() {
             if (!chain.roadmap) {
                 throw new Error('No ROADMAP found for this chain. Run: sigma roadmap new');
             }
-            const roadmapAbsPath = path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
+            const roadmapAbsPath = path_1.default.join(projectRoot, chain.roadmap.file ?? path_1.default.join('Sigma', 'roadmap', `ROADMAP-${chain.roadmap.version}.md`));
             (0, chain_1.updatePlanMetadata)(chain, opts.v, opts.title, opts.focus);
             (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
             (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, chain);

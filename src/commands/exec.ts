@@ -25,7 +25,7 @@ function execDocPath(projectRoot: string, chain: ChainState, version?: string): 
     ? chain.exec.versions.find(v => v.version === version)
     : chain.exec.versions.find(v => v.version === chain.exec.active_version);
   if (!entry) throw new Error(version ? `DEV-EXEC ${version} not found.` : 'No active DEV-EXEC found. Run: sigma exec new');
-  return path.join(projectRoot, entry.file ?? path.join('Sigma', 'build', `DEV-EXEC-${entry.version}.md`));
+  return path.join(projectRoot, entry.file ?? path.join('Sigma', 'evidence', `DEV-EXEC-${entry.version}.md`));
 }
 
 // PLAN-IMPL-MULTIDRAFT-LOCK §8.3 (Director directive 2026-08-12) — same
@@ -117,7 +117,7 @@ export function execCommand(): Command {
         }
 
         const version = nextExecVersion(chain, planVersionRef);
-        const relPath = path.join('Sigma', 'build', `DEV-EXEC-${version}.md`);
+        const relPath = path.join('Sigma', 'evidence', `DEV-EXEC-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
         if (chain.exec.versions.some(v => v.version === version)) {
           throw new Error(`EXEC CONFLICT: DEV-EXEC ${version} already exists in progress-${chainVersion}.json`);

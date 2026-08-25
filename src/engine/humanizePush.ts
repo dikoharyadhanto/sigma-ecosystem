@@ -76,7 +76,7 @@ export function collectHumanPushTargets(chain: ChainState): HumanArtifactPushTar
       version: chain.intent.version,
       humanRelPath,
       ledgerRelPath,
-      sourceRelPaths: [chain.intent.file ?? path.join('Sigma', 'design', `DIR-INTENT-${chain.intent.version}.md`)],
+      sourceRelPaths: [chain.intent.file ?? path.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`)],
       coverageConfig: DIR_INTENT_COVERAGE_CONFIG,
     });
   }
@@ -88,8 +88,8 @@ export function collectHumanPushTargets(chain: ChainState): HumanArtifactPushTar
       ? chain.plan.versions.find(v => v.version === execEntry.plan_version_ref)
       : undefined;
     const sourceRelPaths = [
-      planEntry?.file ?? (execEntry.plan_version_ref ? path.join('Sigma', 'build', `FMN-PLAN-${execEntry.plan_version_ref}.md`) : undefined),
-      execEntry.file ?? path.join('Sigma', 'build', `DEV-EXEC-${execEntry.version}.md`),
+      planEntry?.file ?? (execEntry.plan_version_ref ? path.join('Sigma', 'contract', `FMN-PLAN-${execEntry.plan_version_ref}.md`) : undefined),
+      execEntry.file ?? path.join('Sigma', 'evidence', `DEV-EXEC-${execEntry.version}.md`),
     ].filter((p): p is string => Boolean(p));
     targets.push({
       kind: 'exec',

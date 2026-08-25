@@ -653,7 +653,7 @@ The following are never modified by migration commands:
 - `Sigma/progress-v<N>.json` gate and lock decisions
 - `.sigma-identity.json` at project root (project identity — untouched by migration or `sigma setup uninstall`)
 - `Sigma/logs/` — legacy CSO handoff files (if present; CSO was removed from current Sigma)
-- All content inside `Sigma/build/`, `Sigma/design/`, `Sigma/close/`
+- All content inside `Sigma/contract/`, `Sigma/roadmap/`, `Sigma/evidence/`, `Sigma/charter/`, `Sigma/close/`
 
 Migration commands only update schema wrappers, doctrine files, and template structure — not Director decisions or locked evidence.
 

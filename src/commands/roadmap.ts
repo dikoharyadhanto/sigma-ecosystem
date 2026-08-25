@@ -27,7 +27,7 @@ import {
 
 function roadmapDocPath(projectRoot: string, chain: ChainState): string {
   if (!chain.roadmap) throw new Error('No ROADMAP found for this chain. Run: sigma roadmap new');
-  return path.join(projectRoot, chain.roadmap.file ?? path.join('Sigma', 'build', `ROADMAP-${chain.roadmap.version}.md`));
+  return path.join(projectRoot, chain.roadmap.file ?? path.join('Sigma', 'roadmap', `ROADMAP-${chain.roadmap.version}.md`));
 }
 
 // ── Command ───────────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ export function roadmapCommand(): Command {
         }
 
         const version = chain.chain_version;
-        const relPath = path.join('Sigma', 'build', `ROADMAP-${version}.md`);
+        const relPath = path.join('Sigma', 'roadmap', `ROADMAP-${version}.md`);
         const absPath = path.join(projectRoot, relPath);
 
         copyTemplateToArtifact('ROADMAP-TEMPLATE.md', absPath);

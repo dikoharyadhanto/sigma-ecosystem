@@ -22,7 +22,7 @@ describe('FMN Post-Build Advisory Verdict gate (exec lock only, verdict-agnostic
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftExec());
-    const execFile = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v0.1.md');
+    const execFile = path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md');
     fs.writeFileSync(execFile, validExecDoc('v0.1', 'v1').replace('- [x] READY_FOR_LOCK', ''));
 
     const result = runCli('exec lock', env.projectDir, env.homeDir);
@@ -36,7 +36,7 @@ describe('FMN Post-Build Advisory Verdict gate (exec lock only, verdict-agnostic
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftExec());
-    const execFile = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v0.1.md');
+    const execFile = path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md');
     fs.writeFileSync(
       execFile,
       validExecDoc('v0.1', 'v1').replace('- [x] READY_FOR_LOCK', '- [x] READY_FOR_LOCK\n- [x] NEEDS_DEV_UPDATE')
@@ -52,7 +52,7 @@ describe('FMN Post-Build Advisory Verdict gate (exec lock only, verdict-agnostic
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftExec());
-    const execFile = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v0.1.md');
+    const execFile = path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md');
     // REVISION_REQUIRED — semantically "not ready" — must still not block exec lock.
     fs.writeFileSync(execFile, validExecDoc('v0.1', 'v1', 'REVISION_REQUIRED'));
 
@@ -170,7 +170,7 @@ describe('Lock Validation Equivalence (PLAN-EVAL-11 Bagian A.5)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftExec());
-    const execFile = path.join(env.projectDir, 'Sigma', 'build', 'DEV-EXEC-v0.1.md');
+    const execFile = path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md');
     fs.writeFileSync(execFile, validExecDoc('v0.1', 'v1').replace('- [x] READY_FOR_LOCK', ''));
 
     const checked = runCli('exec check', env.projectDir, env.homeDir);

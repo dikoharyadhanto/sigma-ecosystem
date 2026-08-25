@@ -29,7 +29,7 @@ function promptApprove(message) {
     });
 }
 function intentDocPath(projectRoot, chain) {
-    return path_1.default.join(projectRoot, chain.intent.file ?? path_1.default.join('Sigma', 'design', `DIR-INTENT-${chain.intent.version}.md`));
+    return path_1.default.join(projectRoot, chain.intent.file ?? path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`));
 }
 // PLAN-EVAL-06 §6.2 — intent-history.md is a plain pipe-split table, and
 // doctor --reconstruct parses it back to recover title/focus. "|"/newlines would
@@ -81,7 +81,7 @@ function intentCommand() {
                 }
             }
             const chainVersion = (0, chain_1.nextChainVersion)(projectRoot);
-            const relPath = path_1.default.join('Sigma', 'design', `DIR-INTENT-${chainVersion}.md`);
+            const relPath = path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`);
             const absPath = path_1.default.join(projectRoot, relPath);
             (0, artifacts_1.copyTemplateToArtifact)('DIR-INTENT-TEMPLATE.md', absPath);
             const chain = (0, chain_1.createInitialChain)(chainVersion, relPath, opts.title, opts.focus);

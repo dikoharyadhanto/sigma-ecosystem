@@ -120,7 +120,7 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
   intent: {
     heading: 'Sigma Intent Check',
     expectedType: 'DIR_INTENT',
-    fallbackPath: path.join('Sigma', 'design', 'DIR-INTENT.md'),
+    fallbackPath: path.join('Sigma', 'charter', 'DIR-INTENT.md'),
     requiredSections: [
       'INTENT_CORE',
       'COMPREHENSIVE_RESEARCH',
@@ -162,7 +162,7 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
   roadmap: {
     heading: 'Sigma Roadmap Check',
     expectedType: 'ROADMAP',
-    fallbackPath: path.join('Sigma', 'build', 'ROADMAP.md'),
+    fallbackPath: path.join('Sigma', 'roadmap', 'ROADMAP.md'),
     requiredSections: [
       'OVERVIEW',
       'CORE_PROCESS_FLOW',
@@ -172,7 +172,7 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
   plan: {
     heading: 'Sigma Plan Check',
     expectedType: 'FMN_PLAN',
-    fallbackPath: path.join('Sigma', 'build', 'FMN-PLAN.md'),
+    fallbackPath: path.join('Sigma', 'contract', 'FMN-PLAN.md'),
     requiredSections: [
       'SOURCE_ALIGNMENT',
       'WORK_ORDER_TASK_PLAN',
@@ -206,7 +206,7 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
   exec: {
     heading: 'Sigma Exec Check',
     expectedType: 'DEV_EXEC',
-    fallbackPath: path.join('Sigma', 'build', 'DEV-EXEC.md'),
+    fallbackPath: path.join('Sigma', 'evidence', 'DEV-EXEC.md'),
     requiredSections: [
       'SOURCE_PLAN_ALIGNMENT',
       'DEV_PRE_BUILD_ASSESSMENT',

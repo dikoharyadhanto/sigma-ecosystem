@@ -62,7 +62,7 @@ describe('Document checks and auto-validation', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
-    const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    const intentFile = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, '# DIR-INTENT\n\n## 1. Intent Core — Sovereign Layer\n');
 
     const result = runCli('intent ratify', env.projectDir, env.homeDir);
@@ -83,7 +83,7 @@ describe('Document checks and auto-validation', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Running automatic validation/);
     expect(result.stdout).toMatch(/Sigma Roadmap Check/);
-    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'build', 'ROADMAP-v1.md'))).toBe(true);
+    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'roadmap', 'ROADMAP-v1.md'))).toBe(true);
   });
 });
 
@@ -96,7 +96,7 @@ describe('AUD Advisory Verdict gate (intent ratify / plan lock only)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
-    const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    const intentFile = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, validIntentDoc('v1').replace('- [x] PASS', ''));
 
     const result = runCli('intent ratify', env.projectDir, env.homeDir);
@@ -109,7 +109,7 @@ describe('AUD Advisory Verdict gate (intent ratify / plan lock only)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
-    const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    const intentFile = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
     fs.writeFileSync(intentFile, validIntentDoc('v1').replace('- [x] PASS', '- [x] PASS\n- [x] REVISE'));
 
     const result = runCli('intent ratify', env.projectDir, env.homeDir);
@@ -122,7 +122,7 @@ describe('AUD Advisory Verdict gate (intent ratify / plan lock only)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
-    const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    const intentFile = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
       intentFile,
       validIntentDoc('v1').replace('- [x] PASS', '- [x] SKIP_FOR_AUDIT\n\nDirector Instruction (verbatim): [...]')
@@ -138,7 +138,7 @@ describe('AUD Advisory Verdict gate (intent ratify / plan lock only)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
-    const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    const intentFile = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
       intentFile,
       validIntentDoc('v1').replace(
@@ -162,7 +162,7 @@ describe('Final Validation Checklist gate (intent ratify only)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
-    const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    const intentFile = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
       intentFile,
       validIntentDoc('v1').replace('- [x] Risk appetite is stated.', '- [ ] Risk appetite is stated.')
@@ -179,7 +179,7 @@ describe('Final Validation Checklist gate (intent ratify only)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
-    const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    const intentFile = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
     fs.writeFileSync(
       intentFile,
       validIntentDoc('v1').replace(
@@ -199,7 +199,7 @@ describe('Final Validation Checklist gate (intent ratify only)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
-    const intentFile = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    const intentFile = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
     // validIntentDoc() ships with Conditional Requirement items left unchecked by default.
     fs.writeFileSync(intentFile, validIntentDoc('v1'));
 

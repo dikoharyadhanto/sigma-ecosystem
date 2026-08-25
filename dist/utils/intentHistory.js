@@ -21,8 +21,18 @@ const chain_1 = require("../engine/chain");
 // Satisfaction Score (Gate 3.5). Table stores only the current value per chain —
 // overwritten on every `sigma intent score` re-run. Full assessment history is not
 // duplicated here; it already lives in Sigma/logs/operations.jsonl by design.
+// PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816 — new projects render to
+// Sigma/charter/; a project whose file already exists at the old
+// Sigma/design/ location keeps being updated there in place, so upgrading
+// the binary on an existing project never forks its history into two
+// files. Checked on every call rather than cached, since this is a cheap
+// existsSync and the file is meant to be re-rendered on essentially every
+// intent mutation anyway.
 function intentHistoryPath(projectRoot) {
-    return path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'design', 'intent-history.md');
+    const legacyPath = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'design', 'intent-history.md');
+    if (fs_extra_1.default.existsSync(legacyPath))
+        return legacyPath;
+    return path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'charter', 'intent-history.md');
 }
 function generateIntentHistoryContent(chains) {
     const header = [

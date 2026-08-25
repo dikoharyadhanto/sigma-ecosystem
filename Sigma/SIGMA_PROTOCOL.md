@@ -198,7 +198,7 @@ Sigma uses six artifact types: five governance artifacts (DIR-INTENT, ROADMAP, F
 | Owner | Director |
 | Authored by | ARC (draft), Director (approval and ratify verdict) |
 | Phase | DESIGN |
-| Storage | `Sigma/design/` |
+| Storage | `Sigma/charter/` |
 | Versioning | Tier 1 |
 | Auto-supersede | No — a chain file holds exactly one intent, so there is nothing else in the same file for a new DIR-INTENT to demote. `SUPERSEDED` only via explicit `sigma intent supersede --director-confirm` (see Gate 3 section). |
 
@@ -241,7 +241,7 @@ DIR-INTENT includes an optional **Comprehensive Research** section, marked NEEDE
 | Owner | FMN |
 | Authored by | FMN (all sections — see per-section source below) |
 | Phase | BUILD |
-| Storage | `Sigma/build/` |
+| Storage | `Sigma/contract/` |
 | Versioning | Tier 2 |
 | Auto-supersede | No (multi-active, manual supersede only) |
 
@@ -271,7 +271,7 @@ Section 9 is sourced from ARC or FMN, transcribing an AUD message or the Directo
 | Owner | DEV |
 | Authored by | DEV (most sections), FMN (pre-build and post-build review), Director (relayed through DEV in Section 17 — see per-section source below) |
 | Phase | BUILD |
-| Storage | `Sigma/build/` |
+| Storage | `Sigma/evidence/` |
 | Versioning | Tier 2 |
 | Auto-supersede | No (multi-active, manual supersede only) |
 
@@ -324,7 +324,7 @@ Closure document authored by the Director. Must explicitly reference the FMN-PLA
 | Owner | FMN |
 | Authored by | FMN |
 | Phase | BUILD |
-| Storage | `Sigma/build/` |
+| Storage | `Sigma/roadmap/` |
 | Versioning | Tier 1 |
 
 **Mandatory governance artifact.** ROADMAP is required before FMN-PLAN can be created — `plan new` is blocked unless the chain's ROADMAP exists and is not SUPERSEDED (Gate 1.5).
@@ -461,12 +461,18 @@ Gate 3.5 is deliberately narrower than Gate 1/1.5/2/3: it gates only `close new`
 
 | Folder | Phase | Artifacts |
 | :--- | :--- | :--- |
-| `Sigma/design/` | DESIGN | `DIR-INTENT-v{VER}.md` |
-| `Sigma/build/` | BUILD | `FMN-PLAN-v{VER}.md`, `DEV-EXEC-v{VER}.md`, `ROADMAP-v{VER}.md` |
+| `Sigma/charter/` | DESIGN | `DIR-INTENT-v{VER}.md` |
+| `Sigma/contract/` | BUILD | `FMN-PLAN-v{VER}.md` |
+| `Sigma/roadmap/` | BUILD | `ROADMAP-v{VER}.md` |
+| `Sigma/evidence/` | BUILD | `DEV-EXEC-v{VER}.md` |
 | `Sigma/close/` | CLOSE | `DIR-CLOSE-v{VER}.md` |
+| `Sigma/human/` | Any phase (derived, human-facing) | `DIR-INTENT-HUMAN-v{VER}.md`, `PLAN-EXEC-HUMAN-v{VER}.md`, `DIR-CLOSE-HUMAN-v{VER}.md` |
+| `Sigma/notes/` | Any phase | `.fidelity.md` (never published) |
 | `Sigma/rules/` | All phases (reference) | `ARC-RULE.md`, `AUD-RULE.md`, `FMN-RULE.md`, `DEV-RULE.md` |
 | `Sigma/logs/` | Any phase | Progress backups, migration logs |
 | `Sigma/reference/` | Any phase (project-wide, cumulative) | `reference-list.md`, `data/` (local research artifacts) |
+
+Existing projects created before this mapping keep working unchanged: every command resolves stored `entry.file` paths first, falling back to folder-derived defaults only when unset — old projects are never force-migrated to the new folder names.
 
 ---
 

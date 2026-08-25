@@ -51,7 +51,7 @@ describe('sigma intent supersede', () => {
   it('fails when the intent version is DRAFT, not RATIFIED (INACTIVE no longer exists, PLAN-EVAL-01 §3.4)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
-    writeChainFixture(env, 'v1', { chain_version: 'v1', schema_version: '1.1.0', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), lifecycle_state: 'DESIGN', intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, roadmap: null, plan: { active_version: null, active_state: null, versions: [], pending: [] }, exec: { active_version: null, active_state: null, versions: [] }, close: null, gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false } });
+    writeChainFixture(env, 'v1', { chain_version: 'v1', schema_version: '1.1.0', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), lifecycle_state: 'DESIGN', intent: { version: 'v1', state: 'DRAFT', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, roadmap: null, plan: { active_version: null, active_state: null, versions: [], pending: [] }, exec: { active_version: null, active_state: null, versions: [] }, close: null, gates: { gate_1_open: false, gate_2_open: false, gate_3_satisfied: false } });
 
     const result = runCli('intent supersede --v v1 --reason "testing" --director-confirm', env.projectDir, env.homeDir);
 
@@ -127,7 +127,7 @@ describe('sigma intent supersede', () => {
     writeChainFixture(env, 'v1', {
       schema_version: '1.0.0', chain_version: 'v1', created_at: now, updated_at: now,
       lifecycle_state: 'BUILD',
-      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/design/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
+      intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
       roadmap: null,
       plan: { active_version: null, active_state: null, versions: [], pending: [] },
       exec: { active_version: null, active_state: null, versions: [] },
@@ -211,7 +211,7 @@ describe('intent ratify regression — no auto-supersede, no auto-cascade', () =
     expect(reopened.exitCode).toBe(0);
 
     fs.writeFileSync(
-      path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v2.md'),
+      path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v2.md'),
       validIntentDoc('v2')
     );
 

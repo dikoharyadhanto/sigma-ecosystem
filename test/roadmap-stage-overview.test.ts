@@ -20,7 +20,7 @@ function baseChain(): ChainState {
     roadmap: {
       version: 'v1',
       state: 'DRAFT',
-      file: 'Sigma/build/ROADMAP-v1.md',
+      file: 'Sigma/roadmap/ROADMAP-v1.md',
       created_at: '2026-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
     },

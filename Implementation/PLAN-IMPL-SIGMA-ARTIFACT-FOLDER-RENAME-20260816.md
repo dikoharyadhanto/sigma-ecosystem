@@ -2,7 +2,7 @@
 
 **Sumber**: Diskusi lanjutan pada sesi ini (2026-08-16), terpisah dari evaluasi Notion/Humanize tapi bersinggungan dengan satu keputusan yang sempat terbuka di sana (lokasi folder dokumen human).
 **Tanggal**: 2026-08-16 · **Revisi 1**
-**Status**: **DRAFT — belum ada satu baris pun yang dieksekusi.** Nama folder dan cakupan sudah dikunci Director; detail teknis migrasi belum digarap.
+**Status**: **Fase 1–5 SELESAI (2026-08-25).** Fase 6 (migrasi `sigma doctor` untuk proyek lama) sengaja ditunda, di luar cakupan plan ini (§2.3). 397/397 test lulus, tanpa regresi.
 **Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma.
 **Hubungan dengan plan lain**: Menyelesaikan pertanyaan terbuka di `PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816` §6 poin 2 (lokasi file human) — dikonfirmasi Director tetap folder terpisah `Sigma/human/`, bukan nested di dalam folder tiap artefak. Tidak bergantung ke plan Notion v2 atau Humanize; bisa dikerjakan independen.
 **Branch**: diusulkan branch baru terpisah, `feat/sigma-artifact-folder-rename`, dari `main`. `main` tidak disentuh, tidak ada merge tanpa izin eksplisit Director.
@@ -76,11 +76,11 @@ Director: migrasi untuk proyek existing yang mau ikut pindah ke struktur baru di
 
 | Fase | Isi | Status |
 | :--- | :--- | :--- |
-| **1 — Config & scaffolding** | `SUBFOLDERS` di `config.ts`, `sigma project start` mem-precreate folder baru termasuk `human/` | Belum dimulai |
-| **2 — Default path per command** | `intent.ts`/`plan.ts`/`exec.ts`/`roadmap.ts` — ganti default fallback ke folder baru; `close.ts` tidak disentuh | Belum dimulai |
-| **3 — Regresi kompatibilitas mundur** | Test eksplisit: chain lama dengan `entry.file` menunjuk folder lama tetap ter-resolve benar tanpa migrasi | Belum dimulai |
-| **4 — Sweep test fixture** | `test/helpers.ts` dan fixture lain disesuaikan ke folder baru untuk skenario proyek baru | Belum dimulai |
-| **5 — Dokumentasi** | README, `SIGMA_PROTOCOL.md`, komentar kode, template yang mereferensikan path lama | Belum dimulai |
+| **1 — Config & scaffolding** | `SUBFOLDERS` di `config.ts`, `sigma project start` mem-precreate folder baru termasuk `human/` | Selesai |
+| **2 — Default path per command** | `intent.ts`/`plan.ts`/`exec.ts`/`roadmap.ts` — ganti default fallback ke folder baru; `close.ts` tidak disentuh | Selesai |
+| **3 — Regresi kompatibilitas mundur** | Test eksplisit: chain lama dengan `entry.file` menunjuk folder lama tetap ter-resolve benar tanpa migrasi (`test/folder-rename-backward-compat.test.ts`) | Selesai |
+| **4 — Sweep test fixture** | `test/helpers.ts` dan fixture lain disesuaikan ke folder baru untuk skenario proyek baru; termasuk temuan di luar cakupan awal — `src/engine/reconstruct.ts` (dual-candidate scan) dan `src/utils/intentHistory.ts` (existence-check path) — yang tidak punya `entry.file` tersimpan untuk fallback | Selesai |
+| **5 — Dokumentasi** | README, `SIGMA_PROTOCOL.md`, komentar kode, template yang mereferensikan path lama | Selesai |
 | **6 — Migrasi `sigma doctor`** *(terpisah, opsional)* | Dicatat sebagai kerja lanjutan, tidak digarap dalam plan ini | Ditunda, di luar cakupan plan ini |
 
 Fase 3 (regresi kompatibilitas mundur) sengaja mendahului Fase 4 (sweep fixture) — supaya jaminan "proyek lama tidak rusak" punya bukti test sebelum fixture proyek baru ikut diubah, bukan diasumsikan benar dari pembacaan kode saja.

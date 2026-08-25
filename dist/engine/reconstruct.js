@@ -11,12 +11,19 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
 const chain_1 = require("./chain");
+// PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816 — `dirs` (plural, new name
+// first) instead of a single `dir`. Reconstruct has no stored entry.file to
+// fall back on (that is precisely the state it exists to rebuild), so
+// unlike intent.ts/plan.ts/exec.ts/roadmap.ts it cannot rely on the
+// stored-path-wins mechanism for backward compatibility — it has to
+// actually look in both the old and new folder for a project it doesn't
+// yet know the age of.
 const PATTERNS = {
-    intent: { dir: 'design', regex: /^DIR-INTENT-(v\d+)\.md$/, docType: 'DIR_INTENT' },
-    roadmap: { dir: 'build', regex: /^ROADMAP-(v\d+)\.md$/, docType: 'ROADMAP' },
-    plan: { dir: 'build', regex: /^FMN-PLAN-(v\d+\.\d+)\.md$/, docType: 'FMN_PLAN' },
-    exec: { dir: 'build', regex: /^DEV-EXEC-(v\d+\.\d+)\.md$/, docType: 'DEV_EXEC' },
-    close: { dir: 'close', regex: /^DIR-CLOSE-(v\d+)\.md$/, docType: 'DIR_CLOSE' },
+    intent: { dirs: ['charter', 'design'], regex: /^DIR-INTENT-(v\d+)\.md$/, docType: 'DIR_INTENT' },
+    roadmap: { dirs: ['roadmap', 'build'], regex: /^ROADMAP-(v\d+)\.md$/, docType: 'ROADMAP' },
+    plan: { dirs: ['contract', 'build'], regex: /^FMN-PLAN-(v\d+\.\d+)\.md$/, docType: 'FMN_PLAN' },
+    exec: { dirs: ['evidence', 'build'], regex: /^DEV-EXEC-(v\d+\.\d+)\.md$/, docType: 'DEV_EXEC' },
+    close: { dirs: ['close'], regex: /^DIR-CLOSE-(v\d+)\.md$/, docType: 'DIR_CLOSE' },
 };
 function readDocType(absPath) {
     const head = fs_extra_1.default.readFileSync(absPath, 'utf8').slice(0, 200);
@@ -26,22 +33,24 @@ function readDocType(absPath) {
 function discoverArtifacts(projectRoot) {
     const found = { intent: [], roadmap: [], plan: [], exec: [], close: [], skipped: [] };
     for (const domain of Object.keys(PATTERNS)) {
-        const { dir, regex, docType } = PATTERNS[domain];
-        const absDir = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, dir);
-        if (!fs_extra_1.default.existsSync(absDir))
-            continue;
-        for (const filename of fs_extra_1.default.readdirSync(absDir)) {
-            const match = filename.match(regex);
-            if (!match)
+        const { dirs, regex, docType } = PATTERNS[domain];
+        for (const dir of dirs) {
+            const absDir = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, dir);
+            if (!fs_extra_1.default.existsSync(absDir))
                 continue;
-            const relFile = path_1.default.join(config_1.PROJECT_SIGMA_DIR, dir, filename);
-            const absFile = path_1.default.join(absDir, filename);
-            const actualType = readDocType(absFile);
-            if (actualType !== docType) {
-                found.skipped.push(`${relFile} (expected SIGMA:DOC type=${docType}, found "${actualType ?? 'none'}")`);
-                continue;
+            for (const filename of fs_extra_1.default.readdirSync(absDir)) {
+                const match = filename.match(regex);
+                if (!match)
+                    continue;
+                const relFile = path_1.default.join(config_1.PROJECT_SIGMA_DIR, dir, filename);
+                const absFile = path_1.default.join(absDir, filename);
+                const actualType = readDocType(absFile);
+                if (actualType !== docType) {
+                    found.skipped.push(`${relFile} (expected SIGMA:DOC type=${docType}, found "${actualType ?? 'none'}")`);
+                    continue;
+                }
+                found[domain].push({ version: match[1], file: relFile });
             }
-            found[domain].push({ version: match[1], file: relFile });
         }
     }
     return found;
@@ -97,9 +106,15 @@ function makeMarker(domain, gate, reason, chain, now) {
 // preserved, not silently broken by the later column addition
 // (test-suite-debt PLAN-EVAL-01, 2026-07-21).
 function readIntentHistoryMetadata(projectRoot) {
-    const filePath = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'design', 'intent-history.md');
+    // Folder-rename dual-lookup, same reasoning as PATTERNS above — reconstruct
+    // does not know in advance whether this project predates the rename.
+    const candidates = [
+        path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'charter', 'intent-history.md'),
+        path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'design', 'intent-history.md'),
+    ];
+    const filePath = candidates.find(p => fs_extra_1.default.existsSync(p));
     const result = new Map();
-    if (!fs_extra_1.default.existsSync(filePath))
+    if (!filePath)
         return result;
     for (const line of fs_extra_1.default.readFileSync(filePath, 'utf8').split('\n')) {
         const cells = line.split('|').map(c => c.trim());

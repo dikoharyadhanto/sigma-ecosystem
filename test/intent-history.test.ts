@@ -22,7 +22,7 @@ import {
 // the only other place these fields persist.
 
 function historyPath(env: TestEnv): string {
-  return path.join(env.sigmaDir, 'design', 'intent-history.md');
+  return path.join(env.sigmaDir, 'charter', 'intent-history.md');
 }
 
 function withIntentMeta(chain: object, title: string, focus: string): object {
@@ -107,7 +107,7 @@ describe('Sigma/design/intent-history.md auto-render', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', withIntentMeta(makeChainWithDraftIntent('v1'), 'Foo Intent', 'Foo focus'));
-    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md'), validIntentDoc('v1'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md'), validIntentDoc('v1'));
 
     const result = runCli('intent ratify', env.projectDir, env.homeDir);
     expect(result.exitCode).toBe(0);

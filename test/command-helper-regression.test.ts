@@ -20,7 +20,7 @@ describe('Shared artifact command helpers', () => {
     const result = runCli('intent new --title "Test Intent" --focus "Test focus"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/Created: Sigma[\\/]design[\\/]DIR-INTENT-v1\.md/);
-    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md'))).toBe(true);
+    expect(result.stdout).toMatch(/Created: Sigma[\\/]charter[\\/]DIR-INTENT-v1\.md/);
+    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md'))).toBe(true);
   });
 });
