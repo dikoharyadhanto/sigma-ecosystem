@@ -22,7 +22,7 @@ function runDefaultDoctor() {
     }
     const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
     const overrides = (0, chain_1.readOverrides)(projectRoot);
-    const report = (0, chain_1.runDoctorReconciliation)(chain, overrides, projectRoot);
+    const report = (0, chain_1.runDoctorReconciliation)(chain, overrides);
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
     (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — self-heal net
     console.log('\n=== Sigma Doctor ===\n');
@@ -74,7 +74,7 @@ function runAllVersionsDoctor() {
     const overrides = (0, chain_1.readOverrides)(projectRoot);
     for (const chainVersion of versions) {
         const chain = (0, chain_1.readChain)(projectRoot, chainVersion);
-        const report = (0, chain_1.runDoctorReconciliation)(chain, overrides, projectRoot);
+        const report = (0, chain_1.runDoctorReconciliation)(chain, overrides);
         (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
         console.log(`--- Chain ${chainVersion} ---`);
         if (report.repaired.length > 0) {

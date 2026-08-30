@@ -593,8 +593,7 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | reference| `sigma reference update`           | Rebuild the project-wide reference list (Comprehensive Research source index)  |
 | report   | `sigma report logs`                | View the operation history log with filters (read-only)                        |
 | override | `sigma override`                   | Bypass current lifecycle gate under Director authority (recorded in audit log) |
-| doctor   | `sigma doctor`                     | Diagnose and reconcile runtime state (repairs gate drift and stale artifact-folder paths, marks unresolved breaks INVALID) |
-| doctor   | `sigma doctor --all-versions`      | Same, applied to every chain on disk (not just the active one)                 |
+| doctor   | `sigma doctor`                     | Diagnose and reconcile runtime state (repairs drift, marks unresolved breaks INVALID) |
 | doctor   | `sigma doctor --recovery`          | Explicit alias for the default `sigma doctor` behavior                        |
 | doctor   | `sigma doctor --reconstruct`       | Rebuild `progress-v<N>.json` from artifact files when missing or corrupted     |
 | setup    | `sigma setup install`              | Install Sigma globally to `~/.sigma/`, deploy skill files + hook               |

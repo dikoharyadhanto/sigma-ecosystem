@@ -888,37 +888,6 @@ export interface DoctorReport {
   remainingInvalid: InvalidMarker[];
 }
 
-// Bug report 2026-08-30 (KLHK_JasaLingkunganHidup, "folder migration"): when a
-// project's Sigma artifact folders are renamed to the SIGMA_PROTOCOL §13
-// layout (design → charter, build → contract/roadmap/evidence), the chain's
-// stored `entry.file` paths keep pointing at the old folders. Every command
-// that opens the artifact then fails with ENOENT, and `sigma doctor` reported
-// VALID because it never checked whether `entry.file` resolves. When
-// runDoctorReconciliation() is given a projectRoot it verifies each stored
-// path against disk: a stale path with exactly one matching basename in the
-// domain's canonical-or-legacy folders is rewritten in place; multiple
-// matches are flagged INVALID for Director review; no match anywhere is left
-// alone (a missing/deleted artifact is `sigma doctor --reconstruct`'s job,
-// not this pass's). Legacy names are kept as fallbacks so a project that has
-// NOT migrated is left untouched.
-type ArtifactPathDomain = 'intent' | 'roadmap' | 'plan' | 'exec' | 'close';
-
-const ARTIFACT_FOLDER_CANDIDATES: Record<ArtifactPathDomain, string[]> = {
-  intent: ['charter', 'design'],
-  roadmap: ['roadmap', 'build'],
-  plan: ['contract', 'build'],
-  exec: ['evidence', 'build'],
-  close: ['close'],
-};
-
-const ARTIFACT_PATH_MARKER_GATE: Record<ArtifactPathDomain, InvalidGateKey | undefined> = {
-  intent: 'gate_1_open',
-  roadmap: 'gate_2_open',
-  plan: 'gate_2_open',
-  exec: 'gate_3_satisfied',
-  close: undefined,
-};
-
 function markerChain(
   intentVersion: string | null = null,
   planVersion: string | null = null,
@@ -941,11 +910,7 @@ function buildMarker(
   };
 }
 
-export function runDoctorReconciliation(
-  chain: ChainState,
-  overrides: OverrideEntry[] = [],
-  projectRoot?: string,
-): DoctorReport {
+export function runDoctorReconciliation(chain: ChainState, overrides: OverrideEntry[] = []): DoctorReport {
   const runtimeInvalid = ensureRuntimeInvalid(chain);
   const previous = new Map(runtimeInvalid.markers.map(marker => [marker.id, marker]));
   const nextMarkers: InvalidMarker[] = [];
@@ -969,68 +934,6 @@ export function runDoctorReconciliation(
   if (chain.schema_version !== SCHEMA_VERSION && !isNewerSchema(chain.schema_version, SCHEMA_VERSION)) {
     repaired.push(`schema_version migrated "${chain.schema_version}" → "${SCHEMA_VERSION}"`);
     chain.schema_version = SCHEMA_VERSION;
-  }
-
-  // Stale `entry.file` reconciliation (bug report 2026-08-30 — see
-  // ARTIFACT_FOLDER_CANDIDATES). Only runs when a projectRoot is supplied
-  // (CLI `sigma doctor`, MCP `sigma_doctor`); the pure in-memory unit-test
-  // callers pass none and skip it.
-  if (projectRoot) {
-    const toPosix = (p: string): string => p.split(path.sep).join('/').replace(/\\/g, '/');
-    const reconcilePath = (
-      domain: ArtifactPathDomain,
-      versionLabel: string,
-      current: string,
-      assign: (next: string) => void,
-      chainRef: InvalidChainRef,
-    ): void => {
-      if (fs.existsSync(path.join(projectRoot, current))) return;
-      const basename = path.basename(toPosix(current));
-      const matches: string[] = [];
-      for (const dir of ARTIFACT_FOLDER_CANDIDATES[domain]) {
-        const rel = path.join(PROJECT_SIGMA_DIR, dir, basename);
-        if (fs.existsSync(path.join(projectRoot, rel))) matches.push(toPosix(rel));
-      }
-      if (matches.length === 1) {
-        assign(matches[0]);
-        repaired.push(`${domain} ${versionLabel} file relocated "${toPosix(current)}" → "${matches[0]}" (folder layout migration)`);
-        return;
-      }
-      if (matches.length === 0) {
-        // Missing at its stored path and nowhere in the canonical/legacy
-        // folders either. That is a different problem from a folder-layout
-        // migration (a deleted or never-created artifact) — left to `sigma
-        // doctor --reconstruct` and not flagged here, so metadata-only states
-        // are not disturbed.
-        return;
-      }
-      nextMarkers.push(buildMarker(previous, now, {
-        id: `${domain}:dangling-file:${versionLabel}`,
-        domain,
-        reason: `stored file "${toPosix(current)}" is missing on disk and "${basename}" matches ${matches.length} candidates (${matches.join(', ')}) — remove the ambiguity, then re-run \`sigma doctor\``,
-        gate: ARTIFACT_PATH_MARKER_GATE[domain],
-        chain: chainRef,
-      }));
-    };
-
-    if (chain.intent.file) {
-      reconcilePath('intent', chain.intent.version, chain.intent.file, v => { chain.intent.file = v; }, markerChain(chain.intent.version));
-    }
-    if (chain.roadmap?.file) {
-      reconcilePath('roadmap', chain.roadmap.version, chain.roadmap.file, v => { chain.roadmap!.file = v; }, markerChain(chain.intent.version));
-    }
-    if (chain.close?.file) {
-      reconcilePath('close', chain.close.version, chain.close.file, v => { chain.close!.file = v; }, markerChain(chain.intent.version));
-    }
-    for (const pv of chain.plan.versions) {
-      if (pv.file) reconcilePath('plan', pv.version, pv.file, v => { pv.file = v; }, markerChain(null, pv.version, null));
-    }
-    for (const pp of chain.plan.pending) {
-      if (pp.file) reconcilePath('plan', pp.id, pp.file, v => { pp.file = v; }, markerChain(null, pp.id, null));
-    }
-    for (const ev of chain.exec.versions) {
-      if (ev.file) reconcilePath('exec', ev.version, ev.file, v => { ev.file = v; }, markerChain(null, null, ev.version));
-    }
   }
 
   // Deliberately NOT self-healed here, unlike every other auto-repair in this

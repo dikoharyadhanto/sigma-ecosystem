@@ -625,20 +625,6 @@ function getGateStatus(chain) {
         gate_3_satisfied: chain.gates.gate_3_satisfied,
     };
 }
-const ARTIFACT_FOLDER_CANDIDATES = {
-    intent: ['charter', 'design'],
-    roadmap: ['roadmap', 'build'],
-    plan: ['contract', 'build'],
-    exec: ['evidence', 'build'],
-    close: ['close'],
-};
-const ARTIFACT_PATH_MARKER_GATE = {
-    intent: 'gate_1_open',
-    roadmap: 'gate_2_open',
-    plan: 'gate_2_open',
-    exec: 'gate_3_satisfied',
-    close: undefined,
-};
 function markerChain(intentVersion = null, planVersion = null, execVersion = null) {
     return { intent_version: intentVersion, plan_version: planVersion, exec_version: execVersion };
 }
@@ -651,7 +637,7 @@ function buildMarker(existing, now, partial) {
         last_detected_at: now,
     };
 }
-function runDoctorReconciliation(chain, overrides = [], projectRoot) {
+function runDoctorReconciliation(chain, overrides = []) {
     const runtimeInvalid = ensureRuntimeInvalid(chain);
     const previous = new Map(runtimeInvalid.markers.map(marker => [marker.id, marker]));
     const nextMarkers = [];
@@ -674,65 +660,6 @@ function runDoctorReconciliation(chain, overrides = [], projectRoot) {
     if (chain.schema_version !== config_1.SCHEMA_VERSION && !isNewerSchema(chain.schema_version, config_1.SCHEMA_VERSION)) {
         repaired.push(`schema_version migrated "${chain.schema_version}" → "${config_1.SCHEMA_VERSION}"`);
         chain.schema_version = config_1.SCHEMA_VERSION;
-    }
-    // Stale `entry.file` reconciliation (bug report 2026-08-30 — see
-    // ARTIFACT_FOLDER_CANDIDATES). Only runs when a projectRoot is supplied
-    // (CLI `sigma doctor`, MCP `sigma_doctor`); the pure in-memory unit-test
-    // callers pass none and skip it.
-    if (projectRoot) {
-        const toPosix = (p) => p.split(path_1.default.sep).join('/').replace(/\\/g, '/');
-        const reconcilePath = (domain, versionLabel, current, assign, chainRef) => {
-            if (fs_extra_1.default.existsSync(path_1.default.join(projectRoot, current)))
-                return;
-            const basename = path_1.default.basename(toPosix(current));
-            const matches = [];
-            for (const dir of ARTIFACT_FOLDER_CANDIDATES[domain]) {
-                const rel = path_1.default.join(config_1.PROJECT_SIGMA_DIR, dir, basename);
-                if (fs_extra_1.default.existsSync(path_1.default.join(projectRoot, rel)))
-                    matches.push(toPosix(rel));
-            }
-            if (matches.length === 1) {
-                assign(matches[0]);
-                repaired.push(`${domain} ${versionLabel} file relocated "${toPosix(current)}" → "${matches[0]}" (folder layout migration)`);
-                return;
-            }
-            if (matches.length === 0) {
-                // Missing at its stored path and nowhere in the canonical/legacy
-                // folders either. That is a different problem from a folder-layout
-                // migration (a deleted or never-created artifact) — left to `sigma
-                // doctor --reconstruct` and not flagged here, so metadata-only states
-                // are not disturbed.
-                return;
-            }
-            nextMarkers.push(buildMarker(previous, now, {
-                id: `${domain}:dangling-file:${versionLabel}`,
-                domain,
-                reason: `stored file "${toPosix(current)}" is missing on disk and "${basename}" matches ${matches.length} candidates (${matches.join(', ')}) — remove the ambiguity, then re-run \`sigma doctor\``,
-                gate: ARTIFACT_PATH_MARKER_GATE[domain],
-                chain: chainRef,
-            }));
-        };
-        if (chain.intent.file) {
-            reconcilePath('intent', chain.intent.version, chain.intent.file, v => { chain.intent.file = v; }, markerChain(chain.intent.version));
-        }
-        if (chain.roadmap?.file) {
-            reconcilePath('roadmap', chain.roadmap.version, chain.roadmap.file, v => { chain.roadmap.file = v; }, markerChain(chain.intent.version));
-        }
-        if (chain.close?.file) {
-            reconcilePath('close', chain.close.version, chain.close.file, v => { chain.close.file = v; }, markerChain(chain.intent.version));
-        }
-        for (const pv of chain.plan.versions) {
-            if (pv.file)
-                reconcilePath('plan', pv.version, pv.file, v => { pv.file = v; }, markerChain(null, pv.version, null));
-        }
-        for (const pp of chain.plan.pending) {
-            if (pp.file)
-                reconcilePath('plan', pp.id, pp.file, v => { pp.file = v; }, markerChain(null, pp.id, null));
-        }
-        for (const ev of chain.exec.versions) {
-            if (ev.file)
-                reconcilePath('exec', ev.version, ev.file, v => { ev.file = v; }, markerChain(null, null, ev.version));
-        }
     }
     // Deliberately NOT self-healed here, unlike every other auto-repair in this
     // function: chain.intent.certified_doc_sha256 (Amendment mechanism —

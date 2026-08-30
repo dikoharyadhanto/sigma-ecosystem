@@ -219,31 +219,42 @@ membuat project portabel Windows↔Linux.
 
 ---
 
-## 7. Resolusi (sesi DEV Professional Mode, 2026-08-30)
+## 7. Resolusi (sesi Professional Mode, 2026-08-30)
 
-Diterapkan di codebase sigma-cli ini (bukan di project KLHK). Semua 430 test hijau, `tsc` bersih.
+### BUG A — `entry.file` menggantung → diperbaiki langsung di project KLHK
 
-### BUG A — `entry.file` menggantung → ditangani di `sigma doctor` (Opsi C)
+Keputusan Director: KLHK adalah **satu-satunya** project yang pernah migrasi folder manual,
+dan `Sigma/build/`·`Sigma/design/` tidak akan dipakai lagi ke depan. Jadi tidak perlu
+mekanisme migrasi permanen di CLI — cukup edit langsung file state KLHK (Professional Mode,
+di luar governance role), git sebagai jaring pengaman.
 
-- `runDoctorReconciliation()` (`src/engine/chain.ts`) menerima `projectRoot` opsional. Pass baru:
-  untuk tiap path tersimpan (`intent`/`roadmap`/`close`/`plan.versions`/`plan.pending`/`exec.versions`)
-  yang tidak ada di disk, cari basename yang sama di folder kanonik **dan** legacy
-  (`charter`/`design`, `contract`/`build`, `evidence`/`build`, `roadmap`/`build`, `close`).
-  - Tepat 1 kandidat → `entry.file` ditulis ulang di tempat, dilaporkan sebagai `Repaired`.
-  - ≥2 kandidat → `INVALID` marker (butuh review Director).
-  - 0 kandidat → **dibiarkan** (artefak hilang/terhapus adalah domain `sigma doctor --reconstruct`,
-    bukan pass ini — supaya state metadata-only tidak terganggu).
-- `sigma doctor` = chain aktif; `sigma doctor --all-versions` = semua chain (v1..v4).
-- MCP `sigma_doctor` melaporkan temuan yang sama, tetap read-only terhadap disk.
-- Project yang **belum** migrasi tidak tersentuh (path lama masih resolve → tidak ada aksi).
-- Test: `test/doctor-dangling-paths.test.ts`.
+Diedit di `/home/dikoharyadhanto/Documents/Works/Projects/KLHK_JasaLingkunganHidup`
+(substitusi string `entry.file`, tidak menyentuh state/gate/version):
+
+| Dari | Ke |
+| :--- | :--- |
+| `Sigma/design/DIR-INTENT-*` | `Sigma/charter/DIR-INTENT-*` |
+| `Sigma/build/ROADMAP-*` | `Sigma/roadmap/ROADMAP-*` |
+| `Sigma/build/FMN-PLAN-*` | `Sigma/contract/FMN-PLAN-*` |
+| `Sigma/build/DEV-EXEC-*` | `Sigma/evidence/DEV-EXEC-*` |
+
+- `progress-v1..v4.json`: 44 entri `entry.file` diperbaiki (8 + 16 + 4 + 16). Tiap target
+  diverifikasi ada di disk. `Sigma/close/DIR-CLOSE-v1.md`, `Sigma/pending/FMN-PLAN-*.md`,
+  dan entri v3.8 dibiarkan (sudah benar).
+- `SIGMA-OPERATION-REGISTRY.json`: 8 string `description`/`post_condition` kosmetik dibersihkan.
+- `Sigma/messages/index.json`: 54 entri `file` backslash → forward-slash (BUG B, lihat bawah).
+
+Percobaan sebelumnya menambah rekonsiliasi path ke `sigma doctor` **di-revert** — nilainya
+terikat ke skenario migrasi yang tidak akan berulang.
 
 ### BUG B — separator backslash
 
 - `progress-v<N>.json`: sudah ditangani sebelumnya (`normalizeFilePathsOnRead`).
-- `messages/index.json`: `readIndex()` (`src/engine/mailbox.ts`) kini menormalkan `\` → `/`
-  pada `entry.file` dan `attachments[]` setiap kali baca, sebelum cek duplikat. `index.json`
-  tidak ditulis ulang. `sigma inbox read` / `inbox check` kini resolve 54 entri legacy.
+- **KLHK** `messages/index.json`: 54 entri `file` di-swap `\` → `/` langsung (perbaikan satu kali).
+- **CLI (sigma-ecosystem)**: `readIndex()` (`src/engine/mailbox.ts`) kini menormalkan `\` → `/`
+  pada `file` dan `attachments[]` setiap baca, sebelum cek duplikat — melengkapi pola
+  `normalizeFilePathsOnRead()` yang sudah ada untuk `progress.json`, asuransi portabilitas
+  Windows↔Linux ke depan. `index.json` tidak ditulis ulang oleh CLI.
 - Test: `test/mailbox-path-normalization.test.ts`.
 
 ### Fitur tambahan (permintaan Director) — tier pesan `OUTDATED`
@@ -261,10 +272,15 @@ tidak ada file dipindah/dihapus.
 - `sigma inbox read <id>` tetap bisa membaca pesan OUTDATED (tidak mengubah status kembali).
 - Test: `test/inbox-outdated.test.ts`.
 
-### Belum dikerjakan (tindak lanjut terpisah, disepakati Director)
+### Belum dikerjakan
 
-- Prioritas 4 — guardrail: ubah ENOENT mentah jadi pesan "jalankan `sigma doctor`".
-- Prioritas 5 — normalisasi argumen `--v 3.4` vs `--v v3.4`; string `Sigma/build/`·`Sigma/design/`
-  di `description` `SIGMA-OPERATION-REGISTRY.json`.
-- Prioritas 2 (varian): menandai `entry.file` yang hilang total (0 kandidat) sebagai `INVALID` —
-  ditunda karena butuh refactor fixture test yang luas.
+Setelah keputusan "perbaiki KLHK langsung, tidak ada mekanisme migrasi di CLI", sisa relevan:
+
+- **Prioritas 5a** — normalisasi argumen `--v 3.4` ≡ `--v v3.4`. Bug arg-parsing independen,
+  tidak terkait folder. Prioritas rendah.
+- **Prioritas 5b** — cek apakah generator registry (`scripts/refresh-registries.js` /
+  template) di sigma-ecosystem masih memancarkan `Sigma/build/`·`Sigma/design/`; kalau ya,
+  itu doc-drift laten untuk semua project saat regenerasi. Prioritas rendah.
+
+Tidak lagi relevan (mati bersama revert rekonsiliasi-path `sigma doctor`):
+Prioritas 4 (guardrail ENOENT), varian Prioritas 2 (flag `entry.file` hilang total).
