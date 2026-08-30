@@ -19,8 +19,10 @@ import { detectTools, targetPaths } from '../utils/detect';
 import {
   writeCodexMcpConfig,
   writeAntigravityMcpConfig,
+  writeReasonixMcpConfig,
   removeCodexMcpConfig,
   removeAntigravityMcpConfig,
+  removeReasonixMcpConfig,
   isSigmaMcpResolvable,
   tryMcpOp,
 } from '../utils/mcpConfig';
@@ -173,7 +175,7 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
   console.log(`  Global dir: ${GLOBAL_SIGMA_DIR}`);
   console.log('  Run `sigma project start` to initialize a project.');
 
-  // Stage 3 — Tulis global MCP config untuk Codex dan Antigravity
+  // Stage 3 — Tulis global MCP config untuk Codex, Antigravity, dan Reasonix
   {
     const err = tryMcpOp(() => writeCodexMcpConfig(), '~/.codex/config.toml');
     if (err) warn(`MCP (Codex): ${err}`);
@@ -183,6 +185,11 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
     const err = tryMcpOp(() => writeAntigravityMcpConfig(), '~/.gemini/config/mcp_config.json');
     if (err) warn(`MCP (Antigravity): ${err}`);
     else console.log('  MCP: ~/.gemini/config/mcp_config.json updated (sigma-mcp — Antigravity).');
+  }
+  {
+    const err = tryMcpOp(() => writeReasonixMcpConfig(), '~/.reasonix/config.toml');
+    if (err) warn(`MCP (Reasonix): ${err}`);
+    else console.log('  MCP: ~/.reasonix/config.toml updated (sigma-mcp — Reasonix).');
   }
   if (!isSigmaMcpResolvable()) {
     warn('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
@@ -428,7 +435,7 @@ async function runUpdate(): Promise<void> {
   console.log('  Note: existing project Sigma/ folders were NOT touched.');
   console.log('  To sync governance files into a project, run: sigma project sync --confirm');
 
-  // Stage 3 — Refresh global MCP config untuk Codex dan Antigravity
+  // Stage 3 — Refresh global MCP config untuk Codex, Antigravity, dan Reasonix
   {
     const err = tryMcpOp(() => writeCodexMcpConfig(), '~/.codex/config.toml');
     if (err) warn(`MCP (Codex): ${err}`);
@@ -438,6 +445,11 @@ async function runUpdate(): Promise<void> {
     const err = tryMcpOp(() => writeAntigravityMcpConfig(), '~/.gemini/config/mcp_config.json');
     if (err) warn(`MCP (Antigravity): ${err}`);
     else console.log('  MCP: ~/.gemini/config/mcp_config.json refreshed (sigma-mcp — Antigravity).');
+  }
+  {
+    const err = tryMcpOp(() => writeReasonixMcpConfig(), '~/.reasonix/config.toml');
+    if (err) warn(`MCP (Reasonix): ${err}`);
+    else console.log('  MCP: ~/.reasonix/config.toml refreshed (sigma-mcp — Reasonix).');
   }
   if (!isSigmaMcpResolvable()) {
     warn('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
@@ -581,6 +593,11 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
     const err = tryMcpOp(() => removeAntigravityMcpConfig(), '~/.gemini/config/mcp_config.json');
     if (err) warn(`MCP cleanup (Antigravity): ${err}`);
     else console.log('  Removed: sigma entry from ~/.gemini/config/mcp_config.json (if existed).');
+  }
+  {
+    const err = tryMcpOp(() => removeReasonixMcpConfig(), '~/.reasonix/config.toml');
+    if (err) warn(`MCP cleanup (Reasonix): ${err}`);
+    else console.log('  Removed: sigma entry from ~/.reasonix/config.toml (if existed).');
   }
 
   success('Sigma uninstalled successfully.');

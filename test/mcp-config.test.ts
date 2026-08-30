@@ -8,6 +8,8 @@
  *   - writeAntigravityMcpConfig: merge-aware, idempoten, non-destruktif
  *   - removeCodexMcpConfig     : no-op kalau tidak ada, merge-delete, idempoten
  *   - removeAntigravityMcpConfig: no-op kalau tidak ada, merge-delete, idempoten
+ *   - writeReasonixMcpConfig   : merge-aware, idempoten, non-destruktif, preserves comments (TOML)
+ *   - removeReasonixMcpConfig  : no-op kalau tidak ada, merge-delete, idempoten, preserves comments
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -76,6 +78,10 @@ function codexConfigPath(home: string) {
 
 function antigravityConfigPath(home: string) {
   return path.join(home, '.gemini', 'config', 'mcp_config.json');
+}
+
+function reasonixConfigPath(home: string) {
+  return path.join(home, '.reasonix', 'config.toml');
 }
 
 const expectedEntry = (root?: string) => ({
@@ -351,5 +357,173 @@ describe('removeAntigravityMcpConfig', () => {
     writeAntigravityMcpConfig();
     removeAntigravityMcpConfig();
     expect(() => removeAntigravityMcpConfig()).not.toThrow();
+  });
+});
+
+// ── writeReasonixMcpConfig ────────────────────────────────────────────────────
+//
+// Beda dari Codex: config.toml Reasonix bisa berisi komentar dokumentasi yang
+// HARUS dipertahankan (smol-toml full parse+stringify membuangnya). Test di
+// sini secara eksplisit memverifikasi pelestarian komentar, bukan cuma isi
+// yang di-parse.
+
+describe('writeReasonixMcpConfig', () => {
+  it('creates ~/.reasonix/config.toml with [[plugins]] sigma entry when file does not exist', async () => {
+    const { writeReasonixMcpConfig } = await importMcpConfig();
+    writeReasonixMcpConfig(tmpProject);
+
+    const filePath = reasonixConfigPath(tmpHome);
+    expect(fs.existsSync(filePath)).toBe(true);
+    const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
+    const sigma = (parsed.plugins as any[]).find((p) => p.name === 'sigma');
+    expect(sigma.command).toBe('sigma-mcp');
+    expect(sigma.args).toEqual([tmpProject]);
+  });
+
+  it('merges sigma without touching other plugins or settings', async () => {
+    const { writeReasonixMcpConfig } = await importMcpConfig();
+    const filePath = reasonixConfigPath(tmpHome);
+    fs.ensureDirSync(path.dirname(filePath));
+    fs.writeFileSync(
+      filePath,
+      `config_version = 7\n\n[[plugins]]\nname    = "shell"\ncommand = "npx"\nargs    = ["-y", "mcp-shell"]\n`,
+      'utf-8',
+    );
+
+    writeReasonixMcpConfig(tmpProject);
+
+    const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
+    const plugins = parsed.plugins as any[];
+    expect(plugins.find((p) => p.name === 'sigma')?.command).toBe('sigma-mcp');
+    expect(plugins.find((p) => p.name === 'sigma')?.args).toEqual([tmpProject]);
+    expect(plugins.find((p) => p.name === 'shell')?.command).toBe('npx');
+    expect((parsed as any).config_version).toBe(7);
+  });
+
+  it('preserves comments elsewhere in the file (does not round-trip through smol-toml)', async () => {
+    const { writeReasonixMcpConfig } = await importMcpConfig();
+    const filePath = reasonixConfigPath(tmpHome);
+    fs.ensureDirSync(path.dirname(filePath));
+    const original = `# Reasonix configuration.\n# Resolution order: flag > ./reasonix.toml > ~/.reasonix/config.toml > built-in defaults.\n\nconfig_version = 7   # schema marker\n\n[[plugins]]\nname    = "shell"   # inline comment\ncommand = "npx"\nargs    = ["-y", "mcp-shell"]\n`;
+    fs.writeFileSync(filePath, original, 'utf-8');
+
+    writeReasonixMcpConfig(tmpProject);
+
+    const result = fs.readFileSync(filePath, 'utf-8');
+    expect(result).toContain('# Reasonix configuration.');
+    expect(result).toContain('# Resolution order: flag > ./reasonix.toml > ~/.reasonix/config.toml > built-in defaults.');
+    expect(result).toContain('config_version = 7   # schema marker');
+    expect(result).toContain('name    = "shell"   # inline comment');
+  });
+
+  it('does not touch an existing "sigma-memory" plugin (exact name match, not prefix)', async () => {
+    const { writeReasonixMcpConfig } = await importMcpConfig();
+    const filePath = reasonixConfigPath(tmpHome);
+    fs.ensureDirSync(path.dirname(filePath));
+    fs.writeFileSync(
+      filePath,
+      `[[plugins]]\nname    = "sigma-memory"\ncommand = "npx"\nargs    = ["-y", "@modelcontextprotocol/server-memory"]\n`,
+      'utf-8',
+    );
+
+    writeReasonixMcpConfig(tmpProject);
+
+    const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
+    const plugins = parsed.plugins as any[];
+    expect(plugins.find((p) => p.name === 'sigma-memory')?.command).toBe('npx');
+    expect(plugins.find((p) => p.name === 'sigma')?.command).toBe('sigma-mcp');
+    expect(plugins).toHaveLength(2);
+  });
+
+  it('is idempotent (calling twice produces the same plugins list)', async () => {
+    const { writeReasonixMcpConfig } = await importMcpConfig();
+    writeReasonixMcpConfig(tmpProject);
+    writeReasonixMcpConfig(tmpProject);
+
+    const parsed = parseTOML(fs.readFileSync(reasonixConfigPath(tmpHome), 'utf-8')) as any;
+    const plugins = parsed.plugins as any[];
+    expect(plugins.filter((p) => p.name === 'sigma')).toHaveLength(1);
+    expect(plugins.find((p) => p.name === 'sigma')?.args).toEqual([tmpProject]);
+  });
+
+  it('writes empty args when no projectRoot is given', async () => {
+    const { writeReasonixMcpConfig } = await importMcpConfig();
+    writeReasonixMcpConfig();
+
+    const parsed = parseTOML(fs.readFileSync(reasonixConfigPath(tmpHome), 'utf-8')) as any;
+    const sigma = (parsed.plugins as any[]).find((p) => p.name === 'sigma');
+    expect(sigma.args).toEqual([]);
+  });
+});
+
+// ── removeReasonixMcpConfig ───────────────────────────────────────────────────
+
+describe('removeReasonixMcpConfig', () => {
+  it('is no-op when file does not exist', async () => {
+    const { removeReasonixMcpConfig } = await importMcpConfig();
+    expect(() => removeReasonixMcpConfig()).not.toThrow();
+    expect(fs.existsSync(reasonixConfigPath(tmpHome))).toBe(false);
+  });
+
+  it('is no-op when the sigma plugin does not exist', async () => {
+    const { removeReasonixMcpConfig } = await importMcpConfig();
+    const filePath = reasonixConfigPath(tmpHome);
+    fs.ensureDirSync(path.dirname(filePath));
+    fs.writeFileSync(filePath, `[[plugins]]\nname    = "shell"\ncommand = "npx"\nargs    = ["-y", "mcp-shell"]\n`, 'utf-8');
+
+    removeReasonixMcpConfig();
+
+    const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
+    const plugins = parsed.plugins as any[];
+    expect(plugins.find((p) => p.name === 'shell')?.command).toBe('npx');
+    expect(plugins.find((p) => p.name === 'sigma')).toBeUndefined();
+  });
+
+  it('removes only the sigma plugin, preserving other plugins and comments', async () => {
+    const { writeReasonixMcpConfig, removeReasonixMcpConfig } = await importMcpConfig();
+    const filePath = reasonixConfigPath(tmpHome);
+    fs.ensureDirSync(path.dirname(filePath));
+    fs.writeFileSync(
+      filePath,
+      `# top-level doc comment\nconfig_version = 7\n\n[[plugins]]\nname    = "shell"   # inline comment\ncommand = "npx"\nargs    = ["-y", "mcp-shell"]\n`,
+      'utf-8',
+    );
+    writeReasonixMcpConfig(tmpProject);
+
+    removeReasonixMcpConfig();
+
+    const result = fs.readFileSync(filePath, 'utf-8');
+    expect(result).toContain('# top-level doc comment');
+    expect(result).toContain('name    = "shell"   # inline comment');
+    const parsed = parseTOML(result) as any;
+    const plugins = parsed.plugins as any[];
+    expect(plugins.find((p) => p.name === 'sigma')).toBeUndefined();
+    expect(plugins.find((p) => p.name === 'shell')?.command).toBe('npx');
+  });
+
+  it('does not touch an existing "sigma-memory" plugin when removing "sigma"', async () => {
+    const { writeReasonixMcpConfig, removeReasonixMcpConfig } = await importMcpConfig();
+    const filePath = reasonixConfigPath(tmpHome);
+    fs.ensureDirSync(path.dirname(filePath));
+    fs.writeFileSync(
+      filePath,
+      `[[plugins]]\nname    = "sigma-memory"\ncommand = "npx"\nargs    = ["-y", "@modelcontextprotocol/server-memory"]\n`,
+      'utf-8',
+    );
+    writeReasonixMcpConfig(tmpProject);
+
+    removeReasonixMcpConfig();
+
+    const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
+    const plugins = parsed.plugins as any[];
+    expect(plugins.find((p) => p.name === 'sigma-memory')?.command).toBe('npx');
+    expect(plugins.find((p) => p.name === 'sigma')).toBeUndefined();
+  });
+
+  it('is idempotent (calling remove twice is safe)', async () => {
+    const { writeReasonixMcpConfig, removeReasonixMcpConfig } = await importMcpConfig();
+    writeReasonixMcpConfig();
+    removeReasonixMcpConfig();
+    expect(() => removeReasonixMcpConfig()).not.toThrow();
   });
 });

@@ -75,6 +75,7 @@ export function configCommand(): Command {
         console.log(`AI Communication Language:     ${config.interaction_language}`);
         console.log(`Sigma Docs Language:           ${config.document_language}`);
         console.log(`Output Doc Written Language:   ${config.output_document_language}`);
+        console.log(`Notion Humanize Gate:          ${config.notion_humanize_gate?.enabled ? 'ON' : 'OFF'}`);
         console.log('');
       } catch (e) {
         console.error((e as Error).message);

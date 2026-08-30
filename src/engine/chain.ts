@@ -425,6 +425,45 @@ function normalizeIntentStateOnRead(chain: ChainState): void {
   }
 }
 
+// Backward compatibility for chain files whose `file` fields were written
+// with Windows-style backslashes (e.g. a project moved from Windows to
+// Linux/macOS, or a chain hand-edited on Windows). path.join() on POSIX
+// treats "\" as an ordinary filename character rather than a separator, so
+// downstream consumers (execDocPath(), planDocPath(), etc.) end up looking
+// for a single file literally named "Sigma\build\DEV-EXEC-v3.6.md" instead
+// of joining path segments — ENOENT even though the real file exists at
+// Sigma/build/DEV-EXEC-v3.6.md. Forward slash is accepted by path.join() on
+// every platform Node supports (Windows included), so normalizing to "/"
+// here is the one fix that needs no OS-conditional branching. Same
+// choke-point reasoning as normalizeIntentStateOnRead(): every chain read
+// passes through readChain(), so no second read path can miss it.
+// In-memory only until something calls writeChain() (e.g. `sigma doctor`).
+function normalizeFilePathsOnRead(chain: ChainState): void {
+  const migrated: string[] = [];
+  const fix = (label: string, value: string): string => {
+    if (!value.includes('\\')) return value;
+    migrated.push(`${label} file path normalized to forward slashes: "${value}"`);
+    return value.replace(/\\/g, '/');
+  };
+
+  if (chain.intent.file) chain.intent.file = fix(`intent ${chain.intent.version}`, chain.intent.file);
+  if (chain.roadmap?.file) chain.roadmap.file = fix(`roadmap ${chain.roadmap.version}`, chain.roadmap.file);
+  if (chain.close?.file) chain.close.file = fix(`close ${chain.close.version}`, chain.close.file);
+  for (const v of chain.plan.versions) {
+    if (v.file) v.file = fix(`plan ${v.version}`, v.file);
+  }
+  for (const p of chain.plan.pending) {
+    p.file = fix(`plan pending ${p.id}`, p.file);
+  }
+  for (const v of chain.exec.versions) {
+    if (v.file) v.file = fix(`exec ${v.version}`, v.file);
+  }
+
+  if (migrated.length > 0) {
+    chain._migratedOnRead = [...(chain._migratedOnRead ?? []), ...migrated];
+  }
+}
+
 export function readChain(projectRoot: string, chainVersion: string): ChainState {
   const filePath = chainFilePath(projectRoot, chainVersion);
   if (!fs.existsSync(filePath)) {
@@ -448,6 +487,7 @@ export function readChain(projectRoot: string, chainVersion: string): ChainState
   }
   const chain = raw as ChainState;
   normalizeIntentStateOnRead(chain);
+  normalizeFilePathsOnRead(chain);
   return chain;
 }
 

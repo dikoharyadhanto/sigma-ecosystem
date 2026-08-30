@@ -1,10 +1,10 @@
 /**
  * mcpConfig.ts — Wiring sigma-mcp ke AI client configs
  *
- * Menyediakan fungsi tulis dan hapus config MCP untuk kelima platform:
+ * Menyediakan fungsi tulis dan hapus config MCP untuk platform yang didukung:
  *   Tulis  : writeClaudeMcpConfig, writeCursorMcpConfig,
- *            writeCodexMcpConfig, writeAntigravityMcpConfig
- *   Hapus  : removeCodexMcpConfig, removeAntigravityMcpConfig
+ *            writeCodexMcpConfig, writeAntigravityMcpConfig, writeReasonixMcpConfig
+ *   Hapus  : removeCodexMcpConfig, removeAntigravityMcpConfig, removeReasonixMcpConfig
  *   Helper : tryMcpOp — wrap operasi MCP dengan try-catch, kembalikan pesan error atau null
  *
  * Prinsip desain:
@@ -15,6 +15,15 @@
  *   - Fungsi hapus: no-op kalau file/key tidak ada; merge-delete kalau ada
  *   - Fault-tolerant: semua fungsi boleh gagal (EPERM, EACCES, file locked);
  *     gunakan tryMcpOp() di call site supaya error jadi warn, bukan crash
+ *
+ * Catatan Reasonix: writeCodexMcpConfig dkk. memakai smol-toml (parse penuh →
+ * mutate → stringify), yang aman untuk Codex karena config.toml-nya polos
+ * tanpa komentar. ~/.reasonix/config.toml sebaliknya penuh komentar dokumentasi
+ * yang harus dipertahankan, dan smol-toml membuang semua komentar saat
+ * stringify — jadi writeReasonixMcpConfig/removeReasonixMcpConfig TIDAK
+ * memakai parse+stringify penuh. Keduanya melakukan surgical text edit per
+ * baris pada blok `[[plugins]]` yang name-nya "sigma" saja, sisa file
+ * (komentar, plugin lain, section lain) tidak disentuh sama sekali.
  */
 
 import fs from 'fs-extra';
@@ -156,6 +165,108 @@ export function writeAntigravityMcpConfig(projectRoot?: string): void {
   (existing.mcpServers as Record<string, unknown>).sigma = makeMcpEntry(projectRoot);
 
   writeJsonSafe(filePath, existing);
+}
+
+/**
+ * Cari rentang baris blok `[[pluginsTableName]]` (array-of-tables TOML) yang
+ * punya `name = "<pluginName>"` persis (bukan prefix — "sigma" tidak boleh
+ * ketemu di blok "sigma-memory"). Mengembalikan null kalau tidak ketemu.
+ *
+ * Batas blok: dari baris `[[pluginsTableName]]` sampai baris section/array-of-
+ * tables berikutnya (`[...]` atau `[[...]]`), atau EOF kalau tidak ada lagi.
+ */
+function findPluginBlockRange(
+  lines: string[],
+  pluginsTableName: string,
+  pluginName: string,
+): { start: number; end: number } | null {
+  const headerRe = new RegExp(`^\\[\\[${pluginsTableName}\\]\\]\\s*$`);
+  const sectionRe = /^\[\[?[^\]]+\]\]?\s*$/;
+  const nameLineRe = new RegExp(`^name\\s*=\\s*"${pluginName}"\\s*(#.*)?$`);
+
+  for (let i = 0; i < lines.length; i++) {
+    if (!headerRe.test(lines[i].trim())) continue;
+
+    let end = lines.length;
+    for (let j = i + 1; j < lines.length; j++) {
+      if (sectionRe.test(lines[j].trim())) {
+        end = j;
+        break;
+      }
+    }
+
+    const body = lines.slice(i + 1, end);
+    if (body.some((l) => nameLineRe.test(l.trim()))) {
+      return { start: i, end };
+    }
+  }
+  return null;
+}
+
+/** Bentuk blok teks `[[plugins]]` untuk entri sigma-mcp milik Reasonix. */
+function makeReasonixPluginBlockLines(projectRoot?: string): string[] {
+  const args = projectRoot && projectRoot.trim().length > 0
+    ? `["${projectRoot.trim()}"]`
+    : '[]';
+  return [
+    '[[plugins]]',
+    'name    = "sigma"',
+    'command = "sigma-mcp"',
+    `args    = ${args}`,
+  ];
+}
+
+/**
+ * Upsert entri sigma ke ~/.reasonix/config.toml (global Reasonix config).
+ * Bagian: `[[plugins]]` dengan `name = "sigma"`.
+ *
+ * Beda dari writeCodexMcpConfig: dilakukan sebagai surgical text edit
+ * (lihat catatan Reasonix di header file), bukan parse+stringify TOML penuh,
+ * supaya komentar dokumentasi di config.toml Reasonix tidak hilang.
+ * Merge-aware: plugin lain (mis. "shell", "sequential-thinking") dan seluruh
+ * konten lain file dipertahankan byte-identik.
+ */
+export function writeReasonixMcpConfig(projectRoot?: string): void {
+  const filePath = path.join(os.homedir(), '.reasonix', 'config.toml');
+  const raw = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf-8') : '';
+  const lines = raw.length > 0 ? raw.split('\n') : [];
+
+  const range = findPluginBlockRange(lines, 'plugins', 'sigma');
+  const blockLines = makeReasonixPluginBlockLines(projectRoot);
+
+  let next: string[];
+  if (range) {
+    next = [...lines.slice(0, range.start), ...blockLines, ...lines.slice(range.end)];
+  } else {
+    const needsBlankSep = lines.length > 0 && lines[lines.length - 1].trim() !== '';
+    next = [...lines, ...(needsBlankSep ? [''] : []), ...blockLines];
+  }
+
+  fs.ensureDirSync(path.dirname(filePath));
+  fs.writeFileSync(filePath, next.join('\n'), 'utf-8');
+}
+
+/**
+ * Hapus blok `[[plugins]]` dengan `name = "sigma"` dari ~/.reasonix/config.toml.
+ * No-op kalau file atau blok tidak ada.
+ * Sisa file (plugin lain, komentar, section lain) dipertahankan byte-identik.
+ */
+export function removeReasonixMcpConfig(): void {
+  const filePath = path.join(os.homedir(), '.reasonix', 'config.toml');
+  if (!fs.existsSync(filePath)) return;
+
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  const lines = raw.split('\n');
+  const range = findPluginBlockRange(lines, 'plugins', 'sigma');
+  if (!range) return;
+
+  let { start } = range;
+  const { end } = range;
+  // Buang satu baris kosong sebelum blok (kalau ada) supaya tidak menumpuk baris kosong
+  if (start > 0 && lines[start - 1].trim() === '') start -= 1;
+
+  const next = [...lines.slice(0, start), ...lines.slice(end)];
+  fs.writeFileSync(filePath, next.join('\n'), 'utf-8');
 }
 
 // ── Stage 8: Uninstall cleanup ────────────────────────────────────────────────

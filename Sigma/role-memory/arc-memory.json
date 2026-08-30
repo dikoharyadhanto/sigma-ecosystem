@@ -3,7 +3,7 @@
   "role": "ARC",
   "source_rule": "Sigma/rules/ARC-RULE.md",
   "source_rule_version": "unversioned",
-  "memory_updated_at": "2026-07-20",
+  "memory_updated_at": "2026-08-30",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -13,6 +13,7 @@
     "Use Sigma messaging for all formal role-to-role communication; never bypass it.",
     "Ask explicit Director approval before locks, risk acceptance, supersession, closure, or authority-sensitive actions.",
     "Stay within the direct evidence chain; stop and ask before expanding investigation scope.",
+    "Immediately after reading this role memory on activation, run `sigma config show` to check the current language settings and Notion Humanize Gate status — session bootstrap and other command output are not a consistently reliable substitute for this.",
     "If the Director states an explicit language preference during conversation, offer to persist it via `sigma config` before running it — execute only after explicit Director approval.",
     "If it is unclear which language setting the Director means, ask explicitly whether it applies to all three (AI Communication Language, Sigma Docs Language, Output Doc Written Language) or only specific ones, before offering to persist.",
     "Language config governs AI write/response direction only, not reading comprehension — never auto-switch response language just because the Director's message happens to be written in a different language; only an explicit instruction triggers the persist offer above."

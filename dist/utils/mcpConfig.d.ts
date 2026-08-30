@@ -1,10 +1,10 @@
 /**
  * mcpConfig.ts — Wiring sigma-mcp ke AI client configs
  *
- * Menyediakan fungsi tulis dan hapus config MCP untuk kelima platform:
+ * Menyediakan fungsi tulis dan hapus config MCP untuk platform yang didukung:
  *   Tulis  : writeClaudeMcpConfig, writeCursorMcpConfig,
- *            writeCodexMcpConfig, writeAntigravityMcpConfig
- *   Hapus  : removeCodexMcpConfig, removeAntigravityMcpConfig
+ *            writeCodexMcpConfig, writeAntigravityMcpConfig, writeReasonixMcpConfig
+ *   Hapus  : removeCodexMcpConfig, removeAntigravityMcpConfig, removeReasonixMcpConfig
  *   Helper : tryMcpOp — wrap operasi MCP dengan try-catch, kembalikan pesan error atau null
  *
  * Prinsip desain:
@@ -15,6 +15,15 @@
  *   - Fungsi hapus: no-op kalau file/key tidak ada; merge-delete kalau ada
  *   - Fault-tolerant: semua fungsi boleh gagal (EPERM, EACCES, file locked);
  *     gunakan tryMcpOp() di call site supaya error jadi warn, bukan crash
+ *
+ * Catatan Reasonix: writeCodexMcpConfig dkk. memakai smol-toml (parse penuh →
+ * mutate → stringify), yang aman untuk Codex karena config.toml-nya polos
+ * tanpa komentar. ~/.reasonix/config.toml sebaliknya penuh komentar dokumentasi
+ * yang harus dipertahankan, dan smol-toml membuang semua komentar saat
+ * stringify — jadi writeReasonixMcpConfig/removeReasonixMcpConfig TIDAK
+ * memakai parse+stringify penuh. Keduanya melakukan surgical text edit per
+ * baris pada blok `[[plugins]]` yang name-nya "sigma" saja, sisa file
+ * (komentar, plugin lain, section lain) tidak disentuh sama sekali.
  */
 /**
  * Tulis/upsert entri sigma ke .mcp.json di project root.
@@ -40,6 +49,23 @@ export declare function writeCodexMcpConfig(projectRoot?: string): void;
  * Merge-aware: server MCP lain milik pengguna dipertahankan.
  */
 export declare function writeAntigravityMcpConfig(projectRoot?: string): void;
+/**
+ * Upsert entri sigma ke ~/.reasonix/config.toml (global Reasonix config).
+ * Bagian: `[[plugins]]` dengan `name = "sigma"`.
+ *
+ * Beda dari writeCodexMcpConfig: dilakukan sebagai surgical text edit
+ * (lihat catatan Reasonix di header file), bukan parse+stringify TOML penuh,
+ * supaya komentar dokumentasi di config.toml Reasonix tidak hilang.
+ * Merge-aware: plugin lain (mis. "shell", "sequential-thinking") dan seluruh
+ * konten lain file dipertahankan byte-identik.
+ */
+export declare function writeReasonixMcpConfig(projectRoot?: string): void;
+/**
+ * Hapus blok `[[plugins]]` dengan `name = "sigma"` dari ~/.reasonix/config.toml.
+ * No-op kalau file atau blok tidak ada.
+ * Sisa file (plugin lain, komentar, section lain) dipertahankan byte-identik.
+ */
+export declare function removeReasonixMcpConfig(): void;
 /**
  * Hapus key "sigma" dari [mcp_servers] di ~/.codex/config.toml.
  * No-op kalau file tidak ada atau key tidak ada.
