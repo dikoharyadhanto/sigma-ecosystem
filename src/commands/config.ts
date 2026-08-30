@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { findProjectRoot } from '../utils/fs';
-import { readProjectConfig, writeProjectConfig } from '../engine/projectConfig';
+import { readProjectConfig, writeProjectConfig, resolveAutoOutdateKeep } from '../engine/projectConfig';
 import { promptLanguageWizard } from '../engine/languageWizard';
 
 export function configCommand(): Command {
@@ -65,6 +65,29 @@ export function configCommand(): Command {
       }
     });
 
+  set.command('mailbox-outdate-keep <n>')
+    .description(
+      'Set how many most-recent READ messages `sigma inbox read` keeps before aging the rest to OUTDATED. ' +
+      '0 disables the auto-sweep (mailbox.auto_outdate_read_keep).'
+    )
+    .action((n: string) => {
+      try {
+        const value = Number(n);
+        if (!Number.isInteger(value) || value < 0) {
+          throw new Error(`Expected a non-negative integer, got "${n}".`);
+        }
+        const projectRoot = findProjectRoot();
+        const config = readProjectConfig(projectRoot);
+        const prev = config.mailbox?.auto_outdate_read_keep;
+        config.mailbox = { ...config.mailbox, auto_outdate_read_keep: value };
+        writeProjectConfig(projectRoot, config);
+        console.log(`Mailbox auto-outdate keep: ${prev ?? '(default)'} -> ${value}${value === 0 ? ' (auto-sweep disabled)' : ''}`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
   cmd.command('show')
     .description('Show current project configuration')
     .action(() => {
@@ -76,6 +99,8 @@ export function configCommand(): Command {
         console.log(`Sigma Docs Language:           ${config.document_language}`);
         console.log(`Output Doc Written Language:   ${config.output_document_language}`);
         console.log(`Notion Humanize Gate:          ${config.notion_humanize_gate?.enabled ? 'ON' : 'OFF'}`);
+        const keep = resolveAutoOutdateKeep(config);
+        console.log(`Mailbox Auto-Outdate Keep:     ${keep === 0 ? 'OFF' : keep}`);
         console.log('');
       } catch (e) {
         console.error((e as Error).message);

@@ -25,7 +25,9 @@ export function computeDoctor(root: string | null): unknown {
   // not touch disk because we never writeChain.
   const { data } = readActiveChain(root);
   const overrides = readOverrides(root);
-  const findings = runDoctorReconciliation(data, overrides);
+  // root is passed so the diagnosis includes stale entry.file detection; this
+  // tool still never calls writeChain, so the rewrite/markers stay in-memory.
+  const findings = runDoctorReconciliation(data, overrides, root);
 
   return {
     active: true,

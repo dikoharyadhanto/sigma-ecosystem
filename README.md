@@ -578,17 +578,23 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | config   | `sigma config`                     | Interactive wizard for all 3 language preferences (yes/no per field)           |
 | config   | `sigma config show`                | Show current project language preferences                                      |
 | config   | `sigma config set language <name> --interaction\|--sigma-document\|--output-document` | Set one language preference non-interactively (free-form name, e.g. `English`, `Indonesia`) |
+| config   | `sigma config set mailbox-outdate-keep <n>` | How many recent READ messages `sigma inbox read` keeps before aging the rest to OUTDATED (`0` disables; default `5`) |
 | send     | `sigma send`                       | Send a message from one role to another (`--from`, `--to`, `--message`)        |
 | inbox    | `sigma inbox --role <role>`        | List unread messages for a role                                                |
-| inbox    | `sigma inbox read <id>`            | Read a message and mark it as READ                                             |
+| inbox    | `sigma inbox --role <role> --all`  | List UNREAD + READ + ARCHIVED (excludes OUTDATED)                              |
+| inbox    | `sigma inbox --role <role> --outdated` | List only OUTDATED messages (READ aged out by clear / auto-sweep)          |
+| inbox    | `sigma inbox read <id>`            | Read a message and mark it as READ (auto-ages surplus READ to OUTDATED)        |
 | inbox    | `sigma inbox archive <id>`         | Archive a message                                                              |
+| inbox    | `sigma inbox clear --role <role> [--keep 5] [--dry-run]` | Age stale READ messages to OUTDATED, keeping the N most recent READ |
+| inbox    | `sigma inbox clear --all-roles --director-confirm` | Same, swept across every messaging role                             |
 | inbox    | `sigma inbox check`                | Run inbox integrity check (index vs disk files, attachments, field values)     |
 | git      | `sigma git evidence`               | Show read-only Git state summary                                               |
 | memory   | `sigma memory --<role>`            | Show role activation memory reminders for arc/fmn/dev/aud (read-only)          |
 | reference| `sigma reference update`           | Rebuild the project-wide reference list (Comprehensive Research source index)  |
 | report   | `sigma report logs`                | View the operation history log with filters (read-only)                        |
 | override | `sigma override`                   | Bypass current lifecycle gate under Director authority (recorded in audit log) |
-| doctor   | `sigma doctor`                     | Diagnose and reconcile runtime state (repairs drift, marks unresolved breaks INVALID) |
+| doctor   | `sigma doctor`                     | Diagnose and reconcile runtime state (repairs gate drift and stale artifact-folder paths, marks unresolved breaks INVALID) |
+| doctor   | `sigma doctor --all-versions`      | Same, applied to every chain on disk (not just the active one)                 |
 | doctor   | `sigma doctor --recovery`          | Explicit alias for the default `sigma doctor` behavior                        |
 | doctor   | `sigma doctor --reconstruct`       | Rebuild `progress-v<N>.json` from artifact files when missing or corrupted     |
 | setup    | `sigma setup install`              | Install Sigma globally to `~/.sigma/`, deploy skill files + hook               |

@@ -6,9 +6,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.readProjectConfig = readProjectConfig;
 exports.writeProjectConfig = writeProjectConfig;
 exports.createDefaultProjectConfig = createDefaultProjectConfig;
+exports.resolveAutoOutdateKeep = resolveAutoOutdateKeep;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
+const DEFAULT_MAILBOX = {
+    auto_outdate_read_keep: 5,
+};
 const DEFAULTS = {
     schema_version: config_1.SCHEMA_VERSION,
     document_language: 'English',
@@ -21,6 +25,7 @@ const DEFAULTS = {
     notion_humanize_gate: {
         enabled: false,
     },
+    mailbox: { ...DEFAULT_MAILBOX },
 };
 function readProjectConfig(projectRoot) {
     const filePath = path_1.default.join(projectRoot, config_1.PROJECT_CONFIG_FILE);
@@ -52,6 +57,17 @@ function createDefaultProjectConfig(lang = 'English') {
         notion_humanize_gate: {
             enabled: false,
         },
+        mailbox: { ...DEFAULT_MAILBOX },
     };
+}
+// Resolves the auto-outdate keep-count, tolerating a missing or malformed
+// `mailbox` block. An explicit 0 is honored (disables the sweep); anything
+// non-numeric or negative falls back to the default.
+function resolveAutoOutdateKeep(config) {
+    const raw = config.mailbox?.auto_outdate_read_keep;
+    if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0) {
+        return DEFAULT_MAILBOX.auto_outdate_read_keep;
+    }
+    return Math.floor(raw);
 }
 //# sourceMappingURL=projectConfig.js.map

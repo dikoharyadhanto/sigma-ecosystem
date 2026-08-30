@@ -9,6 +9,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
 const mailbox_1 = require("../engine/mailbox");
+const projectConfig_1 = require("../engine/projectConfig");
 const fs_1 = require("../utils/fs");
 function validateRole(value) {
     const upper = value.toUpperCase();
@@ -31,24 +32,18 @@ function printMessageSummary(entry, index) {
         console.log(`   Attach   : ${entry.attachments.join(', ')}`);
     }
 }
-function runList(role, includeAll) {
+function runList(role, view) {
     const projectRoot = (0, fs_1.findProjectRoot)();
     const index = (0, mailbox_1.readIndex)(projectRoot);
-    const messages = (0, mailbox_1.getMessagesForRole)(index, role, includeAll);
-    const totalUnread = index.messages.filter(m => m.to === role && m.status === 'UNREAD').length;
-    const label = includeAll ? 'All messages' : 'Unread messages';
+    const messages = (0, mailbox_1.selectInboxMessages)(index, role, view);
     console.log(`\nRole Inbox — ${role}`);
+    const label = view === 'unread' ? 'unread message' : view === 'outdated' ? 'outdated message' : 'message';
     if (messages.length === 0) {
-        console.log(includeAll ? 'No messages.' : 'No unread messages.');
+        console.log(`No ${label}s.`);
         console.log('');
         return;
     }
-    if (!includeAll && totalUnread > messages.length) {
-        console.log(`${totalUnread} unread (showing ${messages.length}):`);
-    }
-    else {
-        console.log(`${messages.length} ${label.toLowerCase()}:`);
-    }
+    console.log(`${messages.length} ${label}${messages.length === 1 ? '' : 's'}:`);
     messages.forEach((m, i) => printMessageSummary(m, i + 1));
     console.log(`\nRun: sigma inbox read <id>`);
     console.log('');
@@ -66,11 +61,82 @@ function runRead(messageId) {
     }
     const content = fs_extra_1.default.readFileSync(absPath, 'utf8');
     console.log('\n' + content);
+    let dirty = false;
     if (entry.status === 'UNREAD') {
         (0, mailbox_1.updateMessageStatus)(index, messageId, 'READ');
-        (0, mailbox_1.writeIndex)(projectRoot, index);
+        dirty = true;
         console.log(`[Marked as READ: ${messageId}]\n`);
     }
+    // Phase 6 auto-sweep: after a successful read, keep the N most recent READ
+    // messages for this recipient role and flip the rest to OUTDATED. Disabled
+    // when mailbox.auto_outdate_read_keep is 0. Never touches the message just
+    // read, UNREAD, or ARCHIVED.
+    const keep = (0, projectConfig_1.resolveAutoOutdateKeep)((0, projectConfig_1.readProjectConfig)(projectRoot));
+    if (keep > 0) {
+        const surplus = (0, mailbox_1.selectSurplusRead)(index, entry.to, keep).filter(m => m.id !== messageId);
+        for (const m of surplus)
+            (0, mailbox_1.updateMessageStatus)(index, m.id, 'OUTDATED');
+        if (surplus.length > 0) {
+            dirty = true;
+            console.log(`[${surplus.length} older READ message${surplus.length === 1 ? '' : 's'} moved to OUTDATED — ` +
+                `see: sigma inbox --role ${entry.to.toLowerCase()} --outdated]\n`);
+        }
+    }
+    if (dirty)
+        (0, mailbox_1.writeIndex)(projectRoot, index);
+}
+function parseKeep(value) {
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 0) {
+        throw new Error(`--keep must be a non-negative integer, got "${value}"`);
+    }
+    return n;
+}
+function runClear(opts) {
+    const projectRoot = (0, fs_1.findProjectRoot)();
+    const keep = opts.keep !== undefined ? parseKeep(opts.keep) : 5;
+    let roles;
+    if (opts.allRoles) {
+        if (!opts.directorConfirm) {
+            throw new Error('sigma inbox clear --all-roles sweeps every role\'s inbox — re-run with --director-confirm.');
+        }
+        roles = [...config_1.MESSAGING_ROLES];
+    }
+    else {
+        if (!opts.role) {
+            throw new Error('--role <role> is required (or: --all-roles --director-confirm).');
+        }
+        roles = [validateRole(opts.role)];
+    }
+    const index = (0, mailbox_1.readIndex)(projectRoot);
+    let totalOutdated = 0;
+    console.log(`\n=== sigma inbox clear${opts.dryRun ? ' (dry run)' : ''} ===\n`);
+    for (const role of roles) {
+        const readCount = index.messages.filter(m => m.to === role && m.status === 'READ').length;
+        const surplus = (0, mailbox_1.selectSurplusRead)(index, role, keep);
+        if (surplus.length === 0) {
+            console.log(`${role}: ${readCount} READ — nothing to outdate (keep ${keep}).`);
+            continue;
+        }
+        console.log(`${role}: ${readCount} READ → ${surplus.length} to OUTDATED, ${readCount - surplus.length} kept:`);
+        for (const m of surplus) {
+            console.log(`  - ${m.id}  ${m.subject}`);
+            if (!opts.dryRun)
+                (0, mailbox_1.updateMessageStatus)(index, m.id, 'OUTDATED');
+        }
+        totalOutdated += surplus.length;
+    }
+    if (opts.dryRun) {
+        console.log(`\nDry run — no changes written. ${totalOutdated} message(s) would move to OUTDATED.`);
+    }
+    else if (totalOutdated > 0) {
+        (0, mailbox_1.writeIndex)(projectRoot, index);
+        console.log(`\n${totalOutdated} message(s) moved to OUTDATED. View: sigma inbox --role <role> --outdated`);
+    }
+    else {
+        console.log('\nNothing to do.');
+    }
+    console.log('');
 }
 function runArchive(messageId) {
     const projectRoot = (0, fs_1.findProjectRoot)();
@@ -137,7 +203,6 @@ function runCheck() {
         console.log(`  ✓ ${attachChecked} attachment(s) verified`);
     // 4. Check for valid roles and statuses
     console.log('\nChecking field validity...');
-    const validStatuses = ['UNREAD', 'READ', 'ARCHIVED'];
     const ids = new Set();
     for (const entry of index.messages) {
         if (ids.has(entry.id)) {
@@ -153,7 +218,7 @@ function runCheck() {
             console.log(`  ✗ INVALID to role: ${entry.id} → ${entry.to}`);
             failures++;
         }
-        if (!validStatuses.includes(entry.status)) {
+        if (!mailbox_1.VALID_STATUSES.includes(entry.status)) {
             console.log(`  ✗ INVALID status: ${entry.id} → ${entry.status}`);
             failures++;
         }
@@ -184,13 +249,16 @@ function inboxCommand() {
     const cmd = new commander_1.Command('inbox');
     cmd.description('Manage role message inbox. Messages are stored in Sigma/messages/{ROLE}/.\n' +
         '  List unread  : sigma inbox --role <role>\n' +
-        '  List all     : sigma inbox --role <role> --all\n' +
-        '  Read message : sigma inbox read <id>   (marks as READ)\n' +
+        '  List all     : sigma inbox --role <role> --all        (UNREAD + READ + ARCHIVED, not OUTDATED)\n' +
+        '  List outdated : sigma inbox --role <role> --outdated   (aged-out READ)\n' +
+        '  Read message : sigma inbox read <id>   (marks as READ; auto-ages surplus READ to OUTDATED)\n' +
         '  Archive      : sigma inbox archive <id>\n' +
+        '  Clear        : sigma inbox clear --role <role> [--keep 5] [--dry-run]\n' +
         '  Check        : sigma inbox check       (validates index vs disk files)');
     cmd
         .option('--role <role>', `Role inbox to view (${config_1.MESSAGING_ROLES.map(r => r.toLowerCase()).join('|')})`)
-        .option('--all', 'Include READ and ARCHIVED messages (default: unread only)')
+        .option('--all', 'Include READ and ARCHIVED messages (excludes OUTDATED)')
+        .option('--outdated', 'Show only OUTDATED messages (READ aged out by clear / auto-sweep)')
         .action((opts) => {
         try {
             if (!opts.role) {
@@ -199,7 +267,27 @@ function inboxCommand() {
                 process.exit(1);
             }
             const role = validateRole(opts.role);
-            runList(role, opts.all ?? false);
+            const view = opts.outdated ? 'outdated' : opts.all ? 'all' : 'unread';
+            runList(role, view);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
+    cmd
+        .command('clear')
+        .description('Age stale READ messages to OUTDATED, keeping the N most recent READ (default 5)')
+        .option('--role <role>', `Role inbox to clear (${config_1.MESSAGING_ROLES.map(r => r.toLowerCase()).join('|')})`)
+        .option('--all-roles', 'Clear every messaging role (requires --director-confirm)')
+        .option('--keep <n>', 'Number of most-recent READ messages to keep (default 5)')
+        .option('--dry-run', 'Show what would change without writing')
+        .option('--director-confirm', 'Required with --all-roles')
+        .action((_opts, command) => {
+        try {
+            // `--role` is also declared on the parent `inbox` command; Commander
+            // routes a shared option name to the parent, so merge globals here.
+            runClear(command.optsWithGlobals());
         }
         catch (e) {
             console.error(e.message);

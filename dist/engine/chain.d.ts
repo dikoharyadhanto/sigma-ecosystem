@@ -181,7 +181,7 @@ export interface DoctorReport {
     invalidCleared: InvalidMarker[];
     remainingInvalid: InvalidMarker[];
 }
-export declare function runDoctorReconciliation(chain: ChainState, overrides?: OverrideEntry[]): DoctorReport;
+export declare function runDoctorReconciliation(chain: ChainState, overrides?: OverrideEntry[], projectRoot?: string): DoctorReport;
 export declare function nextPlanVersion(chain: ChainState, intentVersionRef: string): string;
 export declare function nextExecVersion(_chain: ChainState, planVersionRef: string): string;
 export declare function ratifyIntent(chain: ChainState): void;

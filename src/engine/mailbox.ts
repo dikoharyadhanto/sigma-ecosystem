@@ -16,7 +16,11 @@ export interface MessageEntry {
   type: MessageType;
   subject: string;
   file: string;
-  status: 'UNREAD' | 'READ' | 'ARCHIVED';
+  // OUTDATED (bug-report follow-up 2026-08-30, Phase 6): a READ message aged
+  // out of the recent window by `sigma inbox clear` or the auto-sweep in
+  // `sigma inbox read`. Hidden from every default/`--all` listing; still
+  // readable by id and via `--outdated`. Non-destructive.
+  status: 'UNREAD' | 'READ' | 'ARCHIVED' | 'OUTDATED';
   created_at: string;
   attachments: string[];
   reply_to?: string;
@@ -28,7 +32,7 @@ export interface MessageIndex {
   messages: MessageEntry[];
 }
 
-const VALID_STATUSES: ReadonlyArray<string> = ['UNREAD', 'READ', 'ARCHIVED'];
+export const VALID_STATUSES: ReadonlyArray<string> = ['UNREAD', 'READ', 'ARCHIVED', 'OUTDATED'];
 const REQUIRED_ENTRY_FIELDS = ['id', 'from', 'to', 'type', 'subject', 'file', 'status', 'created_at'] as const;
 
 function corruptionError(detail: string): Error {
@@ -46,6 +50,28 @@ function validateIndexData(data: unknown): MessageIndex {
   const d = data as Record<string, unknown>;
   if (!('messages' in d) || !Array.isArray(d.messages)) {
     throw corruptionError('"messages" field is missing or not an array');
+  }
+
+  // Bug report 2026-08-30 (BUG B): entries written on Windows store `file`
+  // with backslash separators (e.g. "Sigma\messages\DEV\...md"). On POSIX,
+  // path.join() treats "\" as a literal filename character, so `sigma inbox
+  // read`/`inbox check` look for a single file with backslashes in its name
+  // and fail ENOENT even though the real forward-slash file exists. Normalize
+  // to "/" on every read, before the duplicate-path check below so two
+  // entries differing only by separator collapse. In-memory only — index.json
+  // is not rewritten (mirrors normalizeFilePathsOnRead() in chain.ts).
+  for (const m of d.messages) {
+    if (m && typeof m === 'object') {
+      const entry = m as Record<string, unknown>;
+      if (typeof entry.file === 'string' && entry.file.includes('\\')) {
+        entry.file = entry.file.replace(/\\/g, '/');
+      }
+      if (Array.isArray(entry.attachments)) {
+        entry.attachments = entry.attachments.map(a =>
+          typeof a === 'string' && a.includes('\\') ? a.replace(/\\/g, '/') : a
+        );
+      }
+    }
   }
 
   const ids = new Set<string>();
@@ -174,18 +200,37 @@ export function getUnreadForRole(index: MessageIndex, role: SigmaRole): MessageE
   return index.messages.filter(m => m.to === role && m.status === 'UNREAD');
 }
 
-export function getMessagesForRole(index: MessageIndex, role: SigmaRole, includeAll = false): MessageEntry[] {
+// Inbox listing tiers (Phase 6):
+//   'unread'   — UNREAD only (the default `sigma inbox --role X`)
+//   'all'      — everything EXCEPT OUTDATED (`--all`)
+//   'outdated' — OUTDATED only (`--outdated`)
+export type InboxView = 'unread' | 'all' | 'outdated';
+
+export function selectInboxMessages(index: MessageIndex, role: SigmaRole, view: InboxView): MessageEntry[] {
   return index.messages.filter(m => {
     if (m.to !== role) return false;
-    if (includeAll) return true;
-    return m.status === 'UNREAD';
+    if (view === 'unread') return m.status === 'UNREAD';
+    if (view === 'outdated') return m.status === 'OUTDATED';
+    return m.status !== 'OUTDATED';
   });
+}
+
+// READ messages addressed to `role`, oldest-first, beyond the `keep` most
+// recent by created_at — the ones `sigma inbox clear` and the `inbox read`
+// auto-sweep flip to OUTDATED. keep <= 0 selects every READ message.
+export function selectSurplusRead(index: MessageIndex, role: SigmaRole, keep: number): MessageEntry[] {
+  const read = index.messages
+    .filter(m => m.to === role && m.status === 'READ')
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+  if (keep <= 0) return read;
+  if (read.length <= keep) return [];
+  return read.slice(0, read.length - keep);
 }
 
 export function updateMessageStatus(
   index: MessageIndex,
   id: string,
-  status: 'READ' | 'ARCHIVED'
+  status: 'READ' | 'ARCHIVED' | 'OUTDATED'
 ): MessageEntry {
   const entry = index.messages.find(m => m.id === id);
   if (!entry) throw new Error(`Message not found: ${id}`);

@@ -26,6 +26,21 @@ export interface NotionHumanizeGateConfig {
   enabled: boolean;
 }
 
+// Bug-report follow-up 2026-08-30 (Phase 6). After a successful `sigma inbox
+// read`, READ messages addressed to that role beyond the N most recent (by
+// created_at) are flipped to OUTDATED, so AI roles stop re-scanning stale
+// threads. 0 disables the auto-sweep (`sigma inbox clear` still works
+// manually). Non-destructive: OUTDATED messages stay on disk and in the
+// index, still reachable via `sigma inbox read <id>` and `sigma inbox
+// --role <r> --outdated`.
+export interface MailboxConfig {
+  auto_outdate_read_keep: number;
+}
+
+const DEFAULT_MAILBOX: MailboxConfig = {
+  auto_outdate_read_keep: 5,
+};
+
 export interface ProjectConfig {
   schema_version: string;
   document_language: string;
@@ -33,6 +48,7 @@ export interface ProjectConfig {
   output_document_language: string;
   notion?: NotionConfig;
   notion_humanize_gate?: NotionHumanizeGateConfig;
+  mailbox?: MailboxConfig;
 }
 
 const DEFAULTS: ProjectConfig = {
@@ -47,6 +63,7 @@ const DEFAULTS: ProjectConfig = {
   notion_humanize_gate: {
     enabled: false,
   },
+  mailbox: { ...DEFAULT_MAILBOX },
 };
 
 export function readProjectConfig(projectRoot: string): ProjectConfig {
@@ -79,5 +96,17 @@ export function createDefaultProjectConfig(lang = 'English'): ProjectConfig {
     notion_humanize_gate: {
       enabled: false,
     },
+    mailbox: { ...DEFAULT_MAILBOX },
   };
+}
+
+// Resolves the auto-outdate keep-count, tolerating a missing or malformed
+// `mailbox` block. An explicit 0 is honored (disables the sweep); anything
+// non-numeric or negative falls back to the default.
+export function resolveAutoOutdateKeep(config: ProjectConfig): number {
+  const raw = config.mailbox?.auto_outdate_read_keep;
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0) {
+    return DEFAULT_MAILBOX.auto_outdate_read_keep;
+  }
+  return Math.floor(raw);
 }

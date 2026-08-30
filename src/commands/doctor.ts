@@ -34,7 +34,7 @@ function runDefaultDoctor(): void {
 
   const { chainVersion, data: chain } = readActiveChain(projectRoot);
   const overrides = readOverrides(projectRoot);
-  const report = runDoctorReconciliation(chain, overrides);
+  const report = runDoctorReconciliation(chain, overrides, projectRoot);
   writeChain(projectRoot, chainVersion, chain);
   renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — self-heal net
 
@@ -97,7 +97,7 @@ function runAllVersionsDoctor(): void {
 
   for (const chainVersion of versions) {
     const chain = readChain(projectRoot, chainVersion);
-    const report = runDoctorReconciliation(chain, overrides);
+    const report = runDoctorReconciliation(chain, overrides, projectRoot);
     writeChain(projectRoot, chainVersion, chain);
 
     console.log(`--- Chain ${chainVersion} ---`);
