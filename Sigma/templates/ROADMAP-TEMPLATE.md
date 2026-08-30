@@ -43,7 +43,7 @@ ROADMAP is mandatory. `sigma plan new` is blocked without a ROADMAP for the curr
 
 ROADMAP is FMN-owned.
 
-ROADMAP lives in BUILD context (`Sigma/build/`).
+ROADMAP lives in `Sigma/roadmap/`.
 
 ROADMAP is a living document — freely editable until project close.
 

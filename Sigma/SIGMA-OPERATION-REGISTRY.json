@@ -259,7 +259,7 @@
       "outputs": [
         {
           "type": "file",
-          "description": "Sigma/design/DIR-INTENT-v{version}.md (DRAFT)"
+          "description": "Sigma/charter/DIR-INTENT-v{version}.md (DRAFT)"
         },
         {
           "type": "state_change",
@@ -437,7 +437,7 @@
       "outputs": [
         {
           "type": "file",
-          "description": "Sigma/build/FMN-PLAN-v{version}.md (DRAFT)"
+          "description": "Sigma/contract/FMN-PLAN-v{version}.md (DRAFT)"
         },
         {
           "type": "state_change",
@@ -626,7 +626,7 @@
       "outputs": [
         {
           "type": "file",
-          "description": "Sigma/build/DEV-EXEC-{plan_version}.md (DRAFT)"
+          "description": "Sigma/evidence/DEV-EXEC-{plan_version}.md (DRAFT)"
         },
         {
           "type": "state_change",
@@ -1017,12 +1017,12 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create the ROADMAP for the active chain from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/build/ and registers it in progress-v<N>.json as DRAFT \u2014 one ROADMAP per chain. There is no standalone `sigma roadmap lock` command; ROADMAP auto-locks as a side effect of `sigma close lock` (see close_lock).",
+      "description": "Create the ROADMAP for the active chain from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/roadmap/ and registers it in progress-v<N>.json as DRAFT \u2014 one ROADMAP per chain. There is no standalone `sigma roadmap lock` command; ROADMAP auto-locks as a side effect of `sigma close lock` (see close_lock).",
       "inputs": [],
       "outputs": [
         {
           "type": "file",
-          "description": "Sigma/build/ROADMAP-v{N}.md (from template)"
+          "description": "Sigma/roadmap/ROADMAP-v{N}.md (from template)"
         },
         {
           "type": "state_change",
@@ -1043,7 +1043,7 @@
       ],
       "gating": {
         "pre_condition": "progress.intent.state == 'RATIFIED'; no ROADMAP version already exists for the ratified INTENT major",
-        "post_condition": "ROADMAP-v{N}.md exists in Sigma/build/; progress-v<N>.json records the roadmap with state DRAFT"
+        "post_condition": "ROADMAP-v{N}.md exists in Sigma/roadmap/; progress-v<N>.json records the roadmap with state DRAFT"
       },
       "error_messages": {
         "no_locked_intent": "No ratified DIR-INTENT found. ROADMAP requires a ratified intent. Run: sigma intent ratify",
@@ -1840,7 +1840,7 @@
       "action": "score",
       "level": "semantic",
       "role": "director",
-      "description": "Record ARC Satisfaction Score (integer 0-100) for a RATIFIED DIR-INTENT. Gate 3.5 pre-condition for `sigma close new` \u2014 does not gate `close lock`. Score and notes are stored on the chain and rendered into Sigma/design/intent-history.md.",
+      "description": "Record ARC Satisfaction Score (integer 0-100) for a RATIFIED DIR-INTENT. Gate 3.5 pre-condition for `sigma close new` \u2014 does not gate `close lock`. Score and notes are stored on the chain and rendered into Sigma/charter/intent-history.md.",
       "inputs": [
         {
           "name": "<n>",
@@ -1959,7 +1959,7 @@
       "outputs": [
         {
           "type": "state_change",
-          "description": "Active-chain pointer updated; Sigma/design/intent-history.md re-rendered"
+          "description": "Active-chain pointer updated; Sigma/charter/intent-history.md re-rendered"
         }
       ],
       "constraints": [
