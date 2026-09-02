@@ -316,9 +316,17 @@ Ditangani (Prioritas 3, tuntas):
   memancarkan `Sigma/build/`·`Sigma/design/` (sudah dibersihkan di commit
   `322f0f7`). Tidak ada aksi.
 
-Test: `test/windows-path-backward-compat.test.ts` (blok baru "Path portability
-— commands persist forward-slash paths on every OS"), `test/mcp-config.test.ts`
-(asersi Reasonix diupdate ke `toPosix(tmpProject)`). Suite: **425 pass, 0 gagal**.
+**Prioritas 5a (tuntas)** — `normalizeVersionArg()` baru di `chain.ts`, dipasang
+sebagai commander coercion fn di tiap opsi `--v` / `--plan` dan `notion pull
+<version>`. `--v 3.4` dan `--v v3.4` kini resolve identik (trim + prefix `v`
+bila diawali digit; idempoten; teks non-versi lewat apa adanya).
 
-Masih terbuka: Prioritas 5a (`--v 3.4` ≡ `--v v3.4`) — prioritas rendah, tak
-terkait path separator.
+**Line ending** — `.gitattributes` (`eol=lf`) + renormalize ditambahkan: file
+yang di-build/checkout di Windows tak lagi tampil "modified" palsu.
+
+Test: `test/version-arg-normalization.test.ts` (baru), blok write-side di
+`test/windows-path-backward-compat.test.ts`, asersi Reasonix di
+`test/mcp-config.test.ts` diupdate ke `toPosix(tmpProject)`. Suite: **431 pass,
+0 gagal**. Commit `de70363`.
+
+Semua item bug report ini selesai.
