@@ -174,7 +174,10 @@ function runCheck() {
             continue;
         const files = fs_extra_1.default.readdirSync(roleDir).filter(f => f.endsWith('.md'));
         for (const file of files) {
-            const relPath = path_1.default.join('Sigma', 'messages', role, file);
+            // toPosix: index `file` fields are normalized to forward slashes on
+            // read (readIndex → validateIndexData), so the disk-walk path must be
+            // too or every message reads as an ORPHAN on Windows.
+            const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'messages', role, file));
             if (!indexedFiles.has(relPath)) {
                 console.log(`  ⚠ ORPHAN FILE: ${relPath} (not in index)`);
                 warnings++;

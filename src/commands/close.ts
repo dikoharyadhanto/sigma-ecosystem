@@ -14,8 +14,9 @@ import {
   describeGate3Blockers,
   hasGate35Score,
   arcScoreBand,
+  normalizeVersionArg,
 } from '../engine/chain';
-import { findProjectRoot } from '../utils/fs';
+import { findProjectRoot, toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { readProjectConfig } from '../engine/projectConfig';
 import {
@@ -97,7 +98,7 @@ export function closeCommand(): Command {
         }
 
         const version = chain.chain_version;
-        const relPath = path.join('Sigma', 'close', `DIR-CLOSE-${version}.md`);
+        const relPath = toPosix(path.join('Sigma', 'close', `DIR-CLOSE-${version}.md`));
         const absPath = path.join(projectRoot, relPath);
         copyTemplateToArtifact('DIR-CLOSE-TEMPLATE.md', absPath);
 
@@ -212,8 +213,8 @@ export function closeCommand(): Command {
           );
         }
 
-        const humanRelPath = path.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.md`);
-        const ledgerRelPath = path.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.fidelity.md`);
+        const humanRelPath = toPosix(path.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.md`));
+        const ledgerRelPath = toPosix(path.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.fidelity.md`));
         copyTemplateToArtifact('DIR-CLOSE-HUMAN-TEMPLATE.md', path.join(projectRoot, humanRelPath));
         copyTemplateToArtifact('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path.join(projectRoot, ledgerRelPath));
 
@@ -237,7 +238,7 @@ export function closeCommand(): Command {
 
   cmd.command('check')
     .description('Validate a DIR-CLOSE structure and markers')
-    .option('--v <version>', 'Check the DIR-CLOSE of a specific chain instead of the active one')
+    .option('--v <version>', 'Check the DIR-CLOSE of a specific chain instead of the active one', normalizeVersionArg)
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();

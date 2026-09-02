@@ -22,7 +22,7 @@ import {
   getUnreadForRole,
   MessageEntry,
 } from '../engine/mailbox';
-import { findProjectRoot } from '../utils/fs';
+import { findProjectRoot, toPosix } from '../utils/fs';
 
 function validateRole(value: string, flag: string): MessagingRole {
   const upper = value.toUpperCase() as MessagingRole;
@@ -134,13 +134,13 @@ function runSend(opts: {
     const attachFilename = `${msgId}-${path.basename(srcPath)}`;
     const destPath = path.join(attachDir, attachFilename);
     fs.copySync(srcPath, destPath);
-    attachmentPaths.push(path.join(MESSAGES_ATTACHMENTS_DIR, attachFilename));
+    attachmentPaths.push(toPosix(path.join(MESSAGES_ATTACHMENTS_DIR, attachFilename)));
   }
 
   // Build index entry
   const inboxDir = resolveInboxDir(projectRoot, toRole);
   fs.ensureDirSync(inboxDir);
-  const relFilePath = path.join('Sigma', 'messages', toRole, filename);
+  const relFilePath = toPosix(path.join('Sigma', 'messages', toRole, filename));
 
   const entry: MessageEntry = {
     id: msgId,

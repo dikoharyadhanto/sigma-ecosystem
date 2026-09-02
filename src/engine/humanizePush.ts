@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { ChainState, readActiveChain, readChain, listChainVersions, writeChain, readProjectIdentity } from './chain';
+import { toPosix } from '../utils/fs';
 import { syncArtifactToNotion, deleteNotionPageByTitle } from './notionService';
 import { stripTemplateInstructions, scanForSigmaTerminology, loadTerminologyList } from './terminologyScanner';
 import {
@@ -50,8 +51,8 @@ export function computeHumanNotionTitle(kind: HumanArtifactPushTarget['kind'], v
 
 function humanPaths(prefix: string, version: string): { humanRelPath: string; ledgerRelPath: string } {
   return {
-    humanRelPath: path.join('Sigma', 'human', `${prefix}-${version}.md`),
-    ledgerRelPath: path.join('Sigma', 'human', `${prefix}-${version}.fidelity.md`),
+    humanRelPath: toPosix(path.join('Sigma', 'human', `${prefix}-${version}.md`)),
+    ledgerRelPath: toPosix(path.join('Sigma', 'human', `${prefix}-${version}.fidelity.md`)),
   };
 }
 
@@ -76,7 +77,7 @@ export function collectHumanPushTargets(chain: ChainState): HumanArtifactPushTar
       version: chain.intent.version,
       humanRelPath,
       ledgerRelPath,
-      sourceRelPaths: [chain.intent.file ?? path.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`)],
+      sourceRelPaths: [chain.intent.file ?? toPosix(path.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`))],
       coverageConfig: DIR_INTENT_COVERAGE_CONFIG,
     });
   }
@@ -88,8 +89,8 @@ export function collectHumanPushTargets(chain: ChainState): HumanArtifactPushTar
       ? chain.plan.versions.find(v => v.version === execEntry.plan_version_ref)
       : undefined;
     const sourceRelPaths = [
-      planEntry?.file ?? (execEntry.plan_version_ref ? path.join('Sigma', 'contract', `FMN-PLAN-${execEntry.plan_version_ref}.md`) : undefined),
-      execEntry.file ?? path.join('Sigma', 'evidence', `DEV-EXEC-${execEntry.version}.md`),
+      planEntry?.file ?? (execEntry.plan_version_ref ? toPosix(path.join('Sigma', 'contract', `FMN-PLAN-${execEntry.plan_version_ref}.md`)) : undefined),
+      execEntry.file ?? toPosix(path.join('Sigma', 'evidence', `DEV-EXEC-${execEntry.version}.md`)),
     ].filter((p): p is string => Boolean(p));
     targets.push({
       kind: 'exec',
@@ -110,7 +111,7 @@ export function collectHumanPushTargets(chain: ChainState): HumanArtifactPushTar
       version: chain.close.version,
       humanRelPath,
       ledgerRelPath,
-      sourceRelPaths: [chain.close.file ?? path.join('Sigma', 'close', `DIR-CLOSE-${chain.close.version}.md`)],
+      sourceRelPaths: [chain.close.file ?? toPosix(path.join('Sigma', 'close', `DIR-CLOSE-${chain.close.version}.md`))],
       coverageConfig: DIR_CLOSE_COVERAGE_CONFIG,
     });
   }

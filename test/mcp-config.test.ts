@@ -17,6 +17,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { parse as parseTOML } from 'smol-toml';
+import { toPosix } from '../src/utils/fs';
 
 // ── Isolasi HOME via env override ─────────────────────────────────────────────
 // Semua fungsi global-scoped di mcpConfig.ts menggunakan os.homedir(), yang
@@ -377,7 +378,9 @@ describe('writeReasonixMcpConfig', () => {
     const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
     const sigma = (parsed.plugins as any[]).find((p) => p.name === 'sigma');
     expect(sigma.command).toBe('sigma-mcp');
-    expect(sigma.args).toEqual([tmpProject]);
+    // Reasonix path is normalized to forward slashes on write (a raw Windows
+    // path breaks TOML parsing — `\U` is an invalid unicode escape).
+    expect(sigma.args).toEqual([toPosix(tmpProject)]);
   });
 
   it('merges sigma without touching other plugins or settings', async () => {
@@ -395,7 +398,7 @@ describe('writeReasonixMcpConfig', () => {
     const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
     const plugins = parsed.plugins as any[];
     expect(plugins.find((p) => p.name === 'sigma')?.command).toBe('sigma-mcp');
-    expect(plugins.find((p) => p.name === 'sigma')?.args).toEqual([tmpProject]);
+    expect(plugins.find((p) => p.name === 'sigma')?.args).toEqual([toPosix(tmpProject)]);
     expect(plugins.find((p) => p.name === 'shell')?.command).toBe('npx');
     expect((parsed as any).config_version).toBe(7);
   });
@@ -443,7 +446,7 @@ describe('writeReasonixMcpConfig', () => {
     const parsed = parseTOML(fs.readFileSync(reasonixConfigPath(tmpHome), 'utf-8')) as any;
     const plugins = parsed.plugins as any[];
     expect(plugins.filter((p) => p.name === 'sigma')).toHaveLength(1);
-    expect(plugins.find((p) => p.name === 'sigma')?.args).toEqual([tmpProject]);
+    expect(plugins.find((p) => p.name === 'sigma')?.args).toEqual([toPosix(tmpProject)]);
   });
 
   it('writes empty args when no projectRoot is given', async () => {

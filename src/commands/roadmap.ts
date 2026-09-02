@@ -7,8 +7,9 @@ import {
   writeChain,
   assertChainCanMutate,
   registerRoadmapDraft,
+  normalizeVersionArg,
 } from '../engine/chain';
-import { findProjectRoot } from '../utils/fs';
+import { findProjectRoot, toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { renderRoadmapFile, getStagePlansForRoadmap } from '../utils/roadmap';
 import {
@@ -49,7 +50,7 @@ export function roadmapCommand(): Command {
         }
 
         const version = chain.chain_version;
-        const relPath = path.join('Sigma', 'roadmap', `ROADMAP-${version}.md`);
+        const relPath = toPosix(path.join('Sigma', 'roadmap', `ROADMAP-${version}.md`));
         const absPath = path.join(projectRoot, relPath);
 
         copyTemplateToArtifact('ROADMAP-TEMPLATE.md', absPath);
@@ -69,7 +70,7 @@ export function roadmapCommand(): Command {
 
   cmd.command('check')
     .description('Validate a ROADMAP structure and markers')
-    .option('--v <version>', 'Check the ROADMAP of a specific chain instead of the active one')
+    .option('--v <version>', 'Check the ROADMAP of a specific chain instead of the active one', normalizeVersionArg)
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();

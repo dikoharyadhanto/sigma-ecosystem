@@ -139,7 +139,7 @@ function overrideCommand() {
     const cmd = new commander_1.Command('override');
     cmd.description('Bypass the current lifecycle gate under Director authority (recorded in Sigma/memory/overrides.jsonl)');
     cmd
-        .option('--v <version>', 'Artifact version this override applies to. Required when more than one DRAFT is open for the blocked artifact.')
+        .option('--v <version>', 'Artifact version this override applies to. Required when more than one DRAFT is open for the blocked artifact.', chain_1.normalizeVersionArg)
         .option('--reason <reason>', 'Required. Describe why this override is authorized.')
         .option('--director-confirm', 'Required. Explicit Director authorization to execute the override.')
         .option('--dry-run', 'Show what would be bypassed without modifying state.')

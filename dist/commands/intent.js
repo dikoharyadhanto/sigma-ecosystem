@@ -81,7 +81,7 @@ function intentCommand() {
                 }
             }
             const chainVersion = (0, chain_1.nextChainVersion)(projectRoot);
-            const relPath = path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`);
+            const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`));
             const absPath = path_1.default.join(projectRoot, relPath);
             (0, artifacts_1.copyTemplateToArtifact)('DIR-INTENT-TEMPLATE.md', absPath);
             const chain = (0, chain_1.createInitialChain)(chainVersion, relPath, opts.title, opts.focus);
@@ -135,7 +135,7 @@ function intentCommand() {
     // / CR-01: the gate belongs at `plan new`, not here).
     cmd.command('humanize')
         .description('Generate a human-readable projection of a RATIFIED DIR-INTENT for Notion (Sigma Humanize Operation)')
-        .option('--v <version>', 'Chain version to humanize instead of the active one')
+        .option('--v <version>', 'Chain version to humanize instead of the active one', chain_1.normalizeVersionArg)
         .option('--force', 'Overwrite an already-generated human projection for this version')
         .action((opts) => {
         try {
@@ -152,8 +152,8 @@ function intentCommand() {
                     `(generated ${chain.intent.human.generated_at}).\n` +
                     'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.');
             }
-            const humanRelPath = path_1.default.join('Sigma', 'human', `DIR-INTENT-HUMAN-${chain.intent.version}.md`);
-            const ledgerRelPath = path_1.default.join('Sigma', 'human', `DIR-INTENT-HUMAN-${chain.intent.version}.fidelity.md`);
+            const humanRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `DIR-INTENT-HUMAN-${chain.intent.version}.md`));
+            const ledgerRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `DIR-INTENT-HUMAN-${chain.intent.version}.fidelity.md`));
             (0, artifacts_1.copyTemplateToArtifact)('DIR-INTENT-HUMAN-TEMPLATE.md', path_1.default.join(projectRoot, humanRelPath));
             (0, artifacts_1.copyTemplateToArtifact)('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path_1.default.join(projectRoot, ledgerRelPath));
             chain.intent.human = {
@@ -195,7 +195,7 @@ function intentCommand() {
     cmd.command('amendment')
         .description('Record a Director-approved Amendment against a RATIFIED DIR-INTENT (Operationalization only — see SIGMA_PROTOCOL §5.1.1)')
         .requiredOption('--change <change>', 'Free-text description of the change, commit-message style')
-        .option('--v <version>', 'Chain version to amend instead of the active one')
+        .option('--v <version>', 'Chain version to amend instead of the active one', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -234,7 +234,7 @@ function intentCommand() {
     cmd.command('score <n>')
         .description('Record ARC Satisfaction Score for a RATIFIED DIR-INTENT (Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`)')
         .requiredOption('--notes <notes>', 'Rationale for the score')
-        .option('--v <version>', 'Chain version to score instead of the active one')
+        .option('--v <version>', 'Chain version to score instead of the active one', chain_1.normalizeVersionArg)
         .action((n, opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -258,7 +258,7 @@ function intentCommand() {
     });
     cmd.command('supersede')
         .description('Supersede a RATIFIED DIR-INTENT chain — cascades SUPERSEDED to its Roadmap/Plan/Exec/Close (requires --director-confirm)')
-        .requiredOption('--v <version>', 'Chain version to supersede (e.g. v1) — need not be the active chain')
+        .requiredOption('--v <version>', 'Chain version to supersede (e.g. v1) — need not be the active chain', chain_1.normalizeVersionArg)
         .requiredOption('--reason <reason>', 'Reason for superseding')
         .option('--director-confirm', 'Required. Explicit Director authorization to execute the supersede.')
         .action((opts) => {
@@ -310,7 +310,7 @@ function intentCommand() {
     });
     cmd.command('activate')
         .description('Switch which chain is active (analog `git checkout <branch>`) — no --director-confirm required (DISCUSSION "Konsolidasi Lanjutan" bagian 6): default-to-latest + mandatory session bootstrap visibility are the compensating safety net')
-        .requiredOption('--v <version>', 'Chain version to activate (e.g. v2)')
+        .requiredOption('--v <version>', 'Chain version to activate (e.g. v2)', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -329,7 +329,7 @@ function intentCommand() {
     });
     cmd.command('check')
         .description('Validate a DIR-INTENT structure and markers')
-        .option('--v <version>', 'Check a specific chain instead of the active one')
+        .option('--v <version>', 'Check a specific chain instead of the active one', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();

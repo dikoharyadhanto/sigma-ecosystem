@@ -1,0 +1,25 @@
+# Normalize all text files to LF in the repo and on checkout, on every OS.
+# This project is developed on both Windows and Linux; without this, files
+# built/checked out on Windows pick up CRLF and show as spuriously modified
+# (git status flags them, git diff shows no content change).
+* text=auto eol=lf
+
+# Explicit: source, build output, config, and docs are always LF.
+*.ts   text eol=lf
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.cjs  text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+
+# Binary assets — never touch line endings.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

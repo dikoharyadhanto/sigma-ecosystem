@@ -55,7 +55,7 @@ function scanCommand() {
             const logsDir = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'logs');
             fs_extra_1.default.ensureDirSync(logsDir);
             const logFileName = `${timestampSlug(new Date())}_terminology-scan.log`;
-            const logRelPath = path_1.default.join(config_1.PROJECT_SIGMA_DIR, 'logs', logFileName);
+            const logRelPath = (0, fs_1.toPosix)(path_1.default.join(config_1.PROJECT_SIGMA_DIR, 'logs', logFileName));
             const logAbsPath = path_1.default.join(logsDir, logFileName);
             const lines = [];
             lines.push(`Sigma terminology scan — ${opts.file}`);

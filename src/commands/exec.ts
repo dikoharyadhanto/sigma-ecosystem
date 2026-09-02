@@ -11,8 +11,9 @@ import {
   resolveTargetVersion,
   assertChainCanMutate,
   getOperationalGate,
+  normalizeVersionArg,
 } from '../engine/chain';
-import { findProjectRoot } from '../utils/fs';
+import { findProjectRoot, toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import {
   ensureSigmaDocEligible,
@@ -48,7 +49,7 @@ export function execCommand(): Command {
 
   cmd.command('new')
     .description('Create a new DEV-EXEC draft (requires a LOCKED FMN-PLAN with no open exec)')
-    .option('--plan <version>', 'Explicitly specify which locked plan to execute (required when multiple unexecuted locked plans exist)')
+    .option('--plan <version>', 'Explicitly specify which locked plan to execute (required when multiple unexecuted locked plans exist)', normalizeVersionArg)
     .action((opts: { plan?: string }) => {
       try {
         const projectRoot = findProjectRoot();
@@ -117,7 +118,7 @@ export function execCommand(): Command {
         }
 
         const version = nextExecVersion(chain, planVersionRef);
-        const relPath = path.join('Sigma', 'evidence', `DEV-EXEC-${version}.md`);
+        const relPath = toPosix(path.join('Sigma', 'evidence', `DEV-EXEC-${version}.md`));
         const absPath = path.join(projectRoot, relPath);
         if (chain.exec.versions.some(v => v.version === version)) {
           throw new Error(`EXEC CONFLICT: DEV-EXEC ${version} already exists in progress-${chainVersion}.json`);
@@ -141,7 +142,7 @@ export function execCommand(): Command {
 
   cmd.command('lock')
     .description('Lock a DRAFT DEV-EXEC (re-evaluates Gate 3). Requires --v when more than one DRAFT is open.')
-    .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)')
+    .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)', normalizeVersionArg)
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
@@ -191,7 +192,7 @@ export function execCommand(): Command {
   // this (§3.4 / CR-01 — the gate belongs at the next `plan new`/`close new`).
   cmd.command('humanize')
     .description('Generate a human-readable projection of a LOCKED plan+exec pair for Notion (Sigma Humanize Operation)')
-    .option('--v <version>', 'EXEC version to humanize instead of the active one')
+    .option('--v <version>', 'EXEC version to humanize instead of the active one', normalizeVersionArg)
     .option('--force', 'Overwrite an already-generated human projection for this version')
     .action((opts: { v?: string; force?: boolean }) => {
       try {
@@ -228,8 +229,8 @@ export function execCommand(): Command {
           );
         }
 
-        const humanRelPath = path.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.md`);
-        const ledgerRelPath = path.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.fidelity.md`);
+        const humanRelPath = toPosix(path.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.md`));
+        const ledgerRelPath = toPosix(path.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.fidelity.md`));
         copyTemplateToArtifact('PLAN-EXEC-HUMAN-TEMPLATE.md', path.join(projectRoot, humanRelPath));
         copyTemplateToArtifact('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path.join(projectRoot, ledgerRelPath));
 
@@ -253,7 +254,7 @@ export function execCommand(): Command {
 
   cmd.command('check')
     .description('Validate a DEV-EXEC structure and markers')
-    .option('--v <version>', 'Check a specific DEV-EXEC version. Required when more than one DRAFT is open.')
+    .option('--v <version>', 'Check a specific DEV-EXEC version. Required when more than one DRAFT is open.', normalizeVersionArg)
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();

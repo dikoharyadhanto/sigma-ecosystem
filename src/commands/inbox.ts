@@ -13,7 +13,7 @@ import {
   MessageEntry,
 } from '../engine/mailbox';
 import { readProjectConfig, resolveAutoOutdateKeep } from '../engine/projectConfig';
-import { findProjectRoot } from '../utils/fs';
+import { findProjectRoot, toPosix } from '../utils/fs';
 
 function validateRole(value: string): MessagingRole {
   const upper = value.toUpperCase() as MessagingRole;
@@ -210,7 +210,10 @@ function runCheck(): void {
     if (!fs.existsSync(roleDir)) continue;
     const files = fs.readdirSync(roleDir).filter(f => f.endsWith('.md'));
     for (const file of files) {
-      const relPath = path.join('Sigma', 'messages', role, file);
+      // toPosix: index `file` fields are normalized to forward slashes on
+      // read (readIndex → validateIndexData), so the disk-walk path must be
+      // too or every message reads as an ORPHAN on Windows.
+      const relPath = toPosix(path.join('Sigma', 'messages', role, file));
       if (!indexedFiles.has(relPath)) {
         console.log(`  ⚠ ORPHAN FILE: ${relPath} (not in index)`);
         warnings++;
