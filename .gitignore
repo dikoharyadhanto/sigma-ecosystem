@@ -23,8 +23,15 @@ desktop.ini
 Implementation/
 Discussion/
 
+# AI Assistant config
+.codex/
+.claude/
+AGENTS.md
+CLAUDE.md
+DEEPSEEK.md
+GEMINI.md
+REASONIX.md
 
-.claude/settings.local.json
 
 # MCP config — machine/user-specific; regenerate with: sigma setup memory [--vscode]
 .mcp.json
