@@ -1,7 +1,7 @@
 import path from 'path';
 import os from 'os';
 
-export const SIGMA_VERSION = '0.10.0';
+export const SIGMA_VERSION = '1.0.0';
 // 1.1.0 — RATIFIED rename (Director directive 2026-08-12): DIR-INTENT
 // intent.state "LOCKED" → "RATIFIED", intent.locked_at → intent.ratified_at.
 // A chain written by an older binary still reads fine (readChain()

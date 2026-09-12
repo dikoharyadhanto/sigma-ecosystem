@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.INTENT_AMENDMENT_LOG_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.ACTIVATE_STATUS_FILE = exports.BRIDGE_STUBS = exports.PROJECT_REMOTE_STATE_FILE = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_NOTION_CREDENTIALS_FILE = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
-exports.SIGMA_VERSION = '0.10.0';
+exports.SIGMA_VERSION = '1.0.0';
 // 1.1.0 — RATIFIED rename (Director directive 2026-08-12): DIR-INTENT
 // intent.state "LOCKED" → "RATIFIED", intent.locked_at → intent.ratified_at.
 // A chain written by an older binary still reads fine (readChain()
