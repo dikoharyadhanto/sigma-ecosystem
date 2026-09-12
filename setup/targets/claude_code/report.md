@@ -56,8 +56,10 @@ The role may use any reasonable read-only source to compose the report:
 - `sigma project status` — lifecycle phase and gate status, if available
 - `sigma git evidence` — Git branch, working tree state, and changed files, if available
 - `Sigma/progress-v<N>.json` — lifecycle phase and gate status
-- `Sigma/design/` — active DIR-INTENT version and state
-- `Sigma/build/` — ROADMAP, FMN-PLAN, and DEV-EXEC versions and states
+- `Sigma/charter/` — active DIR-INTENT version and state
+- `Sigma/roadmap/` — ROADMAP version and state
+- `Sigma/contract/` — FMN-PLAN versions and states
+- `Sigma/evidence/` — DEV-EXEC versions and states
 - `Sigma/close/` — DIR-CLOSE state if applicable
 - Any artifact file currently in session context
 - Current conversation context

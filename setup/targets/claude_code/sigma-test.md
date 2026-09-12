@@ -37,7 +37,7 @@ Run: `sigma --help`
 Run: `sigma session bootstrap`
 
 - PASS if output reports lifecycle phase and gate status
-- WARN if not in a Sigma project (no `Sigma/progress-v<N>.json` found) — mark all Project checks as N/A
+- WARN if not in a Sigma project (no `Sigma/activate_status.json` found) — mark all Project checks as N/A
 - FAIL if command errors out unexpectedly
 
 ### 2. Skill Files Check
@@ -64,22 +64,28 @@ Check that the following paths exist:
 - `~/.sigma/rules/` — role rule files
 - `~/.sigma/governance/` — SIGMA_PROTOCOL.md and SIGMA_CONSTITUTION.md
 - `~/.sigma/templates/` — artifact templates
-- `~/.sigma/projects.json` — project registry
 
 - PASS if present
 - FAIL if missing (run `sigma setup install`)
 
 ### 4. Project Structure Check
 
-Only run if inside a Sigma project (`Sigma/progress-v<N>.json` exists).
+Only run if inside a Sigma project (`Sigma/activate_status.json` exists).
 
 Check that the following paths exist relative to the project root:
 
-- `Sigma/design/`
-- `Sigma/build/`
+- `Sigma/charter/`
+- `Sigma/contract/`
+- `Sigma/roadmap/`
+- `Sigma/evidence/`
 - `Sigma/close/`
+- `Sigma/human/`
+- `Sigma/notes/`
 - `Sigma/rules/`
 - `Sigma/logs/`
+- `Sigma/memory/`
+- `Sigma/role-memory/`
+- `Sigma/reference/`
 
 - PASS if present
 - WARN if missing and lifecycle_state is START (expected for brand-new project)
@@ -113,11 +119,18 @@ Platform: Claude Code
 | Global | `rules/` | PASS/FAIL | |
 | Global | `governance/` | PASS/FAIL | |
 | Global | `templates/` | PASS/FAIL | |
-| Global | `projects.json` | PASS/FAIL | |
-| Project | `Sigma/design/` | PASS/WARN/N/A | |
-| Project | `Sigma/build/` | PASS/WARN/N/A | |
+| Project | `Sigma/charter/` | PASS/WARN/N/A | |
+| Project | `Sigma/contract/` | PASS/WARN/N/A | |
+| Project | `Sigma/roadmap/` | PASS/WARN/N/A | |
+| Project | `Sigma/evidence/` | PASS/WARN/N/A | |
+| Project | `Sigma/close/` | PASS/WARN/N/A | |
+| Project | `Sigma/human/` | PASS/WARN/N/A | |
+| Project | `Sigma/notes/` | PASS/WARN/N/A | |
 | Project | `Sigma/rules/` | PASS/WARN/N/A | |
 | Project | `Sigma/logs/` | PASS/WARN/N/A | |
+| Project | `Sigma/memory/` | PASS/WARN/N/A | |
+| Project | `Sigma/role-memory/` | PASS/WARN/N/A | |
+| Project | `Sigma/reference/` | PASS/WARN/N/A | |
 
 **Verdict:** PASS / WARN / FAIL
 
