@@ -1,0 +1,15 @@
+{
+  "name": "sigma-read-memo",
+  "version": "1.0.0",
+  "description": "Check and read pending self-addressed memos (sigma memo list / sigma memo read) for the active role",
+  "author": {
+    "name": "Sigma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sigma",
+    "governance",
+    "memo",
+    "handoff"
+  ]
+}

@@ -30,7 +30,7 @@ export declare const VALID_ROLES: readonly ["ARC", "FMN", "DEV", "AUD", "DIRECTO
 export type SigmaRole = typeof VALID_ROLES[number];
 export declare const MESSAGING_ROLES: readonly ["ARC", "FMN", "DEV", "AUD"];
 export type MessagingRole = typeof MESSAGING_ROLES[number];
-export declare const VALID_MESSAGE_TYPES: readonly ["NOTE", "CHECK", "RESPONSE", "HANDOFF", "QUESTION", "RISK"];
+export declare const VALID_MESSAGE_TYPES: readonly ["NOTE", "CHECK", "RESPONSE", "HANDOFF", "QUESTION", "RISK", "MEMO"];
 export type MessageType = typeof VALID_MESSAGE_TYPES[number];
 export declare const VALID_ACTIONS: readonly ["FYI", "RESPOND", "REVIEW", "UNBLOCK", "OTHER"];
 export type ActionRequired = typeof VALID_ACTIONS[number];

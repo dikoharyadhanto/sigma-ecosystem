@@ -3,15 +3,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_MAILBOX = void 0;
 exports.readProjectConfig = readProjectConfig;
 exports.writeProjectConfig = writeProjectConfig;
 exports.createDefaultProjectConfig = createDefaultProjectConfig;
 exports.resolveAutoOutdateKeep = resolveAutoOutdateKeep;
+exports.resolveMemoLimit = resolveMemoLimit;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
-const DEFAULT_MAILBOX = {
+exports.DEFAULT_MAILBOX = {
     auto_outdate_read_keep: 5,
+    memo_unread_limit: 5,
 };
 const DEFAULTS = {
     schema_version: config_1.SCHEMA_VERSION,
@@ -25,7 +28,7 @@ const DEFAULTS = {
     notion_humanize_gate: {
         enabled: false,
     },
-    mailbox: { ...DEFAULT_MAILBOX },
+    mailbox: { ...exports.DEFAULT_MAILBOX },
 };
 function readProjectConfig(projectRoot) {
     const filePath = path_1.default.join(projectRoot, config_1.PROJECT_CONFIG_FILE);
@@ -57,7 +60,7 @@ function createDefaultProjectConfig(lang = 'English') {
         notion_humanize_gate: {
             enabled: false,
         },
-        mailbox: { ...DEFAULT_MAILBOX },
+        mailbox: { ...exports.DEFAULT_MAILBOX },
     };
 }
 // Resolves the auto-outdate keep-count, tolerating a missing or malformed
@@ -66,7 +69,18 @@ function createDefaultProjectConfig(lang = 'English') {
 function resolveAutoOutdateKeep(config) {
     const raw = config.mailbox?.auto_outdate_read_keep;
     if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0) {
-        return DEFAULT_MAILBOX.auto_outdate_read_keep;
+        return exports.DEFAULT_MAILBOX.auto_outdate_read_keep;
+    }
+    return Math.floor(raw);
+}
+// Resolves the per-role MEMO unread quota, tolerating a missing or malformed
+// `mailbox` block (including project.config.json written before this field
+// existed). An explicit 0 is honored (disables `sigma memo write` entirely);
+// anything non-numeric or negative falls back to the default.
+function resolveMemoLimit(config) {
+    const raw = config.mailbox?.memo_unread_limit;
+    if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0) {
+        return exports.DEFAULT_MAILBOX.memo_unread_limit;
     }
     return Math.floor(raw);
 }

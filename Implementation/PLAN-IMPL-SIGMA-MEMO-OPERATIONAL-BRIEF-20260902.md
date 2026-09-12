@@ -1,9 +1,8 @@
 # PLAN-IMPL — Sigma Memo (Operational Brief)
 
 **Sumber**: Diskusi sesi ini (2026-09-02) antara Director dan Claude (Professional Mode). Bermula dari rencana menghidupkan kembali "checkpoint" yang dulu dihapus, lalu berkembang jadi mekanisme baru bernama **memo** dengan pendekatan berbeda.
-**Tanggal**: 2026-09-02 · **Revisi 1**
-**Status**: **DRAFT — belum disetujui.** Belum ada baris kode ditulis.
-**Catatan**: Plan implementasi biasa, disusun Professional Mode. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma. Kalau Director memutuskan ini digarap lewat jalur governance, plan ini jadi bahan masuk untuk DIR-INTENT baru (lihat §8).
+**Tanggal**: 2026-09-02 · **Revisi 3** (implementasi Fase 1–7 selesai 2026-09-12)
+**Status**: **IMPLEMENTED — dieksekusi jalur Professional Mode langsung** (Director 2026-09-12: "eksekusi jalur professional... sigma master folder project tidak terikat ke sigma governance itu sendiri"). Fase 1–7 selesai, 440/440 test lulus. Belum di-commit — menunggu instruksi Director. Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma.
 **Hubungan dengan riwayat**: Fitur `CHECKPOINT` + `CSO` dihapus total via commit `208a560` (2026-07-14, "Remove CHECKPOINT and CSO functionalities from Sigma framework"; governance artifact `PLAN-EVAL-05-CSO-REMOVAL`). Memo **bukan** kebangkitan CSO — beda storage, beda perintah, beda tujuan, beda template. Detail pembedaan di §7.
 **Branch**: diusulkan branch baru `feat/sigma-memo-operational-brief` dari `main`. `main` tidak disentuh, tidak ada merge tanpa izin eksplisit Director.
 
@@ -47,9 +46,11 @@ Turunannya:
 | **Kuota** | Maks **N unread MEMO per role** (default 5), configurable via `sigma config set memo-limit <n>`. `0` = fitur memo mati. Kuota penuh → `sigma memo write` ditolak dan menampilkan daftar memo unread. |
 | **Isolasi kuota** | Per role. 5 untuk DEV, 5 untuk ARC, dst. Tidak ada pool gabungan. |
 | **`sigma inbox`** | Daftar pesan mengecualikan MEMO. Kalau role punya UNREAD memo, cetak **satu baris penunjuk**: `N memo belum dibaca — sigma memo list --role dev`. |
-| **Field wajib** | Dilewati untuk memo: `action = FYI`, `related_artifact = N/A`, tanpa seksi "Action Required" di markdown. |
+| **Field wajib** | `action = FYI` (dilewati, otomatis). `related_artifact` **tidak** dilewati untuk memo — wajib salah satu `INTENT-vN` / `PLAN-vN` / `EXEC-vN` / `GENERAL` via flag `--ref` (diputuskan Director 2026-09-12; membalik keputusan Revisi 1 yang memaksa `N/A`). Tanpa seksi "Action Required" di markdown. |
+| **Sigma Artifact Reference** | Flag wajib `--ref <INTENT-vN\|PLAN-vN\|EXEC-vN\|GENERAL>`, divalidasi regex, disimpan ke field `related_artifact` yang sudah ada di skema `MessageEntry` — tidak ada field baru. `GENERAL` untuk memo yang tidak terikat artifact governance tertentu (mis. diskusi Professional Mode pra-INTENT). Ditambahkan Director 2026-09-12. |
+| **Topik** | Flag wajib `--topic <satu kalimat>`, non-empty. Dirender sebagai baris metadata di body memo (bukan ditulis caller). Kalau `--subject` tidak diberikan, `--subject` auto-terisi dari `--topic` (bukan lagi `(memo)` generik). Ditambahkan Director 2026-09-12. |
 | **Skill** | Dua skill terpisah: `/write-memo` dan `/read-memo`. Alasan pemisahan di §6. |
-| **Template** | 4 seksi naratif + header. Baris "Chain / fase / versi" diisi otomatis oleh CLI dari `progress.json`. Template di §5.4. |
+| **Template** | 4 seksi naratif + header. Baris "Chain / Phase / Version" diisi otomatis oleh CLI dari `progress.json`. Label ini dan "Topic" ditulis dalam Bahasa Inggris (keputusan review checkpoint §6.4, 2026-09-12), menyamakan dengan skill `/write-memo` yang isinya Inggris. Template di §5.4. |
 | **Auto-sweep** | READ memo ikut aging ke OUTDATED lewat mekanisme `mailbox.auto_outdate_read_keep` yang sudah ada. UNREAD memo tidak pernah tersentuh sweep. |
 | **Housekeeping** | Non-destruktif — file memo tidak pernah dihapus/dipindah/rename, konsisten dengan kebijakan mailbox (`src/commands/inbox.ts` tidak punya operasi delete). |
 | **Opsi konten** | Opsi B (longgar) — memo boleh membawa kesimpulan satu baris **dengan** guardrail formalisasi di §2. |
@@ -68,8 +69,8 @@ Turunannya:
 | `src/commands/send.ts:100` | Panggilan `getUnreadForRole(existingIndex, fromRole)` → `getUnreadForRole(existingIndex, fromRole, { excludeMemo: true })`. Ini satu-satunya titik di mana memo dikecualikan dari gate. |
 | `src/commands/inbox.ts` | `runList` — setelah mencetak daftar pesan, kalau `countUnreadMemos(index, role) > 0`, cetak baris penunjuk ke `sigma memo list`. |
 | `src/commands/session.ts:~239` | Setelah blok "Role Inbox", tambah baris ringkas per role: `<ROLE>: N memo belum dibaca — sigma memo list --role <role>`. Sumber angka: `countUnreadMemos`. (Lapisan surfacing pasif — lihat §5.5.) |
-| `src/commands/config.ts` | Tambah subcommand `sigma config set memo-limit <n>` (menulis `mailbox.memo_unread_limit`). Tambah barisnya di output `sigma config get`. |
-| `src/commands/memo.ts` | **Berkas baru.** Command group `sigma memo` — detail di §5. |
+| `src/commands/config.ts` | Tambah subcommand `sigma config set memo-limit <n>` (menulis `mailbox.memo_unread_limit`). Tambah barisnya di output `sigma config show` (**koreksi Revisi 2** — Revisi 1 salah menyebut `sigma config get`, command itu tidak ada; command aktual adalah `show`, lihat `src/commands/config.ts:91`). |
+| `src/commands/memo.ts` | **Berkas baru.** Command group `sigma memo` — detail di §5, termasuk validasi `--ref`/`--topic`. |
 | `src/cli.ts` | Import `memoCommand`, `program.addCommand(memoCommand())` (setelah `inboxCommand()` di baris ~42). |
 | `Sigma/templates/MEMO-TEMPLATE.md` | **Berkas baru.** Template di §5.4. (Catatan: `CSO-TEMPLATE.md` yang lama sudah dihapus commit `208a560` — ini template baru yang berbeda.) |
 | `Sigma/SIGMA-OPERATION-REGISTRY.json` | Tambah operasi `memo` (domain `memo`, action `memo`) + subcommand `write`/`list`/`read` ke array `operations` dan daftar `operation_ids` di header. Registri disinkron manual (`scripts/refresh-registries.js` masih stub — lihat memori proyek). |
@@ -102,7 +103,11 @@ Berkas baru `test/memo.test.ts`:
 9. Auto-sweep: setelah `memo_unread_limit` READ memo terlampaui `auto_outdate_read_keep`, READ memo tertua → OUTDATED; UNREAD memo tidak pernah kena.
 10. `sigma inbox check` melewati entri MEMO tanpa `INVALID type`.
 11. `sigma config set memo-limit 0` → `sigma memo write` menolak dengan pesan "memo disabled".
-12. Baris "Chain / fase / versi" terisi benar dari chain aktif; degradasi anggun ke `(unresolved)` saat tidak ada chain.
+12. Baris "Chain / Phase / Version" terisi benar dari chain aktif; degradasi anggun ke `(unresolved)` saat tidak ada chain.
+13. `--ref` invalid (bukan `INTENT-vN`/`PLAN-vN`/`EXEC-vN`/`GENERAL`) → `sigma memo write` ditolak, tidak menulis apa pun.
+14. `--ref GENERAL` diterima tanpa chain aktif (regresi §5.1 langkah 5).
+15. `--topic` kosong/tidak diberikan → `sigma memo write` ditolak.
+16. `--subject` tidak diberikan → subject entri terisi otomatis dari `--topic`.
 
 Sweep berkas test lain yang meng-assert jumlah `VALID_MESSAGE_TYPES` atau mengiterasi tipe pesan.
 
@@ -113,22 +118,25 @@ Sweep berkas test lain yang meng-assert jumlah `VALID_MESSAGE_TYPES` atau mengit
 ### 5.1 `sigma memo write`
 
 ```
-sigma memo write --role <role> (--message <body> | --message-file <path>) [--subject <s>]
+sigma memo write --role <role> --ref <INTENT-vN|PLAN-vN|EXEC-vN|GENERAL> --topic <satu kalimat> (--message <body> | --message-file <path>) [--subject <s>]
 ```
 
 - `--role` wajib. Salah satu dari `arc|fmn|dev|aud` (pakai `MESSAGING_ROLES`). Konsisten dengan `sigma inbox --role`, bukan `sigma send --from`, karena secara mental ini "memo milik role tersebut".
 - `--to` **ditolak** dengan error eksplisit: *"sigma memo does not take --to — a memo is always to your own role. Use sigma send for cross-role messages."*
+- `--ref` wajib, divalidasi regex `^(INTENT|PLAN|EXEC)-v\d+$` atau literal `GENERAL`. Nilai lain/kosong → error eksplisit dengan daftar nilai valid. Disimpan ke `related_artifact` pada entri index. Diputuskan Director 2026-09-12 (§9 poin 7).
+- `--topic` wajib, satu kalimat, non-empty. Kalau `--subject` tidak diberikan, `--subject` auto-terisi dari `--topic`. Diputuskan Director 2026-09-12 (§9 poin 8).
 - Body via `--message` (satu baris) atau `--message-file` (multi-baris, preserve newline) — sama seperti `sigma send`.
-- `--subject` opsional, default `(memo)`.
+- `--subject` opsional; default kalau `--topic` juga tidak ada jalan turunannya (tidak seharusnya terjadi karena `--topic` wajib) tetap `(memo)`.
 - **Langkah eksekusi:**
   1. `findProjectRoot()`, `readIndex()`.
-  2. `countUnreadMemos(index, role)` ≥ `resolveMemoLimit(config)` (dan limit > 0) → **tolak**, cetak daftar memo unread + `sigma memo read <id>`.
-  3. `resolveMemoLimit(config) === 0` → tolak: *"Memo is disabled (mailbox.memo_unread_limit = 0). Enable with: sigma config set memo-limit 5"*.
-  4. Resolve baris chain otomatis: `readActiveChain(projectRoot)` → `chainVersion`, `lifecycle_state`, `intent.version/state`, `plan.active_version/active_state`, `exec.active_version/active_state`. Susun jadi satu baris. Kalau `readActiveChain` melempar (tidak ada chain) → `(unresolved — no active chain)`.
-  5. Bangun markdown: header metadata + baris chain + body caller (apa adanya, caller/skill yang menyusun 4 seksi).
-  6. `generateMessageId(role, role, ts, suffix)` (signatur `(from, to, ts, suffix)`), filename via `generateFilename('MEMO', role, role, ts, suffix)` dengan special-case agar keluar `MEMO-<ROLE>-<ts>-<suffix>.md` (tanpa role ganda).
-  7. Tulis file ke `Sigma/messages/<ROLE>/`, push entri ke index, `writeIndex()`.
-  8. Cetak konfirmasi + `slot terpakai: <n+1>/<limit>`.
+  2. Validasi `--ref` (regex/literal) dan `--topic` (non-empty) — gagal di sini sebelum menyentuh index kalau tidak valid.
+  3. `countUnreadMemos(index, role)` ≥ `resolveMemoLimit(config)` (dan limit > 0) → **tolak**, cetak daftar memo unread + `sigma memo read <id>`.
+  4. `resolveMemoLimit(config) === 0` → tolak: *"Memo is disabled (mailbox.memo_unread_limit = 0). Enable with: sigma config set memo-limit 5"*.
+  5. Resolve baris chain otomatis: `readActiveChain(projectRoot)` → `chainVersion`, `lifecycle_state`, `intent.version/state`, `plan.active_version/active_state`, `exec.active_version/active_state`. Susun jadi satu baris. Kalau `readActiveChain` melempar (tidak ada chain) → `(unresolved — no active chain)`. (`--ref GENERAL` dipakai justru untuk kasus ini.)
+  6. Bangun markdown: header metadata + baris chain + baris `Sigma Artifact Reference` (dari `--ref`) + baris `Topic` (dari `--topic`) + body caller (apa adanya, caller/skill yang menyusun 4 seksi §5.4).
+  7. `generateMessageId(role, role, ts, suffix)` (signatur `(from, to, ts, suffix)`), filename via `generateFilename('MEMO', role, role, ts, suffix)` dengan special-case agar keluar `MEMO-<ROLE>-<ts>-<suffix>.md` (tanpa role ganda).
+  8. Tulis file ke `Sigma/messages/<ROLE>/`, push entri ke index dengan `related_artifact` = nilai `--ref`, `writeIndex()`.
+  9. Cetak konfirmasi + `slot terpakai: <n+1>/<limit>`.
 
 ### 5.2 `sigma memo list`
 
@@ -136,10 +144,10 @@ sigma memo write --role <role> (--message <body> | --message-file <path>) [--sub
 sigma memo list --role <role> [--all]
 ```
 
-- Default: hanya UNREAD memo untuk role, terurut `created_at` (terbaru dulu atau terlama dulu — **keputusan terbuka §9**).
+- Default: hanya UNREAD memo untuk role, terurut `created_at` **terlama dulu** (diputuskan Director 2026-09-12 — konsisten dengan `selectSurplusRead` yang membuang surplus tertua lebih dulu; memo lama paling mendesak dibersihkan).
 - `--all`: sertakan READ + OUTDATED.
 - Header output menampilkan status kuota: `Memo — DEV — 2/5 slot terpakai`.
-- Tiap entri: id, subject, created_at, cuplikan baris pertama body.
+- Tiap entri: status, `related_artifact` (Ref), `subject` (auto-terisi dari Topic saat `--subject` tidak diberikan), id, created_at.
 - Footer: `sigma memo read <id>`.
 
 ### 5.3 `sigma memo read`
@@ -156,29 +164,33 @@ sigma memo read <memo-id>
 
 ### 5.4 Template memo (`Sigma/templates/MEMO-TEMPLATE.md`)
 
-Header + baris chain digenerate CLI. Empat seksi naratif diisi oleh caller (`/write-memo`):
+Header + baris chain digenerate CLI. Empat seksi naratif diisi oleh caller (`/write-memo`). Sesuai keputusan review checkpoint §6.4 (2026-09-12), seluruh isi memo — termasuk label dan placeholder di bawah ini — ditulis dalam Bahasa Inggris, persis salinan `Sigma/templates/MEMO-TEMPLATE.md`:
 
 ```
 ## Memo — <ROLE> — <YYYY-MM-DD HH:MM>
 
-**Chain / fase / versi:** <chain-vN> | <DESIGN|PLAN|EXEC|CLOSE> | INTENT <vN> (<STATE>) · PLAN <vN> (<STATE>) · EXEC <vN> (<STATE>)
+**Chain / Phase / Version:** <chain-vN> | <DESIGN|BUILD|CLOSE|CLOSED> | INTENT <vN> (<STATE>) · PLAN <vN> (<STATE>) · EXEC <vN> (<STATE>)
 
-**Konteks (hanya yang belum ada di artifact):**
-<2-3 kalimat — arah diskusi sesi ini, alasan berhenti. Bukan ringkasan isi artifact.>
+**Sigma Artifact Reference:** <INTENT-vN|PLAN-vN|EXEC-vN|GENERAL>
 
-**Orientasi ulang — baca:**
-- <ref artifact + section, mis. exec-evidence 1.2>
-- <ref inbox msg, mis. inbox msg abc123 dari FMN>
+**Topic:** <one sentence>
 
-**Aksi berikutnya:**
-- <instruksi operasional konkret>
-- hindari: <jalur yang sudah dicoba dan gagal, plus alasan singkat>
+**Context (only what isn't already in the artifact):**
+<2-3 sentences — direction of this session's discussion, why it stopped here. Not a summary of artifact content.>
 
-**Blocked — jangan lanjut sampai:**
-- <keputusan Director soal X, atau balasan role Y atas msg Z>
+**Reorientation — Read:**
+- <artifact ref + section, e.g. exec-evidence §1.2>
+- <inbox msg ref, e.g. inbox msg abc123 from FMN>
+
+**Next Actions:**
+- <concrete operational instruction>
+- avoid: <a path already tried and failed, with a short reason>
+
+**Blocked — Do Not Proceed Until:**
+- <a Director decision on X, or role Y's reply to msg Z>
 ```
 
-Seksi "Konteks" dan "Blocked" boleh kosong (tulis `—`). "Orientasi ulang" dan "Aksi berikutnya" wajib ada isi — itu inti memo.
+Seksi "Context" dan "Blocked" boleh kosong (tulis `—`). "Reorientation — Read" dan "Next Actions" wajib ada isi — itu inti memo. Baris "Chain / Phase / Version", "Sigma Artifact Reference", dan "Topic" dihasilkan otomatis oleh CLI dari `readActiveChain()` dan flag `--ref`/`--topic`, bukan ditulis caller di badan markdown. Kalau sebuah informasi butuh penjelasan detail, caller tidak menuliskannya di memo — buat file `.md` baru di `Sigma/notes/` (tanpa perlu approval Director) dan arahkan dari "Reorientation — Read" (lihat skill `/write-memo` §"Keeping Memos Brief").
 
 ### 5.5 Surfacing — bagaimana memo sampai terbaca
 
@@ -234,6 +246,17 @@ Tambah berkas skill per target (pola sama dengan skill `humanize` yang sudah ada
 
 `src/commands/setup.ts` `ROLE_FILES` (baris 43-48) — tambah key `writeMemo` + `readMemo` per platform dengan nama berkas di atas. `cursor` tidak dapat skill (hanya `SIGMA.mdc` tunggal).
 
+### 6.4 Checkpoint review — draft skill (diputuskan Director 2026-09-12)
+
+Implementasi skill **berhenti di satu titik wajib**, sebelum direplikasi lintas target dan sebelum Fase 7 dimulai:
+
+1. Tulis draft acuan `write-memo.md` dan `read-memo.md` **hanya untuk target `claude_code`** (`setup/targets/claude_code/`) — format paling sederhana, tanpa manifest/plugin.json tambahan, representatif untuk direview isinya.
+2. **Pause.** Sajikan isi kedua file ke Director untuk review — tidak lanjut ke langkah 3 tanpa itu.
+3. Terima feedback/revisi Director, perbaiki draft `claude_code` sampai disetujui.
+4. Setelah disetujui: replikasi ke `codex`, `reasonix`, `antigravity` (§6.3), lanjut `ROLE_FILES` di `setup.ts` + manifest antigravity, baru mulai Fase 7 (§10).
+
+Fase 7 (registry, `README.md`, `SIGMA_PROTOCOL.md`, role rules) **menunggu checkpoint ini disetujui** — isinya (nama skill, kalimat aktivasi, deskripsi satu baris untuk pemilihan skill) bisa berubah dari feedback Director, jadi tidak digarap paralel dengan draft skill.
+
 ---
 
 ## 7. Memo vs CSO/CHECKPOINT lama — pembedaan eksplisit
@@ -265,16 +288,26 @@ Plan ini (`PLAN-IMPL-*`) tetap jadi dokumen referensi teknis apa pun jalurnya.
 
 ---
 
-## 9. Pertanyaan terbuka
+## 9. Keputusan Director (2026-09-12)
 
-Tidak ada yang mem-block penyusunan; semua butuh keputusan Director sebelum implementasi mulai.
+Semua pertanyaan yang sebelumnya terbuka di Revisi 1 sudah diputuskan Director pada 2026-09-12. Sudah tercermin di §3 dan §5; dicatat di sini untuk jejak audit, bukan lagi "terbuka".
 
-1. **Nama config key**: `memo-limit` (CLI) → `mailbox.memo_unread_limit` (JSON). Setuju? Atau `memo-max` / `mailbox.memo_max_unread`?
-2. **Urutan `sigma memo list`**: terbaru dulu (konsisten dengan naluri "yang paling relevan di atas") atau terlama dulu (konsisten dengan `selectSurplusRead` yang sort ascending)? Rekomendasi: terlama dulu — memo lama justru yang paling mendesak dibersihkan.
-3. **`sigma memo write` saat tidak ada chain aktif**: tetap izinkan (baris chain = `(unresolved)`) atau tolak? Rekomendasi: izinkan — kerja pra-INTENT juga butuh memo.
-4. **Banner pasif (surfacing lapis 2 versi kuat)**: garap terpisah nanti, atau masukkan versi "cek semua role" ke plan ini? Rekomendasi: terpisah — jangan gandakan scope.
-5. **`/read-memo` di role rules**: tambahkan instruksi "cek memo di awal sesi" ke `Sigma/rules/{ARC,FMN,DEV,AUD}-RULE.md`, atau biarkan murni Director-triggered? Rekomendasi: tambahkan sebagai anjuran (bukan gate) di role rules.
-6. **Subject default**: `(memo)` cukup, atau minta caller selalu isi `--subject`?
+1. **Nama config key**: `memo-limit` (CLI) / `mailbox.memo_unread_limit` (JSON). **Terkunci.**
+2. **Urutan `sigma memo list`**: terlama dulu — konsisten dengan `selectSurplusRead` (sort ascending, buang surplus tertua lebih dulu); memo lama paling mendesak dibersihkan. **Terkunci.**
+3. **`sigma memo write` tanpa chain aktif**: diizinkan; baris chain = `(unresolved — no active chain)`, dan `--ref GENERAL` dipakai eksplisit untuk kasus ini. **Terkunci.**
+4. **Banner pasif lintas semua command write-class** (surfacing lapis 2 versi kuat): ditunda, digarap terpisah — tidak masuk plan ini. **Terkunci.**
+5. **Instruksi "cek memo di awal sesi" di role rules**: ditambahkan sebagai anjuran (bukan gate) di `Sigma/rules/{ARC,FMN,DEV,AUD}-RULE.md`, dieksekusi di Fase 7 (§10). **Terkunci.**
+6. **Subject default**: `(memo)` tetap opsional sebagai fallback; kalau `--subject` tidak diberikan, auto-terisi dari `--topic` (poin 8). **Terkunci.**
+7. **Sigma Artifact Reference** (tambahan Director, di luar 6 poin Revisi 1): flag wajib `--ref <INTENT-vN|PLAN-vN|EXEC-vN|GENERAL>`, disimpan ke field `related_artifact` yang sudah ada di skema `MessageEntry` — tidak ada field baru. **Terkunci.** Detail: §3, §5.1, §5.4.
+8. **Topik** (tambahan Director): flag wajib `--topic <satu kalimat>`, non-empty, auto-isi `--subject` bila kosong. **Terkunci.** Detail: §3, §5.1, §5.4.
+9. **Checkpoint review draft skill** (tambahan Director): `/write-memo` + `/read-memo` ditulis dulu hanya untuk target `claude_code`, lalu implementasi **pause** menunggu feedback Director — replikasi ke target lain dan Fase 7 tidak dimulai sebelum draft ini disetujui. **Terkunci.** Detail: §6.4, §10.
+10. **Bahasa isi memo** (hasil review checkpoint, 2026-09-12): seluruh isi memo — label CLI-generated (`Chain / Phase / Version`, `Topic`) maupun 4 seksi naratif yang ditulis skill (`Context`/`Reorientation — Read`/`Next Actions`/`Blocked — Do Not Proceed Until`) — ditulis dalam Bahasa Inggris, mengikuti kebiasaan "Sigma docs must be English". Frasa aktivasi yang diucapkan Director ke skill `/write-memo`/`/read-memo` tetap boleh menyesuaikan bahasa interaksi sesi yang sedang aktif (Indonesia atau Inggris). **Terkunci.** Detail: §5.4, `write-memo.md`, `MEMO-TEMPLATE.md`.
+11. **Memo menandakan sesi akan diakhiri** (hasil review checkpoint, 2026-09-12): menulis memo selalu diasumsikan Director ingin segera mengakhiri sesi berjalan dan beralih ke sesi baru, agar role AI yang sama di sesi baru dapat melanjutkan diskusi/pekerjaan tertunda — biasanya untuk menghindari percakapan yang terlalu panjang atau batas konteks AI. Setelah memo ditulis, sesi berjalan **disarankan tidak dilanjutkan**. **Terkunci.** Detail: `write-memo.md` §"Assumption: Writing A Memo Signals The Session Is Ending".
+12. **Memo tetap ringkas, detail pindah ke `Sigma/notes/`** (hasil review checkpoint, 2026-09-12): kalau sebuah informasi butuh penjelasan detail, AI role tidak menuliskannya di badan memo — cek dulu apakah sudah ada file yang bisa dirujuk (DEV-EXEC, artifact lain, atau file `Sigma/notes/` yang sudah ada); kalau belum ada, buat file `.md` baru di `Sigma/notes/` **tanpa perlu approval Director** (bukan artifact governance, sama seperti penulisan memo itu sendiri), lalu arahkan dari "Reorientation — Read". **Terkunci.** Detail: `write-memo.md` §"Keeping Memos Brief".
+
+13. **Anjuran "cek memo di awal sesi" (§9 poin 5) — pengecualian AUD** (diputuskan Director 2026-09-12 saat eksekusi Fase 7): anjuran ditambahkan ke `Sigma/rules/{ARC,FMN,DEV}-RULE.md` sebagai klausa yang mengecualikan `sigma memo list` dari pembatasan baca-default masing-masing role (memo = catatan kontinuitas milik role sendiri, bukan governance state/historical artifact). **AUD sengaja tidak disentuh** — `AUD Exception` di `CLAUDE.md` root project melarang AUD memanggil CLI/MCP apa pun tanpa otorisasi eksplisit Director, dan itu aturan project-wide yang tidak diubah lewat plan ini. **Terkunci.**
+
+Tidak ada pertanyaan terbuka lagi di dokumen ini. Eksekusi Fase 1–7 selesai — lihat §10.
 
 ---
 
@@ -282,12 +315,12 @@ Tidak ada yang mem-block penyusunan; semua butuh keputusan Director sebelum impl
 
 | Fase | Isi | Bergantung pada |
 | :--- | :--- | :--- |
-| **1 — Tipe & storage primitives** | `VALID_MESSAGE_TYPES += MEMO`; helper `getUnreadMemosForRole`/`countUnreadMemos`; `selectInboxMessages` kecualikan MEMO; `getUnreadForRole` param `excludeMemo`; filename special-case. Test unit primitif. | — |
-| **2 — Config kuota** | `MailboxConfig.memo_unread_limit`, `DEFAULT_MAILBOX`, `resolveMemoLimit`; `sigma config set memo-limit` + tampil di `config get`. Test. | Fase 1 |
-| **3 — `sigma memo` command group** | `src/commands/memo.ts` (`write`/`list`/`read`), registrasi di `cli.ts`, baris chain otomatis via `readActiveChain`. Test `test/memo.test.ts` poin 1-7, 11-12. | Fase 1-2 |
-| **4 — Send gate + inbox + bootstrap surfacing** | `send.ts` pakai `excludeMemo: true`; `inbox.ts` baris penunjuk; `session.ts` baris memo per role. Test poin 4, 8. | Fase 1, 3 |
-| **5 — Auto-sweep regresi** | Test eksplisit poin 9 (READ memo aging, UNREAD aman). Tidak ada kode baru diharapkan — konfirmasi perilaku warisan benar. | Fase 3 |
-| **6 — Template & skill** | `Sigma/templates/MEMO-TEMPLATE.md`; skill `/write-memo` + `/read-memo` di `setup/targets/*`; `ROLE_FILES` di `setup.ts`; manifest antigravity. | Fase 3 |
-| **7 — Registry & dokumentasi** | `SIGMA-OPERATION-REGISTRY.json`, `SIGMA-REGISTRY.json`, `README.md` Command Reference + handoff, `SIGMA_PROTOCOL.md`, role rules (bila §9 poin 5 disetujui). | Fase 3-6 |
+| **1 — Tipe & storage primitives** ✅ | `VALID_MESSAGE_TYPES += MEMO`; helper `getUnreadMemosForRole`/`countUnreadMemos`; `selectInboxMessages` kecualikan MEMO; `getUnreadForRole` param `excludeMemo`; filename special-case. Test unit primitif. | — |
+| **2 — Config kuota** ✅ | `MailboxConfig.memo_unread_limit`, `DEFAULT_MAILBOX`, `resolveMemoLimit`; `sigma config set memo-limit` + tampil di `config show`. Test. | Fase 1 |
+| **3 — `sigma memo` command group** ✅ | `src/commands/memo.ts` (`write`/`list`/`read`), registrasi di `cli.ts`, baris chain otomatis via `readActiveChain`. Test `test/memo.test.ts` poin 1-16. | Fase 1-2 |
+| **4 — Send gate + inbox + bootstrap surfacing** ✅ | `send.ts` pakai `excludeMemo: true`; `inbox.ts` baris penunjuk (Bahasa Inggris); `session.ts` baris memo per role (excludeMemo di kedua tampilan Role Inbox); MCP `sigma_get_orientation` juga diperbaiki — field `inbox_unread` kecualikan MEMO, field baru `memo_unread` ditambahkan. Test poin 4, 8 + `test/mcp-tools.test.ts`. | Fase 1, 3 |
+| **5 — Auto-sweep regresi** ✅ | Test eksplisit poin 9 (READ memo aging, UNREAD aman). Tidak ada kode baru — perilaku warisan terkonfirmasi benar. | Fase 3 |
+| **6 — Template & skill** ✅ | `Sigma/templates/MEMO-TEMPLATE.md`. Skill `/write-memo` + `/read-memo`: draft `claude_code` → checkpoint pause (§6.4) → Director review (isi Bahasa Inggris, aturan brevity+overflow ke `Sigma/notes/`, asumsi session-ending, aktivasi eksplisit-saja untuk read-memo, read-only vs write-class) → disetujui → direplikasi ke `codex` (SKILL.md + agents/openai.yaml, `#write-memo`/`#read-memo`), `reasonix` (copy identik), `antigravity` (`sigma-write-memo`/`sigma-read-memo` + plugin.json); `ROLE_FILES` di `setup.ts` (4 platform); manifest antigravity diverifikasi lewat `sigma setup install --yes` smoke test (9 skills per platform). | Fase 3 |
+| **7 — Registry & dokumentasi** ✅ | `SIGMA-OPERATION-REGISTRY.json` (+3 operasi: `memo_write`/`memo_list`/`memo_read`, domain `memo` ditambah ke daftar domain, `total_operations` 56→59). `SIGMA-REGISTRY.json` — entri skill tidak berlaku (registri ini tidak melacak skill sama sekali, cuma "documents"); deskripsi `artifact_templates` diperbarui (11→12 file, sebut MEMO-TEMPLATE.md). `README.md` — baris Command Reference (`memo write/list/read`, `config set memo-limit`) + kalimat "Handoff between sessions". `SIGMA_PROTOCOL.md` §16F baru (Self-Addressed Memo Doctrine). Role rules — anjuran cek memo di `ARC`/`FMN`/`DEV`-RULE.md (§9 poin 13); AUD sengaja dikecualikan. | Fase 3-6, checkpoint §6.4 disetujui |
 
-Fase 5 mendahului tidak ada — ia hanya memverifikasi perilaku warisan sebelum fitur dianggap selesai. Urutan 1→2→3 keras; 4/5/6 bisa paralel setelah 3; 7 terakhir.
+Fase 5 mendahului tidak ada — ia hanya memverifikasi perilaku warisan sebelum fitur dianggap selesai. Urutan 1→2→3 keras; 4/5/6 bisa paralel setelah 3; 6 berhenti di tengah untuk checkpoint review skill (§6.4); 7 baru mulai setelah checkpoint itu disetujui, dan berjalan terakhir.

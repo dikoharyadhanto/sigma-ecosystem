@@ -15,7 +15,7 @@ import {
   isIntentDocUncertified,
   InvalidGateKey,
 } from '../../engine/chain';
-import { readIndex, getUnreadForRole } from '../../engine/mailbox';
+import { readIndex, getUnreadForRole, countUnreadMemos } from '../../engine/mailbox';
 import { MESSAGING_ROLES, SigmaRole } from '../../config';
 import { buildBootstrapView } from '../../session/bootstrapView';
 import { resolveRoot, okText, noProject, SOURCE_ENGINE } from '../shared';
@@ -26,6 +26,10 @@ const GATE_LABELS: Record<InvalidGateKey, string> = {
   gate_3_satisfied: 'Gate 3 (Build Evidence)',
 };
 
+// PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF-20260902 — mirrors the CLI's own
+// split: cross-role inbox_unread excludes MEMO (same as the sigma send gate
+// and sigma session bootstrap's "Role Inbox"), memo_unread is the separate
+// self-addressed count (same as sigma session bootstrap's "Unread Memos").
 function collectInboxUnread(projectRoot: string, role?: SigmaRole): Record<string, number> {
   const unread: Record<string, number> = {};
   try {
@@ -33,7 +37,23 @@ function collectInboxUnread(projectRoot: string, role?: SigmaRole): Record<strin
     const roles = role ? [role] : MESSAGING_ROLES;
     for (const r of roles) {
       if (!(MESSAGING_ROLES as readonly string[]).includes(r)) continue;
-      const count = getUnreadForRole(index, r).length;
+      const count = getUnreadForRole(index, r, { excludeMemo: true }).length;
+      if (count > 0) unread[r] = count;
+    }
+  } catch {
+    // index.json absent/unreadable — treat as no unread, same as the CLI.
+  }
+  return unread;
+}
+
+function collectMemoUnread(projectRoot: string, role?: SigmaRole): Record<string, number> {
+  const unread: Record<string, number> = {};
+  try {
+    const index = readIndex(projectRoot);
+    const roles = role ? [role] : MESSAGING_ROLES;
+    for (const r of roles) {
+      if (!(MESSAGING_ROLES as readonly string[]).includes(r)) continue;
+      const count = countUnreadMemos(index, r);
       if (count > 0) unread[r] = count;
     }
   } catch {
@@ -70,6 +90,7 @@ export function computeOrientation(root: string | null, role?: SigmaRole): unkno
     stale_intent_warnings: chain ? getInvalidWarningLines(chain) : [],
     blockers,
     inbox_unread: collectInboxUnread(root, role),
+    memo_unread: collectMemoUnread(root, role),
     // Amendment mechanism (Discussion 2026-08-11_0115 §5.3) — true when the
     // DIR-INTENT file's bytes no longer match the last certified hash (edited
     // outside `sigma intent ratify`/`sigma intent amendment`).
@@ -85,7 +106,7 @@ export function registerOrientationTool(server: McpServer): void {
     {
       title: 'Get Sigma Orientation',
       description:
-        'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, unread inbox counts, and DIR-INTENT certification state. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes the inbox counts to that role. Optional project_root sets the project directory. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, intent_doc_uncertified, intent_doc_uncertified_since, source }.',
+        'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, unread cross-role inbox counts, unread self-addressed memo counts, and DIR-INTENT certification state. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes both counts to that role. Optional project_root sets the project directory. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, memo_unread, intent_doc_uncertified, intent_doc_uncertified_since, source }.',
       inputSchema: {
         role: z
           .enum(['ARC', 'FMN', 'DEV', 'AUD'])

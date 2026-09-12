@@ -24,6 +24,10 @@ const GATE_LABELS = {
     gate_2_open: 'Gate 2 (Plan Locked)',
     gate_3_satisfied: 'Gate 3 (Build Evidence)',
 };
+// PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF-20260902 — mirrors the CLI's own
+// split: cross-role inbox_unread excludes MEMO (same as the sigma send gate
+// and sigma session bootstrap's "Role Inbox"), memo_unread is the separate
+// self-addressed count (same as sigma session bootstrap's "Unread Memos").
 function collectInboxUnread(projectRoot, role) {
     const unread = {};
     try {
@@ -32,7 +36,25 @@ function collectInboxUnread(projectRoot, role) {
         for (const r of roles) {
             if (!config_1.MESSAGING_ROLES.includes(r))
                 continue;
-            const count = (0, mailbox_1.getUnreadForRole)(index, r).length;
+            const count = (0, mailbox_1.getUnreadForRole)(index, r, { excludeMemo: true }).length;
+            if (count > 0)
+                unread[r] = count;
+        }
+    }
+    catch {
+        // index.json absent/unreadable — treat as no unread, same as the CLI.
+    }
+    return unread;
+}
+function collectMemoUnread(projectRoot, role) {
+    const unread = {};
+    try {
+        const index = (0, mailbox_1.readIndex)(projectRoot);
+        const roles = role ? [role] : config_1.MESSAGING_ROLES;
+        for (const r of roles) {
+            if (!config_1.MESSAGING_ROLES.includes(r))
+                continue;
+            const count = (0, mailbox_1.countUnreadMemos)(index, r);
             if (count > 0)
                 unread[r] = count;
         }
@@ -67,6 +89,7 @@ function computeOrientation(root, role) {
         stale_intent_warnings: chain ? (0, chain_1.getInvalidWarningLines)(chain) : [],
         blockers,
         inbox_unread: collectInboxUnread(root, role),
+        memo_unread: collectMemoUnread(root, role),
         // Amendment mechanism (Discussion 2026-08-11_0115 §5.3) — true when the
         // DIR-INTENT file's bytes no longer match the last certified hash (edited
         // outside `sigma intent ratify`/`sigma intent amendment`).
@@ -78,7 +101,7 @@ function computeOrientation(root, role) {
 function registerOrientationTool(server) {
     server.registerTool('sigma_get_orientation', {
         title: 'Get Sigma Orientation',
-        description: 'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, unread inbox counts, and DIR-INTENT certification state. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes the inbox counts to that role. Optional project_root sets the project directory. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, intent_doc_uncertified, intent_doc_uncertified_since, source }.',
+        description: 'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, unread cross-role inbox counts, unread self-addressed memo counts, and DIR-INTENT certification state. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes both counts to that role. Optional project_root sets the project directory. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, memo_unread, intent_doc_uncertified, intent_doc_uncertified_since, source }.',
         inputSchema: {
             role: zod_1.z
                 .enum(['ARC', 'FMN', 'DEV', 'AUD'])

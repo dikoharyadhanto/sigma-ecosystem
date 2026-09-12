@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sigma Write Memo"
+  short_description: "Write a self-to-self operational brief (sigma memo write) so the active role can resume cleanly in a later session"
+  default_prompt: "Use #write-memo to write a self-addressed operational brief before ending this session."

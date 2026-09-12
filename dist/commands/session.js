@@ -206,7 +206,7 @@ function runBootstrap(opts) {
         if (opts.role) {
             const role = opts.role.toUpperCase();
             if (config_1.MESSAGING_ROLES.includes(role)) {
-                const allUnread = (0, mailbox_1.getUnreadForRole)(index, role);
+                const allUnread = (0, mailbox_1.getUnreadForRole)(index, role, { excludeMemo: true });
                 const total = allUnread.length;
                 const shown = allUnread.slice(-3).reverse();
                 if (total > 0) {
@@ -226,13 +226,17 @@ function runBootstrap(opts) {
                     });
                     console.log(`\n  Run: sigma inbox --role ${role.toLowerCase()}`);
                 }
+                const unreadMemos = (0, mailbox_1.countUnreadMemos)(index, role);
+                if (unreadMemos > 0) {
+                    console.log(`\n${role}: ${unreadMemos} unread memo${unreadMemos > 1 ? 's' : ''} — sigma memo list --role ${role.toLowerCase()}`);
+                }
             }
         }
         else {
             // Group unread by messaging roles — show up to 3 per role that has messages
             const byRole = {};
             for (const role of config_1.MESSAGING_ROLES) {
-                const allUnread = (0, mailbox_1.getUnreadForRole)(index, role);
+                const allUnread = (0, mailbox_1.getUnreadForRole)(index, role, { excludeMemo: true });
                 if (allUnread.length > 0) {
                     byRole[role] = { total: allUnread.length, shown: allUnread.slice(-3).reverse() };
                 }
@@ -249,6 +253,15 @@ function runBootstrap(opts) {
                     });
                 }
                 console.log('\n  Run: sigma inbox --role <role>    sigma inbox read <id>');
+            }
+            const memoLines = config_1.MESSAGING_ROLES
+                .map(role => ({ role, count: (0, mailbox_1.countUnreadMemos)(index, role) }))
+                .filter(r => r.count > 0);
+            if (memoLines.length > 0) {
+                console.log('\n--- Role Mailbox — Unread Memos ---');
+                for (const { role, count } of memoLines) {
+                    console.log(`  ${role}: ${count} unread memo${count > 1 ? 's' : ''} — sigma memo list --role ${role.toLowerCase()}`);
+                }
             }
         }
     }

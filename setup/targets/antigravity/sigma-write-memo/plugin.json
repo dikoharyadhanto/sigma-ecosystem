@@ -1,0 +1,15 @@
+{
+  "name": "sigma-write-memo",
+  "version": "1.0.0",
+  "description": "Write a self-to-self operational brief (sigma memo write) so the active role can resume cleanly in a later session",
+  "author": {
+    "name": "Sigma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sigma",
+    "governance",
+    "memo",
+    "handoff"
+  ]
+}

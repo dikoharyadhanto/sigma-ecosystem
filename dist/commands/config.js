@@ -75,9 +75,30 @@ function configCommand() {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const config = (0, projectConfig_1.readProjectConfig)(projectRoot);
             const prev = config.mailbox?.auto_outdate_read_keep;
-            config.mailbox = { ...config.mailbox, auto_outdate_read_keep: value };
+            config.mailbox = { ...projectConfig_1.DEFAULT_MAILBOX, ...config.mailbox, auto_outdate_read_keep: value };
             (0, projectConfig_1.writeProjectConfig)(projectRoot, config);
             console.log(`Mailbox auto-outdate keep: ${prev ?? '(default)'} -> ${value}${value === 0 ? ' (auto-sweep disabled)' : ''}`);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
+    set.command('memo-limit <n>')
+        .description('Set the max unread MEMO count per role before `sigma memo write` is blocked (default 5). ' +
+        '0 disables the memo feature (mailbox.memo_unread_limit).')
+        .action((n) => {
+        try {
+            const value = Number(n);
+            if (!Number.isInteger(value) || value < 0) {
+                throw new Error(`Expected a non-negative integer, got "${n}".`);
+            }
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const config = (0, projectConfig_1.readProjectConfig)(projectRoot);
+            const prev = config.mailbox?.memo_unread_limit;
+            config.mailbox = { ...projectConfig_1.DEFAULT_MAILBOX, ...config.mailbox, memo_unread_limit: value };
+            (0, projectConfig_1.writeProjectConfig)(projectRoot, config);
+            console.log(`Memo unread limit: ${prev ?? '(default)'} -> ${value}${value === 0 ? ' (memo disabled)' : ''}`);
         }
         catch (e) {
             console.error(e.message);
@@ -97,6 +118,8 @@ function configCommand() {
             console.log(`Notion Humanize Gate:          ${config.notion_humanize_gate?.enabled ? 'ON' : 'OFF'}`);
             const keep = (0, projectConfig_1.resolveAutoOutdateKeep)(config);
             console.log(`Mailbox Auto-Outdate Keep:     ${keep === 0 ? 'OFF' : keep}`);
+            const memoLimit = (0, projectConfig_1.resolveMemoLimit)(config);
+            console.log(`Memo Unread Limit:             ${memoLimit === 0 ? 'OFF (memo disabled)' : memoLimit}`);
             console.log('');
         }
         catch (e) {

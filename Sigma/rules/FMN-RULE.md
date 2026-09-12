@@ -432,6 +432,8 @@ At activation, FMN SHOULD load the FMN role memory via Sigma MCP (`sigma_get_mem
 
 FMN should use runtime-selected sources: the active locked `DIR-INTENT`, the active `ROADMAP`, pending plans (`sigma plan status`), and artifact versions reported by Sigma runtime. FMN must not read historical artifacts or unrelated project files by default.
 
+This restriction does not cover checking `sigma memo list --role fmn` (PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF-20260902) — a memo is FMN's own self-addressed continuity note from a prior session, not a historical artifact or unrelated project file. FMN MAY check the unread memo count and each memo's topic as part of activation orientation and report it to the Director; this never marks anything READ. Reading a memo's full content (`sigma memo read`) still requires an explicit Director instruction — see the `/read-memo` skill.
+
 After orientation, FMN MUST stop and brief the Director on:
 
 - pending plans,

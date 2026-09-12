@@ -64,7 +64,7 @@ function runSend(opts) {
     const projectRoot = (0, fs_1.findProjectRoot)();
     // Gate: sender must have an empty unread queue before sending new messages.
     const existingIndex = (0, mailbox_1.readIndex)(projectRoot);
-    const unread = (0, mailbox_1.getUnreadForRole)(existingIndex, fromRole);
+    const unread = (0, mailbox_1.getUnreadForRole)(existingIndex, fromRole, { excludeMemo: true });
     if (unread.length > 0) {
         const ids = unread.map(m => `  - ${m.id}  [${m.from} → ${m.to}] ${m.type}: ${m.subject}`).join('\n');
         throw new Error(`SEND BLOCKED — ${fromRole} has ${unread.length} unread message${unread.length > 1 ? 's' : ''} in their own inbox.\n` +

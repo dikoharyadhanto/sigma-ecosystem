@@ -11,7 +11,7 @@ import {
   getDocumentsForRole,
   DocumentEntry,
 } from '../engine/registry';
-import { readIndex, getUnreadForRole, MessageEntry } from '../engine/mailbox';
+import { readIndex, getUnreadForRole, countUnreadMemos, MessageEntry } from '../engine/mailbox';
 import { MESSAGING_ROLES, SigmaRole } from '../config';
 import { readProjectConfig } from '../engine/projectConfig';
 import { buildBootstrapView } from '../session/bootstrapView';
@@ -236,7 +236,7 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
     if (opts.role) {
       const role = opts.role.toUpperCase() as SigmaRole;
       if ((MESSAGING_ROLES as readonly string[]).includes(role)) {
-        const allUnread = getUnreadForRole(index, role);
+        const allUnread = getUnreadForRole(index, role, { excludeMemo: true });
         const total = allUnread.length;
         const shown = allUnread.slice(-3).reverse();
         if (total > 0) {
@@ -255,12 +255,16 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
           });
           console.log(`\n  Run: sigma inbox --role ${role.toLowerCase()}`);
         }
+        const unreadMemos = countUnreadMemos(index, role);
+        if (unreadMemos > 0) {
+          console.log(`\n${role}: ${unreadMemos} unread memo${unreadMemos > 1 ? 's' : ''} — sigma memo list --role ${role.toLowerCase()}`);
+        }
       }
     } else {
       // Group unread by messaging roles — show up to 3 per role that has messages
       const byRole: Partial<Record<SigmaRole, { total: number; shown: MessageEntry[] }>> = {};
       for (const role of MESSAGING_ROLES) {
-        const allUnread = getUnreadForRole(index, role);
+        const allUnread = getUnreadForRole(index, role, { excludeMemo: true });
         if (allUnread.length > 0) {
           byRole[role] = { total: allUnread.length, shown: allUnread.slice(-3).reverse() };
         }
@@ -278,6 +282,16 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
           });
         }
         console.log('\n  Run: sigma inbox --role <role>    sigma inbox read <id>');
+      }
+
+      const memoLines = MESSAGING_ROLES
+        .map(role => ({ role, count: countUnreadMemos(index, role) }))
+        .filter(r => r.count > 0);
+      if (memoLines.length > 0) {
+        console.log('\n--- Role Mailbox — Unread Memos ---');
+        for (const { role, count } of memoLines) {
+          console.log(`  ${role}: ${count} unread memo${count > 1 ? 's' : ''} — sigma memo list --role ${role.toLowerCase()}`);
+        }
       }
     }
   } catch {

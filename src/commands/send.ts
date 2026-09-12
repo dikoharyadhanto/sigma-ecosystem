@@ -97,7 +97,7 @@ function runSend(opts: {
 
   // Gate: sender must have an empty unread queue before sending new messages.
   const existingIndex = readIndex(projectRoot);
-  const unread = getUnreadForRole(existingIndex, fromRole);
+  const unread = getUnreadForRole(existingIndex, fromRole, { excludeMemo: true });
   if (unread.length > 0) {
     const ids = unread.map(m => `  - ${m.id}  [${m.from} → ${m.to}] ${m.type}: ${m.subject}`).join('\n');
     throw new Error(

@@ -77,6 +77,9 @@ exports.REFERENCE_DATA_DIR = path_1.default.join(exports.REFERENCE_DIR, 'data');
 exports.VALID_ROLES = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR'];
 // DIRECTOR is excluded from messaging — Director communicates directly, not via CLI inbox
 exports.MESSAGING_ROLES = ['ARC', 'FMN', 'DEV', 'AUD'];
-exports.VALID_MESSAGE_TYPES = ['NOTE', 'CHECK', 'RESPONSE', 'HANDOFF', 'QUESTION', 'RISK'];
+// MEMO (PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF) — self-to-self operational
+// brief. from === to, excluded from sigma send's unread gate and from
+// sigma inbox listings; has its own command group (`sigma memo`).
+exports.VALID_MESSAGE_TYPES = ['NOTE', 'CHECK', 'RESPONSE', 'HANDOFF', 'QUESTION', 'RISK', 'MEMO'];
 exports.VALID_ACTIONS = ['FYI', 'RESPOND', 'REVIEW', 'UNBLOCK', 'OTHER'];
 //# sourceMappingURL=config.js.map

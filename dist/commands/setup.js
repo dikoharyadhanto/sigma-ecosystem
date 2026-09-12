@@ -25,10 +25,10 @@ const SETUP_TARGETS_DIR = path_1.default.join(PACKAGE_ROOT, 'setup', 'targets');
 const BUNDLE_BRIDGE_DIR = path_1.default.join(SETUP_TARGETS_DIR, 'bridge');
 const BUNDLE_HOOKS_DIR = path_1.default.join(SETUP_TARGETS_DIR, 'hooks');
 const ROLE_FILES = {
-    claudeCode: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md', humanize: 'humanize.md' },
-    codex: { arc: 'arc', fmn: 'fmn', dev: 'dev', aud: 'aud', report: 'report', sigmaTest: 'sigma-test', humanize: 'humanize' },
-    reasonix: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md', humanize: 'humanize.md' },
-    antigravity: { arc: 'sigma-arc', fmn: 'sigma-fmn', dev: 'sigma-dev', aud: 'sigma-aud', report: 'sigma-report', sigmaTest: 'sigma-test', humanize: 'sigma-humanize' },
+    claudeCode: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md', humanize: 'humanize.md', writeMemo: 'write-memo.md', readMemo: 'read-memo.md' },
+    codex: { arc: 'arc', fmn: 'fmn', dev: 'dev', aud: 'aud', report: 'report', sigmaTest: 'sigma-test', humanize: 'humanize', writeMemo: 'write-memo', readMemo: 'read-memo' },
+    reasonix: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md', humanize: 'humanize.md', writeMemo: 'write-memo.md', readMemo: 'read-memo.md' },
+    antigravity: { arc: 'sigma-arc', fmn: 'sigma-fmn', dev: 'sigma-dev', aud: 'sigma-aud', report: 'sigma-report', sigmaTest: 'sigma-test', humanize: 'sigma-humanize', writeMemo: 'sigma-write-memo', readMemo: 'sigma-read-memo' },
     cursor: { sigma: 'SIGMA.mdc' },
 };
 const PLATFORM_LABELS = {

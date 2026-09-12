@@ -707,6 +707,16 @@ An AI role may not send a new message while it has unread incoming messages. The
 
 ---
 
+## 16F. Self-Addressed Memo Doctrine
+
+A memo (`sigma memo write`/`sigma memo list`/`sigma memo read`) is not role-to-role messaging — it is a role leaving an operational brief for itself, to be picked up in a later session. `from` and `to` are always the same role; `--to` is rejected outright.
+
+Memos share the mailbox index (`type: MEMO`) but are excluded from the sender-side unread gate in Section 16E and from `sigma inbox` listings — they never block sending and never appear mixed in with cross-role messages. Each role has its own unread-memo quota (default 5, `mailbox.memo_unread_limit`); once full, `sigma memo write` is blocked until existing unread memos are read.
+
+A memo carries pointers to existing artifacts and instructions for the next session, not copies of artifact content, and is never a substitute for a locked or ratified artifact. Full doctrine, template, and the guardrail against a memo becoming a shadow artifact: `PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF-20260902.md` and `Sigma/templates/MEMO-TEMPLATE.md`.
+
+---
+
 ## 17. Git Evidence
 
 Sigma provides minimal, read-only git evidence via `sigma git evidence`.

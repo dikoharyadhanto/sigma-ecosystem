@@ -291,7 +291,7 @@ Typical result:
 
 `/report` is chat-only. It does not create files and does not change project state.
 
-Handoff between sessions or roles uses `sigma send` / `sigma inbox` directly (see Command Reference below).
+Handoff between roles uses `sigma send` / `sigma inbox` directly. Handoff for the *same* role across sessions — leaving yourself a resume note before a session ends — uses `sigma memo write` / `sigma memo list` / `sigma memo read` instead (see Command Reference below).
 
 ---
 
@@ -579,6 +579,7 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | config   | `sigma config show`                | Show current project language preferences                                      |
 | config   | `sigma config set language <name> --interaction\|--sigma-document\|--output-document` | Set one language preference non-interactively (free-form name, e.g. `English`, `Indonesia`) |
 | config   | `sigma config set mailbox-outdate-keep <n>` | How many recent READ messages `sigma inbox read` keeps before aging the rest to OUTDATED (`0` disables; default `5`) |
+| config   | `sigma config set memo-limit <n>`  | Max unread MEMO count per role before `sigma memo write` is blocked (`0` disables memo; default `5`) |
 | send     | `sigma send`                       | Send a message from one role to another (`--from`, `--to`, `--message`)        |
 | inbox    | `sigma inbox --role <role>`        | List unread messages for a role                                                |
 | inbox    | `sigma inbox --role <role> --all`  | List UNREAD + READ + ARCHIVED (excludes OUTDATED)                              |
@@ -588,6 +589,9 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | inbox    | `sigma inbox clear --role <role> [--keep 5] [--dry-run]` | Age stale READ messages to OUTDATED, keeping the N most recent READ |
 | inbox    | `sigma inbox clear --all-roles --director-confirm` | Same, swept across every messaging role                             |
 | inbox    | `sigma inbox check`                | Run inbox integrity check (index vs disk files, attachments, field values)     |
+| memo     | `sigma memo write --role <role> --ref <ref> --topic "<sentence>" --message "..."` | Write a self-addressed operational brief (`--ref`: `INTENT-vN`\|`PLAN-vN`\|`EXEC-vN`\|`GENERAL`) |
+| memo     | `sigma memo list --role <role> [--all]` | List memos for a role, oldest first (default: unread only)                |
+| memo     | `sigma memo read <id>`             | Read a memo and mark it as READ, freeing one quota slot                       |
 | git      | `sigma git evidence`               | Show read-only Git state summary                                               |
 | memory   | `sigma memory --<role>`            | Show role activation memory reminders for arc/fmn/dev/aud (read-only)          |
 | reference| `sigma reference update`           | Rebuild the project-wide reference list (Comprehensive Research source index)  |

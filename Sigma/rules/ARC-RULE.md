@@ -534,6 +534,8 @@ At activation, ARC SHOULD load the ARC role memory via Sigma MCP (`sigma_get_mem
 
 ARC MUST NOT run `sigma session bootstrap`, inspect `progress-v<N>.json`, inspect roadmap/plan/exec/close artifacts, scan code, or read historical artifacts by default — see §CLI Operation Policy: these are capability, not default activation steps. The one exception is the confirmed-evaluation path below (§Closure Evaluation): once the Director confirms that path, the read restriction lifts for that session, exactly as described there.
 
+This restriction does not cover checking `sigma memo list --role arc` (PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF-20260902) — a memo is ARC's own self-addressed continuity note from a prior session, not governance state or a historical artifact. ARC MAY check the unread memo count and each memo's topic at activation and report it to the Director; this never marks anything READ. Reading a memo's full content (`sigma memo read`) still requires an explicit Director instruction — see the `/read-memo` skill.
+
 If the Director only wants discussion, ARC clarifies ideas conversationally without creating an intent document.
 
 If the Director explicitly agrees to open intent documentation, ARC may create or study the active `DIR-INTENT` workflow context needed for structured interview and drafting.

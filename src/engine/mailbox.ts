@@ -150,6 +150,12 @@ export function generateMessageId(from: SigmaRole, to: SigmaRole, ts: string, su
 }
 
 export function generateFilename(type: MessageType, from: SigmaRole, to: SigmaRole, ts: string, suffix: string): string {
+  // MEMO is always from === to; the generic "<TYPE>-<FROM>-to-<TO>" pattern
+  // would render as "MEMO-DEV-to-DEV", a redundant role mention. Special-case
+  // to a role-once form instead.
+  if (type === 'MEMO') {
+    return `MEMO-${from}-${formatTimestampForId(ts)}-${suffix}.md`;
+  }
   return `${formatTimestampForId(ts)}-${suffix}-${type}-${from}-to-${to}.md`;
 }
 
@@ -196,8 +202,14 @@ ${body}
 `;
 }
 
-export function getUnreadForRole(index: MessageIndex, role: SigmaRole): MessageEntry[] {
-  return index.messages.filter(m => m.to === role && m.status === 'UNREAD');
+export function getUnreadForRole(
+  index: MessageIndex,
+  role: SigmaRole,
+  opts: { excludeMemo?: boolean } = {}
+): MessageEntry[] {
+  return index.messages.filter(m =>
+    m.to === role && m.status === 'UNREAD' && (!opts.excludeMemo || m.type !== 'MEMO')
+  );
 }
 
 // Inbox listing tiers (Phase 6):
@@ -206,13 +218,24 @@ export function getUnreadForRole(index: MessageIndex, role: SigmaRole): MessageE
 //   'outdated' — OUTDATED only (`--outdated`)
 export type InboxView = 'unread' | 'all' | 'outdated';
 
+// MEMO is self-to-self and has its own listing (`sigma memo list`) — never
+// shown in the cross-role `sigma inbox` view, in any tier.
 export function selectInboxMessages(index: MessageIndex, role: SigmaRole, view: InboxView): MessageEntry[] {
   return index.messages.filter(m => {
     if (m.to !== role) return false;
+    if (m.type === 'MEMO') return false;
     if (view === 'unread') return m.status === 'UNREAD';
     if (view === 'outdated') return m.status === 'OUTDATED';
     return m.status !== 'OUTDATED';
   });
+}
+
+export function getUnreadMemosForRole(index: MessageIndex, role: SigmaRole): MessageEntry[] {
+  return index.messages.filter(m => m.to === role && m.type === 'MEMO' && m.status === 'UNREAD');
+}
+
+export function countUnreadMemos(index: MessageIndex, role: SigmaRole): number {
+  return getUnreadMemosForRole(index, role).length;
 }
 
 // READ messages addressed to `role`, oldest-first, beyond the `keep` most

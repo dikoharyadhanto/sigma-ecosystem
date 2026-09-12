@@ -14,6 +14,8 @@ exports.generateFilename = generateFilename;
 exports.buildMessageMarkdown = buildMessageMarkdown;
 exports.getUnreadForRole = getUnreadForRole;
 exports.selectInboxMessages = selectInboxMessages;
+exports.getUnreadMemosForRole = getUnreadMemosForRole;
+exports.countUnreadMemos = countUnreadMemos;
 exports.selectSurplusRead = selectSurplusRead;
 exports.updateMessageStatus = updateMessageStatus;
 exports.resolveInboxDir = resolveInboxDir;
@@ -122,6 +124,12 @@ function generateMessageId(from, to, ts, suffix) {
     return `MSG-${formatTimestampForId(ts)}-${suffix}-${from}-${to}`;
 }
 function generateFilename(type, from, to, ts, suffix) {
+    // MEMO is always from === to; the generic "<TYPE>-<FROM>-to-<TO>" pattern
+    // would render as "MEMO-DEV-to-DEV", a redundant role mention. Special-case
+    // to a role-once form instead.
+    if (type === 'MEMO') {
+        return `MEMO-${from}-${formatTimestampForId(ts)}-${suffix}.md`;
+    }
     return `${formatTimestampForId(ts)}-${suffix}-${type}-${from}-to-${to}.md`;
 }
 function buildMessageMarkdown(entry, body) {
@@ -165,12 +173,16 @@ ${actionChecklist}
 ${body}
 `;
 }
-function getUnreadForRole(index, role) {
-    return index.messages.filter(m => m.to === role && m.status === 'UNREAD');
+function getUnreadForRole(index, role, opts = {}) {
+    return index.messages.filter(m => m.to === role && m.status === 'UNREAD' && (!opts.excludeMemo || m.type !== 'MEMO'));
 }
+// MEMO is self-to-self and has its own listing (`sigma memo list`) — never
+// shown in the cross-role `sigma inbox` view, in any tier.
 function selectInboxMessages(index, role, view) {
     return index.messages.filter(m => {
         if (m.to !== role)
+            return false;
+        if (m.type === 'MEMO')
             return false;
         if (view === 'unread')
             return m.status === 'UNREAD';
@@ -178,6 +190,12 @@ function selectInboxMessages(index, role, view) {
             return m.status === 'OUTDATED';
         return m.status !== 'OUTDATED';
     });
+}
+function getUnreadMemosForRole(index, role) {
+    return index.messages.filter(m => m.to === role && m.type === 'MEMO' && m.status === 'UNREAD');
+}
+function countUnreadMemos(index, role) {
+    return getUnreadMemosForRole(index, role).length;
 }
 // READ messages addressed to `role`, oldest-first, beyond the `keep` most
 // recent by created_at — the ones `sigma inbox clear` and the `inbox read`

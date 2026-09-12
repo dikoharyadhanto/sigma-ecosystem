@@ -212,6 +212,34 @@ describe('sigma_get_orientation', () => {
     expect(out.blockers).toContain('Gate 3 (Build Evidence) is BLOCKED');
     expect(Array.isArray(out.next_valid_operations)).toBe(true);
     expect(out.inbox_unread).toEqual({});
+    expect(out.memo_unread).toEqual({});
+  });
+
+  // PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF-20260902 — inbox_unread must
+  // exclude MEMO (mirrors the sigma send gate / sigma session bootstrap
+  // "Role Inbox"); memo_unread is the separate self-addressed count (mirrors
+  // sigma session bootstrap's "Unread Memos").
+  it('splits inbox_unread (cross-role, excludes MEMO) from memo_unread (self-addressed)', () => {
+    env = setupTestEnv();
+    projectWithChain(env, makeChainWithLockedPlan());
+
+    const now = new Date().toISOString();
+    fs.outputJsonSync(path.join(env.projectDir, 'Sigma', 'messages', 'index.json'), {
+      messages: [
+        {
+          id: 'MSG-1', from: 'ARC', to: 'DEV', type: 'NOTE', subject: 'hi',
+          file: 'Sigma/messages/DEV/msg1.md', status: 'UNREAD', created_at: now, attachments: [],
+        },
+        {
+          id: 'MSG-2', from: 'DEV', to: 'DEV', type: 'MEMO', subject: 'self note',
+          file: 'Sigma/messages/DEV/memo1.md', status: 'UNREAD', created_at: now, attachments: [],
+        },
+      ],
+    });
+
+    const out = computeOrientation(env.projectDir) as Payload;
+    expect(out.inbox_unread).toEqual({ DEV: 1 });
+    expect(out.memo_unread).toEqual({ DEV: 1 });
   });
 });
 

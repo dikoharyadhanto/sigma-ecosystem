@@ -8,6 +8,7 @@ import {
   selectInboxMessages,
   selectSurplusRead,
   updateMessageStatus,
+  countUnreadMemos,
   VALID_STATUSES,
   InboxView,
   MessageEntry,
@@ -40,6 +41,13 @@ function printMessageSummary(entry: MessageEntry, index: number): void {
   }
 }
 
+function printMemoPointer(index: ReturnType<typeof readIndex>, role: MessagingRole): void {
+  const unreadMemos = countUnreadMemos(index, role);
+  if (unreadMemos > 0) {
+    console.log(`\n${unreadMemos} unread memo${unreadMemos > 1 ? 's' : ''} — sigma memo list --role ${role.toLowerCase()}`);
+  }
+}
+
 function runList(role: MessagingRole, view: InboxView): void {
   const projectRoot = findProjectRoot();
   const index = readIndex(projectRoot);
@@ -51,6 +59,7 @@ function runList(role: MessagingRole, view: InboxView): void {
 
   if (messages.length === 0) {
     console.log(`No ${label}s.`);
+    printMemoPointer(index, role);
     console.log('');
     return;
   }
@@ -58,6 +67,7 @@ function runList(role: MessagingRole, view: InboxView): void {
   console.log(`${messages.length} ${label}${messages.length === 1 ? '' : 's'}:`);
   messages.forEach((m, i) => printMessageSummary(m, i + 1));
   console.log(`\nRun: sigma inbox read <id>`);
+  printMemoPointer(index, role);
   console.log('');
 }
 

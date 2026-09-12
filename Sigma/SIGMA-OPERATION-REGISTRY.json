@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-08-19T10:01:41.423Z",
   "description": "Sigma Operation Registry \u2014 all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 56,
+  "total_operations": 59,
   "domains": [
     "close",
     "config",
@@ -11,6 +11,7 @@
     "git",
     "inbox",
     "intent",
+    "memo",
     "memory",
     "override",
     "plan",
@@ -2183,6 +2184,169 @@
       "gating": {
         "pre_condition": "none",
         "post_condition": "none \u2014 informational only"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "memo_write",
+      "domain": "memo",
+      "action": "write",
+      "level": "semantic",
+      "role": "any",
+      "description": "Write a self-to-self operational brief. Always self-addressed (from === to); --to is rejected. Excluded from the sigma send unread gate and from sigma inbox listings \u2014 has its own per-role unread quota.",
+      "inputs": [
+        {
+          "name": "--role",
+          "type": "string",
+          "required": true,
+          "description": "Role this memo belongs to (arc|fmn|dev|aud)"
+        },
+        {
+          "name": "--ref",
+          "type": "string",
+          "required": true,
+          "description": "Sigma Artifact Reference: INTENT-vN | PLAN-vN | EXEC-vN | GENERAL"
+        },
+        {
+          "name": "--topic",
+          "type": "string",
+          "required": true,
+          "description": "One-sentence topic; auto-fills --subject when --subject is omitted"
+        },
+        {
+          "name": "--message",
+          "type": "string",
+          "required": false,
+          "description": "Memo body (single-line; use --message-file for multi-line content)"
+        },
+        {
+          "name": "--message-file",
+          "type": "string",
+          "required": false,
+          "description": "Path to a file whose contents become the memo body (preserves newlines)"
+        },
+        {
+          "name": "--subject",
+          "type": "string",
+          "required": false,
+          "description": "Short subject line (defaults to --topic)"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Memo file created in Sigma/messages/{ROLE}/ and registered in Sigma/messages/index.json as type MEMO"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "--to is not accepted",
+          "error_message": "sigma memo does not take --to \u2014 a memo is always to your own role. Use sigma send for cross-role messages."
+        },
+        {
+          "type": "state",
+          "condition": "role's unread memo count must be below the configured quota (mailbox.memo_unread_limit, default 5)",
+          "error_message": "MEMO QUOTA FULL \u2014 read existing unread memos first"
+        },
+        {
+          "type": "state",
+          "condition": "quota must not be disabled",
+          "error_message": "Memo is disabled (mailbox.memo_unread_limit = 0)"
+        },
+        {
+          "type": "flag",
+          "condition": "--ref must match INTENT-vN | PLAN-vN | EXEC-vN | GENERAL",
+          "error_message": "Invalid --ref"
+        },
+        {
+          "type": "flag",
+          "condition": "--topic must be non-empty",
+          "error_message": "--topic is required and must not be empty"
+        }
+      ],
+      "gating": {
+        "pre_condition": "role's unread memo count below quota; quota not disabled",
+        "post_condition": "one new UNREAD memo entry for the role; progress-v<N>.json untouched"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "memo_list",
+      "domain": "memo",
+      "action": "list",
+      "level": "read_only",
+      "role": "any",
+      "description": "List memos for a role, oldest first. Default shows unread only; --all includes READ and OUTDATED.",
+      "inputs": [
+        {
+          "name": "--role",
+          "type": "string",
+          "required": true,
+          "description": "Role inbox to view (arc|fmn|dev|aud)"
+        },
+        {
+          "name": "--all",
+          "type": "flag",
+          "required": false,
+          "description": "Include READ and OUTDATED memos (default: unread only)"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Memo listing (status, Sigma Artifact Reference, subject, id, created_at) and quota usage for the selected role"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "flag",
+          "condition": "--role must be a valid messaging role",
+          "error_message": "--role is required (arc|fmn|dev|aud)"
+        }
+      ],
+      "gating": {
+        "pre_condition": "none \u2014 empty/missing mailbox lists nothing",
+        "post_condition": "none \u2014 read-only"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "memo_read",
+      "domain": "memo",
+      "action": "read",
+      "level": "semantic",
+      "role": "any",
+      "description": "Read a memo: prints its full content and marks it READ, freeing one quota slot. Rejects an id whose type is not MEMO. Runs the same legacy auto-sweep as sigma inbox read (shared READ pool with regular messages).",
+      "inputs": [
+        {
+          "name": "<memo-id>",
+          "type": "string",
+          "required": true,
+          "description": "Memo ID to read, e.g. MSG-20260912-..."
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Memo status \u2192 READ in Sigma/messages/index.json and the memo file; content printed; older surplus READ entries for the role may age to OUTDATED"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "memo id must exist in the mailbox index",
+          "error_message": "Memo not found"
+        },
+        {
+          "type": "state",
+          "condition": "entry type must be MEMO",
+          "error_message": "<id> is not a memo. Use: sigma inbox read <id>"
+        }
+      ],
+      "gating": {
+        "pre_condition": "memo exists and is type MEMO",
+        "post_condition": "memo no longer counts against the role's unread memo quota"
       },
       "error_messages": {}
     }

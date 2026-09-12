@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sigma Read Memo"
+  short_description: "Check and read pending self-addressed memos (sigma memo list / sigma memo read) for the active role"
+  default_prompt: "Use #read-memo to check and read pending self-addressed memos for the active role."

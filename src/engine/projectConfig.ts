@@ -33,12 +33,18 @@ export interface NotionHumanizeGateConfig {
 // manually). Non-destructive: OUTDATED messages stay on disk and in the
 // index, still reachable via `sigma inbox read <id>` and `sigma inbox
 // --role <r> --outdated`.
+// PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF §3/§9 poin 1 (Director 2026-09-12).
+// Max unread MEMO entries per role before `sigma memo write` is blocked.
+// 0 disables the memo feature entirely (mirrors auto_outdate_read_keep's
+// 0-disables convention).
 export interface MailboxConfig {
   auto_outdate_read_keep: number;
+  memo_unread_limit: number;
 }
 
-const DEFAULT_MAILBOX: MailboxConfig = {
+export const DEFAULT_MAILBOX: MailboxConfig = {
   auto_outdate_read_keep: 5,
+  memo_unread_limit: 5,
 };
 
 export interface ProjectConfig {
@@ -107,6 +113,18 @@ export function resolveAutoOutdateKeep(config: ProjectConfig): number {
   const raw = config.mailbox?.auto_outdate_read_keep;
   if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0) {
     return DEFAULT_MAILBOX.auto_outdate_read_keep;
+  }
+  return Math.floor(raw);
+}
+
+// Resolves the per-role MEMO unread quota, tolerating a missing or malformed
+// `mailbox` block (including project.config.json written before this field
+// existed). An explicit 0 is honored (disables `sigma memo write` entirely);
+// anything non-numeric or negative falls back to the default.
+export function resolveMemoLimit(config: ProjectConfig): number {
+  const raw = config.mailbox?.memo_unread_limit;
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0) {
+    return DEFAULT_MAILBOX.memo_unread_limit;
   }
   return Math.floor(raw);
 }

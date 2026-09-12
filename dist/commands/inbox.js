@@ -32,6 +32,12 @@ function printMessageSummary(entry, index) {
         console.log(`   Attach   : ${entry.attachments.join(', ')}`);
     }
 }
+function printMemoPointer(index, role) {
+    const unreadMemos = (0, mailbox_1.countUnreadMemos)(index, role);
+    if (unreadMemos > 0) {
+        console.log(`\n${unreadMemos} unread memo${unreadMemos > 1 ? 's' : ''} — sigma memo list --role ${role.toLowerCase()}`);
+    }
+}
 function runList(role, view) {
     const projectRoot = (0, fs_1.findProjectRoot)();
     const index = (0, mailbox_1.readIndex)(projectRoot);
@@ -40,12 +46,14 @@ function runList(role, view) {
     const label = view === 'unread' ? 'unread message' : view === 'outdated' ? 'outdated message' : 'message';
     if (messages.length === 0) {
         console.log(`No ${label}s.`);
+        printMemoPointer(index, role);
         console.log('');
         return;
     }
     console.log(`${messages.length} ${label}${messages.length === 1 ? '' : 's'}:`);
     messages.forEach((m, i) => printMessageSummary(m, i + 1));
     console.log(`\nRun: sigma inbox read <id>`);
+    printMemoPointer(index, role);
     console.log('');
 }
 function runRead(messageId) {

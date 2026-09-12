@@ -25,9 +25,13 @@ export declare function generateRandomSuffix(): string;
 export declare function generateMessageId(from: SigmaRole, to: SigmaRole, ts: string, suffix: string): string;
 export declare function generateFilename(type: MessageType, from: SigmaRole, to: SigmaRole, ts: string, suffix: string): string;
 export declare function buildMessageMarkdown(entry: MessageEntry, body: string): string;
-export declare function getUnreadForRole(index: MessageIndex, role: SigmaRole): MessageEntry[];
+export declare function getUnreadForRole(index: MessageIndex, role: SigmaRole, opts?: {
+    excludeMemo?: boolean;
+}): MessageEntry[];
 export type InboxView = 'unread' | 'all' | 'outdated';
 export declare function selectInboxMessages(index: MessageIndex, role: SigmaRole, view: InboxView): MessageEntry[];
+export declare function getUnreadMemosForRole(index: MessageIndex, role: SigmaRole): MessageEntry[];
+export declare function countUnreadMemos(index: MessageIndex, role: SigmaRole): number;
 export declare function selectSurplusRead(index: MessageIndex, role: SigmaRole, keep: number): MessageEntry[];
 export declare function updateMessageStatus(index: MessageIndex, id: string, status: 'READ' | 'ARCHIVED' | 'OUTDATED'): MessageEntry;
 export declare function resolveInboxDir(projectRoot: string, role: SigmaRole): string;
