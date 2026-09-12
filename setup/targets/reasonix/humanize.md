@@ -33,13 +33,18 @@ This skill produces separate documents derived from those artifacts — `DIR-INT
 
 ```text
 /humanize
-/humanize <file or section>
-/humanize this
-create file <path> with /humanize
-update this file <path> with /humanize
+/humanize LOW
+/humanize BALANCE <file or section>
+/humanize HIGH this
+create file <path> with /humanize HIGH
+update this file <path> with /humanize LOW
 ```
 
 Applies to whatever the Director indicates — the current draft in progress, a named file, or a specific section. The skill combines naturally with an ordinary file request rather than requiring its own separate step: "create file `docs/onboarding.md` with /humanize" drafts new content directly in this style from the start; "update this file `README.md` with /humanize" rewrites existing content in place, applying Preserve/Compress/Rephrase/Infer (below) to what's already there. If the target is ambiguous, ask once rather than guessing.
+
+An optional technical detail level — `LOW`, `BALANCE`, or `HIGH` — may follow the activation word; see "Technical Detail Level" below for what each means. Level ambiguity is handled differently from target ambiguity: if no level is stated, apply `BALANCE` without asking. Only ask when the target — which file or section — is unclear.
+
+**Activation Scope:** `/humanize` is never active by default and never applies to a file the Director has not pointed it at. Invoking it stays scoped to the specific file, section, or draft named in that request — it never becomes a standing mode applied to other, unrelated files for the rest of the session. Once a specific file has been humanized within a session, later revisions to that same file continue to use this skill without repeating the activation word; that persistence is locked to that file and never extends to any other file. This activation state belongs to the current working session only — it is never stored as a persistent memory or preference that would auto-apply `/humanize` in a future session without a fresh, explicit instruction.
 
 ## Target Audience & Purpose
 
@@ -71,6 +76,24 @@ Simplifying for readability must never simplify away doubt, partial results, or 
 - **Compress** — repetitive detail, verbose reasoning, mechanical metadata. Free to shorten.
 - **Rephrase** — wording and structure. Free to change for clarity.
 - **Infer** — forbidden. Never add a conclusion, judgment, or degree of completeness the source does not itself support.
+
+## Technical Detail Level
+
+`/humanize` supports three technical detail levels: `LOW`, `BALANCE`, and `HIGH`. The level controls how much implementation detail is shown — it never changes which decisions, statuses, risks, limitations, or degree of certainty the source supports. The Core Invariant above and the Preserve/Compress/Rephrase/Infer operations apply identically at every level.
+
+If no level is stated when `/humanize` is activated, apply `BALANCE`. Once a level is chosen for a document, it stays in effect for the rest of that revision sequence — a level change requires an explicit Director instruction, never an inferred one.
+
+| Level | Primary reader | Detail included | Detail usually dropped |
+| :--- | :--- | :--- | :--- |
+| `LOW` | General or non-technical readers who only need to understand the outcome | Purpose, outcome, how to use it, impact, decisions that affect the reader, risks or limitations that need follow-up | Component names, internal structure, algorithms, interfaces, and implementation mechanics that don't change the reader's decision |
+| `BALANCE` | Cross-functional stakeholders, product/operations, or readers with light technical background | Outcome, key technical reasoning, a short workflow, important components at a conceptual level, trade-offs, risks, and relevant verification evidence | Code-level detail, low-level configuration, and implementation narrative not needed to understand the decision or impact |
+| `HIGH` | Developers, architects, and technical reviewers | Architecture, data or control flow, interfaces, dependencies, assumptions, technical decisions, trade-offs, failure modes, limitations, and verification evidence | Source detail immaterial to understanding, review, or technical decisions; Sigma internal terminology stays forbidden regardless |
+
+`HIGH` does not mean copying the entire source. Compression still applies to repetition, mechanical metadata, and immaterial detail. `LOW` must never drop a risk, limitation, or decision the reader needs to understand.
+
+A single document may mix a primary level with a per-section exception — for example, a `LOW` summary with a `HIGH` technical appendix — only when the Director states this explicitly. Never create this split from assumption; when the target audience or detail need is unclear, the level stays `BALANCE` until the Director changes it.
+
+Rule 8 below (Never use Sigma terminology) applies without exception at every level — a `HIGH` technical explanation is never grounds to surface Sigma-internal names, states, gates, roles, or commands.
 
 ## Writing Rules
 

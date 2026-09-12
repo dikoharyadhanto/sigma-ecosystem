@@ -225,6 +225,13 @@ DEV should report in DEV-EXEC:
 
 ### 9.1 AUD Advisory Verdict
 
+**Verdict criteria** *(basis for picking one below — for AUD when issuing the verdict, and for FMN/ARC when transcribing it)*:
+
+- **PASS** — no finding requires action, or everything AUD would otherwise check was already handled by FMN/ARC before this audit.
+- **PASS_WITH_RISK** — findings are minor and not fatal if left as-is; or FMN/ARC deliberately decided not to act on a finding, with the Director's awareness and FMN/ARC's own stated position. Commonly used near the revision-round limit (commonly 2–3 rounds) when only minor items remain. This verdict assumes the minor finding was either applied, or knowingly left unaddressed with Director + FMN/ARC agreement. Does not require a full re-audit — a simple report is enough; the revised file does not need to be attached in full.
+- **REVISE** — the finding is major or fatal if left unaddressed, and must be fixed and re-audited by AUD before this artifact can lock. The full revised file must be sent/attached to AUD, or read again by AUD, before the next verdict.
+- **REJECT_RECOMMENDED** — rare. Used when continuing the revise-and-reaudit cycle above is not the right move: the flaw traces back to an earlier decision and cannot be fixed by revising this artifact alone, the revision-round limit was reached with the same major finding still unresolved, evidence actively contradicts a core claim (not merely unverified), or the risk is disqualifying rather than something that can be accepted with a caveat. This is a recommendation only — the Director decides whether to step back a stage, accept the risk directly, or override.
+
 **Verdict**:
 
 > Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
@@ -233,7 +240,6 @@ DEV should report in DEV-EXEC:
 - [ ] PASS_WITH_RISK
 - [ ] REVISE
 - [ ] REJECT_RECOMMENDED
-- [ ] PROMOTE_TO_HEAVIER_PROCESS
 - [ ] OTHER: [describe]
 - [ ] SKIP_FOR_AUDIT — Director explicitly approved skipping audit for this lock cycle
 

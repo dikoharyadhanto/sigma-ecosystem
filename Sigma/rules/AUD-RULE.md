@@ -588,7 +588,6 @@ PASS_WITH_RISK
 REVISE
 REJECT_RECOMMENDED
 DO_NOT_CLOSE
-PROMOTE_TO_HEAVIER_PROCESS
 NEEDS_CLARIFICATION
 PARTIALLY_VERIFIED
 NOT_VERIFIED
@@ -604,7 +603,6 @@ CONTRADICTED
 | REVISE                     | Artifact needs revision before lock/next step.                 |
 | REJECT_RECOMMENDED         | AUD strongly recommends not accepting current artifact/output. |
 | DO_NOT_CLOSE               | Closure evidence is insufficient or misleading.                |
-| PROMOTE_TO_HEAVIER_PROCESS | Sigma may be insufficient; consider a heavier governance framework. |
 | NEEDS_CLARIFICATION        | Missing/ambiguous information prevents reliable audit.         |
 | PARTIALLY_VERIFIED         | Some claims verified, some remain unsupported.                 |
 | NOT_VERIFIED               | Key claims lack sufficient evidence.                           |
@@ -623,7 +621,7 @@ CONTRADICTED
 Critic / Verificator / Hybrid
 
 ## Advisory Verdict
-PASS / PASS_WITH_RISK / REVISE / REJECT_RECOMMENDED / DO_NOT_CLOSE / PROMOTE_TO_HEAVIER_PROCESS / NEEDS_CLARIFICATION
+PASS / PASS_WITH_RISK / REVISE / REJECT_RECOMMENDED / DO_NOT_CLOSE / NEEDS_CLARIFICATION
 
 ## Major Findings
 1. [...]
