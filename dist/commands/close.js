@@ -75,7 +75,7 @@ function closeCommand() {
                 }
             }
             const version = chain.chain_version;
-            const relPath = path_1.default.join('Sigma', 'close', `DIR-CLOSE-${version}.md`);
+            const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'close', `DIR-CLOSE-${version}.md`));
             const absPath = path_1.default.join(projectRoot, relPath);
             (0, artifacts_1.copyTemplateToArtifact)('DIR-CLOSE-TEMPLATE.md', absPath);
             (0, chain_1.registerCloseDraft)(chain, relPath);
@@ -179,8 +179,8 @@ function closeCommand() {
                     `(generated ${chain.close.human.generated_at}).\n` +
                     'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.');
             }
-            const humanRelPath = path_1.default.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.md`);
-            const ledgerRelPath = path_1.default.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.fidelity.md`);
+            const humanRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.md`));
+            const ledgerRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.fidelity.md`));
             (0, artifacts_1.copyTemplateToArtifact)('DIR-CLOSE-HUMAN-TEMPLATE.md', path_1.default.join(projectRoot, humanRelPath));
             (0, artifacts_1.copyTemplateToArtifact)('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path_1.default.join(projectRoot, ledgerRelPath));
             chain.close.human = {
@@ -202,7 +202,7 @@ function closeCommand() {
     });
     cmd.command('check')
         .description('Validate a DIR-CLOSE structure and markers')
-        .option('--v <version>', 'Check the DIR-CLOSE of a specific chain instead of the active one')
+        .option('--v <version>', 'Check the DIR-CLOSE of a specific chain instead of the active one', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();

@@ -10,6 +10,7 @@ exports.findSigmaProjectRoot = findSigmaProjectRoot;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
+const fs_1 = require("../utils/fs");
 const chain_1 = require("./chain");
 // PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816 — `dirs` (plural, new name
 // first) instead of a single `dir`. Reconstruct has no stored entry.file to
@@ -42,7 +43,7 @@ function discoverArtifacts(projectRoot) {
                 const match = filename.match(regex);
                 if (!match)
                     continue;
-                const relFile = path_1.default.join(config_1.PROJECT_SIGMA_DIR, dir, filename);
+                const relFile = (0, fs_1.toPosix)(path_1.default.join(config_1.PROJECT_SIGMA_DIR, dir, filename));
                 const absFile = path_1.default.join(absDir, filename);
                 const actualType = readDocType(absFile);
                 if (actualType !== docType) {

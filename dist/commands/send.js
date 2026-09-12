@@ -96,12 +96,12 @@ function runSend(opts) {
         const attachFilename = `${msgId}-${path_1.default.basename(srcPath)}`;
         const destPath = path_1.default.join(attachDir, attachFilename);
         fs_extra_1.default.copySync(srcPath, destPath);
-        attachmentPaths.push(path_1.default.join(config_1.MESSAGES_ATTACHMENTS_DIR, attachFilename));
+        attachmentPaths.push((0, fs_1.toPosix)(path_1.default.join(config_1.MESSAGES_ATTACHMENTS_DIR, attachFilename)));
     }
     // Build index entry
     const inboxDir = (0, mailbox_1.resolveInboxDir)(projectRoot, toRole);
     fs_extra_1.default.ensureDirSync(inboxDir);
-    const relFilePath = path_1.default.join('Sigma', 'messages', toRole, filename);
+    const relFilePath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'messages', toRole, filename));
     const entry = {
         id: msgId,
         from: fromRole,

@@ -10,6 +10,7 @@ import {
   readOverrides,
   resolveActiveChainVersion,
   parseMajorVersion,
+  normalizeVersionArg,
 } from '../engine/chain';
 import { reconstructAllChains, findSigmaProjectRoot, MultiReconstructResult } from '../engine/reconstruct';
 import { findProjectRoot } from '../utils/fs';
@@ -243,7 +244,7 @@ export function doctorCommand(): Command {
     .option('--recovery', 'Explicit alias for the default reconciliation behavior (same as running with no flag)')
     .option('--all-versions', 'Apply to every chain found on disk instead of just the active one')
     .option('--reconstruct', 'Rebuild chain file(s) from artifact files on disk (use when a progress-v<N>.json is missing or corrupted)')
-    .option('--v <version>', 'With --reconstruct, target one specific chain instead of the active one (e.g. v2)')
+    .option('--v <version>', 'With --reconstruct, target one specific chain instead of the active one (e.g. v2)', normalizeVersionArg)
     .action((opts: { recovery?: boolean; allVersions?: boolean; reconstruct?: boolean; v?: string }) => {
       try {
         if (opts.v && !opts.reconstruct) {

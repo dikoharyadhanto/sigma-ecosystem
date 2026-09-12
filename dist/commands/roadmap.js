@@ -38,7 +38,7 @@ function roadmapCommand() {
                 throw new Error('ROADMAP requires a ratified DIR-INTENT. Run: sigma intent ratify');
             }
             const version = chain.chain_version;
-            const relPath = path_1.default.join('Sigma', 'roadmap', `ROADMAP-${version}.md`);
+            const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'roadmap', `ROADMAP-${version}.md`));
             const absPath = path_1.default.join(projectRoot, relPath);
             (0, artifacts_1.copyTemplateToArtifact)('ROADMAP-TEMPLATE.md', absPath);
             (0, chain_1.registerRoadmapDraft)(chain, relPath);
@@ -57,7 +57,7 @@ function roadmapCommand() {
     });
     cmd.command('check')
         .description('Validate a ROADMAP structure and markers')
-        .option('--v <version>', 'Check the ROADMAP of a specific chain instead of the active one')
+        .option('--v <version>', 'Check the ROADMAP of a specific chain instead of the active one', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();

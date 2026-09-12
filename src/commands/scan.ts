@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
 import chalk from 'chalk';
-import { findProjectRoot } from '../utils/fs';
+import { findProjectRoot, toPosix } from '../utils/fs';
 import { scanForSigmaTerminology, loadTerminologyList } from '../engine/terminologyScanner';
 import { PROJECT_SIGMA_DIR } from '../config';
 
@@ -62,7 +62,7 @@ export function scanCommand(): Command {
         const logsDir = path.join(projectRoot, PROJECT_SIGMA_DIR, 'logs');
         fs.ensureDirSync(logsDir);
         const logFileName = `${timestampSlug(new Date())}_terminology-scan.log`;
-        const logRelPath = path.join(PROJECT_SIGMA_DIR, 'logs', logFileName);
+        const logRelPath = toPosix(path.join(PROJECT_SIGMA_DIR, 'logs', logFileName));
         const logAbsPath = path.join(logsDir, logFileName);
 
         const lines: string[] = [];

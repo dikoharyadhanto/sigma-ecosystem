@@ -11,6 +11,7 @@ exports.reconcileSupersededHumanArtifacts = reconcileSupersededHumanArtifacts;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("./chain");
+const fs_1 = require("../utils/fs");
 const notionService_1 = require("./notionService");
 const terminologyScanner_1 = require("./terminologyScanner");
 const fidelityCoverage_1 = require("./fidelityCoverage");
@@ -26,8 +27,8 @@ function computeHumanNotionTitle(kind, version, projectName) {
 }
 function humanPaths(prefix, version) {
     return {
-        humanRelPath: path_1.default.join('Sigma', 'human', `${prefix}-${version}.md`),
-        ledgerRelPath: path_1.default.join('Sigma', 'human', `${prefix}-${version}.fidelity.md`),
+        humanRelPath: (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `${prefix}-${version}.md`)),
+        ledgerRelPath: (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `${prefix}-${version}.fidelity.md`)),
     };
 }
 // Collects every human artifact the chain currently knows about — not just
@@ -50,7 +51,7 @@ function collectHumanPushTargets(chain) {
             version: chain.intent.version,
             humanRelPath,
             ledgerRelPath,
-            sourceRelPaths: [chain.intent.file ?? path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`)],
+            sourceRelPaths: [chain.intent.file ?? (0, fs_1.toPosix)(path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`))],
             coverageConfig: fidelityCoverage_1.DIR_INTENT_COVERAGE_CONFIG,
         });
     }
@@ -62,8 +63,8 @@ function collectHumanPushTargets(chain) {
             ? chain.plan.versions.find(v => v.version === execEntry.plan_version_ref)
             : undefined;
         const sourceRelPaths = [
-            planEntry?.file ?? (execEntry.plan_version_ref ? path_1.default.join('Sigma', 'contract', `FMN-PLAN-${execEntry.plan_version_ref}.md`) : undefined),
-            execEntry.file ?? path_1.default.join('Sigma', 'evidence', `DEV-EXEC-${execEntry.version}.md`),
+            planEntry?.file ?? (execEntry.plan_version_ref ? (0, fs_1.toPosix)(path_1.default.join('Sigma', 'contract', `FMN-PLAN-${execEntry.plan_version_ref}.md`)) : undefined),
+            execEntry.file ?? (0, fs_1.toPosix)(path_1.default.join('Sigma', 'evidence', `DEV-EXEC-${execEntry.version}.md`)),
         ].filter((p) => Boolean(p));
         targets.push({
             kind: 'exec',
@@ -83,7 +84,7 @@ function collectHumanPushTargets(chain) {
             version: chain.close.version,
             humanRelPath,
             ledgerRelPath,
-            sourceRelPaths: [chain.close.file ?? path_1.default.join('Sigma', 'close', `DIR-CLOSE-${chain.close.version}.md`)],
+            sourceRelPaths: [chain.close.file ?? (0, fs_1.toPosix)(path_1.default.join('Sigma', 'close', `DIR-CLOSE-${chain.close.version}.md`))],
             coverageConfig: fidelityCoverage_1.DIR_CLOSE_COVERAGE_CONFIG,
         });
     }

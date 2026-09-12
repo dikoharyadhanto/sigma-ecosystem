@@ -146,6 +146,23 @@ export function parseMajorVersion(version: string): number {
   return parseInt(match[1], 10);
 }
 
+// Stored version strings always carry a leading "v" (e.g. "v3", "v3.4").
+// Users routinely type `--v 3.4` instead of `--v v3.4` — the same version,
+// a different string, so a verbatim lookup silently misses and the command
+// reports "not found" (bug report 2026-08-30, Priority 5a). Normalize every
+// version-shaped CLI argument at the parse boundary: trim, drop a leading
+// "v"/"V", then re-add a lowercase "v" when what remains starts with a digit.
+// Anything else passes through untouched so a genuine typo still surfaces as
+// a normal "not found". Idempotent — "v3.4" and "V3.4" both yield "v3.4".
+// Wired in as a commander coercion fn: `.option('--v <version>', desc,
+// normalizeVersionArg)`, so `opts.v` is already normalized at every use.
+export function normalizeVersionArg(input: string | undefined): string | undefined {
+  if (input === undefined) return undefined;
+  const trimmed = input.trim();
+  const bare = trimmed.replace(/^[vV]/, '');
+  return /^\d/.test(bare) ? `v${bare}` : trimmed;
+}
+
 export function parseMinorVersion(version: string): number {
   const match = version.match(/^v\d+(?:\.(\d+))?/);
   if (!match) throw new Error(`Cannot parse minor version from "${version}"`);

@@ -30,6 +30,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { parse as parseTOML, stringify as stringifyTOML } from 'smol-toml';
+import { toPosix } from './fs';
 
 // ── Payload sigma-mcp ─────────────────────────────────────────────────────────
 
@@ -203,10 +204,17 @@ function findPluginBlockRange(
   return null;
 }
 
-/** Bentuk blok teks `[[plugins]]` untuk entri sigma-mcp milik Reasonix. */
+/** Bentuk blok teks `[[plugins]]` untuk entri sigma-mcp milik Reasonix.
+ *  projectRoot dinormalisasi ke forward slash lalu di-JSON-stringify: sebuah
+ *  path Windows mentah (`C:\Users\...`) yang ditulis apa adanya membuat
+ *  config.toml gagal parse ("invalid non-hex character in unicode escape" —
+ *  `\U` bukan escape TOML yang valid), sehingga Reasonix kehilangan SEMUA
+ *  plugin di file itu. Forward slash valid sebagai argumen path di Windows
+ *  maupun POSIX, dan JSON.stringify menghasilkan literal string kutip-ganda
+ *  yang sah untuk basic string TOML. */
 function makeReasonixPluginBlockLines(projectRoot?: string): string[] {
   const args = projectRoot && projectRoot.trim().length > 0
-    ? `["${projectRoot.trim()}"]`
+    ? `[${JSON.stringify(toPosix(projectRoot.trim()))}]`
     : '[]';
   return [
     '[[plugins]]',

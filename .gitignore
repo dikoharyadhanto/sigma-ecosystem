@@ -19,6 +19,10 @@ yarn-error.log*
 Thumbs.db
 desktop.ini
 
+#Informal Notes
+Implementation/
+Discussion/
+
 
 .claude/settings.local.json
 

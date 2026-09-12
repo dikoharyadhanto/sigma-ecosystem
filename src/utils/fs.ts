@@ -19,6 +19,22 @@ export function fileExists(filePath: string): boolean {
   return fs.existsSync(filePath);
 }
 
+// Cross-platform path portability (bug report 2026-08-30, BUG B + follow-up).
+// A relative path that Sigma *persists* (into progress-v<N>.json `entry.file`,
+// Sigma/messages/index.json `file`/`attachments`, a reconstructed chain) or
+// *string-compares* (inbox orphan check) or *prints as a stored location*
+// must use forward slashes on every OS. path.join() emits "\" on Windows, so
+// a chain/index written on Windows is unreadable on Linux without the
+// read-time normalizers (normalizeFilePathsOnRead, readIndex) — and any code
+// path that bypasses those (e.g. the orphan-file set comparison) breaks
+// outright. Forward slashes are accepted by path.join()/fs on Windows too, so
+// normalizing on write is the one fix that needs no OS branching and keeps
+// state portable at rest. Read-time normalizers stay as the safety net for
+// files written by older builds.
+export function toPosix(p: string): string {
+  return p.replace(/\\/g, '/');
+}
+
 // PLAN-EVAL-01 Fase 5 — anchors on Sigma/activate_status.json (written by
 // `sigma project start`/`--reinit`), not Sigma/progress.json. That file is
 // legacy/inert now (nothing reads its content, PLAN-EVAL-01 §3.6) and this

@@ -102,3 +102,40 @@ describe('Windows backslash file paths — read-time normalization', () => {
     expect(result.stdout).not.toMatch(/file path normalized to forward slashes/);
   });
 });
+
+// Companion to the read-time normalization above: the commands that *write*
+// a relative artifact/message path into JSON state now emit forward slashes
+// on every OS (utils/fs.ts toPosix), so a project's progress-v<N>.json and
+// messages/index.json are POSIX-at-rest even when authored on Windows — no
+// churn, no reliance on the read-time fixup for freshly written entries.
+describe('Path portability — commands persist forward-slash paths on every OS', () => {
+  let env: TestEnv;
+  afterEach(() => env?.cleanup());
+
+  it('sigma intent new stores intent.file with forward slashes', () => {
+    env = setupTestEnv();
+    fs.removeSync(env.sigmaDir);
+    runCli('project start --id PORTABLE --name "Portable" --confirm', env.projectDir, env.homeDir);
+
+    const result = runCli('intent new --title "T" --focus "F"', env.projectDir, env.homeDir);
+    expect(result.exitCode).toBe(0);
+
+    const chain = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
+    expect(chain.intent.file).toBe('Sigma/charter/DIR-INTENT-v1.md');
+    expect(chain.intent.file).not.toContain('\\');
+  });
+
+  it('sigma send stores the message file path with forward slashes', () => {
+    env = setupTestEnv();
+    fs.removeSync(env.sigmaDir);
+    runCli('project start --id PORTABLE --name "Portable" --confirm', env.projectDir, env.homeDir);
+
+    const result = runCli('send --from FMN --to DEV --type NOTE --subject "S" --message "B"', env.projectDir, env.homeDir);
+    expect(result.exitCode).toBe(0);
+
+    const index = fs.readJsonSync(path.join(env.sigmaDir, 'messages', 'index.json')) as Record<string, any>;
+    expect(index.messages).toHaveLength(1);
+    expect(index.messages[0].file).toMatch(/^Sigma\/messages\/DEV\//);
+    expect(index.messages[0].file).not.toContain('\\');
+  });
+});

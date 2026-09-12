@@ -36,7 +36,7 @@ function execCommand() {
     cmd.description('Manage DEV-EXEC artifact');
     cmd.command('new')
         .description('Create a new DEV-EXEC draft (requires a LOCKED FMN-PLAN with no open exec)')
-        .option('--plan <version>', 'Explicitly specify which locked plan to execute (required when multiple unexecuted locked plans exist)')
+        .option('--plan <version>', 'Explicitly specify which locked plan to execute (required when multiple unexecuted locked plans exist)', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -92,7 +92,7 @@ function execCommand() {
                     `Specify which to execute: sigma exec new --plan ${unexecutedPlans[0].version}`);
             }
             const version = (0, chain_1.nextExecVersion)(chain, planVersionRef);
-            const relPath = path_1.default.join('Sigma', 'evidence', `DEV-EXEC-${version}.md`);
+            const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'evidence', `DEV-EXEC-${version}.md`));
             const absPath = path_1.default.join(projectRoot, relPath);
             if (chain.exec.versions.some(v => v.version === version)) {
                 throw new Error(`EXEC CONFLICT: DEV-EXEC ${version} already exists in progress-${chainVersion}.json`);
@@ -117,7 +117,7 @@ function execCommand() {
     });
     cmd.command('lock')
         .description('Lock a DRAFT DEV-EXEC (re-evaluates Gate 3). Requires --v when more than one DRAFT is open.')
-        .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)')
+        .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -163,7 +163,7 @@ function execCommand() {
     // this (§3.4 / CR-01 — the gate belongs at the next `plan new`/`close new`).
     cmd.command('humanize')
         .description('Generate a human-readable projection of a LOCKED plan+exec pair for Notion (Sigma Humanize Operation)')
-        .option('--v <version>', 'EXEC version to humanize instead of the active one')
+        .option('--v <version>', 'EXEC version to humanize instead of the active one', chain_1.normalizeVersionArg)
         .option('--force', 'Overwrite an already-generated human projection for this version')
         .action((opts) => {
         try {
@@ -191,8 +191,8 @@ function execCommand() {
                     `(generated ${execEntry.human.generated_at}).\n` +
                     'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.');
             }
-            const humanRelPath = path_1.default.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.md`);
-            const ledgerRelPath = path_1.default.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.fidelity.md`);
+            const humanRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.md`));
+            const ledgerRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.fidelity.md`));
             (0, artifacts_1.copyTemplateToArtifact)('PLAN-EXEC-HUMAN-TEMPLATE.md', path_1.default.join(projectRoot, humanRelPath));
             (0, artifacts_1.copyTemplateToArtifact)('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path_1.default.join(projectRoot, ledgerRelPath));
             execEntry.human = {
@@ -214,7 +214,7 @@ function execCommand() {
     });
     cmd.command('check')
         .description('Validate a DEV-EXEC structure and markers')
-        .option('--v <version>', 'Check a specific DEV-EXEC version. Required when more than one DRAFT is open.')
+        .option('--v <version>', 'Check a specific DEV-EXEC version. Required when more than one DRAFT is open.', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();

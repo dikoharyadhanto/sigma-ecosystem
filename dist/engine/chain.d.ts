@@ -74,6 +74,7 @@ export interface OverrideEntry {
 }
 export declare function readOverrides(projectRoot: string): OverrideEntry[];
 export declare function parseMajorVersion(version: string): number;
+export declare function normalizeVersionArg(input: string | undefined): string | undefined;
 export declare function parseMinorVersion(version: string): number;
 export type IntentState = 'DRAFT' | 'RATIFIED' | 'SUPERSEDED';
 export type RoadmapState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';

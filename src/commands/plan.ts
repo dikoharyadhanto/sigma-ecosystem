@@ -15,8 +15,9 @@ import {
   updatePlanMetadata,
   assertChainCanMutate,
   getOperationalGate,
+  normalizeVersionArg,
 } from '../engine/chain';
-import { findProjectRoot } from '../utils/fs';
+import { findProjectRoot, toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { renderRoadmapFile } from '../utils/roadmap';
 import { readProjectConfig } from '../engine/projectConfig';
@@ -100,7 +101,7 @@ export function planCommand(): Command {
         if (opts.pending) {
           // Pending plan: no gate requirement, no version
           const id = generatePendingId();
-          const relPath = path.join('Sigma', 'pending', `FMN-PLAN-${id}.md`);
+          const relPath = toPosix(path.join('Sigma', 'pending', `FMN-PLAN-${id}.md`));
           const absPath = path.join(projectRoot, relPath);
           fs.ensureDirSync(path.dirname(absPath));
           copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);
@@ -164,7 +165,7 @@ export function planCommand(): Command {
 
         const intentVersionRef = chain.intent.version;
         const version = nextPlanVersion(chain, intentVersionRef);
-        const relPath = path.join('Sigma', 'contract', `FMN-PLAN-${version}.md`);
+        const relPath = toPosix(path.join('Sigma', 'contract', `FMN-PLAN-${version}.md`));
         const absPath = path.join(projectRoot, relPath);
 
         // Artifact writes first, writeChain last
@@ -189,7 +190,7 @@ export function planCommand(): Command {
 
   cmd.command('lock')
     .description('Lock a DRAFT FMN-PLAN (opens Gate 2). Requires --v when more than one DRAFT is open.')
-    .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)')
+    .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)', normalizeVersionArg)
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
@@ -224,7 +225,7 @@ export function planCommand(): Command {
 
   cmd.command('supersede')
     .description('Supersede an FMN-PLAN version, DRAFT or LOCKED (auto-supersedes any linked non-final DEV-EXEC)')
-    .requiredOption('--v <version>', 'Version to supersede (e.g. v1.2)')
+    .requiredOption('--v <version>', 'Version to supersede (e.g. v1.2)', normalizeVersionArg)
     .requiredOption('--reason <reason>', 'Reason for superseding')
     .action((opts: { v: string; reason: string }) => {
       try {
@@ -295,7 +296,7 @@ export function planCommand(): Command {
         // Compute next version before any writes
         const newVersion = nextPlanVersion(chain, chain.intent.version);
         const oldAbsPath = path.join(projectRoot, pending.file);
-        const newRelPath = path.join('Sigma', 'contract', `FMN-PLAN-${newVersion}.md`);
+        const newRelPath = toPosix(path.join('Sigma', 'contract', `FMN-PLAN-${newVersion}.md`));
         const newAbsPath = path.join(projectRoot, newRelPath);
 
         // Artifact writes first: rename file
@@ -324,7 +325,7 @@ export function planCommand(): Command {
 
   cmd.command('check')
     .description('Validate an FMN-PLAN structure and markers')
-    .option('--v <version>', 'Check a specific FMN-PLAN version. Required when more than one DRAFT is open.')
+    .option('--v <version>', 'Check a specific FMN-PLAN version. Required when more than one DRAFT is open.', normalizeVersionArg)
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
@@ -409,7 +410,7 @@ export function planCommand(): Command {
 
   cmd.command('update')
     .description('Update title and/or focus for an existing FMN-PLAN stage in the active ROADMAP')
-    .requiredOption('--v <version>', 'Plan version to update (e.g. v1.15)')
+    .requiredOption('--v <version>', 'Plan version to update (e.g. v1.15)', normalizeVersionArg)
     .option('--title <title>', 'New stage title')
     .option('--focus <focus>', 'New stage focus summary')
     .action((opts: { v: string; title?: string; focus?: string }) => {

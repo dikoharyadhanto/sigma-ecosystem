@@ -44,6 +44,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 const smol_toml_1 = require("smol-toml");
+const fs_1 = require("./fs");
 // ── Payload sigma-mcp ─────────────────────────────────────────────────────────
 /** Helper untuk membuat entri config sigma-mcp.
  *  Jika projectRoot diberikan, masukkan ke args: [projectRoot]. */
@@ -196,10 +197,17 @@ function findPluginBlockRange(lines, pluginsTableName, pluginName) {
     }
     return null;
 }
-/** Bentuk blok teks `[[plugins]]` untuk entri sigma-mcp milik Reasonix. */
+/** Bentuk blok teks `[[plugins]]` untuk entri sigma-mcp milik Reasonix.
+ *  projectRoot dinormalisasi ke forward slash lalu di-JSON-stringify: sebuah
+ *  path Windows mentah (`C:\Users\...`) yang ditulis apa adanya membuat
+ *  config.toml gagal parse ("invalid non-hex character in unicode escape" —
+ *  `\U` bukan escape TOML yang valid), sehingga Reasonix kehilangan SEMUA
+ *  plugin di file itu. Forward slash valid sebagai argumen path di Windows
+ *  maupun POSIX, dan JSON.stringify menghasilkan literal string kutip-ganda
+ *  yang sah untuk basic string TOML. */
 function makeReasonixPluginBlockLines(projectRoot) {
     const args = projectRoot && projectRoot.trim().length > 0
-        ? `["${projectRoot.trim()}"]`
+        ? `[${JSON.stringify((0, fs_1.toPosix)(projectRoot.trim()))}]`
         : '[]';
     return [
         '[[plugins]]',

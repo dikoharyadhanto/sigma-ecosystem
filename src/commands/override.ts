@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
-import { ChainState, OverrideEntry, readActiveChain, writeChain, resolveTargetVersion } from '../engine/chain';
+import { ChainState, OverrideEntry, readActiveChain, writeChain, resolveTargetVersion, normalizeVersionArg } from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
 import { OVERRIDES_FILE } from '../config';
 
@@ -152,7 +152,7 @@ export function overrideCommand(): Command {
   cmd.description('Bypass the current lifecycle gate under Director authority (recorded in Sigma/memory/overrides.jsonl)');
 
   cmd
-    .option('--v <version>', 'Artifact version this override applies to. Required when more than one DRAFT is open for the blocked artifact.')
+    .option('--v <version>', 'Artifact version this override applies to. Required when more than one DRAFT is open for the blocked artifact.', normalizeVersionArg)
     .option('--reason <reason>', 'Required. Describe why this override is authorized.')
     .option('--director-confirm', 'Required. Explicit Director authorization to execute the override.')
     .option('--dry-run', 'Show what would be bypassed without modifying state.')

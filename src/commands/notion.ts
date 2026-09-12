@@ -14,6 +14,7 @@ import {
   runNotionPush,
 } from '../engine/notionService';
 import { pushAllHumanArtifacts, reconcileSupersededHumanArtifacts } from '../engine/humanizePush';
+import { normalizeVersionArg } from '../engine/chain';
 
 export function notionCommand(): Command {
   const notion = new Command('notion').description('Sigma Notion remote governance dashboard & state backup');
@@ -275,6 +276,7 @@ export function notionCommand(): Command {
     .command('pull <type> <version>')
     .description('Fetch a single page from Notion by type + version (read-only preview)')
     .action(async (type: string, version: string) => {
+      version = normalizeVersionArg(version) ?? version;
       const root = findProjectRootForRemote(process.cwd());
       if (!root) {
         console.error(chalk.red('Error: Not inside a Sigma project.'));

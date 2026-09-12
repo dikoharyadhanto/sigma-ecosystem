@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { PROJECT_SIGMA_DIR } from '../config';
+import { toPosix } from '../utils/fs';
 import {
   ChainState,
   ArtifactVersion,
@@ -86,7 +87,7 @@ export function discoverArtifacts(projectRoot: string): DiscoveredArtifacts {
         const match = filename.match(regex);
         if (!match) continue;
 
-        const relFile = path.join(PROJECT_SIGMA_DIR, dir, filename);
+        const relFile = toPosix(path.join(PROJECT_SIGMA_DIR, dir, filename));
         const absFile = path.join(absDir, filename);
         const actualType = readDocType(absFile);
         if (actualType !== docType) {

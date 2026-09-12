@@ -11,6 +11,7 @@ const projectConfig_1 = require("../engine/projectConfig");
 const notionCredentials_1 = require("../engine/notionCredentials");
 const notionService_1 = require("../engine/notionService");
 const humanizePush_1 = require("../engine/humanizePush");
+const chain_1 = require("../engine/chain");
 function notionCommand() {
     const notion = new commander_1.Command('notion').description('Sigma Notion remote governance dashboard & state backup');
     notion
@@ -259,6 +260,7 @@ function notionCommand() {
         .command('pull <type> <version>')
         .description('Fetch a single page from Notion by type + version (read-only preview)')
         .action(async (type, version) => {
+        version = (0, chain_1.normalizeVersionArg)(version) ?? version;
         const root = (0, notionService_1.findProjectRootForRemote)(process.cwd());
         if (!root) {
             console.error(chalk_1.default.red('Error: Not inside a Sigma project.'));

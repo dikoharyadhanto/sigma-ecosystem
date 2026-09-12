@@ -284,3 +284,49 @@ Setelah keputusan "perbaiki KLHK langsung, tidak ada mekanisme migrasi di CLI", 
 
 Tidak lagi relevan (mati bersama revert rekonsiliasi-path `sigma doctor`):
 Prioritas 4 (guardrail ENOENT), varian Prioritas 2 (flag `entry.file` hilang total).
+
+## 8. Resolusi lanjutan — normalisasi separator di sisi TULIS (sesi Professional Mode, 2026-09-03)
+
+Konteks: path project ini bolak-balik Linux↔Windows. Normalisasi saat-BACA
+(`normalizeFilePathsOnRead`, `readIndex`) sudah ada, tapi tiap command masih
+menyimpan path pakai `path.join(...)` → di Windows persist `\` ke JSON, dan
+konsumen yang tak lewat dua fungsi itu tetap patah. Suite test dijalankan di
+Windows: **9 gagal**, sebagian bug lintas-platform asli.
+
+Ditangani (Prioritas 3, tuntas):
+
+- Helper `toPosix()` baru di `src/utils/fs.ts`. Dipakai di tiap titik yang
+  **mem-persist** atau **membandingkan-string** relative path:
+  `intent/plan/exec/close/roadmap new` (`entry.file`), `send` (index `file` +
+  `attachments`), `*humanize*` (`humanRelPath`/`ledgerRelPath`), `doctor
+  --reconstruct` (`reconstruct.ts` rebuild `file`), `scan` (report path).
+  Progress-v<N>.json & messages/index.json kini POSIX-at-rest di OS manapun.
+- **BUG lintas-platform nyata #1** — `sigma inbox check` di Windows: disk-walk
+  pakai `path.join` (`\`) dibandingkan dengan index yang sudah dinormalisasi
+  ke `/` saat baca → **tiap pesan dilaporkan ORPHAN**. Fixed di
+  `inbox.ts:213`.
+- **BUG lintas-platform nyata #2** — `writeReasonixMcpConfig` menulis path
+  Windows mentah (`args = ["C:\Users\..."]`) ke `~/.reasonix/config.toml`.
+  `\U` bukan escape unicode TOML yang valid → **seluruh config.toml gagal
+  parse, Reasonix kehilangan semua plugin**. Fixed: normalisasi ke forward
+  slash + `JSON.stringify` (`mcpConfig.ts`). Config `.mcp.json` / `.cursor` /
+  Codex tak disentuh — JSON meng-escape `\` dengan benar dan `resolveRoot()`
+  fallback ke `cwd` bila path tersimpan tak resolve di OS lain.
+- **Prioritas 5b** — dicek: `scripts/refresh-registries.js` tidak lagi
+  memancarkan `Sigma/build/`·`Sigma/design/` (sudah dibersihkan di commit
+  `322f0f7`). Tidak ada aksi.
+
+**Prioritas 5a (tuntas)** — `normalizeVersionArg()` baru di `chain.ts`, dipasang
+sebagai commander coercion fn di tiap opsi `--v` / `--plan` dan `notion pull
+<version>`. `--v 3.4` dan `--v v3.4` kini resolve identik (trim + prefix `v`
+bila diawali digit; idempoten; teks non-versi lewat apa adanya).
+
+**Line ending** — `.gitattributes` (`eol=lf`) + renormalize ditambahkan: file
+yang di-build/checkout di Windows tak lagi tampil "modified" palsu.
+
+Test: `test/version-arg-normalization.test.ts` (baru), blok write-side di
+`test/windows-path-backward-compat.test.ts`, asersi Reasonix di
+`test/mcp-config.test.ts` diupdate ke `toPosix(tmpProject)`. Suite: **431 pass,
+0 gagal**. Commit `de70363`.
+
+Semua item bug report ini selesai.
