@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
+import { execFileSync } from 'child_process';
 import fs from 'fs-extra';
 import path from 'path';
 import {
@@ -28,6 +29,34 @@ describe('Lifecycle hardening coverage', () => {
     expect(fs.existsSync(env.activateStatusPath)).toBe(true);
     expect(fs.existsSync(env.progressPath)).toBe(false);
     expect(fs.existsSync(path.join(env.sigmaDir, 'messages', 'index.json'))).toBe(true);
+  });
+
+  it('sigma project start initializes local Git only when --init-git is explicit', () => {
+    env = setupTestEnv();
+
+    const withoutGit = runCli('project start --id TEST --name "Test Project" --confirm', env.projectDir, env.homeDir);
+
+    expect(withoutGit.exitCode).toBe(0);
+    expect(fs.existsSync(path.join(env.projectDir, '.git'))).toBe(false);
+    expect(withoutGit.stdout).toMatch(/project remains valid without Git/i);
+
+    env.cleanup();
+    env = setupTestEnv();
+    const withGit = runCli('project start --id TEST --name "Test Project" --confirm --init-git', env.projectDir, env.homeDir);
+
+    expect(withGit.exitCode).toBe(0);
+    expect(fs.existsSync(path.join(env.projectDir, '.git'))).toBe(true);
+    expect(withGit.stdout).toMatch(/local repository initialized/i);
+  });
+
+  it('sigma project start reuses an existing local Git repository', () => {
+    env = setupTestEnv();
+    execFileSync('git', ['init'], { cwd: env.projectDir, stdio: 'pipe' });
+
+    const result = runCli('project start --id TEST --name "Test Project" --confirm', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/existing local repository detected/i);
   });
 
   it('sigma session bootstrap reports gates and next operations from a locked chain', () => {

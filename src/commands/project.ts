@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { execFileSync } from 'child_process';
 import fs from 'fs-extra';
 import path from 'path';
 import inquirer from 'inquirer';
@@ -86,6 +87,63 @@ export function validateProjectName(name: string): string {
   return clean;
 }
 
+// ── Local Git setup ──────────────────────────────────────────────────────────
+
+function getLocalGitRoot(projectRoot: string): string | null {
+  try {
+    return execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function initializeLocalGit(projectRoot: string): void {
+  try {
+    execFileSync('git', ['init'], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      stdio: 'pipe',
+    });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new Error(`Could not initialize a local Git repository: ${detail}`);
+  }
+}
+
+async function prepareLocalGit(projectRoot: string, opts: { id?: string; name?: string; confirm?: boolean; initGit?: boolean }): Promise<void> {
+  const existingRoot = getLocalGitRoot(projectRoot);
+  if (existingRoot) {
+    console.log(`  Git: existing local repository detected (${existingRoot}).`);
+    return;
+  }
+
+  let shouldInitialize = opts.initGit === true;
+  const nonInteractive = opts.confirm === true || Boolean(opts.id && opts.name);
+  if (!shouldInitialize && !nonInteractive) {
+    const answer = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'initializeGit',
+        message: 'No local Git repository found. Initialize one now? (local only; no remote or GitHub configuration)',
+        default: false,
+      },
+    ]);
+    shouldInitialize = Boolean(answer.initializeGit);
+  }
+
+  if (!shouldInitialize) {
+    console.log('  Git: no local repository — project remains valid without Git.');
+    return;
+  }
+
+  initializeLocalGit(projectRoot);
+  console.log('  Git: local repository initialized (no remote, identity, branch policy, or commit configured).');
+}
+
 // ── .sigma-identity.json helpers ─────────────────────────────────────────────
 //
 // Root-level (sibling to Sigma/), not inside it, so it survives even if the
@@ -147,6 +205,7 @@ async function runStart(opts: {
   reinit?: boolean;
   overwriteBridge?: boolean;
   humanizeGate?: boolean;
+  initGit?: boolean;
 }): Promise<void> {
   if (!fileExists(GLOBAL_SIGMA_DIR)) {
     error('Sigma is not installed. Run: sigma setup install');
@@ -245,6 +304,7 @@ async function runStart(opts: {
   }
 
   info(`Initializing Sigma project: ${projectName} (${projectId})...`);
+  await prepareLocalGit(projectRoot, opts);
 
   // Create Sigma/ folder and all subfolders
   ensureDir(sigmaDir);
@@ -592,11 +652,12 @@ export function projectCommand(): Command {
     .option('--name <name>', 'Project name (max 64 chars)')
     .option('--lang <name>', 'Language name applied to all language preferences in non-interactive mode (default: "English"). Free-form, e.g. "Indonesia".')
     .option('--confirm', 'Skip interactive prompts (requires --id and --name)')
+    .option('--init-git', 'Initialize a local Git repository when none exists (no remote, identity, branch policy, or commit)')
     .option('--reinit', 'Re-initialize an existing Sigma project')
     .option('--overwrite-bridge', 'Overwrite existing bridge files (CLAUDE.md, GEMINI.md, AGENTS.md, DEEPSEEK.md, REASONIX.md)')
     .option('--humanize-gate', 'Enable the Notion humanize gate (non-interactive mode; default ON when a working Notion token is detected)')
     .option('--no-humanize-gate', 'Disable the Notion humanize gate (non-interactive mode)')
-    .action((opts: { id?: string; name?: string; lang?: string; confirm?: boolean; reinit?: boolean; overwriteBridge?: boolean; humanizeGate?: boolean }) => {
+    .action((opts: { id?: string; name?: string; lang?: string; confirm?: boolean; reinit?: boolean; overwriteBridge?: boolean; humanizeGate?: boolean; initGit?: boolean }) => {
       runStart(opts).catch(err => {
         console.error(err instanceof Error ? err.message : String(err));
         process.exit(1);

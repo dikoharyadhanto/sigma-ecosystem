@@ -7,6 +7,7 @@ exports.validateProjectId = validateProjectId;
 exports.validateProjectName = validateProjectName;
 exports.projectCommand = projectCommand;
 const commander_1 = require("commander");
+const child_process_1 = require("child_process");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const inquirer_1 = __importDefault(require("inquirer"));
@@ -54,6 +55,58 @@ function validateProjectName(name) {
         throw new Error('Project name must be between 1 and 64 characters.');
     }
     return clean;
+}
+// ── Local Git setup ──────────────────────────────────────────────────────────
+function getLocalGitRoot(projectRoot) {
+    try {
+        return (0, child_process_1.execFileSync)('git', ['rev-parse', '--show-toplevel'], {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+        }).trim() || null;
+    }
+    catch {
+        return null;
+    }
+}
+function initializeLocalGit(projectRoot) {
+    try {
+        (0, child_process_1.execFileSync)('git', ['init'], {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: 'pipe',
+        });
+    }
+    catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        throw new Error(`Could not initialize a local Git repository: ${detail}`);
+    }
+}
+async function prepareLocalGit(projectRoot, opts) {
+    const existingRoot = getLocalGitRoot(projectRoot);
+    if (existingRoot) {
+        console.log(`  Git: existing local repository detected (${existingRoot}).`);
+        return;
+    }
+    let shouldInitialize = opts.initGit === true;
+    const nonInteractive = opts.confirm === true || Boolean(opts.id && opts.name);
+    if (!shouldInitialize && !nonInteractive) {
+        const answer = await inquirer_1.default.prompt([
+            {
+                type: 'confirm',
+                name: 'initializeGit',
+                message: 'No local Git repository found. Initialize one now? (local only; no remote or GitHub configuration)',
+                default: false,
+            },
+        ]);
+        shouldInitialize = Boolean(answer.initializeGit);
+    }
+    if (!shouldInitialize) {
+        console.log('  Git: no local repository — project remains valid without Git.');
+        return;
+    }
+    initializeLocalGit(projectRoot);
+    console.log('  Git: local repository initialized (no remote, identity, branch policy, or commit configured).');
 }
 // Preserves the existing logs_created_at unless the operations log was just
 // (re)initialized — first-time creation and loss recovery are the same event
@@ -181,6 +234,7 @@ async function runStart(opts) {
         }
     }
     (0, output_1.info)(`Initializing Sigma project: ${projectName} (${projectId})...`);
+    await prepareLocalGit(projectRoot, opts);
     // Create Sigma/ folder and all subfolders
     (0, fs_1.ensureDir)(sigmaDir);
     for (const sub of config_1.SUBFOLDERS) {
@@ -502,6 +556,7 @@ function projectCommand() {
         .option('--name <name>', 'Project name (max 64 chars)')
         .option('--lang <name>', 'Language name applied to all language preferences in non-interactive mode (default: "English"). Free-form, e.g. "Indonesia".')
         .option('--confirm', 'Skip interactive prompts (requires --id and --name)')
+        .option('--init-git', 'Initialize a local Git repository when none exists (no remote, identity, branch policy, or commit)')
         .option('--reinit', 'Re-initialize an existing Sigma project')
         .option('--overwrite-bridge', 'Overwrite existing bridge files (CLAUDE.md, GEMINI.md, AGENTS.md, DEEPSEEK.md, REASONIX.md)')
         .option('--humanize-gate', 'Enable the Notion humanize gate (non-interactive mode; default ON when a working Notion token is detected)')

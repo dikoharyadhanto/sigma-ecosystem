@@ -202,6 +202,12 @@ cd your-project
 sigma project start
 ```
 
+If the directory is not already Git-managed, Sigma asks whether to initialize a
+local repository. The default is **No**. For non-interactive setup, use
+`sigma project start --id <ID> --name "<name>" --confirm --init-git`.
+This runs only `git init`; it does not configure GitHub, a remote, identity,
+branch policy, or an initial commit.
+
 ### 3. Open your AI tool and activate ARC
 
 Use your installed AI role shortcut:
@@ -539,7 +545,7 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 
 | Domain   | Command                            | Description                                                                    |
 |:-------- |:---------------------------------- |:------------------------------------------------------------------------------ |
-| project  | `sigma project start`              | Initialize a Sigma project in the current directory                            |
+| project  | `sigma project start [--init-git]` | Initialize a Sigma project; optionally initialize local Git when none exists   |
 | project  | `sigma project status`             | Show lifecycle phase, gate status, and active artifact versions                |
 | project  | `sigma project sync --confirm`     | Sync doctrine files from global templates into this project                    |
 | project  | `sigma project register`           | Repair/backfill `.sigma-identity.json` at project root (not a global registry) |

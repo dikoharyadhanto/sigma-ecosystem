@@ -251,7 +251,7 @@ If no deviation exists, write:
 > - [ ] Implementation Approach still accurate?
 > - [ ] Implementation Walkthrough reflects actual implementation?
 > - [ ] Developer Verification counts and results still current?
-> - [ ] Git / Change Evidence reflects latest commits?
+> - [ ] Git / Change Evidence still reflects the implementation handoff snapshot?
 > - [ ] Issues Encountered records deviation-related bugs if any?
 > - [ ] DEV Completion Statement is consistent with all changes?
 
@@ -293,13 +293,17 @@ DEV records checks performed before handing back to FMN.
 
 > **Filled by DEV — After Build**
 
-Minimal physical trace. Mark N/A only if no material file changes exist.
+Minimal physical trace captured at implementation handoff. Git evidence requires
+only a local Git repository; GitHub, another remote, and a push are not required.
+It is not updated after the Director commits or pushes. If the project is not
+managed by Git, write `N/A — project is not managed by Git` for Git fields and
+use Changed Files and Diff Summary as an alternative change trace. Mark N/A only
+if no material file changes exist.
 
 | Field              | Value         |
 | :---               | :---          |
 | Branch             | [...]         |
-| Latest Commit      | [...]         |
-| Working Tree State | clean / dirty |
+| Commit at Evidence Capture | [...]  |
 | Changed Files      | [...]         |
 | Diff Summary       | [...]         |
 

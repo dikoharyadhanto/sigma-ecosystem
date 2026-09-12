@@ -232,7 +232,11 @@ DEV does not replace FMN testing. DEV verification is implementation-side eviden
 
 ### 8. Git Diff Evidence
 
-DEV MUST inspect Git state before and after material file changes.
+Git Diff Evidence applies when the project root is managed by a local Git
+repository. GitHub, another remote, and any `git push` are not required.
+
+For a Git-managed project, DEV MUST inspect Git state before and after material
+file changes.
 
 Before work, DEV SHOULD check:
 
@@ -245,10 +249,16 @@ After work, DEV SHOULD capture:
 - changed files,
 - diff summary,
 - head/current commit,
-- working tree state,
 - scope source.
 
-DEV MUST record Git Diff Evidence in `DEV-EXEC` when implementation changes are material.
+For a Git-managed project, DEV MUST record Git Diff Evidence in `DEV-EXEC` when
+implementation changes are material. The record is an implementation-handoff
+snapshot and MUST NOT be updated solely because the Director subsequently
+commits or pushes.
+
+For a project that is not managed by Git, DEV MUST record `N/A — project is not
+managed by Git` in Git / Change Evidence and provide an alternative change
+trace: changed files, the implementation scope, and verification evidence.
 
 DEV MUST NOT run `git commit`, `git push`, or open pull requests. Commit and push are Director actions outside DEV authority.
 
