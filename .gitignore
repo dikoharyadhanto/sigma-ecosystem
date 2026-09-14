@@ -20,8 +20,8 @@ Thumbs.db
 desktop.ini
 
 #Informal Notes
-Implementation/
-Discussion/
+#Implementation/
+#Discussion/
 
 # AI Assistant config
 .codex/
@@ -37,4 +37,3 @@ REASONIX.md
 .mcp.json
 .vscode/mcp.json
 .codex/config.toml
-Implementation/PLAN-19-BUSINESS-CONSULTANT-INTEGRATION.md
