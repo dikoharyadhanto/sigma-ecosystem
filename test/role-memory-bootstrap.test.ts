@@ -45,6 +45,32 @@ describe('Role memory and bootstrap regressions', () => {
     expect(fs.existsSync(path.join(env.projectDir, '.vscode', 'mcp.json'))).toBe(false);
   });
 
+  // Gap report 2026-09-14: /write-memo reads Sigma/templates/MEMO-TEMPLATE.md
+  // by project-relative path (not through resolveTemplate()), so it must be
+  // physically scaffolded — SUBFOLDERS alone never created it.
+  it('project start copies Sigma/templates/ including MEMO-TEMPLATE.md', () => {
+    env = setupTestEnv();
+
+    const result = runCli('project start --id TEST --name "Test Project" --confirm', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'templates', 'MEMO-TEMPLATE.md'))).toBe(true);
+    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'templates', 'DIR-INTENT-TEMPLATE.md'))).toBe(true);
+  });
+
+  it('project sync --confirm backfills Sigma/templates/ for an existing project', () => {
+    env = setupTestEnv();
+    stubProjectRootAnchor(env);
+    // Simulate a project scaffolded before templates/ sync existed: no
+    // Sigma/templates/ directory at all.
+    expect(fs.existsSync(path.join(env.sigmaDir, 'templates'))).toBe(false);
+
+    const result = runCli('project sync --confirm', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(fs.existsSync(path.join(env.sigmaDir, 'templates', 'MEMO-TEMPLATE.md'))).toBe(true);
+  });
+
   it('sigma memory prints authority note, general reminders, and role-specific reminders', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
@@ -222,5 +248,32 @@ describe('Read-only commands degrade gracefully before the first intent new', ()
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Nothing to reconcile/i);
     expect(result.stdout).toMatch(/sigma intent new/);
+  });
+
+  // Gap report 2026-09-14: doctor should surface a missing MEMO-TEMPLATE.md
+  // as a non-blocking warning, not silently say nothing.
+  it('doctor warns (non-blocking) when Sigma/templates/MEMO-TEMPLATE.md is missing', () => {
+    env = setupTestEnv();
+    stubProjectRootAnchor(env);
+    // setupTestEnv() does not create Sigma/templates/ — matches a project
+    // scaffolded before `project sync` learned to copy it.
+
+    const result = runCli('doctor', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/\[WARN\].*MEMO-TEMPLATE\.md not found/i);
+    expect(result.stdout).toMatch(/sigma project sync --confirm/);
+  });
+
+  it('doctor stays silent about templates once Sigma/templates/MEMO-TEMPLATE.md exists', () => {
+    env = setupTestEnv();
+    stubProjectRootAnchor(env);
+    fs.mkdirSync(path.join(env.sigmaDir, 'templates'), { recursive: true });
+    fs.writeFileSync(path.join(env.sigmaDir, 'templates', 'MEMO-TEMPLATE.md'), '# stub');
+
+    const result = runCli('doctor', env.projectDir, env.homeDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).not.toMatch(/MEMO-TEMPLATE\.md not found/i);
   });
 });

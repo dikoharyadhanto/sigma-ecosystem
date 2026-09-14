@@ -6,6 +6,7 @@ import inquirer from 'inquirer';
 import {
   GLOBAL_SIGMA_DIR,
   GLOBAL_RULES_DIR,
+  GLOBAL_TEMPLATES_DIR,
   GLOBAL_GOVERNANCE_DIR,
   GLOBAL_BRIDGE_DIR,
   PROJECT_SIGMA_DIR,
@@ -53,6 +54,7 @@ const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
 const BUNDLE_OP_REGISTRY = path.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-OPERATION-REGISTRY.json');
 const BUNDLE_DOC_REGISTRY = path.join(PACKAGE_ROOT, 'Sigma', 'SIGMA-REGISTRY.json');
 const BUNDLE_ROLE_MEMORY_DIR = getBundledRoleMemoryDir();
+const BUNDLE_TEMPLATES_DIR = path.join(PACKAGE_ROOT, 'Sigma', 'templates');
 const BUNDLE_BRIDGE_DIR = path.join(PACKAGE_ROOT, 'setup', 'targets', 'bridge');
 
 // Resolve a bridge template the same way resolveTemplate() resolves doctrine templates:
@@ -392,6 +394,19 @@ async function runStart(opts: {
     warn('Sigma/role-memory bundle not found — skipping');
   }
 
+  // Copy doctrine templates. Cross-role skills (e.g. /write-memo) reference
+  // files under Sigma/templates/ directly by project-relative path rather
+  // than through resolveTemplate(), so the directory must physically exist
+  // in every scaffolded project. Same precedence as resolveTemplate(): prefer
+  // the global (Director-editable) copy, fall back to the package bundle.
+  const templatesSource = fileExists(GLOBAL_TEMPLATES_DIR) ? GLOBAL_TEMPLATES_DIR : BUNDLE_TEMPLATES_DIR;
+  if (fileExists(templatesSource)) {
+    fs.copySync(templatesSource, path.join(sigmaDir, 'templates'), { overwrite: true });
+    console.log('  Templates: Sigma/templates/ copied.');
+  } else {
+    warn('Sigma/templates not found in ~/.sigma/templates or bundle — skipping');
+  }
+
   // Copy bridge file templates (CLAUDE.md, GEMINI.md, AGENTS.md, DEEPSEEK.md, REASONIX.md)
   let bridgeCopied = 0;
   for (const bridgeFile of BRIDGE_STUBS) {
@@ -520,6 +535,8 @@ function runSync(opts: { confirm?: boolean }): void {
   ];
 
   const rulesDestDir = path.join(sigmaDir, 'rules');
+  const templatesDestDir = path.join(sigmaDir, 'templates');
+  const templatesSource = fileExists(GLOBAL_TEMPLATES_DIR) ? GLOBAL_TEMPLATES_DIR : BUNDLE_TEMPLATES_DIR;
 
   if (!opts.confirm) {
     info('Dry run — files that would be updated:');
@@ -527,6 +544,9 @@ function runSync(opts: { confirm?: boolean }): void {
       console.log(`  ${f.src} → ${f.dest}`);
     }
     console.log(`  ${GLOBAL_RULES_DIR}/ → ${rulesDestDir}/`);
+    if (fileExists(templatesSource)) {
+      console.log(`  ${templatesSource}/ → ${templatesDestDir}/`);
+    }
     if (fileExists(BUNDLE_OP_REGISTRY)) {
       console.log(`  SIGMA-OPERATION-REGISTRY.json (from bundle)`);
     }
@@ -554,6 +574,11 @@ function runSync(opts: { confirm?: boolean }): void {
   if (fileExists(GLOBAL_RULES_DIR)) {
     fs.copySync(GLOBAL_RULES_DIR, rulesDestDir, { overwrite: true });
     updated.push('rules/');
+  }
+
+  if (fileExists(templatesSource)) {
+    fs.copySync(templatesSource, templatesDestDir, { overwrite: true });
+    updated.push('templates/');
   }
 
   if (fileExists(BUNDLE_OP_REGISTRY)) {

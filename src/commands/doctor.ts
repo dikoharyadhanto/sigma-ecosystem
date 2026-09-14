@@ -1,3 +1,4 @@
+import path from 'path';
 import { Command } from 'commander';
 import {
   ChainState,
@@ -13,8 +14,21 @@ import {
   normalizeVersionArg,
 } from '../engine/chain';
 import { reconstructAllChains, findSigmaProjectRoot, MultiReconstructResult } from '../engine/reconstruct';
-import { findProjectRoot } from '../utils/fs';
+import { findProjectRoot, fileExists } from '../utils/fs';
 import { renderIntentHistoryFile } from '../utils/intentHistory';
+import { PROJECT_SIGMA_DIR } from '../config';
+
+// Non-blocking check: cross-role skills (e.g. /write-memo) read
+// Sigma/templates/MEMO-TEMPLATE.md directly by project-relative path rather
+// than through resolveTemplate(). A project scaffolded before this template
+// sync existed (or with the file removed by hand) would silently leave that
+// skill unable to find its reference doc. `sigma project sync --confirm`
+// fixes it; doctor only surfaces the gap, never blocks on it.
+function checkMemoTemplate(projectRoot: string): string | null {
+  const templatePath = path.join(projectRoot, PROJECT_SIGMA_DIR, 'templates', 'MEMO-TEMPLATE.md');
+  if (fileExists(templatePath)) return null;
+  return 'Sigma/templates/MEMO-TEMPLATE.md not found — the /write-memo skill will not be able to read it. Run: sigma project sync --confirm';
+}
 
 // PLAN-EVAL-01 Fase 4 / PLAN-EVAL-05 — every mode below now targets
 // Sigma/progress-v<N>.json via chain.ts. `--reconstruct` (3 modes) and
@@ -29,6 +43,10 @@ function runDefaultDoctor(): void {
   if (listChainVersions(projectRoot).length === 0) {
     console.log('\n=== Sigma Doctor ===\n');
     console.log('No chain exists yet. Nothing to reconcile. Run: sigma intent new');
+    const templateWarning = checkMemoTemplate(projectRoot);
+    if (templateWarning) {
+      console.log(`\n[WARN] ${templateWarning}`);
+    }
     console.log('');
     return;
   }
@@ -72,6 +90,12 @@ function runDefaultDoctor(): void {
       console.log(`  - ${marker.id}: ${marker.reason}`);
     }
     console.log('\n  Gate enforcement is temporarily relaxed for affected chains while INVALID markers remain.');
+  }
+
+  const templateWarning = checkMemoTemplate(projectRoot);
+  if (templateWarning) {
+    console.log('\n--- Diagnostics ---');
+    console.log(`  [WARN] ${templateWarning}`);
   }
 
   console.log('');

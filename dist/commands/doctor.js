@@ -1,11 +1,28 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.doctorCommand = doctorCommand;
+const path_1 = __importDefault(require("path"));
 const commander_1 = require("commander");
 const chain_1 = require("../engine/chain");
 const reconstruct_1 = require("../engine/reconstruct");
 const fs_1 = require("../utils/fs");
 const intentHistory_1 = require("../utils/intentHistory");
+const config_1 = require("../config");
+// Non-blocking check: cross-role skills (e.g. /write-memo) read
+// Sigma/templates/MEMO-TEMPLATE.md directly by project-relative path rather
+// than through resolveTemplate(). A project scaffolded before this template
+// sync existed (or with the file removed by hand) would silently leave that
+// skill unable to find its reference doc. `sigma project sync --confirm`
+// fixes it; doctor only surfaces the gap, never blocks on it.
+function checkMemoTemplate(projectRoot) {
+    const templatePath = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, 'templates', 'MEMO-TEMPLATE.md');
+    if ((0, fs_1.fileExists)(templatePath))
+        return null;
+    return 'Sigma/templates/MEMO-TEMPLATE.md not found — the /write-memo skill will not be able to read it. Run: sigma project sync --confirm';
+}
 // PLAN-EVAL-01 Fase 4 / PLAN-EVAL-05 — every mode below now targets
 // Sigma/progress-v<N>.json via chain.ts. `--reconstruct` (3 modes) and
 // `--all-versions` are PLAN-EVAL-05 additions; the default mode is
@@ -17,6 +34,10 @@ function runDefaultDoctor() {
     if ((0, chain_1.listChainVersions)(projectRoot).length === 0) {
         console.log('\n=== Sigma Doctor ===\n');
         console.log('No chain exists yet. Nothing to reconcile. Run: sigma intent new');
+        const templateWarning = checkMemoTemplate(projectRoot);
+        if (templateWarning) {
+            console.log(`\n[WARN] ${templateWarning}`);
+        }
         console.log('');
         return;
     }
@@ -55,6 +76,11 @@ function runDefaultDoctor() {
             console.log(`  - ${marker.id}: ${marker.reason}`);
         }
         console.log('\n  Gate enforcement is temporarily relaxed for affected chains while INVALID markers remain.');
+    }
+    const templateWarning = checkMemoTemplate(projectRoot);
+    if (templateWarning) {
+        console.log('\n--- Diagnostics ---');
+        console.log(`  [WARN] ${templateWarning}`);
     }
     console.log('');
 }
