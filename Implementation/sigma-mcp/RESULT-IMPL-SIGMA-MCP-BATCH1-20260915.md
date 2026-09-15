@@ -3,7 +3,7 @@
 **Plan**: `PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE-20260915.md` (APPROVED Batch 1, keputusan Q1–Q6 di §21.1)
 **Tanggal**: 2026-09-15
 **Scope dieksekusi**: Stage 0 + Stage A + Stage B1
-**Status**: **Stage 0 SELESAI. Gate 0.5 dan Gate B1 REOPENED oleh review Codex, perbaikan R-01…R-09 selesai, menunggu re-review.**
+**Status**: **Stage 0 SELESAI. R-01…R-10 seluruhnya CLOSED, termasuk bukti consumer aktual. Gate 0.5 dan B1 menunggu re-review terakhir Codex — dokumen ini tidak menyatakannya PASS.**
 **Commit/push**: branch `hermes-integration`, di-push atas otorisasi Director. Tidak di-merge ke `main`.
 
 > **Revisi 2026-09-15.** Versi pertama dokumen ini menutup Gate 0.5 sebagai `runtime UNPROVEN` atas dasar klaim bahwa lab Hermes memakai binary global yang lama. **Klaim itu salah** dan dikoreksi di §6. Setelah Director mengotorisasi `npm link`, pemeriksaan pertama menunjukkan global `sigma-mcp` sudah berupa symlink ke repo ini sejak sebelum Batch 1 — sehingga `npm link` tidak diperlukan dan smoke test runtime dapat langsung dijalankan.
@@ -15,8 +15,8 @@
 | Gate | Hasil | Dasar |
 |---|---|---|
 | Stage 0 | SELESAI | Capability matrix 59 operasi + 3 mismatch registry terdokumentasi |
-| Gate 0.5 (Stage A) | **REOPENED** | R-01…R-04, R-06…R-10 CLOSED. R-05 sebagian: discovery/binding/isolasi terbukti via Hermes (§14), pemanggilan tool belum — butuh credential Director |
-| Gate B1 (Stage B) | **REOPENED** | R-01 dan R-10 CLOSED; 10 regression test pada reader artifact (§11, §13), menunggu re-review terakhir |
+| Gate 0.5 (Stage A) | **Seluruh temuan CLOSED** | R-01…R-10 tertutup. Bukti consumer aktual lengkap (§14, §15). Penetapan PASS milik re-review Codex, bukan dokumen ini |
+| Gate B1 (Stage B) | **Seluruh temuan CLOSED** | R-01 dan R-10 tertutup; 10 regression test reader artifact; `sigma_read_artifact` terbukti via Hermes (§15). Menunggu re-review terakhir |
 
 ## 2. Bukti eksekusi
 
@@ -546,3 +546,66 @@ Tidak ada perubahan lain: profile `default` tidak disentuh, gateway tidak dijala
 ### 14.6 Status
 
 **Gate 0.5 dan B1 tetap REOPENED.** R-05 belum dapat dinyatakan tertutup penuh: discovery, binding, isolasi, dan non-mutasi terbukti pada consumer aktual, tetapi pemanggilan tool belum. Untuk menutupnya dibutuhkan satu giliran model pada profile `sigma-lab` — keputusan credential yang menjadi milik Director, bukan saya.
+
+## 15. R-05 CLOSED — pemanggilan tool melalui Hermes
+
+Dijalankan Director sendiri pada 2026-09-15 dengan credential yang tidak pernah melewati sesi implementer. Melengkapi §14, yang berhenti pada discovery/binding.
+
+### 15.1 Kesembilan tool dipanggil, digerakkan model
+
+Sesi `20260915_193804_4f9e63`, `cwd=C:\Users\dikoh` (netral, bukan root proyek), 10 tool call, 22 pesan, `end_reason=agent_close`.
+
+| Tool | contract_version | binding.verified | project_id | snapshot.active_chain |
+|---|---|---|---|---|
+| `sigma_verify_binding` | 1.0 | true | HERMESLAB | v1 |
+| `sigma_get_state` | 1.0 | true | HERMESLAB | v1 |
+| `sigma_get_gates` | 1.0 | true | HERMESLAB | v1 |
+| `sigma_list_artifacts` | 1.0 | true | HERMESLAB | v1 |
+| `sigma_get_orientation` | 1.0 | true | HERMESLAB | v1 |
+| `sigma_doctor` | 1.0 | true | HERMESLAB | v1 |
+| `sigma_get_memory` | 1.0 | true | HERMESLAB | v1 |
+| `sigma_get_effective_policy` | 1.0 | true | HERMESLAB | v1 |
+| `sigma_read_artifact` | 1.0 | true | HERMESLAB | v1 |
+
+Isi yang diperiksa:
+
+- `sigma_get_state` → `project_id: HERMESLAB`, `active_chain: v1`, `phase: DESIGN` — cocok dengan `sigma session bootstrap` manual pada Phase 0 §3
+- `sigma_get_effective_policy` → **59 operasi**, `advisory: true`
+- `sigma_read_artifact` → `path: Sigma/charter/DIR-INTENT-v1.md`, `present: true` — relatif, bukan path host
+- **Nol string berbentuk path host absolut** di seluruh sembilan payload
+
+### 15.2 Penolakan cross-project pada level pemanggilan
+
+Sesi `20260915_193737_773d7b`. Model memanggil `sigma_get_state` dengan `project_root` diarahkan ke proyek Sigma lain:
+
+```json
+{"contract_version":"1.0","tool":"sigma_get_state",
+ "binding":{"verified":true,"mode":"query","kind":"verified","project_id":"HERMESLAB",
+            "root_fingerprint":"sha256:064e8171..."},
+ "snapshot":{"active_chain":null,"state_revision":null,"observed_at":"2026-09-15T12:37:46.515Z"},
+ "active":false,
+ "error":{"code":"BOUNDARY_VIOLATION",
+          "message":"This server is bound to a single project; project_root cannot select another one."}}
+```
+
+Ditolak oleh server, bukan oleh model. Penolakannya tidak menyebut nama, path, maupun identitas proyek yang diminta.
+
+### 15.3 Non-mutasi
+
+**41/41 file governance lab byte-identical** sebelum dan sesudah seluruh sesi, termasuk kesembilan pemanggilan tool yang digerakkan model.
+
+### 15.4 Temuan baru: credential terpersist ke profile lab
+
+`profiles/sigma-lab/auth.json` berukuran 802 byte dan **termodifikasi pada 19:37**, tepat saat giliran model pertama yang berhasil. Sebelum itu profile tidak memilikinya secara aktif (`auth.lock` bertanggal 15:29).
+
+Artinya Hermes tampaknya **mempersist credential provider ke profile** begitu sebuah giliran berhasil, walaupun Director hanya menaruhnya sebagai environment variable proses. Ini membatalkan properti baseline Phase 0 §1: *"Credential: tidak dipersist ke profile lab"*.
+
+Saya **tidak membuka file itu** — hanya ukuran dan waktu modifikasinya yang diperiksa. Rekomendasi: Director memeriksa dan, bila benar berisi key, menghapusnya (`hermes -p sigma-lab logout`, atau hapus file itu) serta memutar ulang key DeepSeek bila profile lab dianggap tidak tepercaya.
+
+Ini perilaku Hermes, bukan perilaku Sigma, dan bukan akibat perubahan Batch 1. Tetapi ia mengubah asumsi keamanan lab dan karena itu harus tercatat di sini, bukan di catatan sesi.
+
+### 15.5 Status R-05
+
+**CLOSED.** Seluruh syarat re-review §10.5 butir 4 terpenuhi: discovery, binding terverifikasi, sembilan query dipanggil consumer aktual, penolakan cross-project, dan nol mutasi — semuanya melalui Hermes, terpisah dari reference-client smoke yang tetap berdiri sendiri di §6.2.
+
+Yang tetap tidak dibuktikan ulang: probe credential child-environment (diblokir guardrail sesi implementer; sudah dibuktikan Phase 0 §4 dan tidak disentuh Batch 1) dan paritas `structuredContent`/text pada level Hermes — Hermes tidak mengekspos kedua representasi itu pada level giliran; paritasnya dijaga contract test dan reference client.
