@@ -148,28 +148,46 @@ async function runInstall(opts) {
     console.log(`  Global dir: ${config_1.GLOBAL_SIGMA_DIR}`);
     console.log('  Run `sigma project start` to initialize a project.');
     // Stage 3 — Tulis global MCP config untuk Codex, Antigravity, dan Reasonix
-    {
+    // Hanya untuk platform yang terdeteksi (lihat `detected` di atas) — menulis
+    // config untuk tool yang belum terinstal hanya membuat file sampah di home dir.
+    let mcpWritten = false;
+    if (detected.codex) {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeCodexMcpConfig)(), '~/.codex/config.toml');
         if (err)
             (0, output_1.warn)(`MCP (Codex): ${err}`);
-        else
+        else {
             console.log('  MCP: ~/.codex/config.toml updated (sigma-mcp — Codex).');
+            mcpWritten = true;
+        }
     }
-    {
+    else {
+        console.log('  MCP: ~/.codex/config.toml skipped (Codex not detected).');
+    }
+    if (detected.antigravity) {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeAntigravityMcpConfig)(), '~/.gemini/config/mcp_config.json');
         if (err)
             (0, output_1.warn)(`MCP (Antigravity): ${err}`);
-        else
+        else {
             console.log('  MCP: ~/.gemini/config/mcp_config.json updated (sigma-mcp — Antigravity).');
+            mcpWritten = true;
+        }
     }
-    {
+    else {
+        console.log('  MCP: ~/.gemini/config/mcp_config.json skipped (Antigravity not detected).');
+    }
+    if (detected.reasonix) {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeReasonixMcpConfig)(), '~/.reasonix/config.toml');
         if (err)
             (0, output_1.warn)(`MCP (Reasonix): ${err}`);
-        else
+        else {
             console.log('  MCP: ~/.reasonix/config.toml updated (sigma-mcp — Reasonix).');
+            mcpWritten = true;
+        }
     }
-    if (!(0, mcpConfig_1.isSigmaMcpResolvable)()) {
+    else {
+        console.log('  MCP: ~/.reasonix/config.toml skipped (Reasonix not detected).');
+    }
+    if (mcpWritten && !(0, mcpConfig_1.isSigmaMcpResolvable)()) {
         (0, output_1.warn)('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
     }
 }
@@ -383,28 +401,45 @@ async function runUpdate() {
     console.log('  Note: existing project Sigma/ folders were NOT touched.');
     console.log('  To sync governance files into a project, run: sigma project sync --confirm');
     // Stage 3 — Refresh global MCP config untuk Codex, Antigravity, dan Reasonix
-    {
+    // Hanya untuk platform yang terdeteksi (lihat `detected` di atas).
+    let mcpWritten = false;
+    if (detected.codex) {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeCodexMcpConfig)(), '~/.codex/config.toml');
         if (err)
             (0, output_1.warn)(`MCP (Codex): ${err}`);
-        else
+        else {
             console.log('  MCP: ~/.codex/config.toml refreshed (sigma-mcp — Codex).');
+            mcpWritten = true;
+        }
     }
-    {
+    else {
+        console.log('  MCP: ~/.codex/config.toml skipped (Codex not detected).');
+    }
+    if (detected.antigravity) {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeAntigravityMcpConfig)(), '~/.gemini/config/mcp_config.json');
         if (err)
             (0, output_1.warn)(`MCP (Antigravity): ${err}`);
-        else
+        else {
             console.log('  MCP: ~/.gemini/config/mcp_config.json refreshed (sigma-mcp — Antigravity).');
+            mcpWritten = true;
+        }
     }
-    {
+    else {
+        console.log('  MCP: ~/.gemini/config/mcp_config.json skipped (Antigravity not detected).');
+    }
+    if (detected.reasonix) {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeReasonixMcpConfig)(), '~/.reasonix/config.toml');
         if (err)
             (0, output_1.warn)(`MCP (Reasonix): ${err}`);
-        else
+        else {
             console.log('  MCP: ~/.reasonix/config.toml refreshed (sigma-mcp — Reasonix).');
+            mcpWritten = true;
+        }
     }
-    if (!(0, mcpConfig_1.isSigmaMcpResolvable)()) {
+    else {
+        console.log('  MCP: ~/.reasonix/config.toml skipped (Reasonix not detected).');
+    }
+    if (mcpWritten && !(0, mcpConfig_1.isSigmaMcpResolvable)()) {
         (0, output_1.warn)('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
     }
 }
