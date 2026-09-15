@@ -24,6 +24,12 @@ export function registerEffectivePolicyTool(server: McpServer): void {
           .optional()
           .describe('Filter to operations owned by this role, plus role-neutral ones.'),
       },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ role }: { role?: string }) =>
       respond('sigma_get_effective_policy', undefined, (root) => computeEffectivePolicy(root, role))

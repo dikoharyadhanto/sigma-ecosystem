@@ -20,7 +20,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
 import { PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, PROJECT_SIGMA_DIR } from '../config';
-import { Binding, BindingError, assertCallRootAllowed, fingerprintRoot } from './binding';
+import { Binding, BindingError, assertCallRootAllowed, assertIdentityUnchanged, fingerprintRoot } from './binding';
+import { resolveActiveChainVersion } from '../engine/chain';
 import { getBinding, resolveRoot } from './shared';
 
 export const CONTRACT_VERSION = '1.0';
@@ -88,11 +89,20 @@ export function computeStateRevision(root: string | null): { activeChain: string
 
   const activatePath = path.join(root, ACTIVATE_STATUS_FILE);
   absorb(activatePath, 'activate');
+
+  // Reviewer finding R-03: this used to read activate_status.active_chain
+  // directly. The engine does not — resolveActiveChainVersion() repairs a
+  // stale, missing or superseded pointer. With a manifest pointing at v99 and
+  // a real chain at v1, the snapshot claimed v99 while every tool payload
+  // described v1, and edits to v1 left state_revision unchanged. A revision
+  // that does not move when the effective chain moves is worse than no
+  // revision at all, because Stage C/D stale-state rejection is built on it.
+  //
+  // One resolver, shared with the tools.
   try {
-    const raw = fs.readJsonSync(activatePath) as { active_chain?: unknown };
-    if (typeof raw.active_chain === 'string') activeChain = raw.active_chain;
+    activeChain = resolveActiveChainVersion(root);
   } catch {
-    /* handled by absorb */
+    activeChain = null;
   }
 
   if (activeChain) {
@@ -222,6 +232,8 @@ export function respond(
   let root: string | null = null;
   try {
     assertCallRootAllowed(binding, requestedRoot);
+    // R-04 — identity is re-attested on every request, not cached from startup.
+    assertIdentityUnchanged(binding);
     root = binding.root ?? resolveRoot(requestedRoot);
     return ok(tool, root, compute(root));
   } catch (err) {

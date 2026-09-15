@@ -21,6 +21,12 @@ function registerEffectivePolicyTool(server) {
                 .optional()
                 .describe('Filter to operations owned by this role, plus role-neutral ones.'),
         },
+        annotations: {
+            readOnlyHint: true,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: false,
+        },
     }, async ({ role }) => (0, contract_1.respond)('sigma_get_effective_policy', undefined, (root) => (0, policy_1.computeEffectivePolicy)(root, role)));
 }
 //# sourceMappingURL=effectivePolicy.js.map

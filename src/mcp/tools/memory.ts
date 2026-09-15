@@ -7,7 +7,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { loadRoleMemory, ROLE_MEMORY_ROLES, RoleMemoryRole } from '../../engine/roleMemory';
 import { SOURCE_ENGINE, getBinding } from '../shared';
-import { respond, redactPath, pathFingerprint } from '../contract';
+import { respond, redactPath, pathFingerprint, ERROR_CODES } from '../contract';
 
 export function computeMemory(root: string | null, role: RoleMemoryRole): unknown {
   try {
@@ -30,10 +30,20 @@ export function computeMemory(root: string | null, role: RoleMemoryRole): unknow
       source_path_fingerprint: binding.verified ? pathFingerprint(sourcePath) : null,
       source: SOURCE_ENGINE,
     };
-  } catch (err) {
+  } catch {
+    // Reviewer finding R-06: this used to put the raw engine message into a
+    // *success* payload, which never reaches respond()'s anonymisation. A
+    // corrupt memory file therefore returned
+    // "Failed to parse role memory file at C:\Users\...\fmn-memory.json" to
+    // the model, on a verified binding, host path and all.
+    //
+    // The message is dropped, not forwarded. The role and a stable code are
+    // enough for a consumer to act; the detail belongs in the operator's
+    // terminal, not in a model's context.
     return {
       active: false,
-      error: (err as Error).message,
+      role,
+      error: { code: ERROR_CODES.INTERNAL_ERROR, message: 'Role memory for this role could not be read.' },
       source: SOURCE_ENGINE,
     };
   }

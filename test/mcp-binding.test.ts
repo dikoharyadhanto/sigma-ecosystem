@@ -404,12 +404,85 @@ describe('sigma_read_artifact (§9.1)', () => {
     const env = project('MINE');
     const outside = path.join(env.homeDir, 'secret.md');
     fs.writeFileSync(outside, 'secret');
-    // A tracker entry crafted to point out of the tree — the containment check,
-    // not the tracker, is what has to stop this.
     writeChainFixture(env, 'v1', makeChain('v1', {
       intent: { version: 'v1', state: 'DRAFT', file: path.relative(env.projectDir, outside), created_at: 'x', updated_at: 'x' },
     }));
-    expect(() => computeReadArtifact(env.projectDir, 'intent')).toThrow(/BOUNDARY_VIOLATION|outside/);
+    expect(() => computeReadArtifact(env.projectDir, 'intent')).toThrow(/canonical location/);
+  });
+
+  // ── Reviewer finding R-01 ─────────────────────────────────────────────────
+  //
+  // The original containment check only asked "is the resolved path inside the
+  // project root". Everything below is inside the root.
+
+  function withTrackerFile(file: string): TestEnv {
+    const env = project('MINE');
+    writeChainFixture(env, 'v1', makeChain('v1', {
+      intent: { version: 'v1', state: 'DRAFT', file, created_at: 'x', updated_at: 'x' },
+    }));
+    return env;
+  }
+
+  it('refuses a tracker entry redirected at a dotfile inside the root', () => {
+    const env = withTrackerFile('.env');
+    fs.writeFileSync(path.join(env.projectDir, '.env'), 'NOTION_TOKEN=secret_ntn_DEADBEEF\n');
+
+    let leaked = '';
+    try {
+      leaked = JSON.stringify(computeReadArtifact(env.projectDir, 'intent'));
+    } catch (e) {
+      expect((e as { code: string }).code).toBe('BOUNDARY_VIOLATION');
+    }
+    expect(leaked).not.toContain('secret_ntn');
+  });
+
+  it('refuses a tracker entry pointing at another artifact type\'s directory', () => {
+    const env = withTrackerFile('Sigma/contract/FMN-PLAN-v1.md');
+    expect(() => computeReadArtifact(env.projectDir, 'intent')).toThrow(/canonical location/);
+  });
+
+  it('refuses a filename that does not match the requested version', () => {
+    const env = withTrackerFile('Sigma/charter/DIR-INTENT-v2.md');
+    expect(() => computeReadArtifact(env.projectDir, 'intent')).toThrow(/canonical location/);
+  });
+
+  it('refuses a version token that is path-shaped rather than a version', () => {
+    const env = project('MINE');
+    expect(() => computeReadArtifact(env.projectDir, 'intent', '../../etc/passwd'))
+      .toThrow(/INVALID_OPERATION|version|No intent artifact/);
+  });
+
+  it('refuses a symlink sitting at the canonical location', () => {
+    const env = withTrackerFile('Sigma/charter/DIR-INTENT-v1.md');
+    const secret = path.join(env.projectDir, '.env');
+    fs.writeFileSync(secret, 'NOTION_TOKEN=secret_ntn_DEADBEEF\n');
+    const link = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
+    fs.ensureDirSync(path.dirname(link));
+    try {
+      fs.symlinkSync(secret, link, 'file');
+    } catch {
+      return; // symlink creation needs privileges on Windows; skip rather than pass falsely
+    }
+    // Inside the root, correct directory, correct filename — and still refused,
+    // because the real path is not where the canonical path says it should be.
+    let leaked = '';
+    try {
+      leaked = JSON.stringify(computeReadArtifact(env.projectDir, 'intent'));
+    } catch (e) {
+      expect((e as { code: string }).code).toBe('BOUNDARY_VIOLATION');
+    }
+    expect(leaked).not.toContain('secret_ntn');
+  });
+
+  it('still reads a legitimately placed artifact', () => {
+    const env = withTrackerFile('Sigma/charter/DIR-INTENT-v1.md');
+    const p = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
+    fs.ensureDirSync(path.dirname(p));
+    fs.writeFileSync(p, '# DIR-INTENT v1\n');
+    const out = computeReadArtifact(env.projectDir, 'intent') as Payload;
+    expect(out.present).toBe(true);
+    expect(out.path).toBe('Sigma/charter/DIR-INTENT-v1.md');
+    expect(out.content).toBe('# DIR-INTENT v1\n');
   });
 
   it('reports a tracked-but-missing file as state, not as a read error', () => {
@@ -486,5 +559,114 @@ describe('host path redaction (§8.1)', () => {
     expect(out.active).toBe(true);
     expect(path.isAbsolute(String(out.source_path))).toBe(false);
     expect(String(out.source_path_fingerprint)).toMatch(/^sha256:[0-9a-f]{64}$/);
+  });
+});
+
+// ── Reviewer findings R-02, R-03, R-04, R-06 ─────────────────────────────────
+
+describe('process lifecycle (R-02)', () => {
+  // Drives the real binary, which loads dist/. Run `npm run build` first —
+  // test/helpers.ts already depends on dist/cli.js the same way.
+  it('starts exactly one server and answers a request exactly once', async () => {
+    const env = project('LIFECYCLE');
+    const bin = path.resolve(__dirname, '..', 'bin', 'sigma-mcp.js');
+    const { spawn } = await import('child_process');
+
+    const child = spawn(process.execPath, [bin, env.projectDir]);
+    let out = '';
+    let err = '';
+    child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (err += d));
+
+    await new Promise((r) => setTimeout(r, 700));
+    child.stdin.write(JSON.stringify({
+      jsonrpc: '2.0', id: 1, method: 'initialize',
+      params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 't', version: '1' } },
+    }) + '\n');
+    await new Promise((r) => setTimeout(r, 1500));
+    child.kill();
+
+    const frames = out.split('\n').filter((l) => l.trim());
+    // Both halves used to fire: the module auto-started on require, and bin
+    // called startMcpServer() as well.
+    expect((err.match(/running on stdio/g) || []).length).toBe(1);
+    expect(frames.length).toBe(1);
+    expect(JSON.parse(frames[0]).id).toBe(1);
+  }, 20000);
+});
+
+describe('state_revision follows the effective chain (R-03)', () => {
+  it('uses the engine resolver, not the raw activate_status pointer', async () => {
+    const { computeStateRevision } = await import('../src/mcp/contract');
+    const env = project('REV');
+    // Pointer names a chain that does not exist; the engine still resolves v1.
+    fs.writeJsonSync(env.activateStatusPath, { active_chain: 'v99' });
+
+    const first = computeStateRevision(env.projectDir);
+    expect(first.activeChain).toBe('v1');
+
+    // Editing the chain the engine actually considers active must move the
+    // revision. Before the fix it did not, because the hash covered v99.
+    writeChainFixture(env, 'v1', makeChainWithLockedPlan(), { activate: false });
+    const second = computeStateRevision(env.projectDir);
+    expect(second.revision).not.toBe(first.revision);
+  });
+});
+
+describe('identity is re-attested per request (R-04)', () => {
+  it('refuses to serve a project whose identity changed after startup', async () => {
+    const env = project('HERMESLAB');
+    bindFromArgv(['--mode', 'query', '--project-root', env.projectDir, '--project-id', 'HERMESLAB']);
+
+    const { client, close } = await connected();
+    try {
+      const before = await call(client, 'sigma_get_state');
+      expect(before.isError).toBe(false);
+
+      fs.writeJsonSync(path.join(env.projectDir, '.sigma-identity.json'), {
+        schema_version: '1.2.0', project_id: 'REPLACED', project_name: 'X',
+        registered: true, logs_created_at: 'x',
+      });
+
+      const after = await call(client, 'sigma_get_state');
+      expect(after.isError).toBe(true);
+      expect((after.payload.error as Payload).code).toBe('BOUNDARY_VIOLATION');
+    } finally {
+      await close();
+    }
+  });
+
+  it('usable requires a verified binding, not merely a bound one', async () => {
+    const env = project('MINE');
+    bindFromArgv([env.projectDir]); // positional → bound, unverified
+    const { client, close } = await connected();
+    try {
+      const { payload } = await call(client, 'sigma_verify_binding');
+      expect(payload.bound).toBe(true);
+      expect(payload.binding_verified).toBe(false);
+      expect(payload.usable).toBe(false);
+    } finally {
+      await close();
+    }
+  });
+});
+
+describe('error payloads carry no host path (R-06)', () => {
+  it('a corrupt role-memory file does not leak its absolute path', () => {
+    const env = project('MINE');
+    const roleDir = path.join(env.projectDir, 'Sigma', 'role-memory');
+    fs.ensureDirSync(roleDir);
+    fs.writeFileSync(path.join(roleDir, 'fmn-memory.json'), '{ this is not json');
+
+    bindFromArgv(['--mode', 'query', '--project-root', env.projectDir, '--project-id', 'MINE']);
+    const out = computeMemory(env.projectDir, 'FMN') as Payload;
+
+    const serialised = JSON.stringify(out);
+    expect(serialised).not.toContain(env.projectDir);
+    expect(serialised).not.toContain('fmn-memory.json');
+    expect(serialised.toLowerCase()).not.toMatch(/[a-z]:[\\/]users/);
+    if (out.active === false) {
+      expect((out.error as Payload).code).toBe('INTERNAL_ERROR');
+    }
   });
 });

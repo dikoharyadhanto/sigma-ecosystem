@@ -236,6 +236,38 @@ export function resolveBinding(parsed: ParsedBindingArgs): Binding {
 }
 
 /**
+ * Re-reads the bound project's identity and fails closed if it no longer
+ * matches what was verified at startup.
+ *
+ * Reviewer finding R-04: the binding was attested once and then trusted for the
+ * process lifetime. Swapping .sigma-identity.json's project_id after startup
+ * left the server reporting binding_verified:true for the old id while every
+ * payload described the new project. For an orchestrator process that outlives
+ * a single task, that is the failure mode the binding exists to prevent.
+ *
+ * Only a verified binding is re-attested: an unverified one never made a claim
+ * about identity, so there is nothing to contradict.
+ */
+export function assertIdentityUnchanged(binding: Binding): void {
+  if (!binding.verified || !binding.root) return;
+
+  let current: string | null = null;
+  try {
+    const raw = fs.readJsonSync(path.join(binding.root, PROJECT_IDENTITY_FILE)) as { project_id?: unknown };
+    if (typeof raw.project_id === 'string') current = raw.project_id;
+  } catch {
+    current = null;
+  }
+
+  if (current !== binding.projectId) {
+    throw new BindingError(
+      'BOUNDARY_VIOLATION',
+      'Bound project identity changed after this server started; refusing to serve it.'
+    );
+  }
+}
+
+/**
  * Per-call guard for the six legacy tools, which still accept project_root for
  * compatibility (§7.1 rule 4). Once bound, the only accepted values are absent,
  * empty, or a spelling of the bound root itself.

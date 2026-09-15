@@ -35,6 +35,7 @@ const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
 const config_1 = require("../config");
 const binding_1 = require("./binding");
+const chain_1 = require("../engine/chain");
 const shared_1 = require("./shared");
 exports.CONTRACT_VERSION = '1.0';
 // §8 — stable error codes. Batch 1 can only raise the binding/query subset;
@@ -87,13 +88,20 @@ function computeStateRevision(root) {
     absorb(path_1.default.join(root, config_1.PROJECT_IDENTITY_FILE), 'identity');
     const activatePath = path_1.default.join(root, config_1.ACTIVATE_STATUS_FILE);
     absorb(activatePath, 'activate');
+    // Reviewer finding R-03: this used to read activate_status.active_chain
+    // directly. The engine does not — resolveActiveChainVersion() repairs a
+    // stale, missing or superseded pointer. With a manifest pointing at v99 and
+    // a real chain at v1, the snapshot claimed v99 while every tool payload
+    // described v1, and edits to v1 left state_revision unchanged. A revision
+    // that does not move when the effective chain moves is worse than no
+    // revision at all, because Stage C/D stale-state rejection is built on it.
+    //
+    // One resolver, shared with the tools.
     try {
-        const raw = fs_extra_1.default.readJsonSync(activatePath);
-        if (typeof raw.active_chain === 'string')
-            activeChain = raw.active_chain;
+        activeChain = (0, chain_1.resolveActiveChainVersion)(root);
     }
     catch {
-        /* handled by absorb */
+        activeChain = null;
     }
     if (activeChain) {
         absorb(path_1.default.join(root, config_1.PROJECT_SIGMA_DIR, `progress-${activeChain}.json`), 'chain');
@@ -202,6 +210,8 @@ function respond(tool, requestedRoot, compute) {
     let root = null;
     try {
         (0, binding_1.assertCallRootAllowed)(binding, requestedRoot);
+        // R-04 — identity is re-attested on every request, not cached from startup.
+        (0, binding_1.assertIdentityUnchanged)(binding);
         root = binding.root ?? (0, shared_1.resolveRoot)(requestedRoot);
         return ok(tool, root, compute(root));
     }

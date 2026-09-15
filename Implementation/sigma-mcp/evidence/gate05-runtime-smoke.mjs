@@ -161,6 +161,31 @@ console.log('\nCASE D — control mode must refuse unbound');
   check('BINDING_REQUIRED on stderr', /BINDING_REQUIRED/.test(r.stderr || ''), (r.stderr || '').slice(0, 160));
 }
 
+// ── Case E — exactly one server, exactly one response per request id
+//
+// Added after reviewer finding R-02. The SDK client above cannot catch this:
+// it correlates the first response to the request id and discards the rest, so
+// a server answering twice looked perfectly healthy. This case reads raw stdio
+// frames instead of going through the client.
+console.log('\nCASE E — one server, one response per request id');
+{
+  const { spawn } = await import('child_process');
+  const child = spawn(process.execPath, [BIN, LAB]);
+  let rawOut = '', rawErr = '';
+  child.stdout.on('data', d => rawOut += d);
+  child.stderr.on('data', d => rawErr += d);
+  await new Promise(r => setTimeout(r, 700));
+  child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize',
+    params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'raw', version: '1' } } }) + '\n');
+  await new Promise(r => setTimeout(r, 1500));
+  child.kill();
+
+  const frames = rawOut.split('\n').filter(l => l.trim());
+  const startups = (rawErr.match(/running on stdio/g) || []).length;
+  check('exactly one startup', startups === 1, `got ${startups}`);
+  check('exactly one frame for id=1', frames.length === 1, `got ${frames.length}`);
+}
+
 // ── non-mutation across every call above
 console.log('\nNON-MUTATION');
 {

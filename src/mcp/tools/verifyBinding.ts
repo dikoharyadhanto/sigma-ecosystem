@@ -28,10 +28,14 @@ export function computeVerifyBinding(
       ? null
       : binding.root !== null && fingerprintOfExpectedRoot(expected.root) === binding.rootFingerprint;
 
-  // "Usable" is deliberately stricter than "bound": a checked expectation that
-  // fails makes the session unusable for that consumer even though the server
-  // itself is perfectly well bound.
-  const ok = binding.root !== null && idMatch !== false && rootMatch !== false;
+  // "Usable" means usable by a required-binding consumer, which is the only
+  // kind allowed to hold governance capability (§7.1 rule 8). So it demands a
+  // *verified* binding, not merely a bound one — reviewer finding R-04, second
+  // half. A positional-config session is bound and perfectly able to answer
+  // queries, and still reports usable:false, because it never proved which
+  // project it is attached to. Consumers that only need reads should look at
+  // `bound`; consumers that need identity should look at `usable`.
+  const ok = binding.verified && binding.root !== null && idMatch !== false && rootMatch !== false;
 
   return {
     active: root !== null,
@@ -63,6 +67,12 @@ export function registerVerifyBindingTool(server: McpServer): void {
           .string()
           .optional()
           .describe('Absolute project root the caller believes this server is bound to. Compared by fingerprint; never used to rebind.'),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
       },
     },
     async ({ expected_project_id, expected_root }: { expected_project_id?: string; expected_root?: string }) =>

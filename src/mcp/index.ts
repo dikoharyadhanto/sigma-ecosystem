@@ -91,14 +91,19 @@ export async function startMcpServer(argv: string[] = process.argv.slice(2)): Pr
   }
 }
 
-const isEntrypoint =
-  typeof require !== 'undefined' &&
-  require.main &&
-  (require.main === module || require.main.filename.endsWith('sigma-mcp.js'));
-
-if (isEntrypoint) {
-  startMcpServer().catch((e) => {
-    console.error('Fatal error in sigma-mcp:', e);
-    process.exit(1);
-  });
-}
+// NO startup side effect here — this module only exports.
+//
+// It used to auto-start when `require.main.filename` ended with
+// "sigma-mcp.js". That condition is true when bin/sigma-mcp.js requires this
+// module, and bin then called startMcpServer() itself: two servers attached to
+// one stdio pair, answering every request twice with the same JSON-RPC id.
+// Reviewer finding R-02, reproduced against the real executable — one
+// `initialize` with id=1 produced two RESULT frames, both id=1.
+//
+// The defect predates Batch 1: both halves were already present before this
+// work began, so every sigma-mcp session on this host has been double-
+// answering since Phase 0.
+//
+// bin/sigma-mcp.js is now the single entrypoint. Do not reintroduce an
+// auto-start here; test/mcp-binding.test.ts asserts exactly one startup line
+// and exactly one response per request id against the real binary.

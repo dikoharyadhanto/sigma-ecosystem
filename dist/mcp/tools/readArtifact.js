@@ -31,6 +31,29 @@ const contract_1 = require("../contract");
 const binding_1 = require("../binding");
 /** Refuse rather than truncate. Generous for prose, far below any real file. */
 exports.MAX_ARTIFACT_BYTES = 512 * 1024;
+/**
+ * Canonical on-disk layout per artifact type, taken from the CLI writers that
+ * create these files (src/commands/{intent,plan,exec,close,roadmap}.ts).
+ *
+ * Reviewer finding R-01: the first version of this tool treated the tracker's
+ * `file` field as the allowlist and only checked that the resolved path stayed
+ * inside the project root. A tracker entry rewritten to `.env` therefore read
+ * `.env` back — reproduced, returning a live Notion token. "Inside the root" is
+ * the wrong boundary for a governance-artifact reader; the right one is "this
+ * exact directory, this exact filename, for this exact version".
+ *
+ * The tracker is now untrusted input: it may only *select* among paths that
+ * already match this layout, never introduce one.
+ */
+const LAYOUT = Object.freeze({
+    intent: { dir: 'Sigma/charter', prefix: 'DIR-INTENT' },
+    roadmap: { dir: 'Sigma/roadmap', prefix: 'ROADMAP' },
+    plan: { dir: 'Sigma/contract', prefix: 'FMN-PLAN' },
+    exec: { dir: 'Sigma/evidence', prefix: 'DEV-EXEC' },
+    close: { dir: 'Sigma/close', prefix: 'DIR-CLOSE' },
+});
+/** Version tokens Sigma actually issues: v1, v1.1. Nothing path-shaped. */
+const VERSION_RE = /^v\d+(\.\d+)?$/;
 class ArtifactReadError extends Error {
     constructor(code, message) {
         super(message);
@@ -66,14 +89,38 @@ function candidatesFor(data, type) {
             return fromVersions(data.exec?.versions ?? []);
     }
 }
-/** Real path must remain inside the bound root — junctions and `..` included. */
-function assertInsideRoot(root, abs) {
+/**
+ * The path a given artifact type+version is *allowed* to occupy. Derived, not
+ * read from the tracker — so a rewritten tracker cannot widen it.
+ */
+function expectedRelPath(type, version) {
+    if (!VERSION_RE.test(version)) {
+        throw new ArtifactReadError(contract_1.ERROR_CODES.INVALID_OPERATION, 'Artifact version is not a valid Sigma version token.');
+    }
+    const { dir, prefix } = LAYOUT[type];
+    return `${dir}/${prefix}-${version}.md`;
+}
+/**
+ * Checks the tracker's own `file` value against the derived path, then checks
+ * that the path still resolves there after symlinks and Windows junctions are
+ * followed. The second check is what the original containment test missed: a
+ * symlink at the canonical location pointing at `.env` is *inside the root*,
+ * so "inside the root" alone would have let it through.
+ */
+function assertCanonicalLocation(root, type, version, trackerFile) {
+    const expected = expectedRelPath(type, version);
+    const declared = trackerFile.split('\\').join('/');
+    if (declared !== expected) {
+        throw new ArtifactReadError(contract_1.ERROR_CODES.BOUNDARY_VIOLATION, 'Tracker entry does not point at the canonical location for this artifact type and version.');
+    }
+    const abs = path_1.default.resolve(root, expected);
     const realRoot = (0, binding_1.canonicalize)(root);
     const realAbs = (0, binding_1.canonicalize)(abs);
-    const rel = path_1.default.relative(realRoot, realAbs);
-    if (rel === '' || rel.startsWith('..') || path_1.default.isAbsolute(rel)) {
-        throw new ArtifactReadError(contract_1.ERROR_CODES.BOUNDARY_VIOLATION, 'Artifact path resolves outside the bound project root.');
+    const rel = path_1.default.relative(realRoot, realAbs).split(path_1.default.sep).join('/');
+    if (rel !== expected) {
+        throw new ArtifactReadError(contract_1.ERROR_CODES.BOUNDARY_VIOLATION, 'Artifact path does not resolve to its canonical location.');
     }
+    return abs;
 }
 function computeReadArtifact(root, type, version) {
     if (!root)
@@ -92,11 +139,10 @@ function computeReadArtifact(root, type, version) {
     if (!picked) {
         throw new ArtifactReadError(contract_1.ERROR_CODES.INVALID_OPERATION, `No ${type} artifact with that version is registered in the active chain.`);
     }
-    const abs = path_1.default.resolve(root, picked.file);
-    assertInsideRoot(root, abs);
-    let stat;
+    const abs = assertCanonicalLocation(root, type, picked.version, picked.file);
+    let fd;
     try {
-        stat = fs_extra_1.default.statSync(abs);
+        fd = fs_extra_1.default.openSync(abs, 'r');
     }
     catch {
         // The tracker references a file that is not on disk. That is a real
@@ -112,13 +158,36 @@ function computeReadArtifact(root, type, version) {
             source: shared_1.SOURCE_ENGINE,
         };
     }
-    if (!stat.isFile()) {
-        throw new ArtifactReadError(contract_1.ERROR_CODES.BOUNDARY_VIOLATION, 'Registered artifact path is not a regular file.');
+    // Size and type are read off the open descriptor, and the bytes come from
+    // that same descriptor — so the file that was measured is the file that is
+    // read, even if the path is swapped underneath. Residual window: between the
+    // canonical-location check above and openSync. It is re-checked after the
+    // open rather than claimed to be zero.
+    let buf;
+    try {
+        const stat = fs_extra_1.default.fstatSync(fd);
+        if (!stat.isFile()) {
+            throw new ArtifactReadError(contract_1.ERROR_CODES.BOUNDARY_VIOLATION, 'Registered artifact path is not a regular file.');
+        }
+        if (stat.size > exports.MAX_ARTIFACT_BYTES) {
+            throw new ArtifactReadError(contract_1.ERROR_CODES.PAYLOAD_TOO_LARGE, `Artifact exceeds the ${exports.MAX_ARTIFACT_BYTES} byte read limit.`);
+        }
+        assertCanonicalLocation(root, type, picked.version, picked.file);
+        buf = Buffer.alloc(stat.size);
+        let read = 0;
+        while (read < stat.size) {
+            const n = fs_extra_1.default.readSync(fd, buf, read, stat.size - read, read);
+            if (n <= 0)
+                break;
+            read += n;
+        }
+        if (read !== stat.size) {
+            throw new ArtifactReadError(contract_1.ERROR_CODES.INTERNAL_ERROR, 'Artifact could not be read in full.');
+        }
     }
-    if (stat.size > exports.MAX_ARTIFACT_BYTES) {
-        throw new ArtifactReadError(contract_1.ERROR_CODES.PAYLOAD_TOO_LARGE, `Artifact exceeds the ${exports.MAX_ARTIFACT_BYTES} byte read limit.`);
+    finally {
+        fs_extra_1.default.closeSync(fd);
     }
-    const buf = fs_extra_1.default.readFileSync(abs);
     return {
         active: true,
         active_chain: chainVersion,
@@ -126,9 +195,12 @@ function computeReadArtifact(root, type, version) {
         version: picked.version,
         state: picked.state,
         present: true,
-        // Project-relative, posix — never the host path (§8 rule 5).
-        path: picked.file.split(path_1.default.sep).join('/'),
-        bytes: stat.size,
+        // The canonical path, not the tracker's spelling of it — they are proven
+        // equal by assertCanonicalLocation, and echoing the derived one keeps the
+        // payload independent of tracker text. Project-relative, posix, never the
+        // host path (§8 rule 5).
+        path: expectedRelPath(type, picked.version),
+        bytes: buf.length,
         sha256: 'sha256:' + crypto_1.default.createHash('sha256').update(buf).digest('hex'),
         content: buf.toString('utf-8'),
         source: shared_1.SOURCE_ENGINE,
@@ -146,6 +218,12 @@ function registerReadArtifactTool(server) {
                 .string()
                 .optional()
                 .describe('Artifact version, e.g. "v1" or "v1.1". Defaults to the most recent version the tracker records for that type.'),
+        },
+        annotations: {
+            readOnlyHint: true,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: false,
         },
     }, async ({ type, version }) => (0, contract_1.respond)('sigma_read_artifact', undefined, (root) => computeReadArtifact(root, type, version)));
 }

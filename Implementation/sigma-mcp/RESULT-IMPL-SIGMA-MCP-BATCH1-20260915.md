@@ -3,8 +3,8 @@
 **Plan**: `PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE-20260915.md` (APPROVED Batch 1, keputusan Q1–Q6 di §21.1)
 **Tanggal**: 2026-09-15
 **Scope dieksekusi**: Stage 0 + Stage A + Stage B1
-**Status**: **Stage 0 SELESAI. Gate 0.5 PASS (contract + runtime). Gate B1 PASS.**
-**Commit/push**: branch `hermes-integration`, dua commit, sudah di-push. Tidak di-merge ke `main`.
+**Status**: **Stage 0 SELESAI. Gate 0.5 dan Gate B1 REOPENED oleh review Codex, perbaikan R-01…R-09 selesai, menunggu re-review.**
+**Commit/push**: branch `hermes-integration`, di-push atas otorisasi Director. Tidak di-merge ke `main`.
 
 > **Revisi 2026-09-15.** Versi pertama dokumen ini menutup Gate 0.5 sebagai `runtime UNPROVEN` atas dasar klaim bahwa lab Hermes memakai binary global yang lama. **Klaim itu salah** dan dikoreksi di §6. Setelah Director mengotorisasi `npm link`, pemeriksaan pertama menunjukkan global `sigma-mcp` sudah berupa symlink ke repo ini sejak sebelum Batch 1 — sehingga `npm link` tidak diperlukan dan smoke test runtime dapat langsung dijalankan.
 
@@ -15,18 +15,18 @@
 | Gate | Hasil | Dasar |
 |---|---|---|
 | Stage 0 | SELESAI | Capability matrix 59 operasi + 3 mismatch registry terdokumentasi |
-| Gate 0.5 (Stage A) | **PASS** | Contract lulus by test; runtime dibuktikan out-of-process terhadap lab `HERMESLAB` — §6 |
-| Gate B1 (Stage B) | PASS | `sigma_get_effective_policy` + bounded `sigma_read_artifact` lulus test, nol mutasi |
+| Gate 0.5 (Stage A) | **REOPENED** | Codex FAIL/reopen; R-01…R-04, R-06…R-09 sudah diperbaiki (§11), R-05 menunggu keputusan Director |
+| Gate B1 (Stage B) | **REOPENED** | Codex FAIL/reopen atas R-01; perbaikan dan enam regression test selesai (§11), menunggu re-review |
 
 ## 2. Bukti eksekusi
 
 | Perintah | Hasil |
 |---|---|
 | `npm run build` (`tsc`) | Bersih, nol error |
-| `npm test` | **50 file / 519 test pass** |
-| Smoke test runtime (§6.2) | **30 assertion, ALL CHECKS PASSED**, out-of-process terhadap lab `HERMESLAB` |
+| `npm test` | **50 file / 532 test pass** (setelah perbaikan review; 519 sebelum) |
+| Smoke test runtime (§6.2) | **32 assertion, ALL CHECKS PASSED**, out-of-process terhadap lab `HERMESLAB` |
 | Baseline pra-Batch 1 | 49 file / 487 test pass |
-| Delta | +1 file, +32 test. **Nol test hilang, nol test di-skip** |
+| Delta | +1 file, +45 test. **Nol test hilang, nol test di-skip** |
 | `git diff --check` | Bersih (satu warning CRLF pada `dist/` yang sudah ada sebelumnya) |
 
 ### 2.1 Mutation check
@@ -70,7 +70,9 @@ Juga tercatat: **lima dari sembilan tool Batch 1 tidak punya padanan operasi reg
 
 **`src/mcp/policy.ts` (baru).** Tabel tier adalah allowlist eksplisit hasil transkripsi capability matrix, bukan turunan field registry — alasannya tertulis di kepala file. Operasi yang tidak ada di tabel → `forbidden`. Payload menyatakan `advisory: true` dan `enforcement: "server-side, re-checked per command"` secara harfiah, supaya model tidak membaca proyeksi sebagai izin.
 
-**`sigma_read_artifact`.** Menerima `type` + `version`, **tidak pernah** path. Path diselesaikan hanya dari `file` pada chain tracker, real path wajib tetap di dalam bound root (inilah yang menahan entri tracker yang menunjuk ke luar), dan file di atas 512 KB **ditolak, bukan dipotong** — dokumen governance terpotong yang dibaca sebagai utuh lebih berbahaya daripada gagal baca.
+**`sigma_read_artifact`.** Menerima `type` + `version`, **tidak pernah** path. File di atas 512 KB **ditolak, bukan dipotong** — dokumen governance terpotong yang dibaca sebagai utuh lebih berbahaya daripada gagal baca.
+
+> Versi pertama menyelesaikan path dari field `file` milik chain tracker dan hanya memastikan hasilnya berada di dalam bound root. Itu batas yang salah, dan reviewer membuktikannya dengan membaca `.env` — lihat R-01 di §11. Sejak perbaikan, path **diturunkan** dari layout kanonik per tipe+versi dan tracker hanya boleh memilih di antaranya, tidak pernah memperkenalkan path baru.
 
 ## 4. Deviasi terhadap plan
 
@@ -156,7 +158,9 @@ Perhatikan kasus A: `.mcp.json` lab masih berbentuk posisional dan **tidak saya 
 
 ## 8. Yang tidak dikerjakan
 
-Sesuai §20.2: nihil `sigma-control`, nihil write tool, nihil approval/idempotency store, nihil Stage B2/C/D/E, nihil perubahan profile Hermes, nihil perubahan config global Codex/Claude/Reasonix/Gemini/host, nihil commit/push/publish.
+Sesuai §20.2: nihil `sigma-control`, nihil write tool, nihil approval/idempotency store, nihil Stage B2/C/D/E, nihil perubahan profile Hermes, nihil perubahan config global Codex/Claude/Reasonix/Gemini/host.
+
+**Commit/push dikerjakan** atas otorisasi eksplisit Director setelah implementasi selesai — ke branch `hermes-integration`, tidak ke `main`. Versi pertama dokumen ini menyatakan "nihil commit/push" di bagian ini sekaligus "dua commit sudah di-push" di header; kontradiksi itu (reviewer finding R-09) dikoreksi di sini. Status aktual tercatat di header.
 
 `sigma project start` dan `sigma project sync` **tidak pernah dijalankan** selama batch ini — caveat Phase 0 §5.2 membuktikan keduanya menyentuh config global. Perubahan `mcpConfig.ts` diverifikasi hanya lewat fixture disposable di `test/mcp-config.test.ts`.
 
@@ -168,3 +172,159 @@ Untuk review Codex sesuai §20.5: source diff, output test lengkap (§2), capabi
 2. Apakah containment check `sigma_read_artifact` tahan terhadap junction Windows, bukan hanya `..`.
 3. Apakah `structuredContent` tanpa `outputSchema` benar keputusan yang tepat, atau menunda masalah.
 4. Apakah tier pada capability matrix dapat dipertahankan, khususnya `plan_promote` dan `intent_activate` yang saya naikkan di atas klasifikasi registry.
+
+## 10. REVIEW — Codex (2026-09-15)
+
+**Verdict: REQUEST CHANGES.** Stage 0/capability inventory dapat diterima sebagai dasar kerja, tetapi **Gate 0.5 dan Gate B1 belum PASS**. Build dan seluruh test existing lulus, namun review adversarial menemukan pelanggaran boundary, lifecycle proses, dan snapshot contract yang tidak dicakup test tersebut.
+
+**Baseline review**: commit `d65d183` (implementasi) dan `8e2506c` (runtime evidence), pada branch `hermes-integration` dengan HEAD `8e2506c`. Review ini tidak mengubah source implementasi.
+
+### 10.1 Ringkasan status gate
+
+| Area | Klaim result | Hasil review | Alasan utama |
+|---|---|---|---|
+| Stage 0 — capability/policy inventory | PASS | **PASS dengan catatan** | Matrix dan deny-by-default direction berguna; gap registry `notion` dicatat dengan benar. |
+| Gate 0.5 — binding + query contract | PASS | **FAIL / reopen** | Entrypoint memulai dua server, snapshot dapat memakai chain yang salah, live identity drift tidak ditolak, dan evidence belum berasal dari Hermes sebagai consumer aktual. |
+| Gate B1 — policy + bounded artifact read | PASS | **FAIL / reopen** | `sigma_read_artifact` dapat diarahkan tracker untuk membaca file arbitrer di dalam project root. |
+
+### 10.2 Temuan blocking
+
+#### R-01 — CRITICAL — `sigma_read_artifact` bukan bounded governance read
+
+`candidatesFor()` mempercayai nilai `file` dari progress tracker sebagai allowlist (`src/mcp/tools/readArtifact.ts:49-71`). Validasi berikutnya hanya memastikan resolved path masih berada di project root (`src/mcp/tools/readArtifact.ts:75-82,115-147`); tidak ada validasi direktori, pola nama, atau jenis artefak terhadap canonical governance layout.
+
+Probe independen mengubah `intent.file` pada fixture menjadi `.env`, menaruh sentinel di file tersebut, lalu memanggil `computeReadArtifact(root, 'intent')`. Hasilnya:
+
+```json
+{"present":true,"path":".env","secretReturned":true}
+```
+
+Artinya progress tracker yang rusak/manipulatif dapat mengubah query artefak menjadi pembaca file arbitrer di dalam project, termasuk material D3 seperti `.env`. Ini bertentangan langsung dengan syarat Gate B1 pada plan: caller tidak boleh membaca arbitrary path/project/role.
+
+**Perbaikan wajib**: treat tracker path as untrusted; validasi terhadap allowlist lokasi dan filename per artifact type, gunakan canonical/real path, dan baca dari handle/file identity yang sudah diverifikasi untuk mengurangi celah check-to-read. Tambahkan negative test untuk `.env`, file source biasa, cross-type path, junction/symlink, dan perubahan file di antara check/read.
+
+#### R-02 — CRITICAL — executable memulai dua MCP server pada stdio yang sama
+
+`src/mcp/index.ts:94-103` menganggap module sebagai entrypoint bila `require.main.filename` berakhir dengan `sigma-mcp.js` dan memanggil `startMcpServer()`. Pada saat yang sama, `bin/sigma-mcp.js:2-10` me-require module itu lalu memanggil `startMcpServer()` lagi.
+
+Probe terhadap executable nyata menunjukkan dua pesan startup dan **dua JSON-RPC response identik untuk satu request `initialize` dengan id yang sama**. Ini adalah pelanggaran lifecycle/protocol dan dapat menimbulkan perilaku nondeterministik pada consumer. Smoke SDK yang dilaporkan tidak mendeteksi response duplikat tersebut.
+
+**Perbaikan wajib**: hanya satu layer yang memiliki startup side effect; module library sebaiknya hanya mengekspor fungsi, sedangkan bin menjadi satu-satunya entrypoint. Tambahkan transport test yang menyatakan tepat satu startup dan tepat satu response untuk setiap request id.
+
+#### R-03 — HIGH — `state_revision` mengikuti pointer mentah, bukan active chain efektif
+
+`computeStateRevision()` membaca `activate_status.active_chain` langsung lalu meng-hash `progress-${activeChain}.json` (`src/mcp/contract.ts:67-105`). Engine Sigma sendiri dapat memulihkan pointer stale/missing/superseded melalui resolver active-chain. Karena resolver yang dipakai snapshot berbeda dari resolver payload tool, metadata dan isi respons dapat berbicara tentang chain berbeda.
+
+Probe dengan manifest menunjuk `v99` sementara engine memilih progress valid `v1` menghasilkan:
+
+```json
+{"engineActiveChain":"v1","snapshotActiveChain":"v99","revisionChanged":false}
+```
+
+Perubahan bytes `progress-v1.json` tidak mengubah revision. Ini merusak konsistensi query sekarang dan akan membuat proteksi stale-state Stage C/D tidak aman.
+
+**Perbaikan wajib**: resolve active chain melalui satu primitive engine yang sama, lalu hash file chain efektif yang benar. Tambahkan regression test untuk stale pointer, missing pointer, superseded chain, dan perubahan bytes pada chain efektif.
+
+#### R-04 — HIGH — verified binding tidak mendeteksi penggantian identity setelah startup
+
+`computeVerifyBinding()` hanya membandingkan expectation dengan binding yang di-cache saat startup (`src/mcp/tools/verifyBinding.ts:17-46`). Ia tidak membaca ulang `.sigma-identity.json` pada bound root.
+
+Probe mengganti project ID live dari `HERMESLAB` menjadi `REPLACED` setelah binding terbentuk. Hasilnya:
+
+```json
+{"verifyUsableAfterIdentityReplacement":true,"cachedBindingProjectId":"HERMESLAB","liveStateProjectId":"REPLACED"}
+```
+
+Server tetap mengaku usable/verified sambil menyajikan state dengan identity lain. Untuk proses orchestrator berumur panjang, ini adalah kegagalan fail-closed.
+
+**Perbaikan wajib**: re-attest identity bound pada setiap request atau invalidasi binding saat identity revision berubah; mismatch wajib menghasilkan typed `BOUNDARY_VIOLATION`. Definisikan pula `usable` agar tidak `true` untuk binding yang tidak verified ketika dipakai consumer required-binding.
+
+#### R-05 — HIGH — evidence runtime bukan evidence Hermes aktual
+
+Skrip `Implementation/sigma-mcp/evidence/gate05-runtime-smoke.mjs:11,63-64` memakai MCP SDK `Client` + `StdioClientTransport` sendiri. Ini valid sebagai **reference-client subprocess test**, tetapi bukan eksekusi melalui Hermes/profile `sigma-lab`.
+
+Plan mensyaratkan reference client **dan Hermes** membaca state yang sama (`PLAN...:423`) serta runtime smoke Hermes bila environment tersedia (`PLAN...:635`). Dokumen result belum memperlihatkan bukti discovery/call melalui proses Hermes, child environment credential probe, atau hasil sembilan tool dari consumer tersebut. Karena itu evidence saat ini tidak cukup untuk menaikkan Gate 0.5 menjadi PASS—terlebih executable ternyata menghasilkan response duplikat.
+
+**Perbaikan wajib**: setelah R-02 selesai, rekam smoke aktual dari Hermes `sigma-lab`: daftar nama tool yang ditemukan, binding `HERMESLAB`, panggilan sembilan query, cross-project rejection, parity `structuredContent`/text, dan credential child-environment probe tanpa membocorkan secret.
+
+### 10.3 Temuan non-blocking tetapi harus ditutup dalam Batch 1
+
+#### R-06 — MEDIUM — error `sigma_get_memory` masih membocorkan absolute host path
+
+`computeMemory()` menangkap exception engine lalu memasukkan raw `Error.message` ke payload sukses (`src/mcp/tools/memory.ts:12-39`). Karena exception tidak mencapai wrapper `respond()`, mekanisme anonymization tidak berjalan. Fixture dengan JSON memory korup mengembalikan pesan seperti `Failed to parse role memory file at C:\\Users\\...\\fmn-memory.json` pada verified binding.
+
+**Perbaikan**: lempar typed error melalui response wrapper atau sanitasi message sebelum menjadi payload; tambahkan assertion bahwa error verified-binding tidak memuat absolute path/user directory.
+
+#### R-07 — MEDIUM — writer Reasonix tidak bermigrasi ke verified binding
+
+Writer umum membentuk argumen `--mode query --project-root ... --project-id ...` (`src/utils/mcpConfig.ts:73-79`), tetapi `makeReasonixPluginBlockLines()` masih menulis hanya `[projectRoot]` (`src/utils/mcpConfig.ts:249-257`). Test justru mengunci bentuk lama (`test/mcp-config.test.ts:390-392,405-410`). Akibatnya `sigma project sync` tidak dapat memigrasikan Reasonix ke `binding_verified:true`, tidak konsisten dengan komentar dan kontrak migrasi config baru.
+
+**Perbaikan**: gunakan builder binding yang sama dengan escaping TOML yang benar dan tambahkan fixture Reasonix dengan `.sigma-identity.json`.
+
+#### R-08 — MEDIUM — tiga tool baru tidak membawa MCP safety annotations
+
+Registrasi `sigma_verify_binding`, `sigma_get_effective_policy`, dan `sigma_read_artifact` tidak menyertakan `annotations`, sementara enam tool existing menyatakan `readOnlyHint`, `destructiveHint`, `idempotentHint`, dan `openWorldHint`. Ini membuat metadata query-plane tidak seragam bagi orchestrator.
+
+**Perbaikan**: tambahkan annotation read-only/non-destructive/idempotent/closed-world yang sama dan assertion pada tool-list transport test.
+
+#### R-09 — LOW — result report kontradiktif mengenai commit/push
+
+Header menyatakan dua commit sudah di-push (`§ awal:7`), sedangkan §8 menyatakan “nihil commit/push/publish” (`§8:159`). Perbaiki menjadi fakta aktual dan, bila relevan, catat otorisasi Director serta commit yang termasuk Batch 1.
+
+### 10.4 Verifikasi yang lulus
+
+- `npm.cmd run build`: **PASS**.
+- Targeted MCP suite: `test/mcp-binding.test.ts`, `test/mcp-tools.test.ts`, `test/mcp-config.test.ts`: **3 file / 81 test PASS**.
+- Full suite: **50 file / 519 test PASS**. Eksekusi sandbox pertama terhalang `EPERM` ketika fixture Notion mengakses lokasi temp/home Windows; rerun dengan akses host yang sesuai lulus seluruhnya.
+- `git diff --check`: tidak menemukan whitespace error pada source review; hanya warning normalisasi CRLF/LF pada tracked `dist/engine/notionService.js`.
+- Scope utama terjaga: tidak ada command/write/control tool baru; policy projection eksplisit advisory dan arah allowlist lebih aman daripada menganggap operasi yang tidak ada di registry sebagai allowed.
+
+Passing test di atas adalah sinyal regresi yang baik, tetapi tidak menutup temuan adversarial R-01 sampai R-05.
+
+### 10.5 Syarat re-review
+
+1. Tutup R-01 sampai R-05 dan tambahkan regression test yang mereproduksi setiap probe.
+2. Tutup R-06 sampai R-08 dalam Batch 1; koreksi narasi R-09.
+3. Jalankan build, targeted suite, full suite, transport single-response test, dan non-mutation hash check.
+4. Lampirkan evidence **Hermes aktual**, terpisah dari reference-client smoke.
+5. Jangan mulai Stage B2/C atau mengaktifkan command plane sebelum Gate 0.5 dan B1 kembali direview dan dinyatakan PASS.
+
+## 11. Tanggapan atas review Codex (2026-09-15)
+
+Kesembilan temuan direproduksi secara independen sebelum diperbaiki. **Tidak ada yang dibantah.** Setiap probe kini menjadi regression test.
+
+### 11.1 Status per temuan
+
+| # | Sev | Status | Perbaikan | Regression test |
+|---|---|---|---|---|
+| R-01 | CRITICAL | **FIXED** | Tracker menjadi input tidak tepercaya. Path diturunkan dari layout kanonik per tipe+versi (`LAYOUT` + `VERSION_RE`), bukan dibaca dari tracker; realpath harus tetap mendarat di lokasi kanonik itu; baca lewat file descriptor (`openSync`/`fstatSync`/`readSync`) | 6 test: `.env`, cross-type dir, filename beda versi, versi path-shaped, symlink di lokasi kanonik, dan satu test bahwa artefak sah **tetap terbaca** |
+| R-02 | CRITICAL | **FIXED** | Blok auto-start `isEntrypoint` dihapus dari `src/mcp/index.ts`; `bin/sigma-mcp.js` jadi satu-satunya entrypoint | Spawn binary nyata, hitung baris startup dan frame per request id |
+| R-03 | HIGH | **FIXED** | `computeStateRevision()` memakai `resolveActiveChainVersion()` dari engine — resolver yang sama dengan payload tool | Pointer `v99` + edit `progress-v1.json` → revision bergerak |
+| R-04 | HIGH | **FIXED** | `assertIdentityUnchanged()` dipanggil di `respond()` setiap request; `usable` kini mensyaratkan binding **verified**, bukan sekadar bound | Identity swap → `BOUNDARY_VIOLATION`; positional config → `usable:false` |
+| R-05 | HIGH | **BELUM** | Perlu keputusan Director — lihat §11.3 | — |
+| R-06 | MEDIUM | **FIXED** | `catch` tidak lagi meneruskan `Error.message`; mengembalikan kode stabil + pesan generik | Memory file korup → payload tidak memuat path host |
+| R-07 | MEDIUM | **FIXED** | `makeReasonixPluginBlockLines()` memakai `makeMcpEntry()` yang sama | Fixture Reasonix dengan identity → `--project-id` hadir; satu test bahwa semua writer sepakat |
+| R-08 | MEDIUM | **FIXED** | Annotations pada tiga tool baru | Transport test menegaskan **semua** tool punya annotations seragam |
+| R-09 | LOW | **FIXED** | §8 dan header diselaraskan | — |
+
+### 11.2 Bukti setelah perbaikan
+
+| | Sebelum | Sesudah |
+|---|---|---|
+| R-01 probe `.env` | `{present:true, secretReturned:true}` | `BOUNDARY_VIOLATION` |
+| R-01 artefak sah | terbaca | **tetap terbaca** — perbaikan tidak mematikan tool |
+| R-02 satu `initialize` | 2 startup, 2 frame id=1 | 1 startup, 1 frame |
+| R-03 pointer `v99` | snapshot `v99`, revision tidak bergerak | snapshot `v1`, revision bergerak |
+| R-04 identity swap | `usable:true` sambil menyajikan `REPLACED` | `BOUNDARY_VIOLATION` |
+
+Suite: **50 file / 532 test PASS** (dari 519; +13, nol hilang). Build `tsc` bersih. Smoke runtime: **32 assertion PASS**, termasuk CASE E baru.
+
+### 11.3 Catatan atas R-02 dan R-05
+
+**R-02 mendahului Batch 1.** `git show d65d183^` menunjukkan blok `isEntrypoint` dan pemanggilan `startMcpServer()` di `bin/` keduanya sudah ada sebelum pekerjaan ini. Artinya **Phase 0 dinyatakan PASS dengan cacat ini aktif**, dan tidak terdeteksi oleh evidence Phase 0 maupun oleh smoke Batch 1. Konsekuensi yang melampaui temuannya: setiap sesi MCP Sigma di host ini menerima response ganda sejak Phase 0, dan klaim Phase 0 sebaiknya diperiksa ulang atas dasar itu.
+
+Kenapa smoke saya tidak menangkapnya: SDK `Client` mengkorelasikan response pertama ke request id lalu membuang sisanya, sehingga server yang menjawab dua kali terlihat sehat. CASE E kini membaca frame stdio mentah, di luar client.
+
+**R-05 belum dikerjakan dan bukan karena tidak setuju.** Codex benar bahwa evidence saat ini adalah reference-client subprocess, bukan Hermes sebagai consumer aktual, dan plan §16.5 memang mensyaratkan yang kedua. Menjalankannya berarti menyalakan profile Hermes `sigma-lab` dan merekam discovery/call dari sana — menyentuh runtime Hermes, di luar otorisasi yang ada. Menunggu keputusan Director: saya yang menjalankan, atau Director menjalankan dengan skrip verifikasi yang saya siapkan.
+
+Sampai R-05 tertutup, **Gate 0.5 dan Gate B1 tetap REOPENED**. Dokumen ini tidak menaikkannya sendiri.

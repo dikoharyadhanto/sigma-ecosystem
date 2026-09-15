@@ -280,6 +280,18 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
       ].sort(),
     );
 
+    // R-08 — every query-plane tool carries the same safety annotations, so an
+    // orchestrator reading the tool list sees uniform metadata. The three
+    // Batch 1 additions shipped without them at first.
+    for (const t of tools) {
+      expect(t.annotations, `${t.name} must declare annotations`).toMatchObject({
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      });
+    }
+
     // The original six keep their contract: active project, engine-sourced.
     const core = [
       'sigma_doctor',

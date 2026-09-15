@@ -32,10 +32,20 @@ function computeMemory(root, role) {
             source: shared_1.SOURCE_ENGINE,
         };
     }
-    catch (err) {
+    catch {
+        // Reviewer finding R-06: this used to put the raw engine message into a
+        // *success* payload, which never reaches respond()'s anonymisation. A
+        // corrupt memory file therefore returned
+        // "Failed to parse role memory file at C:\Users\...\fmn-memory.json" to
+        // the model, on a verified binding, host path and all.
+        //
+        // The message is dropped, not forwarded. The role and a stable code are
+        // enough for a consumer to act; the detail belongs in the operator's
+        // terminal, not in a model's context.
         return {
             active: false,
-            error: err.message,
+            role,
+            error: { code: contract_1.ERROR_CODES.INTERNAL_ERROR, message: 'Role memory for this role could not be read.' },
             source: shared_1.SOURCE_ENGINE,
         };
     }

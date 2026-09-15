@@ -28,6 +28,7 @@ exports.fingerprintRoot = fingerprintRoot;
 exports.parseBindingArgs = parseBindingArgs;
 exports.discoveryBinding = discoveryBinding;
 exports.resolveBinding = resolveBinding;
+exports.assertIdentityUnchanged = assertIdentityUnchanged;
 exports.assertCallRootAllowed = assertCallRootAllowed;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
@@ -203,6 +204,35 @@ function resolveBinding(parsed) {
         role: parsed.mode === 'control' ? (parsed.role ?? null) : null,
         verified: Boolean(parsed.projectId),
     };
+}
+/**
+ * Re-reads the bound project's identity and fails closed if it no longer
+ * matches what was verified at startup.
+ *
+ * Reviewer finding R-04: the binding was attested once and then trusted for the
+ * process lifetime. Swapping .sigma-identity.json's project_id after startup
+ * left the server reporting binding_verified:true for the old id while every
+ * payload described the new project. For an orchestrator process that outlives
+ * a single task, that is the failure mode the binding exists to prevent.
+ *
+ * Only a verified binding is re-attested: an unverified one never made a claim
+ * about identity, so there is nothing to contradict.
+ */
+function assertIdentityUnchanged(binding) {
+    if (!binding.verified || !binding.root)
+        return;
+    let current = null;
+    try {
+        const raw = fs_extra_1.default.readJsonSync(path_1.default.join(binding.root, config_1.PROJECT_IDENTITY_FILE));
+        if (typeof raw.project_id === 'string')
+            current = raw.project_id;
+    }
+    catch {
+        current = null;
+    }
+    if (current !== binding.projectId) {
+        throw new BindingError('BOUNDARY_VIOLATION', 'Bound project identity changed after this server started; refusing to serve it.');
+    }
 }
 /**
  * Per-call guard for the six legacy tools, which still accept project_root for

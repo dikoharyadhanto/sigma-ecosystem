@@ -65,6 +65,20 @@ export declare function discoveryBinding(): Binding;
  */
 export declare function resolveBinding(parsed: ParsedBindingArgs): Binding;
 /**
+ * Re-reads the bound project's identity and fails closed if it no longer
+ * matches what was verified at startup.
+ *
+ * Reviewer finding R-04: the binding was attested once and then trusted for the
+ * process lifetime. Swapping .sigma-identity.json's project_id after startup
+ * left the server reporting binding_verified:true for the old id while every
+ * payload described the new project. For an orchestrator process that outlives
+ * a single task, that is the failure mode the binding exists to prevent.
+ *
+ * Only a verified binding is re-attested: an unverified one never made a claim
+ * about identity, so there is nothing to contradict.
+ */
+export declare function assertIdentityUnchanged(binding: Binding): void;
+/**
  * Per-call guard for the six legacy tools, which still accept project_root for
  * compatibility (§7.1 rule 4). Once bound, the only accepted values are absent,
  * empty, or a spelling of the bound root itself.

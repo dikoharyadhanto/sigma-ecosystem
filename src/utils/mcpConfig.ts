@@ -247,9 +247,12 @@ function findPluginBlockRange(
  *  maupun POSIX, dan JSON.stringify menghasilkan literal string kutip-ganda
  *  yang sah untuk basic string TOML. */
 function makeReasonixPluginBlockLines(projectRoot?: string): string[] {
-  const args = projectRoot && projectRoot.trim().length > 0
-    ? `[${JSON.stringify(toPosix(projectRoot.trim()))}]`
-    : '[]';
+  // Reviewer finding R-07: this built its own positional argument list while
+  // makeMcpEntry() had already moved to binding flags, so `sigma project sync`
+  // migrated every client except Reasonix — which stayed permanently on
+  // binding_verified:false. One builder now feeds both.
+  const entry = makeMcpEntry(projectRoot ? toPosix(projectRoot.trim()) : undefined);
+  const args = `[${entry.args.map((a) => JSON.stringify(a)).join(', ')}]`;
   return [
     '[[plugins]]',
     'name    = "sigma"',
