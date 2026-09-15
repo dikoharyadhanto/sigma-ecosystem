@@ -2,7 +2,7 @@
 
 **Sumber**: Sesi Professional Mode 2026-09-15 (Director + Claude), lanjutan dari `2026-09-15_proposal-hermes-sigma-integration-setup-guide.md` (Discussion, dikoreksi 2026-09-15) dan `2026-09-12_design-hermes-sigma-project-scoped-governance.md` §3.
 **Tanggal**: 2026-09-15
-**Status**: **DRAFT — menunggu review Director. Belum ada eksekusi apa pun.** Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma. Prasyarat: `PLAN-IMPL-HERMES-PHASE0-MCP-ORIENTATION-20260915.md` selesai (nama tool MCP sebenarnya sudah terkonfirmasi).
+**Status**: **DRAFT — keputusan Director atas §8 sudah dikonfirmasi 2026-09-15 (mengikuti rekomendasi review Claude). Belum ada eksekusi Phase 1** (penulisan kode/skill belum dimulai; update ini murni penyelarasan dokumen sebelum coding). Bukan FMN-PLAN Sigma, tidak punya otoritas lock/gate Sigma. Prasyarat Phase 0 sudah terpenuhi pada 2026-09-15; lihat `RESULT-HERMES-PHASE0-MCP-ORIENTATION-20260915.md`.
 **Cakupan perubahan kode Sigma**: **Ya** — lihat §4. Ini kontras dengan draf awal guide yang sempat menyebut "tidak ada kode baru" (sudah dikoreksi di Discussion doc).
 
 ---
@@ -46,25 +46,34 @@ Hermes belum punya skill perilaku Sigma (ARC/FMN/DEV/AUD) di profile-nya — ini
 
 ### 4.2 Prasyarat verifikasi sebelum menulis kode (bukan diasumsikan)
 
-Path skill Hermes yang sebenarnya di instalasi Windows kita: `%LOCALAPPDATA%\hermes\skills\` (dikonfirmasi langsung 2026-09-15 saat audit instalasi desktop). **Belum diverifikasi**: apakah ini path yang sama secara lintas-platform (macOS/Linux `~/.hermes/skills` atau `~/Library/Application Support/hermes/skills`?), dan apakah Hermes menyediakan env var resmi (mis. `HERMES_HOME`) yang bisa dibaca lintas OS alih-alih hardcode path per-platform seperti target lain. **Item kerja sebelum coding**: cek `hermes config path` / `hermes doctor` di profile yang dipakai untuk memastikan path skill yang benar, dan cek apakah ada `HERMES_HOME` env var yang bisa dipakai (pola lebih tahan lintas-OS daripada hardcode `os.homedir()` + segmen path seperti target lain).
+Path skill Hermes yang sebenarnya di instalasi Windows kita: `%LOCALAPPDATA%\hermes\skills\` (dikonfirmasi langsung 2026-09-15 saat audit instalasi desktop).
 
-### 4.3 Format skill — direktori vs file flat (perlu keputusan sebelum coding)
+**Keputusan Director (2026-09-15, §8.2)**: cakupan verifikasi path Phase 1 dibatasi ke Windows saja. Riset path macOS/Linux (`~/.hermes/skills` atau `~/Library/Application Support/hermes/skills`?) **ditunda** ke fase saat platform tersebut benar-benar digunakan — bukan prasyarat coding Phase 1.
 
-`ROLE_FILES` punya dua pola berbeda: Codex pakai direktori (`arc/SKILL.md`), Claude Code/Reasonix pakai file flat (`arc.md`). Belum diverifikasi mana yang didukung/direkomendasikan Hermes untuk skill progressive-load. Keputusan ini menentukan apakah `sourceDir`/`targetDir` copy logic di `deploySkillsAndHook()` perlu jalur baru atau bisa reuse pola Codex apa adanya.
+**Tetap wajib sebagai item kerja sebelum coding** (tidak berubah oleh keputusan di atas): cek `hermes config path` / `hermes doctor` di profile yang dipakai untuk memastikan path skill Windows yang dipakai kode benar, dan cek apakah ada env var resmi `HERMES_HOME` yang bisa dibaca alih-alih hardcode `os.homedir()` + segmen path seperti target lain di `detect.ts`. Env var lebih tahan lintas-OS bila tersedia, dan pengecekan ini murah dilakukan sekarang meskipun cakupan lintas-platform ditunda.
+
+### 4.3 Format skill — direktori vs file flat (keputusan terkunci)
+
+`ROLE_FILES` punya dua pola berbeda: Codex pakai direktori (`arc/SKILL.md`), Claude Code/Reasonix pakai file flat (`arc.md`).
+
+**Keputusan Director (2026-09-15, §8.3)**: pola direktori (`arc/SKILL.md`, mengikuti Codex) dipilih untuk `setup/targets/hermes/`. Tetap wajib diverifikasi terhadap dokumentasi/`hermes doctor` sebelum final, sebagai bagian dari item kerja §4.2.
+
+**Klarifikasi cakupan coding**: keputusan ini **tidak** menambah pekerjaan implementasi. `deploySkillsAndHook()` (`src/commands/setup.ts:236-257`) sudah generik — memakai `fs.copySync` dan mengecek konflik tipe (`isDirectory()`) sebelum overwrite, sudah menangani direktori (Codex, Antigravity) maupun file flat (Claude Code, Reasonix) tanpa cabang kode terpisah. Menambahkan `hermes` ke `PLATFORM_SOURCE_DIR`/`ROLE_FILES` dengan pola direktori otomatis reuse jalur yang sama; tidak perlu jalur copy baru.
 
 ### 4.4 Yang TIDAK berubah / TIDAK dilakukan di fase ini
 
-- Tidak ada perubahan pada `src/mcp/*` — MCP tool sudah cukup dari Phase 0.
+- Tidak ada perubahan pada `src/mcp/*` **di dalam scope Phase 1 ini** — enam tool Phase 0 cukup untuk eksperimen behaviour/skill satu proyek. Hardening binding, kontrak query, dan command plane direncanakan dalam plan platform consumer-neutral `../sigma-mcp/PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE-20260915.md`; Gate 0.5-nya wajib sebelum gateway diberi capability Sigma, multi-project routing, atau capability write yang lebih luas.
 - Tidak ada mekanisme approval queue/evidence engine baru (itu scope Blueprint terpisah, bukan bagian integrasi ini).
 - Tidak ada perubahan pada `sigma project start` untuk menulis file konteks Hermes secara otomatis — di Phase 1 ini, penulisan `HERMES.md` ke proyek lab dilakukan manual/terverifikasi dulu; otomatisasi penuh via `BRIDGE_STUBS` baru dianggap selesai setelah §4.1 diimplementasikan dan diuji, bukan sebelum.
 - Tidak ada capability tulis apa pun diberikan ke skill Hermes — role rule tetap menegaskan "recommend, not execute" untuk command approval-class (pola yang sama seperti `CODEX-RULES` §Director Authorization Language).
+- **Pemisahan profile produksi Sigma** (profile terpisah dari `default` dengan `HERMES_HOME` + credential set sendiri, di luar `sigma-lab` yang sudah dipakai Phase 0) — **eksplisit ditunda ke Phase 2** (keputusan Director 2026-09-15, menyelesaikan pertanyaan terbuka Discussion `2026-09-15_proposal-hermes-sigma-integration-setup-guide.md` §16 poin 3). Phase 1 hanya menambah skill + bridge stub; tidak menyentuh topologi profile/credential produksi.
 
 ## 5. Isi `HERMES.md` (bridge stub baru) — rangkuman
 
 Mengikuti struktur `AGENTS.md`/`CODEX-RULES` yang sudah ada, dengan penyesuaian khusus Hermes:
 
 - Operational Modes (Professional/ARC/FMN/DEV/AUD) — identik prinsipnya.
-- **MCP Orientation Layer** — daftar tool diperbarui ke **enam** tool nyata (`sigma_get_state`, `sigma_get_orientation`, `sigma_get_gates`, `sigma_list_artifacts`, `sigma_doctor`, `sigma_get_memory`) dengan nama tool ter-prefix **hasil verifikasi Phase 0** (bukan diasumsikan `mcp_sigma_*`).
+- **MCP Orientation Layer** — daftar tool diperbarui ke **enam** tool nyata (`sigma_get_state`, `sigma_get_orientation`, `sigma_get_gates`, `sigma_list_artifacts`, `sigma_doctor`, `sigma_get_memory`). Hasil Phase 0: selector administratif memakai `sigma:<tool>` dan nama model-facing memakai `mcp__sigma__<tool>`; jangan gunakan asumsi lama `mcp_sigma_*`.
 - **Binding requirement** (bagian baru, tidak ada di `CODEX-RULES` karena Codex tidak punya isu auto-load-by-cwd yang sama) — instruksi eksplisit: sebelum aksi governance apa pun, verifikasi `.sigma-identity.json` + `sigma session bootstrap`, jangan asumsikan proyek dari nama folder atau memory Hermes.
 - Director Authorization Language — identik.
 - CLI-Managed Files — Do Not Edit Directly — identik.
@@ -78,6 +87,7 @@ Mengikuti struktur `AGENTS.md`/`CODEX-RULES` yang sudah ada, dengan penyesuaian 
 3. `sigma setup uninstall --confirm` membersihkan skill Hermes yang ter-deploy (regresi untuk temuan `targetDirMap` ganda di §4.1).
 4. `BRIDGE_STUBS` baru (`HERMES.md`) ter-copy ke `GLOBAL_BRIDGE_DIR` saat `setup install`, dan ke project root saat `project start`, sama seperti `AGENTS.md`/`CLAUDE.md` yang sudah ada.
 5. Regresi: menambah `hermes` ke `ROLE_FILES`/`PLATFORM_LABELS` tidak mengubah perilaku target lain (Codex/Claude Code/Reasonix/Antigravity/Cursor) — jalankan ulang test suite existing untuk `setup.ts`.
+6. **Precedence skill bawaan Hermes** — RESULT Phase 0 §5 caveat 3 mencatat `hermes profile create --no-skills` tetap menghasilkan satu skill bawaan `autonomous-ai-agents/hermes-agent` meski marker `.no-bundled-skills` ada, dan menandai ini "perlu diperhitungkan pada Phase 1". Tambahkan uji manual/otomatis: dengan skill `sigma-arc/fmn/dev/aud/report` ter-deploy berdampingan dengan skill bawaan tersebut, konfirmasi tidak ada konflik aktivasi/precedence — sesi ARC (via skill Sigma) tetap menghasilkan behaviour ARC yang benar, bukan tercampur/tertimpa oleh skill bawaan Hermes.
 
 ## 7. Definition of Done
 
@@ -87,10 +97,15 @@ Sesuai guide §8 baris Fase 1:
 - [ ] `sigma plan new` **ditolak** oleh CLI sebelum intent di-ratify — membuktikan skill tidak membawa otoritas, hanya behaviour.
 - [ ] Role immutability terjaga (skill tidak mencoba berpindah role dalam satu sesi, sesuai instruksi di `HERMES.md`).
 - [ ] `sigma setup uninstall --confirm` membersihkan seluruh jejak skill Hermes tanpa sisa.
+- [ ] Skill bawaan `autonomous-ai-agents/hermes-agent` (RESULT Phase 0 §5 caveat 3) terbukti tidak berkonflik precedence dengan skill `sigma-arc/fmn/dev/aud` yang baru — lihat §6 item 6.
 
-## 8. Keputusan Director yang masih terbuka sebelum coding dimulai
+## 8. Keputusan Director (dikonfirmasi 2026-09-15)
 
-1. Setuju pendekatan `HERMES.md` sebagai bridge stub baru (bukan menumpangi `AGENTS.md`)?
-2. Path skill Hermes lintas-platform — cukup verifikasi Windows dulu (`%LOCALAPPDATA%\hermes\skills`), atau perlu riset cross-platform sebelum coding?
-3. Format skill — direktori (`arc/SKILL.md`, pola Codex) atau file flat (`arc.md`, pola Claude Code/Reasonix)? Menunggu hasil §4.3.
-4. Proyek lab mana yang dipakai untuk uji end-to-end §7 (sama dengan keputusan Phase 0, atau proyek terpisah)?
+Diputuskan berdasarkan review Claude atas RESULT Phase 0 dan draf plan ini; Director mengikuti seluruh rekomendasi tanpa perubahan. Belum ada eksekusi kode — keputusan ini mengunci arah, bukan mengesahkan mulainya coding (lihat baris Status di atas).
+
+1. **Bridge stub**: `HERMES.md` baru, bukan menumpangi `AGENTS.md` — disetujui. Lihat §3, §4.1.
+2. **Cakupan path lintas-platform**: verifikasi Windows saja untuk Phase 1; riset macOS/Linux ditunda. `HERMES_HOME` env var tetap dicek sebagai item kerja sekarang. Lihat §4.2.
+3. **Format skill**: direktori (`arc/SKILL.md`, pola Codex). Tidak menambah cakupan coding — lihat klarifikasi di §4.3.
+4. **Proyek lab uji end-to-end §7**: sama dengan Phase 0 — `HERMESLAB` (`C:\Users\dikoh\AppData\Local\hermes\labs\sigma-phase0`), untuk kontinuitas evidence (chain `v1` yang sudah ada).
+5. **(Tambahan hasil review)** Precedence skill bawaan Hermes (`autonomous-ai-agents/hermes-agent`) ditambahkan ke cakupan test/DoD Phase 1 — lihat §6 item 6, §7.
+6. **(Tambahan hasil review)** Pemisahan profile produksi + `HERMES_HOME`/credential terpisah — eksplisit ditunda ke Phase 2, bukan bagian Phase 1 — lihat §4.4.

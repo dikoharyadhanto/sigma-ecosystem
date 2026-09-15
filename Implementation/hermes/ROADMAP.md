@@ -1,6 +1,6 @@
 # Roadmap — Integrasi Sigma ↔ Hermes
 
-**Status:** Peta visual untuk review Director. Bukan artefak governance Sigma, tidak mengotorisasi eksekusi apa pun. Turunan dari `Discussion/2026-09-15_proposal-hermes-sigma-integration-setup-guide.md` (dikoreksi) dan plan di folder ini.
+**Status:** Phase 0 MCP **PASS** pada 2026-09-15; Gate 0.5 MCP hardening, Phase 1–4, dan Slack belum dieksekusi. Peta ini bukan artefak governance Sigma dan tidak mengotorisasi fase berikutnya.
 
 Dua diagram:
 
@@ -13,7 +13,7 @@ Dua diagram:
 
 ```mermaid
 flowchart TD
-    Start(["Mulai"]) --> D0{{"Prasyarat lintas-fase:\nprofile lab + proyek lab\n(lihat README.md)"}}
+    Start(["Mulai"]) --> D0{{"Baseline disetujui:\nprofile sigma-lab +\nproyek disposable"}}
     D0 --> P0
 
     subgraph P0["PHASE 0 — Read-Only Orientation Lab"]
@@ -27,7 +27,19 @@ flowchart TD
 
     P0 --> G0{"Gate 0 lolos?\nMCP read-only terbukti,\nnol jalur tulis governance"}
     G0 -- "belum" --> P0
-    G0 -- "lolos" --> P1
+    G0 -- "lolos" --> P05
+
+    subgraph P05["GATE 0.5 — MCP Contract + Binding Hardening"]
+        direction TB
+        P05a["Binding canonical root + project_id\nditegakkan server-side"]
+        P05b["Response contract versioned +\nstate revision"]
+        P05c["Cross-project dan root escape\nditolak"]
+        P05a --> P05b --> P05c
+    end
+
+    P05 --> G05{"Gate 0.5 lolos?\nquery tetap non-mutating,\nbinding tidak dapat dipindah model"}
+    G05 -- "belum" --> P05
+    G05 -- "lolos" --> P1
 
     subgraph P1["PHASE 1 — Skills + Project Binding"]
         direction TB
@@ -86,6 +98,7 @@ flowchart TD
     end
 
     P0 -. paralel .-> SLACK
+    G05 -. "prasyarat capability Sigma di gateway" .-> SLACK
 ```
 
 **Rujukan tiap node ke dokumen detail:**
@@ -93,6 +106,7 @@ flowchart TD
 | Fase di diagram | File rinci |
 |---|---|
 | Phase 0 | `PLAN-IMPL-HERMES-PHASE0-MCP-ORIENTATION-20260915.md` |
+| Gate 0.5 + MCP query/command track | `../sigma-mcp/PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE-20260915.md` |
 | Phase 1 | `PLAN-IMPL-HERMES-PHASE1-SKILLS-AND-BINDING-20260915.md` |
 | Phase 2–4, Slack | `../../Discussion/2026-09-15_proposal-hermes-sigma-integration-setup-guide.md` (belum ada PLAN-IMPL — lihat `README.md` §"Kenapa hanya Phase 0/1") |
 
@@ -108,22 +122,24 @@ flowchart TD
         direction TB
         C1["1. Instal desktop app"]:::done
         C2["2. Hubungkan provider\nDeepSeek API"]:::done
-        C3["3. Tambah hermes bin\nke PATH"]:::todo
-        C4["4. Tentukan profile lab\ndefault vs baru khusus Sigma"]:::open
-        C5["5. Daftarkan sigma-mcp\ndi config.yaml — Phase 0"]:::todo
+        C3["3. Resolve binary Hermes + sigma-mcp\ntanpa mengubah PATH di Phase 0"]:::done
+        C4["4. Buat profile sigma-lab +\nproyek disposable"]:::done
+        C5["5. Daftarkan sigma-mcp\nPhase 0 — PASS"]:::done
+        C5A["5A. Hardening contract + binding\nGate 0.5"]:::todo
         C6["6. Deploy skill Sigma\nPhase 1, butuh kode baru"]:::todo
         C7["7. Setup Slack gateway\nmanifest, .env, ALLOWED_USERS"]:::todo
         C8["8. Profile sigma-dev + Docker\nPhase 2"]:::todo
-        C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7 --> C8
+        C1 --> C2 --> C3 --> C4 --> C5 --> C5A --> C6 --> C7 --> C8
     end
 
     subgraph TEST["Testing dipasangkan"]
         direction TB
         T1["hermes --version\nhermes doctor"]:::done
         T2["Kirim pesan tes,\ncek respons nyata — sudah terbukti"]:::done
-        T3["hermes doctor / hermes status\ndari terminal manapun"]:::todo
-        T4["Get-ScheduledTask, Get-Process\npastikan tidak ada service liar"]:::todo
-        T5["hermes tools — cek nama tool asli\nvs sigma session bootstrap manual"]:::todo
+        T3["absolute binary --version +\nconfig check — terverifikasi"]:::done
+        T4["profile list + session bootstrap\nisolasi lab — PASS"]:::done
+        T5["6 MCP tools + hash + env\nGate 0 — PASS"]:::done
+        T5A["Binding mismatch/root escape ditolak;\nquery tetap non-mutating"]:::todo
         T6["Chat: /arc to draft DIR-INTENT;\nsigma plan new harus DITOLAK"]:::todo
         T7["Kirim pesan dari Slack app\nsmartphone, verifikasi respons"]:::todo
         T8["Pilot: locked plan to DEV sandbox\nto evidence to pending approval"]:::todo
@@ -134,6 +150,7 @@ flowchart TD
     C3 -.verifikasi.-> T3
     C4 -.verifikasi.-> T4
     C5 -.verifikasi.-> T5
+    C5A -.verifikasi.-> T5A
     C6 -.verifikasi.-> T6
     C7 -.verifikasi.-> T7
     C8 -.verifikasi.-> T8
@@ -151,4 +168,4 @@ flowchart TD
 | 🟨 Kuning | Langkah jelas (command/cara sudah dikonfirmasi), belum dikerjakan |
 | 🟥 Merah | Terhambat keputusan Director yang masih terbuka — lihat bagian "Keputusan Director yang masih terbuka" di tiap `PLAN-IMPL-*.md` |
 
-**Catatan pembacaan diagram:** langkah 3–8 sengaja digambar linear untuk keterbacaan, tapi **langkah 4 (pilih profile lab) memblokir langkah 5 ke bawah** — tidak ada yang bisa dieksekusi sampai keputusan itu dijawab. Track Slack (langkah 7) sebenarnya bisa berjalan paralel dari langkah 3, tidak harus menunggu langkah 6 selesai — lihat diagram §1 untuk hubungan paralelnya.
+**Catatan pembacaan diagram:** langkah 3–8 sengaja digambar linear untuk keterbacaan. Profile dan proyek disposable langkah 4 sudah dibuat serta dipakai ketika Gate 0 lulus pada 2026-09-15. Track Slack (langkah 7) dapat disiapkan/diuji tanpa Sigma secara paralel dan **bukan** bagian Gate 0; gateway baru boleh memperoleh capability Sigma setelah Gate 0.5 lulus—lihat diagram §1.

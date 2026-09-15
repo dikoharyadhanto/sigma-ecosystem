@@ -252,16 +252,18 @@ hermes model deepseek        # atau hermes setup → pilih deepseek
 ```yaml
 mcp_servers:
   sigma:
-    command: "sigma-mcp"
+    command: "<SIGMA_MCP_CMD>"
     args: []
     timeout: 60
     connect_timeout: 30
 ```
 
-- Transport **stdio**; subprocess menerima environment tersaring.
+Pada Hermes `v0.21.3` yang terpasang, registrasi dan verifikasi sebaiknya memakai CLI native `hermes mcp add/list/test` pada profile `sigma-lab`, bukan mengandalkan edit manual dan asumsi restart. Gunakan path absolut `sigma-mcp.cmd` hasil preflight Windows dan jangan memasukkan credential lewat `--env`. Rincian evidence, rollback, dan uji non-mutation ada di `Implementation/hermes/PLAN-IMPL-HERMES-PHASE0-MCP-ORIENTATION-20260915.md`.
+
+- Transport **stdio**; environment subprocess diharapkan tersaring dan wajib dibuktikan saat runtime tanpa mencetak nilai credential.
 - **[Terverifikasi 2026-09-15 — koreksi]** `src/mcp/index.ts` mendaftarkan **enam** tool read-only, bukan lima: `sigma_get_state`, `sigma_get_orientation`, `sigma_get_gates`, `sigma_list_artifacts`, `sigma_doctor`, dan **`sigma_get_memory`** (terlewat lagi di revisi ini — relevan untuk role behaviour yang butuh akses role-memory).
-- **[Belum diverifikasi — uji di Phase 0]** Nama tool akhir di sisi Hermes diasumsikan `mcp_sigma_get_state` dkk., tapi tool asli sudah bernama `sigma_get_state` (prefix "sigma_" sudah melekat), sementara konvensi Hermes adalah `mcp_<server>_<tool>` dengan `<server>` = `sigma`. Kombinasinya berpotensi jadi `mcp_sigma_sigma_get_state` (dobel). Konfirmasi nama sebenarnya lewat `hermes tools`/`hermes chat` sebelum dipakai di skill/prompt manapun.
-- Perubahan MCP butuh restart Hermes.
+- **[Terverifikasi 2026-09-15 — Phase 0 PASS]** Selector administratif memakai `sigma:<tool>` dan nama model-facing/runtime memakai `mcp__sigma__<tool>`, misalnya `sigma:sigma_get_state` ↔ `mcp__sigma__sigma_get_state`. Jangan gunakan bentuk lama `mcp_sigma_*` atau double-prefix lain.
+- Setelah perubahan MCP, jalankan `mcp test` dan mulai sesi baru. Restart hanya diperlukan bila runtime/log membuktikan koneksi lama belum diganti.
 
 ### 9.3 Project context file untuk deteksi (Phase 1)
 
@@ -433,16 +435,23 @@ AUD tetap pasif + manual; Hermes tidak menyentuh sesi login web; temuan tetap ma
 
 ## 13. Runbook implementasi (urut)
 
-### Phase 0 — Read-only lab + gateway (jam)
+### Phase 0 — Read-only MCP lab (jam)
 
-```bash
-hermes --version && sigma-mcp --version
-hermes config edit              # tambahkan mcp_servers.sigma (§9.2); restart
-hermes chat -q "Jalankan mcp_sigma_get_state dan ringkas."   # verifikasi orientasi read-only
+```powershell
+& <HERMES_EXE> --version
+sigma.cmd --version
+where.exe sigma-mcp.cmd
+& <HERMES_EXE> profile create sigma-lab --no-skills --description "Isolated Sigma MCP read-only lab"
+& <HERMES_EXE> --profile sigma-lab mcp add sigma --command <SIGMA_MCP_CMD> --connect-timeout 30
+& <HERMES_EXE> --profile sigma-lab mcp test sigma
+& <HERMES_EXE> --profile sigma-lab tools list --platform cli
 ```
 
+Nama tool model-facing tidak ditulis di prompt sebelum dibuktikan dari tool schema/log aktual. Bandingkan hasil keenam tool read-only dengan `sigma session bootstrap`, lalu verifikasi hash state governance tidak berubah dan environment child tidak membawa credential asing.
+
+### Track paralel — Slack gateway (terpisah dari Gate 0)
+
 ```bash
-# Slack (paralel — channel adalah kebutuhan utama)
 hermes slack manifest --agent-view --write
 # → setup app + .env + hermes gateway (lihat §9.8)
 # → uji: kirim pesan dari smartphone Slack, verifikasi respons
@@ -476,7 +485,8 @@ sigma project start             # tulis AGENTS.md + .sigma-identity.json
 
 | Fase | Gate lolos bila |
 |---|---|
-| 0 | Agent baca state via MCP; tanpa jalur tulis governance; Slack merespons dari smartphone |
+| 0 | Agent baca state via MCP; keenam tool cocok dengan state manual; tanpa jalur tulis/mutasi governance; tidak ada credential asing pada subprocess |
+| Gateway (paralel) | Slack merespons dari smartphone dengan identity/allowlist yang benar; bukan prasyarat Gate 0 MCP |
 | 1 | ARC draft `DIR-INTENT`; gate menahan `sigma plan new` sebelum ratify; role immutability terjaga |
 | 2 | DEV ubah source hanya di worktree; evidence terekam; `progress-v<N>.json` satu penulis |
 | 3 | Dispatcher tidak menandai `READ` saat polling; claim/lease cegah aktivasi ganda |
@@ -496,7 +506,7 @@ sigma project start             # tulis AGENTS.md + .sigma-identity.json
 
 1. **Binding mechanism** — setujui deteksi/verifikasi/capability (§4) dengan `AGENTS.md` + `.sigma-identity.json` + bootstrap?
 2. **Registrasi proyek oleh Hermes** — konfirmasi Hermes menjalankan `sigma project start/register` atas perintah Director?
-3. **Pemisahan fisik profile** — `HERMES_HOME` + credential set terpisah profile Sigma vs personal, mulai Phase 1 atau 2?
+3. **Pemisahan fisik profile produksi** — profile lab `sigma-lab` yang terpisah dari `default` sudah disetujui untuk Phase 0. Apakah profile Sigma produksi memakai `HERMES_HOME` + credential set terpisah mulai Phase 1 atau Phase 2 masih perlu diputuskan setelah evidence Phase 0?
 4. **Version pin Hermes** — versi mana di-pin sebagai baseline, dan jadwal validasi?
 5. **Jalur Gemini/Antigravity** — apakah langganan Gemini memberi API key atau hanya akses aplikasi?
 6. **Metode remote login Windows** — Tailscale+RDP atau yang lain (menentukan jalur SSH/CLI dari laptop Linux)?
