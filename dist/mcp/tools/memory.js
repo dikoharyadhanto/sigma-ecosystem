@@ -9,9 +9,15 @@ exports.registerMemoryTool = registerMemoryTool;
 const zod_1 = require("zod");
 const roleMemory_1 = require("../../engine/roleMemory");
 const shared_1 = require("../shared");
+const contract_1 = require("../contract");
 function computeMemory(root, role) {
     try {
         const { memory, sourcePath } = (0, roleMemory_1.loadRoleMemory)(role, root ?? undefined);
+        // §8.1 — on a verified binding source_path becomes project-relative and
+        // gains a fingerprint; on an unverified one it stays the absolute path the
+        // pre-Stage-A clients already receive. Redaction follows binding state, not
+        // binary version, so no installed client changes behaviour on its own.
+        const binding = (0, shared_1.getBinding)();
         return {
             active: true,
             role: memory.role,
@@ -21,7 +27,8 @@ function computeMemory(root, role) {
             memory_updated_at: memory.memory_updated_at,
             general: memory.general,
             role_specific: memory.role_specific,
-            source_path: sourcePath,
+            source_path: (0, contract_1.redactPath)(binding, sourcePath),
+            source_path_fingerprint: binding.verified ? (0, contract_1.pathFingerprint)(sourcePath) : null,
             source: shared_1.SOURCE_ENGINE,
         };
     }
@@ -52,6 +59,6 @@ function registerMemoryTool(server) {
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ role, project_root }) => (0, shared_1.okText)(computeMemory((0, shared_1.resolveRoot)(project_root), role)));
+    }, async ({ role, project_root }) => (0, contract_1.respond)('sigma_get_memory', project_root, (root) => computeMemory(root, role)));
 }
 //# sourceMappingURL=memory.js.map

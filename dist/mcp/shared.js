@@ -6,6 +6,9 @@
 // go to stderr via console.error, never console.log.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SOURCE_ENGINE = void 0;
+exports.setBinding = setBinding;
+exports.getBinding = getBinding;
+exports.resetBindingForTest = resetBindingForTest;
 exports.setClientRoots = setClientRoots;
 exports.addClientRoot = addClientRoot;
 exports.resolveRoot = resolveRoot;
@@ -14,7 +17,25 @@ exports.errText = errText;
 exports.noProject = noProject;
 const url_1 = require("url");
 const fs_1 = require("../utils/fs");
+const binding_1 = require("./binding");
 exports.SOURCE_ENGINE = 'engine';
+// ── Startup binding (§7.1) ───────────────────────────────────────────────────
+//
+// Set once, from the entry point, out of trusted process arguments. Nothing
+// reachable from a tool call may reassign it — that is the whole point of the
+// binding, and `One binding, one project` (§5.2) is enforced by there being no
+// other writer than startup.
+let activeBinding = (0, binding_1.discoveryBinding)();
+function setBinding(binding) {
+    activeBinding = binding;
+}
+function getBinding() {
+    return activeBinding;
+}
+/** Test-only: restores the unbound default between cases. */
+function resetBindingForTest() {
+    activeBinding = (0, binding_1.discoveryBinding)();
+}
 const clientRootsCache = [];
 function setClientRoots(roots) {
     clientRootsCache.length = 0;
@@ -36,7 +57,17 @@ function addClientRoot(uriOrPath) {
     }
 }
 /**
- * Resolves the Sigma project root from multiple candidate sources:
+ * Legacy multi-source resolution — DISCOVERY MODE ONLY.
+ *
+ * Kept because every MCP config written before Stage A launches the server
+ * with no root at all, or with a bare positional one, and those installations
+ * must keep working for one release (§7.1 rule 7, Director decision Q1).
+ *
+ * Once a binding exists this function is not consulted: contract.respond()
+ * takes binding.root directly. Do not call it from new code — a new tool that
+ * reaches for it is reintroducing exactly the hole Stage A closed.
+ *
+ * Candidate order:
  * 1. explicitPath (e.g. passed from an MCP tool argument)
  * 2. Environment variables (SIGMA_PROJECT_ROOT, INIT_CWD, PWD)
  * 3. CLI arguments (--project-root, --cwd, or a positional path)
@@ -44,6 +75,10 @@ function addClientRoot(uriOrPath) {
  * 5. Current working directory (process.cwd())
  */
 function resolveRoot(explicitPath) {
+    // A bound server never re-resolves. Guards the case of an old tool calling
+    // resolveRoot() directly instead of going through respond().
+    if (activeBinding.root)
+        return activeBinding.root;
     const candidates = [];
     // 1. Explicit path parameter
     if (explicitPath && typeof explicitPath === 'string' && explicitPath.trim().length > 0) {

@@ -14,7 +14,8 @@ import {
   readOverrides,
   runDoctorReconciliation,
 } from '../../engine/chain';
-import { resolveRoot, okText, noProject, SOURCE_ENGINE } from '../shared';
+import { noProject, SOURCE_ENGINE } from '../shared';
+import { respond } from '../contract';
 
 // Pure core (PLAN-IMPL-01 §4-A).
 export function computeDoctor(root: string | null): unknown {
@@ -58,6 +59,6 @@ export function registerDoctorTool(server: McpServer): void {
       },
     },
     async ({ project_root }: { project_root?: string }) =>
-      okText(computeDoctor(resolveRoot(project_root))),
+      respond('sigma_doctor', project_root, computeDoctor),
   );
 }

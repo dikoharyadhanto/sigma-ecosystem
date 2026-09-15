@@ -31,18 +31,52 @@ import path from 'path';
 import os from 'os';
 import { parse as parseTOML, stringify as stringifyTOML } from 'smol-toml';
 import { toPosix } from './fs';
+import { PROJECT_IDENTITY_FILE } from '../config';
 
 // ── Payload sigma-mcp ─────────────────────────────────────────────────────────
 
 /** Helper untuk membuat entri config sigma-mcp.
- *  Jika projectRoot diberikan, masukkan ke args: [projectRoot]. */
+ *
+ *  PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE §7.1/§7.4 — bentuk argumen berubah
+ *  dari posisional `[projectRoot]` menjadi flag eksplisit, supaya server dapat
+ *  mengikat diri ke satu project DAN memverifikasi identitasnya:
+ *
+ *    lama : { command: "sigma-mcp", args: ["C:/proj"] }
+ *    baru : { command: "sigma-mcp", args: ["--mode","query",
+ *                                         "--project-root","C:/proj",
+ *                                         "--project-id","ABC"] }
+ *
+ *  Bentuk lama tetap dipahami server (binding tanpa verifikasi identity), jadi
+ *  config yang sudah terpasang tidak putus; migrasi terjadi saat `sigma project
+ *  sync` berikutnya, bukan otomatis.
+ *
+ *  project_id dibaca langsung dari .sigma-identity.json agar seluruh call site
+ *  lama tidak perlu berubah. Bila identity belum ada — mis. dipanggil sebelum
+ *  file itu ditulis — entri jatuh ke bentuk bound-tanpa-verifikasi, yang tetap
+ *  mengunci root.
+ */
+function readProjectIdForBinding(projectRoot: string): string | null {
+  try {
+    const raw = fs.readJsonSync(path.join(projectRoot, PROJECT_IDENTITY_FILE)) as { project_id?: unknown };
+    return typeof raw.project_id === 'string' && raw.project_id.length > 0 ? raw.project_id : null;
+  } catch {
+    return null;
+  }
+}
+
 function makeMcpEntry(projectRoot?: string) {
-  return {
-    command: 'sigma-mcp',
-    args: projectRoot && typeof projectRoot === 'string' && projectRoot.trim().length > 0
-      ? [projectRoot.trim()]
-      : [],
-  };
+  if (!projectRoot || typeof projectRoot !== 'string' || projectRoot.trim().length === 0) {
+    // Global install: no project to bind to. Server starts in discovery mode.
+    return { command: 'sigma-mcp', args: [] as string[] };
+  }
+
+  const root = projectRoot.trim();
+  const args = ['--mode', 'query', '--project-root', root];
+
+  const projectId = readProjectIdForBinding(root);
+  if (projectId) args.push('--project-id', projectId);
+
+  return { command: 'sigma-mcp', args };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

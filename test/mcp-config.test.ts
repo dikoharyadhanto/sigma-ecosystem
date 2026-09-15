@@ -85,9 +85,18 @@ function reasonixConfigPath(home: string) {
   return path.join(home, '.reasonix', 'config.toml');
 }
 
-const expectedEntry = (root?: string) => ({
+// PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE §7.1/§7.4 — the entry moved from a
+// bare positional root to explicit binding flags. --project-id is appended
+// only when the project actually has a readable .sigma-identity.json, so these
+// fixtures (which write no identity file) exercise the bound-but-unverified
+// form; the verified form is asserted separately below.
+const expectedEntry = (root?: string, projectId?: string) => ({
   command: 'sigma-mcp',
-  args: root ? [root] : [],
+  args: root
+    ? projectId
+      ? ['--mode', 'query', '--project-root', root, '--project-id', projectId]
+      : ['--mode', 'query', '--project-root', root]
+    : [],
 });
 
 // ── writeClaudeMcpConfig ──────────────────────────────────────────────────────
@@ -184,7 +193,7 @@ describe('writeCodexMcpConfig', () => {
     expect(fs.existsSync(filePath)).toBe(true);
     const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
     expect(parsed.mcp_servers?.sigma?.command).toBe('sigma-mcp');
-    expect(parsed.mcp_servers?.sigma?.args).toEqual([tmpProject]);
+    expect(parsed.mcp_servers?.sigma?.args).toEqual(expectedEntry(tmpProject).args);
   });
 
   it('merges sigma without touching other Codex settings', async () => {
@@ -197,7 +206,7 @@ describe('writeCodexMcpConfig', () => {
 
     const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
     expect(parsed.mcp_servers?.sigma?.command).toBe('sigma-mcp');
-    expect(parsed.mcp_servers?.sigma?.args).toEqual([tmpProject]);
+    expect(parsed.mcp_servers?.sigma?.args).toEqual(expectedEntry(tmpProject).args);
     expect(parsed.mcp_servers?.other?.command).toBe('other-mcp');
     expect((parsed.model as any)?.name).toBe('o3');
   });
@@ -209,7 +218,7 @@ describe('writeCodexMcpConfig', () => {
 
     const parsed = parseTOML(fs.readFileSync(codexConfigPath(tmpHome), 'utf-8')) as any;
     expect(parsed.mcp_servers?.sigma?.command).toBe('sigma-mcp');
-    expect(parsed.mcp_servers?.sigma?.args).toEqual([tmpProject]);
+    expect(parsed.mcp_servers?.sigma?.args).toEqual(expectedEntry(tmpProject).args);
     expect(Object.keys(parsed.mcp_servers)).toHaveLength(1);
   });
 });

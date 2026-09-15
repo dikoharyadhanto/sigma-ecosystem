@@ -7,6 +7,7 @@ exports.computeGates = computeGates;
 exports.registerGatesTool = registerGatesTool;
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
+const contract_1 = require("../contract");
 const GATE_KEYS = ['gate_1_open', 'gate_2_open', 'gate_3_satisfied'];
 // Pure core (PLAN-IMPL-01 §4-A) — unit-testable without the transport.
 function computeGates(root) {
@@ -47,6 +48,6 @@ function registerGatesTool(server) {
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, shared_1.okText)(computeGates((0, shared_1.resolveRoot)(project_root))));
+    }, async ({ project_root }) => (0, contract_1.respond)('sigma_get_gates', project_root, computeGates));
 }
 //# sourceMappingURL=gates.js.map

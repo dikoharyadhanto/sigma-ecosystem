@@ -12,6 +12,7 @@ exports.computeDoctor = computeDoctor;
 exports.registerDoctorTool = registerDoctorTool;
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
+const contract_1 = require("../contract");
 // Pure core (PLAN-IMPL-01 §4-A).
 function computeDoctor(root) {
     if (!root)
@@ -47,6 +48,6 @@ function registerDoctorTool(server) {
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, shared_1.okText)(computeDoctor((0, shared_1.resolveRoot)(project_root))));
+    }, async ({ project_root }) => (0, contract_1.respond)('sigma_doctor', project_root, computeDoctor));
 }
 //# sourceMappingURL=doctor.js.map

@@ -8,6 +8,7 @@ exports.computeState = computeState;
 exports.registerStateTool = registerStateTool;
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
+const contract_1 = require("../contract");
 // Core logic exported as a pure function so it can be unit-tested without the
 // MCP transport (PLAN-IMPL-01 §4-A). registerStateTool is a thin wrapper.
 function computeState(root) {
@@ -50,6 +51,6 @@ function registerStateTool(server) {
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, shared_1.okText)(computeState((0, shared_1.resolveRoot)(project_root))));
+    }, async ({ project_root }) => (0, contract_1.respond)('sigma_get_state', project_root, computeState));
 }
 //# sourceMappingURL=state.js.map

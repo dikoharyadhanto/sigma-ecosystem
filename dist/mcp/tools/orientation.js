@@ -19,6 +19,7 @@ const mailbox_1 = require("../../engine/mailbox");
 const config_1 = require("../../config");
 const bootstrapView_1 = require("../../session/bootstrapView");
 const shared_1 = require("../shared");
+const contract_1 = require("../contract");
 const GATE_LABELS = {
     gate_1_open: 'Gate 1 (Design Complete)',
     gate_2_open: 'Gate 2 (Plan Locked)',
@@ -118,6 +119,6 @@ function registerOrientationTool(server) {
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ role, project_root }) => (0, shared_1.okText)(computeOrientation((0, shared_1.resolveRoot)(project_root), role)));
+    }, async ({ role, project_root }) => (0, contract_1.respond)('sigma_get_orientation', project_root, (root) => computeOrientation(root, role)));
 }
 //# sourceMappingURL=orientation.js.map

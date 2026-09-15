@@ -6,11 +6,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { loadRoleMemory, ROLE_MEMORY_ROLES, RoleMemoryRole } from '../../engine/roleMemory';
-import { resolveRoot, okText, SOURCE_ENGINE } from '../shared';
+import { SOURCE_ENGINE, getBinding } from '../shared';
+import { respond, redactPath, pathFingerprint } from '../contract';
 
 export function computeMemory(root: string | null, role: RoleMemoryRole): unknown {
   try {
     const { memory, sourcePath } = loadRoleMemory(role, root ?? undefined);
+    // §8.1 — on a verified binding source_path becomes project-relative and
+    // gains a fingerprint; on an unverified one it stays the absolute path the
+    // pre-Stage-A clients already receive. Redaction follows binding state, not
+    // binary version, so no installed client changes behaviour on its own.
+    const binding = getBinding();
     return {
       active: true,
       role: memory.role,
@@ -20,7 +26,8 @@ export function computeMemory(root: string | null, role: RoleMemoryRole): unknow
       memory_updated_at: memory.memory_updated_at,
       general: memory.general,
       role_specific: memory.role_specific,
-      source_path: sourcePath,
+      source_path: redactPath(binding, sourcePath),
+      source_path_fingerprint: binding.verified ? pathFingerprint(sourcePath) : null,
       source: SOURCE_ENGINE,
     };
   } catch (err) {
@@ -56,6 +63,6 @@ export function registerMemoryTool(server: McpServer): void {
       },
     },
     async ({ role, project_root }: { role: RoleMemoryRole; project_root?: string }) =>
-      okText(computeMemory(resolveRoot(project_root), role)),
+      respond('sigma_get_memory', project_root, (root) => computeMemory(root, role)),
   );
 }
