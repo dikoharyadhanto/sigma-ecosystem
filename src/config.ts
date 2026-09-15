@@ -67,6 +67,33 @@ export const PROJECT_CONFIG_FILE = path.join(PROJECT_SIGMA_DIR, 'project.config.
 // the old names are unaffected without migration.
 export const SUBFOLDERS = ['charter', 'contract', 'roadmap', 'evidence', 'close', 'human', 'notes', 'rules', 'logs', 'memory', 'role-memory', 'reference'];
 
+/**
+ * Where each governance artifact may live on disk, and how its filename is
+ * shaped. New folder name first, pre-rename name second.
+ *
+ * Single source of truth, deliberately. This table existed twice — once inside
+ * reconstruct.ts as PATTERNS, once inside the MCP artifact reader — and the two
+ * drifted: the reader listed only the post-rename folders and so refused every
+ * project created before PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816, while
+ * the CLI read those same projects perfectly well through the chain's stored
+ * entry.file (reviewer finding R-10). CLI and MCP disagreeing about what a
+ * project *is* trips the stop criterion in plan §22, so both now read this.
+ *
+ * `versionSource` is regex source, not a RegExp, because consumers embed it
+ * differently: reconstruct captures the version out of a filename, the MCP
+ * reader validates a version token it was handed. Sharing a mutable RegExp
+ * would also share its lastIndex.
+ */
+export const ARTIFACT_LAYOUT = {
+  intent: { dirs: ['charter', 'design'], prefix: 'DIR-INTENT', versionSource: 'v\\d+' },
+  roadmap: { dirs: ['roadmap', 'build'], prefix: 'ROADMAP', versionSource: 'v\\d+' },
+  plan: { dirs: ['contract', 'build'], prefix: 'FMN-PLAN', versionSource: 'v\\d+\\.\\d+' },
+  exec: { dirs: ['evidence', 'build'], prefix: 'DEV-EXEC', versionSource: 'v\\d+\\.\\d+' },
+  close: { dirs: ['close'], prefix: 'DIR-CLOSE', versionSource: 'v\\d+' },
+} as const;
+
+export type ArtifactDomainKey = keyof typeof ARTIFACT_LAYOUT;
+
 export const MESSAGES_DIR = path.join(PROJECT_SIGMA_DIR, 'messages');
 export const MESSAGES_INDEX_FILE = path.join(MESSAGES_DIR, 'index.json');
 export const MESSAGES_ATTACHMENTS_DIR = path.join(MESSAGES_DIR, 'attachments');

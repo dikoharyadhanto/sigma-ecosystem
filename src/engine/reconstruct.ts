@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { PROJECT_SIGMA_DIR } from '../config';
+import { PROJECT_SIGMA_DIR, ARTIFACT_LAYOUT } from '../config';
 import { toPosix } from '../utils/fs';
 import {
   ChainState,
@@ -60,13 +60,28 @@ type Domain = 'intent' | 'roadmap' | 'plan' | 'exec' | 'close';
 // stored-path-wins mechanism for backward compatibility — it has to
 // actually look in both the old and new folder for a project it doesn't
 // yet know the age of.
-const PATTERNS: Record<Domain, { dirs: string[]; regex: RegExp; docType: string }> = {
-  intent: { dirs: ['charter', 'design'], regex: /^DIR-INTENT-(v\d+)\.md$/, docType: 'DIR_INTENT' },
-  roadmap: { dirs: ['roadmap', 'build'], regex: /^ROADMAP-(v\d+)\.md$/, docType: 'ROADMAP' },
-  plan: { dirs: ['contract', 'build'], regex: /^FMN-PLAN-(v\d+\.\d+)\.md$/, docType: 'FMN_PLAN' },
-  exec: { dirs: ['evidence', 'build'], regex: /^DEV-EXEC-(v\d+\.\d+)\.md$/, docType: 'DEV_EXEC' },
-  close: { dirs: ['close'], regex: /^DIR-CLOSE-(v\d+)\.md$/, docType: 'DIR_CLOSE' },
+// Folders and filename shapes now come from ARTIFACT_LAYOUT in config.ts, so
+// this module and the MCP artifact reader cannot drift apart again (reviewer
+// finding R-10). Only docType — which is reconstruct's own concern — stays here.
+const DOC_TYPES: Record<Domain, string> = {
+  intent: 'DIR_INTENT',
+  roadmap: 'ROADMAP',
+  plan: 'FMN_PLAN',
+  exec: 'DEV_EXEC',
+  close: 'DIR_CLOSE',
 };
+
+const PATTERNS: Record<Domain, { dirs: string[]; regex: RegExp; docType: string }> = (
+  Object.keys(DOC_TYPES) as Domain[]
+).reduce((acc, domain) => {
+  const { dirs, prefix, versionSource } = ARTIFACT_LAYOUT[domain];
+  acc[domain] = {
+    dirs: [...dirs],
+    regex: new RegExp(`^${prefix}-(${versionSource})\\.md$`),
+    docType: DOC_TYPES[domain],
+  };
+  return acc;
+}, {} as Record<Domain, { dirs: string[]; regex: RegExp; docType: string }>);
 
 function readDocType(absPath: string): string | null {
   const head = fs.readFileSync(absPath, 'utf8').slice(0, 200);

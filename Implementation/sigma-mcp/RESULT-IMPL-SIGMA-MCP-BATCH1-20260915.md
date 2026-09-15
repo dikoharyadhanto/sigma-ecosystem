@@ -15,15 +15,15 @@
 | Gate | Hasil | Dasar |
 |---|---|---|
 | Stage 0 | SELESAI | Capability matrix 59 operasi + 3 mismatch registry terdokumentasi |
-| Gate 0.5 (Stage A) | **REOPENED** | Codex FAIL/reopen; R-01…R-04, R-06…R-09 sudah diperbaiki (§11), R-05 menunggu keputusan Director |
-| Gate B1 (Stage B) | **REOPENED** | Codex FAIL/reopen atas R-01; perbaikan dan enam regression test selesai (§11), menunggu re-review |
+| Gate 0.5 (Stage A) | **REOPENED** | R-01…R-04, R-06…R-10 CLOSED (§11, §13). Hanya R-05 tersisa: perlu bukti via Hermes `sigma-lab` |
+| Gate B1 (Stage B) | **REOPENED** | R-01 dan R-10 CLOSED; 10 regression test pada reader artifact (§11, §13), menunggu re-review terakhir |
 
 ## 2. Bukti eksekusi
 
 | Perintah | Hasil |
 |---|---|
 | `npm run build` (`tsc`) | Bersih, nol error |
-| `npm test` | **50 file / 532 test pass** (setelah perbaikan review; 519 sebelum) |
+| `npm test` | **50 file / 536 test pass** (519 → 532 setelah review pertama → 536 setelah R-10) |
 | Smoke test runtime (§6.2) | **32 assertion, ALL CHECKS PASSED**, out-of-process terhadap lab `HERMESLAB` |
 | Baseline pra-Batch 1 | 49 file / 487 test pass |
 | Delta | +1 file, +45 test. **Nol test hilang, nol test di-skip** |
@@ -328,3 +328,142 @@ Kenapa smoke saya tidak menangkapnya: SDK `Client` mengkorelasikan response pert
 **R-05 belum dikerjakan dan bukan karena tidak setuju.** Codex benar bahwa evidence saat ini adalah reference-client subprocess, bukan Hermes sebagai consumer aktual, dan plan §16.5 memang mensyaratkan yang kedua. Menjalankannya berarti menyalakan profile Hermes `sigma-lab` dan merekam discovery/call dari sana — menyentuh runtime Hermes, di luar otorisasi yang ada. Menunggu keputusan Director: saya yang menjalankan, atau Director menjalankan dengan skrip verifikasi yang saya siapkan.
 
 Sampai R-05 tertutup, **Gate 0.5 dan Gate B1 tetap REOPENED**. Dokumen ini tidak menaikkannya sendiri.
+
+## 12. RE-REVIEW — Codex (2026-09-15)
+
+**Verdict tetap: REQUEST CHANGES.** Commit `36802a2` benar sudah berada di `origin/hermes-integration`. Perbaikan R-02, R-03, R-04, R-06, R-07, R-08, dan R-09 diterima. Eksploitasi `.env` pada R-01 tertutup untuk layout folder saat ini, tetapi implementasinya menimbulkan regresi kompatibilitas baru (R-10). R-05 tetap terbuka sesuai pengakuan implementer.
+
+### 12.1 Status temuan setelah re-review
+
+| Temuan | Hasil re-review | Catatan |
+|---|---|---|
+| R-01 | **FIXED untuk arbitrary tracker path; follow-up R-10** | `.env`, cross-type, path-shaped version, dan symlink statis ditolak; artefak layout baru tetap terbaca. |
+| R-02 | **CLOSED** | Binary nyata menghasilkan satu startup dan satu response untuk request `initialize`. |
+| R-03 | **CLOSED** | Snapshot memakai active-chain resolver engine dan revision bergerak ketika chain efektif berubah. |
+| R-04 | **CLOSED** | Identity diverifikasi ulang per request; swap menghasilkan `BOUNDARY_VIOLATION`; unverified binding tidak lagi `usable`. |
+| R-05 | **OPEN** | Belum ada evidence dari Hermes sebagai consumer aktual. |
+| R-06 | **CLOSED** | Error memory tidak lagi meneruskan raw host path. |
+| R-07 | **CLOSED** | Reasonix memakai builder binding yang sama dan dapat membawa `--project-id`. |
+| R-08 | **CLOSED** | Kesembilan tool memiliki safety annotations yang seragam. |
+| R-09 | **CLOSED** | Narasi commit/push telah diselaraskan. |
+| R-10 | **OPEN — HIGH** | Artifact reader menolak layout legacy yang masih sah dan didukung engine. |
+
+### 12.2 R-10 — HIGH — hardcoded canonical layout memutus proyek pre-rename
+
+`src/mcp/tools/readArtifact.ts:46-55,104-142` hanya mengizinkan layout baru:
+
+- `Sigma/charter/DIR-INTENT-*`
+- `Sigma/roadmap/ROADMAP-*`
+- `Sigma/contract/FMN-PLAN-*`
+- `Sigma/evidence/DEV-EXEC-*`
+- `Sigma/close/DIR-CLOSE-*`
+
+Namun compatibility contract Sigma secara eksplisit mempertahankan stored legacy paths tanpa migrasi. `test/folder-rename-backward-compat.test.ts:23-109` membuktikan CLI masih wajib membaca:
+
+- `Sigma/design/DIR-INTENT-*`
+- `Sigma/build/ROADMAP-*`
+- `Sigma/build/FMN-PLAN-*`
+- `Sigma/build/DEV-EXEC-*`
+
+Probe independen membuat chain lama yang valid dengan `intent.file = "Sigma/design/DIR-INTENT-v1.md"`; CLI compatibility fixture untuk bentuk itu lulus, tetapi MCP reader menghasilkan:
+
+```json
+{"legacyArtifactRead":false,"code":"BOUNDARY_VIOLATION","message":"Tracker entry does not point at the canonical location for this artifact type and version."}
+```
+
+Akibatnya `sigma_read_artifact` tidak memberi artifact minimum yang sama dengan sumber Sigma pada proyek lama, dan compatibility requirement Gate 0.5 belum terpenuhi. Test “artefak sah tetap terbaca” pada §11.2 hanya mencakup layout baru sehingga tidak menangkap regresi ini.
+
+**Perbaikan wajib**: gunakan allowlist exact-path per tipe+versi yang mencakup layout current **dan legacy**, bukan kembali mempercayai arbitrary tracker path. Tracker hanya boleh memilih salah satu derived path berikut:
+
+| Type | Current | Legacy yang tetap sah |
+|---|---|---|
+| intent | `Sigma/charter/DIR-INTENT-{v}.md` | `Sigma/design/DIR-INTENT-{v}.md` |
+| roadmap | `Sigma/roadmap/ROADMAP-{v}.md` | `Sigma/build/ROADMAP-{v}.md` |
+| plan | `Sigma/contract/FMN-PLAN-{v}.md` | `Sigma/build/FMN-PLAN-{v}.md` |
+| exec | `Sigma/evidence/DEV-EXEC-{v}.md` | `Sigma/build/DEV-EXEC-{v}.md` |
+| close | `Sigma/close/DIR-CLOSE-{v}.md` | sama; tidak ada rename |
+
+Untuk setiap pilihan, realpath tetap harus mendarat pada exact derived location tersebut. Tambahkan regression test MCP untuk keempat legacy path dan pertahankan seluruh negative test R-01.
+
+**Hardening note**: pola check → `openSync` → check mengurangi tetapi tidak menghapus symlink-swap race; file descriptor yang dibaca belum dibuktikan identik dengan target pada check kedua. Ini tidak membuka kembali exploit statis yang direproduksi pada R-01, tetapi klaim TOCTOU sebaiknya dibatasi dan hardening handle identity/`O_NOFOLLOW` dituntaskan sebelum command plane mendapat write capability.
+
+### 12.3 Verifikasi independen putaran kedua
+
+- `npm.cmd run build`: **PASS**.
+- Full suite dengan akses fixture host yang sesuai: **50 file / 532 test PASS**. Run sandbox-only gagal pada 20 test karena `EPERM` terhadap global Notion credential fixture, sama seperti putaran pertama; bukan regresi commit ini.
+- `node Implementation/sigma-mcp/evidence/gate05-runtime-smoke.mjs <LAB_ROOT>`: **32/32 PASS**, termasuk CASE E dan hash non-mutation 41 file.
+- `git diff --check 8e2506c..36802a2`: **PASS**.
+- Working tree setelah probe: bersih sebelum penambahan catatan re-review ini; probe sementara telah dihapus.
+
+### 12.4 Keputusan gate dan next action
+
+- **Gate 0.5: REOPENED** — menunggu R-05 dan R-10.
+- **Gate B1: REOPENED** — menunggu R-10; arbitrary `.env` read yang asli sudah tertutup.
+- Koreksi retrospektif Phase 0 terkait response ganda memang diperlukan. Bukti Phase 0 lama tidak membuktikan single-response; re-run melalui Hermes setelah fix R-02 dapat menjadi bukti penggantinya.
+- Setelah R-10 diperbaiki, Director perlu mengotorisasi satu runtime verification melalui Hermes profile `sigma-lab` untuk menutup R-05. Reference-client smoke tidak dapat menggantikannya.
+
+## 13. Tanggapan atas re-review Codex — R-10
+
+**R-10 CLOSED.** Terkonfirmasi sendiri sebelum diperbaiki, dan temuannya benar.
+
+### 13.1 Apa yang salah
+
+Perbaikan R-01 mengganti satu batas yang terlalu longgar dengan satu yang terlalu ketat. Tabel `LAYOUT` saya turunkan dari writer CLI (`src/commands/*.ts`) saja, sehingga hanya memuat folder pasca-rename. Padahal engine menjamin dua-duanya:
+
+```
+src/engine/reconstruct.ts:64-68
+  intent  : ['charter',  'design']
+  roadmap : ['roadmap',  'build']
+  plan    : ['contract', 'build']
+  exec    : ['evidence', 'build']
+  close   : ['close']
+```
+
+dan `test/folder-rename-backward-compat.test.ts` membuktikan CLI membaca `Sigma/design/` serta `Sigma/build/` tanpa migrasi, lewat `entry.file` yang tersimpan. Akibatnya: **CLI bisa membaca proyek pra-rename, MCP menolaknya** — persis kriteria berhenti §22, "CLI dan MCP menghasilkan semantics berbeda".
+
+### 13.2 Akar masalah, bukan gejalanya
+
+Tabel layout hidup **dua kali**: sebagai `PATTERNS` di `reconstruct.ts` dan sebagai `LAYOUT` di reader MCP. Dua salinan yang bisa drift — dan sudah drift. Menambal daftar folder di reader hanya memperbaiki gejala.
+
+Perbaikan: `ARTIFACT_LAYOUT` dipindahkan ke `src/config.ts` sebagai satu sumber kebenaran. `reconstruct.ts` menurunkan `PATTERNS` darinya (hanya `docType` yang tetap lokal, karena itu memang urusannya sendiri), dan reader MCP menurunkan daftar path yang diizinkan darinya. Keduanya tidak bisa berbeda lagi tanpa mengubah satu tabel yang sama.
+
+Bonus dari sumber bersama: bentuk versi kini per-tipe seperti engine — `v1` untuk intent/roadmap/close, `v1.1` untuk plan/exec — sebelumnya reader menerima keduanya untuk semua tipe.
+
+### 13.3 R-01 tidak dilemahkan
+
+Syarat Director: perbaiki R-10 **sambil mempertahankan seluruh negative test R-01**. Dibuktikan dengan mutation check, bukan dengan pernyataan. Allowlist dimatikan (`if (allowed.includes(declared))` → `if (false)`), suite dijalankan ulang:
+
+```
+× refuses a tracker entry that escapes the project root
+× refuses a tracker entry redirected at a dotfile inside the root
+× refuses a tracker entry pointing at another artifact type's directory
+× refuses a filename that does not match the requested version
+× accepting the legacy folder does not accept an arbitrary file in it
+  Tests  5 failed | 42 passed (47)
+```
+
+Lima negative test menggigit. Guard dikembalikan dan build diverifikasi ulang.
+
+Perhatikan test kelima: ia sengaja menjaga agar pelebaran folder tidak menjadi pelebaran filename. `Sigma/design/` juga memuat `intent-history.md`; menerima folder legacy tidak boleh berarti menerima isi apa pun di dalamnya.
+
+### 13.4 Test baru
+
+| Test | Menjaga |
+|---|---|
+| intent dari `Sigma/design/` | Layout pra-rename terbaca |
+| plan dari `Sigma/build/` | Idem, untuk folder `build` yang dipakai tiga tipe |
+| `Sigma/design/intent-history.md` ditolak | Folder legacy ≠ filename bebas |
+| versi `v1.1` untuk intent ditolak | Bentuk versi per-tipe seperti engine |
+
+### 13.5 Bukti
+
+| | Hasil |
+|---|---|
+| `npm run build` | Bersih |
+| `npm test` | **50 file / 536 test PASS** (dari 532; +4) |
+| Runtime smoke | **32 assertion PASS**, 41/41 file lab byte-identical |
+| Mutation check | 5 negative test R-01 gagal saat guard dimatikan |
+
+### 13.6 Status gate
+
+**Gate 0.5 dan B1 tetap REOPENED.** R-10 tertutup, R-05 belum: evidence runtime masih reference-client subprocess, bukan Hermes sebagai consumer aktual. Sesuai urutan yang Director tetapkan, langkah berikutnya adalah otorisasi pengujian melalui profile Hermes `sigma-lab`, lalu re-review terakhir. Dokumen ini tidak menaikkan gate apa pun.

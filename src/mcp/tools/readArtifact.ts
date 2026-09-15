@@ -4,10 +4,13 @@
 // has to be paranoid. Rules (§9.1):
 //
 //   - it takes an artifact TYPE and VERSION, never a path;
-//   - the path comes from the chain tracker's own `file` field and nowhere
-//     else, so the set of readable files is whatever Sigma itself recorded;
-//   - the resolved real path must still be inside the bound root, which is
-//     what stops a tracker entry pointing at a symlink or `..` from escaping;
+//   - the readable paths are DERIVED from the shared ARTIFACT_LAYOUT table for
+//     that type and version; the chain tracker may only select among them, and
+//     can never introduce one;
+//   - the resolved real path must still land on that same entry after symlinks
+//     and Windows junctions resolve;
+//   - the bytes come from the descriptor that was stat'd, not from a second
+//     lookup of the path;
 //   - oversized files are refused, not truncated, because a truncated
 //     governance document read as complete is worse than no read at all.
 //
@@ -21,6 +24,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { readActiveChain, listChainVersions, ArtifactVersion } from '../../engine/chain';
 import { SOURCE_ENGINE, noProject } from '../shared';
+import { ARTIFACT_LAYOUT, PROJECT_SIGMA_DIR } from '../../config';
 import { respond, ERROR_CODES } from '../contract';
 import { canonicalize } from '../binding';
 
@@ -30,29 +34,25 @@ export const MAX_ARTIFACT_BYTES = 512 * 1024;
 export type ArtifactType = 'intent' | 'roadmap' | 'plan' | 'exec' | 'close';
 
 /**
- * Canonical on-disk layout per artifact type, taken from the CLI writers that
- * create these files (src/commands/{intent,plan,exec,close,roadmap}.ts).
+ * Two reviewer findings shaped what this file trusts, and they pull in opposite
+ * directions — which is the whole difficulty of the tool.
  *
- * Reviewer finding R-01: the first version of this tool treated the tracker's
- * `file` field as the allowlist and only checked that the resolved path stayed
- * inside the project root. A tracker entry rewritten to `.env` therefore read
- * `.env` back — reproduced, returning a live Notion token. "Inside the root" is
- * the wrong boundary for a governance-artifact reader; the right one is "this
- * exact directory, this exact filename, for this exact version".
+ * R-01 (too permissive): the tracker's `file` field was treated as the
+ * allowlist, checked only for staying inside the project root. An entry
+ * rewritten to `.env` read `.env` back, returning a live Notion token. "Inside
+ * the root" is the wrong boundary for a governance-artifact reader.
  *
- * The tracker is now untrusted input: it may only *select* among paths that
- * already match this layout, never introduce one.
+ * R-10 (too restrictive, after fixing R-01): the replacement table hardcoded
+ * only the post-rename folders, so every project created before
+ * PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816 was refused here while the
+ * CLI read it perfectly well through the stored entry.file. CLI and MCP
+ * disagreeing about what a project *is* trips the stop criterion in plan §22.
+ *
+ * The resolution is not a middle setting between the two. It is: derive the
+ * permitted paths from ARTIFACT_LAYOUT — which lists both the new and the
+ * pre-rename folder for each type, and is shared with engine/reconstruct.ts so
+ * the two cannot drift again — and let the tracker only choose among them.
  */
-const LAYOUT: Readonly<Record<ArtifactType, { dir: string; prefix: string }>> = Object.freeze({
-  intent: { dir: 'Sigma/charter', prefix: 'DIR-INTENT' },
-  roadmap: { dir: 'Sigma/roadmap', prefix: 'ROADMAP' },
-  plan: { dir: 'Sigma/contract', prefix: 'FMN-PLAN' },
-  exec: { dir: 'Sigma/evidence', prefix: 'DEV-EXEC' },
-  close: { dir: 'Sigma/close', prefix: 'DIR-CLOSE' },
-});
-
-/** Version tokens Sigma actually issues: v1, v1.1. Nothing path-shaped. */
-const VERSION_RE = /^v\d+(\.\d+)?$/;
 
 export class ArtifactReadError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -101,12 +101,20 @@ function candidatesFor(data: ReturnType<typeof readActiveChain>['data'], type: A
  * The path a given artifact type+version is *allowed* to occupy. Derived, not
  * read from the tracker — so a rewritten tracker cannot widen it.
  */
-function expectedRelPath(type: ArtifactType, version: string): string {
-  if (!VERSION_RE.test(version)) {
+function allowedRelPaths(type: ArtifactType, version: string): string[] {
+  const { dirs, prefix, versionSource } = ARTIFACT_LAYOUT[type];
+
+  // Per-type version shape, matching the engine: v1 for intent/roadmap/close,
+  // v1.1 for plan/exec. Anything path-shaped fails here, before it can be
+  // pasted into a filename.
+  if (!new RegExp(`^${versionSource}$`).test(version)) {
     throw new ArtifactReadError(ERROR_CODES.INVALID_OPERATION, 'Artifact version is not a valid Sigma version token.');
   }
-  const { dir, prefix } = LAYOUT[type];
-  return `${dir}/${prefix}-${version}.md`;
+
+  // New folder name first, pre-rename name second — both are legitimate
+  // locations for the same artifact, and which one a project uses depends only
+  // on when it was created.
+  return dirs.map((dir) => `${PROJECT_SIGMA_DIR}/${dir}/${prefix}-${version}.md`);
 }
 
 /**
@@ -116,30 +124,40 @@ function expectedRelPath(type: ArtifactType, version: string): string {
  * symlink at the canonical location pointing at `.env` is *inside the root*,
  * so "inside the root" alone would have let it through.
  */
-function assertCanonicalLocation(root: string, type: ArtifactType, version: string, trackerFile: string): string {
-  const expected = expectedRelPath(type, version);
+function assertCanonicalLocation(
+  root: string,
+  type: ArtifactType,
+  version: string,
+  trackerFile: string
+): { abs: string; rel: string } {
+  const allowed = allowedRelPaths(type, version);
   const declared = trackerFile.split('\\').join('/');
 
-  if (declared !== expected) {
+  // The tracker may only *select* among the allowed locations. It can never
+  // introduce one — that is what turned this tool into a file reader before.
+  if (!allowed.includes(declared)) {
     throw new ArtifactReadError(
       ERROR_CODES.BOUNDARY_VIOLATION,
-      'Tracker entry does not point at the canonical location for this artifact type and version.'
+      'Tracker entry does not point at a canonical location for this artifact type and version.'
     );
   }
 
-  const abs = path.resolve(root, expected);
+  const abs = path.resolve(root, declared);
   const realRoot = canonicalize(root);
   const realAbs = canonicalize(abs);
   const rel = path.relative(realRoot, realAbs).split(path.sep).join('/');
 
-  if (rel !== expected) {
+  // Must still land on the *same* entry after symlinks and junctions resolve.
+  // A symlink sitting at a perfectly canonical path is inside the root and
+  // still not the artifact it claims to be.
+  if (rel !== declared) {
     throw new ArtifactReadError(
       ERROR_CODES.BOUNDARY_VIOLATION,
       'Artifact path does not resolve to its canonical location.'
     );
   }
 
-  return abs;
+  return { abs, rel };
 }
 
 export function computeReadArtifact(
@@ -172,7 +190,7 @@ export function computeReadArtifact(
     );
   }
 
-  const abs = assertCanonicalLocation(root, type, picked.version, picked.file);
+  const { abs, rel } = assertCanonicalLocation(root, type, picked.version, picked.file);
 
   let fd: number;
   try {
@@ -239,7 +257,7 @@ export function computeReadArtifact(
     // equal by assertCanonicalLocation, and echoing the derived one keeps the
     // payload independent of tracker text. Project-relative, posix, never the
     // host path (§8 rule 5).
-    path: expectedRelPath(type, picked.version),
+    path: rel,
     bytes: buf.length,
     sha256: 'sha256:' + crypto.createHash('sha256').update(buf).digest('hex'),
     content: buf.toString('utf-8'),

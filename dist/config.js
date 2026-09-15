@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.INTENT_AMENDMENT_LOG_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.ACTIVATE_STATUS_FILE = exports.BRIDGE_STUBS = exports.PROJECT_REMOTE_STATE_FILE = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_NOTION_CREDENTIALS_FILE = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
+exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.ARTIFACT_LAYOUT = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.INTENT_AMENDMENT_LOG_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.ACTIVATE_STATUS_FILE = exports.BRIDGE_STUBS = exports.PROJECT_REMOTE_STATE_FILE = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_NOTION_CREDENTIALS_FILE = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 exports.SIGMA_VERSION = '1.0.0';
@@ -67,6 +67,30 @@ exports.PROJECT_CONFIG_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'pr
 // intent.ts/plan.ts/exec.ts/roadmap.ts), so existing projects created under
 // the old names are unaffected without migration.
 exports.SUBFOLDERS = ['charter', 'contract', 'roadmap', 'evidence', 'close', 'human', 'notes', 'rules', 'logs', 'memory', 'role-memory', 'reference'];
+/**
+ * Where each governance artifact may live on disk, and how its filename is
+ * shaped. New folder name first, pre-rename name second.
+ *
+ * Single source of truth, deliberately. This table existed twice — once inside
+ * reconstruct.ts as PATTERNS, once inside the MCP artifact reader — and the two
+ * drifted: the reader listed only the post-rename folders and so refused every
+ * project created before PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816, while
+ * the CLI read those same projects perfectly well through the chain's stored
+ * entry.file (reviewer finding R-10). CLI and MCP disagreeing about what a
+ * project *is* trips the stop criterion in plan §22, so both now read this.
+ *
+ * `versionSource` is regex source, not a RegExp, because consumers embed it
+ * differently: reconstruct captures the version out of a filename, the MCP
+ * reader validates a version token it was handed. Sharing a mutable RegExp
+ * would also share its lastIndex.
+ */
+exports.ARTIFACT_LAYOUT = {
+    intent: { dirs: ['charter', 'design'], prefix: 'DIR-INTENT', versionSource: 'v\\d+' },
+    roadmap: { dirs: ['roadmap', 'build'], prefix: 'ROADMAP', versionSource: 'v\\d+' },
+    plan: { dirs: ['contract', 'build'], prefix: 'FMN-PLAN', versionSource: 'v\\d+\\.\\d+' },
+    exec: { dirs: ['evidence', 'build'], prefix: 'DEV-EXEC', versionSource: 'v\\d+\\.\\d+' },
+    close: { dirs: ['close'], prefix: 'DIR-CLOSE', versionSource: 'v\\d+' },
+};
 exports.MESSAGES_DIR = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'messages');
 exports.MESSAGES_INDEX_FILE = path_1.default.join(exports.MESSAGES_DIR, 'index.json');
 exports.MESSAGES_ATTACHMENTS_DIR = path_1.default.join(exports.MESSAGES_DIR, 'attachments');

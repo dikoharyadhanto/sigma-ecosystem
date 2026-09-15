@@ -474,6 +474,59 @@ describe('sigma_read_artifact (§9.1)', () => {
     expect(leaked).not.toContain('secret_ntn');
   });
 
+  // ── Reviewer finding R-10 ─────────────────────────────────────────────────
+  //
+  // Fixing R-01 by hardcoding the post-rename folders locked out every project
+  // created before the rename — which the CLI still reads. These mirror
+  // test/folder-rename-backward-compat.test.ts, which proves the CLI side.
+
+  it('reads an intent from the pre-rename Sigma/design/ folder', () => {
+    const env = withTrackerFile('Sigma/design/DIR-INTENT-v1.md');
+    const p = path.join(env.projectDir, 'Sigma', 'design', 'DIR-INTENT-v1.md');
+    fs.ensureDirSync(path.dirname(p));
+    fs.writeFileSync(p, '# legacy intent\n');
+
+    const out = computeReadArtifact(env.projectDir, 'intent') as Payload;
+    expect(out.present).toBe(true);
+    expect(out.path).toBe('Sigma/design/DIR-INTENT-v1.md');
+    expect(out.content).toBe('# legacy intent\n');
+  });
+
+  it('reads a plan from the pre-rename Sigma/build/ folder', () => {
+    const env = project('MINE');
+    const now = new Date().toISOString();
+    writeChainFixture(env, 'v1', makeChain('v1', {
+      plan: {
+        active_version: 'v1.1', active_state: 'DRAFT', pending: [],
+        versions: [{ version: 'v1.1', state: 'DRAFT', file: 'Sigma/build/FMN-PLAN-v1.1.md', created_at: now, updated_at: now }],
+      },
+    }));
+    const p = path.join(env.projectDir, 'Sigma', 'build', 'FMN-PLAN-v1.1.md');
+    fs.ensureDirSync(path.dirname(p));
+    fs.writeFileSync(p, '# legacy plan\n');
+
+    const out = computeReadArtifact(env.projectDir, 'plan') as Payload;
+    expect(out.present).toBe(true);
+    expect(out.path).toBe('Sigma/build/FMN-PLAN-v1.1.md');
+  });
+
+  it('accepting the legacy folder does not accept an arbitrary file in it', () => {
+    // Sigma/design/ also holds intent-history.md. Widening the folder list must
+    // not widen the filename.
+    const env = withTrackerFile('Sigma/design/intent-history.md');
+    fs.ensureDirSync(path.join(env.projectDir, 'Sigma', 'design'));
+    fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'design', 'intent-history.md'), 'secret-ish\n');
+    expect(() => computeReadArtifact(env.projectDir, 'intent')).toThrow(/canonical location/);
+  });
+
+  it('enforces the per-type version shape the engine uses', () => {
+    // intent/roadmap/close are v1; plan/exec are v1.1. A two-part version for
+    // an intent is not a valid intent version.
+    const env = withTrackerFile('Sigma/charter/DIR-INTENT-v1.md');
+    expect(() => computeReadArtifact(env.projectDir, 'intent', 'v1.1'))
+      .toThrow(/version|No intent artifact/);
+  });
+
   it('still reads a legitimately placed artifact', () => {
     const env = withTrackerFile('Sigma/charter/DIR-INTENT-v1.md');
     const p = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
