@@ -33,7 +33,14 @@ export interface Binding {
   projectId: string | null;
   /** Non-reversible correlation handle for the root. Safe to send to a model. */
   rootFingerprint: string | null;
-  /** Server-bound role. Never settable from a tool argument. */
+  /**
+   * Server-bound role. Never settable from a tool argument — the only writer
+   * is resolveBinding(), from trusted process argv, and only in control mode.
+   * Query mode has no role-scoped tool (the Stage B2 mailbox tools that would
+   * have used it were withdrawn by Director decision after review — see
+   * RESULT-IMPL-SIGMA-MCP-STAGE-B2-20260915.md §9), so query-mode role stays
+   * unset.
+   */
   role: string | null;
   verified: boolean;
 }

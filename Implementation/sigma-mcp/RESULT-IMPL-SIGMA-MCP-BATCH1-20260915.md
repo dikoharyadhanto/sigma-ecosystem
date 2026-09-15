@@ -3,7 +3,7 @@
 **Plan**: `PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE-20260915.md` (APPROVED Batch 1, keputusan Q1–Q6 di §21.1)
 **Tanggal**: 2026-09-15
 **Scope dieksekusi**: Stage 0 + Stage A + Stage B1
-**Status**: **Stage 0 SELESAI. R-01…R-10 seluruhnya CLOSED, termasuk bukti consumer aktual. Gate 0.5 dan B1 menunggu re-review terakhir Codex — dokumen ini tidak menyatakannya PASS.**
+**Status**: **Stage 0 SELESAI. R-01…R-10 CLOSED. Gate 0.5 PASS dan Gate B1 PASS berdasarkan final re-review Codex (§16).**
 **Commit/push**: branch `hermes-integration`, di-push atas otorisasi Director. Tidak di-merge ke `main`.
 
 > **Revisi 2026-09-15.** Versi pertama dokumen ini menutup Gate 0.5 sebagai `runtime UNPROVEN` atas dasar klaim bahwa lab Hermes memakai binary global yang lama. **Klaim itu salah** dan dikoreksi di §6. Setelah Director mengotorisasi `npm link`, pemeriksaan pertama menunjukkan global `sigma-mcp` sudah berupa symlink ke repo ini sejak sebelum Batch 1 — sehingga `npm link` tidak diperlukan dan smoke test runtime dapat langsung dijalankan.
@@ -15,8 +15,8 @@
 | Gate | Hasil | Dasar |
 |---|---|---|
 | Stage 0 | SELESAI | Capability matrix 59 operasi + 3 mismatch registry terdokumentasi |
-| Gate 0.5 (Stage A) | **Seluruh temuan CLOSED** | R-01…R-10 tertutup. Bukti consumer aktual lengkap (§14, §15). Penetapan PASS milik re-review Codex, bukan dokumen ini |
-| Gate B1 (Stage B) | **Seluruh temuan CLOSED** | R-01 dan R-10 tertutup; 10 regression test reader artifact; `sigma_read_artifact` terbukti via Hermes (§15). Menunggu re-review terakhir |
+| Gate 0.5 (Stage A) | **PASS** | R-01…R-10 tertutup; reference-client dan consumer aktual Hermes terverifikasi; final re-review §16 |
+| Gate B1 (Stage B) | **PASS** | Bounded artifact read current+legacy, policy projection, non-mutasi, dan pemanggilan melalui Hermes terverifikasi; final re-review §16 |
 
 ## 2. Bukti eksekusi
 
@@ -572,7 +572,7 @@ Isi yang diperiksa:
 - `sigma_get_state` → `project_id: HERMESLAB`, `active_chain: v1`, `phase: DESIGN` — cocok dengan `sigma session bootstrap` manual pada Phase 0 §3
 - `sigma_get_effective_policy` → **59 operasi**, `advisory: true`
 - `sigma_read_artifact` → `path: Sigma/charter/DIR-INTENT-v1.md`, `present: true` — relatif, bukan path host
-- **Nol string berbentuk path host absolut** di seluruh sembilan payload
+- **Nol path host absolut pada envelope/metadata MCP** di seluruh sembilan payload. Isi governance artifact yang sengaja diminta melalui `sigma_read_artifact` dapat menyebut path absolut sebagai bagian dari dokumennya sendiri; itu bukan path yang ditambahkan atau dibocorkan oleh transport MCP.
 
 ### 15.2 Penolakan cross-project pada level pemanggilan
 
@@ -625,3 +625,63 @@ Entri itu bertanda `last_status: exhausted` dengan `401`: jejak percobaan yang g
 **CLOSED.** Seluruh syarat re-review §10.5 butir 4 terpenuhi: discovery, binding terverifikasi, sembilan query dipanggil consumer aktual, penolakan cross-project, dan nol mutasi — semuanya melalui Hermes, terpisah dari reference-client smoke yang tetap berdiri sendiri di §6.2.
 
 Yang tetap tidak dibuktikan ulang: probe credential child-environment (diblokir guardrail sesi implementer; sudah dibuktikan Phase 0 §4 dan tidak disentuh Batch 1) dan paritas `structuredContent`/text pada level Hermes — Hermes tidak mengekspos kedua representasi itu pada level giliran; paritasnya dijaga contract test dan reference client.
+
+## 16. FINAL RE-REVIEW — Codex (2026-09-15)
+
+**Verdict: ACCEPTED. Gate 0.5 PASS. Gate B1 PASS.** Tidak ada temuan blocking yang tersisa pada scope Batch 1. Baseline final yang direview adalah `629967a`, sama dengan `origin/hermes-integration`; `main` tidak disentuh.
+
+### 16.1 Closure R-01…R-10
+
+- R-02, R-03, R-04, dan R-06…R-09 tetap **CLOSED** sebagaimana diterima pada re-review §12.
+- R-10 **CLOSED**: `ARTIFACT_LAYOUT` di `src/config.ts` menjadi sumber bersama untuk reconstruct engine dan MCP reader. Reader menerima exact derived current/legacy paths tanpa kembali mempercayai arbitrary tracker path.
+- R-01 tetap **CLOSED** setelah pelebaran kompatibilitas R-10. Seluruh negative test dipertahankan; allowlist exact filename+version tetap menjadi boundary.
+- R-05 **CLOSED**: bukti berasal dari Hermes sebagai consumer aktual, bukan hanya MCP SDK reference client.
+
+Probe final reviewer terhadap satu chain yang memuat seluruh layout sah menghasilkan:
+
+```json
+{"reads":[{"type":"intent","present":true,"path":"Sigma/design/DIR-INTENT-v1.md"},{"type":"roadmap","present":true,"path":"Sigma/build/ROADMAP-v1.md"},{"type":"plan","present":true,"path":"Sigma/build/FMN-PLAN-v0.1.md"},{"type":"exec","present":true,"path":"Sigma/build/DEV-EXEC-v0.1.md"},{"type":"close","present":true,"path":"Sigma/close/DIR-CLOSE-v1.md"}],"arbitraryRead":"BOUNDARY_VIOLATION"}
+```
+
+Dengan demikian compatibility fix tidak membuka kembali pembacaan `.env`.
+
+### 16.2 Verifikasi consumer aktual R-05
+
+Reviewer membaca database profile Hermes secara read-only dan hanya mengekstrak metadata/tool-result fields yang relevan; prompt, isi credential, dan isi artefak tidak dicetak.
+
+| Evidence | Verifikasi independen |
+|---|---|
+| Session `20260915_193804_4f9e63` | `source=cli`, `profile_name=sigma-lab`, `cwd=C:\Users\dikoh`, `end_reason=agent_close`, 22 message, 10 tool call |
+| Sembilan query Sigma | Kesembilan nama tool memiliki result tersimpan; seluruh envelope membawa `contract_version=1.0`, `binding.verified=true`, `project_id=HERMESLAB`, `snapshot.active_chain=v1` |
+| Policy/artifact | Policy result menyatakan `advisory=true`; artifact result menunjuk `Sigma/charter/DIR-INTENT-v1.md` |
+| Session `20260915_193737_773d7b` | Model mengirim `project_root`; server mengembalikan `BOUNDARY_VIOLATION` tanpa absolute path pada error payload |
+| Lifecycle proses | `mcp-stderr.log` menunjukkan satu startup per sesi sesudah R-02 dan historical double-start sebelum fix |
+| Profile binding | `config.yaml` memuat `--mode query --project-root <lab> --project-id HERMESLAB`; cwd netral tidak memengaruhi root |
+
+Koreksi terhadap §15.1: nilai `path` yang dibentuk MCP memang relatif dan envelope/metadata tidak membawa path host. Isi Intent Doc yang diminta memiliki beberapa string path absolut miliknya sendiri; klaim lama “nol path absolut di seluruh payload” terlalu luas dan telah dikoreksi di atas. Ini bukan security regression pada transport atau binding.
+
+### 16.3 Verifikasi final
+
+- `npm.cmd run build`: **PASS**.
+- `npm.cmd test`: **50 file / 536 test PASS**.
+- Runtime reference-client smoke: **32/32 PASS**, termasuk single-response CASE E dan **41/41 file byte-identical**.
+- Mutation evidence dua boundary guard diterima: per-call project root guard dan artifact allowlist sama-sama membuat negative test gagal ketika sengaja dimatikan.
+- `git diff --check 8e2506c..629967a`: **PASS**.
+- HEAD lokal sama dengan `origin/hermes-integration`; working tree bersih sebelum penambahan final review ini.
+
+### 16.4 Catatan non-blocking
+
+1. Child-environment credential probe tidak diulang pada Batch 1. Bukti Phase 0 §4 tetap dapat dipakai karena Batch 1 tidak mengubah mekanisme spawn/environment; profile hanya menambah binding arguments.
+2. Paritas `structuredContent`/text tidak observable dari transcript Hermes, tetapi lulus pada contract test dan reference-client runtime.
+3. Pola realpath check → `openSync` → realpath re-check belum membuktikan file descriptor identik dengan target check kedua bila ada symlink-swap race yang sangat presisi. Boundary statis dan threat model query-only saat ini cukup untuk B1; hardening handle identity/`O_NOFOLLOW` wajib ditinjau kembali sebelum write/control plane diaktifkan.
+4. Result Hermes Phase 0 sebaiknya menerima koreksi retrospektif bahwa executable saat pengujian historis masih double-start. Bukti current-state setelah R-02 sudah sehat, sehingga ini documentation debt dan bukan blocker Gate 0.5 saat ini.
+
+### 16.5 Keputusan
+
+| Gate | Keputusan final | Dasar |
+|---|---|---|
+| Stage 0 | **PASS** | Capability matrix dan policy boundary diterima |
+| Gate 0.5 / Stage A | **PASS** | Binding, response contract, isolation, compatibility, single-response transport, non-mutasi, dan Hermes actual-consumer evidence terpenuhi |
+| Gate B1 / Stage B | **PASS** | Effective policy dan bounded current+legacy artifact read terpenuhi tanpa arbitrary path |
+
+Keputusan ini hanya menerima Batch 1. Ia **tidak** mengotorisasi Stage B2/C, write tools, command plane, merge ke `main`, atau perubahan runtime lain; semuanya tetap membutuhkan instruksi Director terpisah.

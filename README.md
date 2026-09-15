@@ -459,6 +459,8 @@ Sigma ships a native, read-only [MCP](https://modelcontextprotocol.io) server, `
 
 ### Tools
 
+Ten tools are currently registered: six from the original orientation server, three added for project binding/policy/artifact reading, and one (`sigma_get_evidence`) for plan/exec status.
+
 | Tool | Returns |
 |:--- | :--- |
 | `sigma_get_state` | Project phase, active chain, schema version, gate status |
@@ -466,6 +468,13 @@ Sigma ships a native, read-only [MCP](https://modelcontextprotocol.io) server, `
 | `sigma_get_orientation` | Role hint, gate summary, next valid operations, blockers |
 | `sigma_list_artifacts` | Intent/plan/exec/close/roadmap tracker state |
 | `sigma_doctor` | Reconciliation findings (report-only — never writes to disk) |
+| `sigma_get_memory` | Role memory reminders for ARC/FMN/DEV/AUD |
+| `sigma_verify_binding` | Confirms which project this server is bound to, against an optional expected project ID/root |
+| `sigma_get_effective_policy` | Classifies every Sigma operation as observe / role_action / director_required / gate_blocked / forbidden — advisory only, not an authorization grant |
+| `sigma_read_artifact` | Full content of one governance artifact (intent/roadmap/plan/exec/close), selected by type and version |
+| `sigma_get_evidence` | Status/reference metadata for one plan or exec version — state, timestamps, version refs, and a hash of its file if registered, but **not** the document body |
+
+**Mailbox and memo are not exposed over MCP.** `sigma send`, `sigma inbox`, and `sigma memo` — and the corresponding `write-memo`/`read-memo` skills — remain CLI/skill-only. An MCP mailbox surface was built and reviewed but withdrawn before release: cross-role messaging is handled by Hermes session orchestration instead, and reintroducing it would need a fresh design for per-role binding and message-path authorization.
 
 ### Enabling it
 

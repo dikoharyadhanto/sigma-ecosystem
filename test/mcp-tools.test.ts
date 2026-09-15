@@ -251,7 +251,7 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
     env?.cleanup();
   });
 
-  it('lists the nine Batch 1 tools and every core call returns source:engine', async () => {
+  it('lists the ten tools (Phase 0 + Batch 1 + Stage B2 evidence-only) and every core call returns source:engine', async () => {
     env = setupTestEnv();
     projectWithChain(env, makeChainWithLockedExec());
     // Registered tools resolve the project via findProjectRoot() from cwd.
@@ -265,7 +265,10 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
 
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
-    // Six from Phase 0 plus the three added by Batch 1 (Stage A + Stage B1).
+    // Six from Phase 0, three added by Batch 1 (Stage A + Stage B1), one added
+    // by Stage B2 (sigma_get_evidence). MCP mailbox tools were built and
+    // reviewed during Stage B2 but withdrawn by Director decision — see
+    // RESULT-IMPL-SIGMA-MCP-STAGE-B2-20260915.md §9.
     expect(names).toEqual(
       [
         'sigma_doctor',
@@ -277,6 +280,7 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
         'sigma_verify_binding',
         'sigma_get_effective_policy',
         'sigma_read_artifact',
+        'sigma_get_evidence',
       ].sort(),
     );
 

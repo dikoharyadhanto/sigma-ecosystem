@@ -40,8 +40,8 @@ Kolom **Owner role** bersifat **turunan dan belum diratifikasi**. Ia berasal dar
 | `memory` | read_only | any | semua | `sigma_get_memory` | **implemented** (Phase 0) |
 | `doctor` (diagnosis saja) | semantic | any | semua | `sigma_doctor` (`applied:false`) | **implemented** (Phase 0) — lihat split di §3.4 |
 | `intent_status` | read_only | any | ARC | `sigma_list_artifacts` (parsial) | deferred B2 |
-| `plan_status` | read_only | any | FMN | `sigma_list_artifacts` (parsial) | deferred B2 |
-| `exec_status` | read_only | any | DEV | `sigma_list_artifacts` (parsial) | deferred B2 |
+| `plan_status` | read_only | any | FMN | `sigma_list_artifacts` (parsial), `sigma_get_evidence` (versi tunggal, parsial) | deferred B2 — masih tidak mencakup daftar seluruh versi |
+| `exec_status` | read_only | any | DEV | `sigma_list_artifacts` (parsial), `sigma_get_evidence` (versi tunggal, parsial) | deferred B2 — masih tidak mencakup daftar seluruh versi |
 | `close_status` | read_only | any | AUD | `sigma_list_artifacts` (parsial) | deferred B2 |
 | `intent_list` | read_only | any | semua | — | deferred B2 |
 | `plan_list` | read_only | any | FMN | — | deferred B2 |
@@ -52,7 +52,7 @@ Kolom **Owner role** bersifat **turunan dan belum diratifikasi**. Ia berasal dar
 | `exec_check` | read_only | any | DEV | — | deferred B2 |
 | `close_check` | read_only | any | AUD | — | deferred B2 |
 | `roadmap_check` | read_only | any | FMN | — | deferred B2 |
-| `inbox` | read_only | any | semua | `sigma_list_messages` | deferred B2 — butuh desain claim/lease |
+| `inbox` | read_only | any | semua | — | deferred, tanpa jadwal — MCP mailbox dibangun lalu **ditarik** oleh keputusan Director setelah review Codex (2026-09-15). Lihat §3.6 |
 | `inbox_check` | read_only | any | semua | — | deferred B2 |
 | `memo_list` | read_only | any | semua | — | deferred B2 |
 | `config_show` | read_only | any | semua | — | deferred B2 |
@@ -70,8 +70,8 @@ Kolom **Owner role** bersifat **turunan dan belum diratifikasi**. Ia berasal dar
 | `plan_update` | any | FMN | `sigma_update_artifact_draft` | deferred Stage C |
 | `send` | any | semua | `sigma_send_message` | deferred Stage C |
 | `memo_write` | any | semua | `sigma_write_memo` | deferred Stage C |
-| `memo_read` | any | semua | — | deferred B2/C — **konflik semantik**, §9.1 plan |
-| `inbox_read` | any | semua | — | deferred B2/C — **konflik semantik**, §9.1 plan |
+| `memo_read` | any | semua | — | deferred, tanpa jadwal — MCP memo tidak direncanakan (keputusan Director 2026-09-15, §3.6); tetap CLI/skill (`sigma memo read`, skill `read-memo`) |
+| `inbox_read` | any | semua | — | deferred, tanpa jadwal — MCP mailbox tidak direncanakan (keputusan Director 2026-09-15, §3.6); tetap CLI (`sigma inbox read`) |
 | `inbox_archive` | any | semua | — | deferred Stage E |
 | `roadmap_new` | any | FMN | — | deferred Stage E |
 | `roadmap_render` | any | FMN | — | deferred Stage E — derivasi deterministik dari chain state |
@@ -120,6 +120,22 @@ Seluruhnya memakai `typed prepare → durable Director approval → typed commit
 `scan` ber-level `read_only`, jadi secara registry ia tampak aman. Ia **tidak** aman sebagai primitive MCP: ia menerima path file **arbitrary** untuk dipindai. Mengeksposnya sama dengan memberi `sigma_read_file` berkedok, yang dilarang eksplisit oleh §4 non-goal plan.
 
 Ini contoh utama kenapa `level` registry tidak boleh dijadikan penentu admissibility.
+
+### 3.6 Stage B2 (2026-09-15) — evidence-only, setelah review dan revert mailbox
+
+Stage B2 semula menambah tiga tool (`sigma_get_evidence`, `sigma_list_messages`, `sigma_read_message`). Review Codex menemukan tiga temuan pada dua tool mailbox — R-B2-01 (HIGH, config resmi tidak pernah menulis `--role` sehingga mailbox selalu `ROLE_NOT_AUTHORIZED` pada instalasi nyata), R-B2-02 (MEDIUM, existence oracle lintas role lewat error code yang berbeda), R-B2-03 (MEDIUM, filename pesan tidak diturunkan dari `entry.id`/`from`/`to`/`type` sehingga entry index yang rusak bisa diarahkan ke file pesan lain yang sah). Director memutuskan **tidak memperbaiki temuan itu, melainkan menarik seluruh MCP mailbox/memo dari scope** — Hermes tidak membutuhkannya sekarang; komunikasi antar-role tetap lewat CLI (`sigma send`, `sigma inbox read`) dan skill (`write-memo`/`read-memo`).
+
+**Yang bertahan setelah revert:**
+
+| Tool | Padanan registry | Sifat |
+|---|---|---|
+| `sigma_get_evidence` | `plan_status`/`exec_status` (parsial — satu versi, bukan daftar) | **baru** — proyeksi status/referensi tracker plan/exec, bukan isi dokumen |
+
+`sigma_list_messages` dan `sigma_read_message`, berikut `src/mcp/tools/mailbox.ts`, dihapus. `binding.role` dikembalikan ke control-mode-only. `inbox` dan `inbox_read` di §3.1/§3.2 kembali `deferred` tanpa jadwal.
+
+**R-B2-04 (LOW, tetap perlu diperbaiki pada evidence) — CLOSED.** `sigma_get_evidence` semula punya boundary lebih longgar dari `sigma_read_artifact`: tidak melempar `BOUNDARY_VIOLATION` untuk non-regular file di path kanonik, dan tidak melakukan canonical-recheck setelah `openSync`. Diperbaiki dengan mengekstrak `readCanonicalArtifactFile()` ke `src/mcp/artifactPath.ts` — satu rutin open/verify/hash/read yang dipakai `sigma_read_artifact` **dan** `sigma_get_evidence`, sehingga keduanya tidak bisa drift lagi pada boundary maupun pada posture pembacaan. Diverifikasi dengan test baru: direktori pada path kanonik → `BOUNDARY_VIOLATION` (bukan `present:false`), file di atas batas ukuran → `PAYLOAD_TOO_LARGE`.
+
+**Verifikasi final.** `test/mcp-stage-b2.test.ts` (9 test, evidence-only): status + hash, present:false untuk file hilang, unknown version, boundary violation `.env`, parity legacy folder (R-10), non-regular-file boundary (R-B2-04), payload-too-large; dua test transport-level (envelope + non-mutasi). Full suite kembali ke baseline Batch 1 + 9 test evidence: **51 file / 545 test PASS**.
 
 ## 4. Surface Batch 1
 

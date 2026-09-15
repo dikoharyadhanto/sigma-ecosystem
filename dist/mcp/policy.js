@@ -66,7 +66,16 @@ exports.OPERATION_OWNER = Object.freeze({
     exec_humanize: 'DEV', git_evidence: 'DEV',
     close_status: 'AUD', close_check: 'AUD', close_humanize: 'AUD', report_logs: 'AUD',
 });
-/** Operations whose MCP primitive exists today. Everything else is deferred. */
+/**
+ * Operations whose MCP primitive exists today. Everything else is deferred.
+ *
+ * `inbox`/`inbox_read` are NOT here: MCP mailbox tools (sigma_list_messages,
+ * sigma_read_message) were built and reviewed during Stage B2 but withdrawn
+ * by Director decision after review (2026-09-15,
+ * RESULT-IMPL-SIGMA-MCP-STAGE-B2-20260915.md §9). Mailbox stays CLI/skill-only
+ * (`sigma send`, `sigma inbox read`, write-memo/read-memo) — there is no MCP
+ * primitive for it, so both operations report `deferred`.
+ */
 const IMPLEMENTED = new Set(['project_status', 'session_bootstrap', 'memory', 'doctor']);
 function mcpStatusFor(operationId) {
     const tier = exports.OPERATION_TIERS[operationId];

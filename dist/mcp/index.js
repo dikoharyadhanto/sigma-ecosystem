@@ -12,8 +12,18 @@
 //
 // Registers the six read-only core tools — sigma_get_state,
 // sigma_get_orientation, sigma_get_gates, sigma_list_artifacts, sigma_doctor,
-// sigma_get_memory — plus the Batch 1 additions sigma_verify_binding,
-// sigma_get_effective_policy, and sigma_read_artifact.
+// sigma_get_memory — the Batch 1 additions sigma_verify_binding,
+// sigma_get_effective_policy, and sigma_read_artifact, and the Stage B2
+// (evidence-only) addition sigma_get_evidence.
+//
+// MCP mailbox/memo tools (sigma_list_messages, sigma_read_message) were built
+// and reviewed during Stage B2 but withdrawn by Director decision after
+// review (2026-09-15, RESULT-IMPL-SIGMA-MCP-STAGE-B2-20260915.md §9): Hermes
+// integration does not need them, and cross-role messaging stays on the CLI
+// (`sigma send`/`sigma inbox read`) and the write-memo/read-memo skills. Do
+// not re-add a mailbox tool here without a fresh Director decision — the
+// review that withdrew it found real role-binding and boundary gaps (R-B2-01
+// through R-B2-03) that a reintroduction would have to address again.
 //
 // stdout is reserved for JSON-RPC frames — all diagnostics go to stderr.
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -32,6 +42,7 @@ const memory_1 = require("./tools/memory");
 const verifyBinding_1 = require("./tools/verifyBinding");
 const effectivePolicy_1 = require("./tools/effectivePolicy");
 const readArtifact_1 = require("./tools/readArtifact");
+const evidence_1 = require("./tools/evidence");
 const shared_1 = require("./shared");
 const binding_1 = require("./binding");
 // Exported so tests can boot the server in-process (PLAN-IMPL-01 §4).
@@ -46,6 +57,7 @@ function buildServer() {
     (0, verifyBinding_1.registerVerifyBindingTool)(server);
     (0, effectivePolicy_1.registerEffectivePolicyTool)(server);
     (0, readArtifact_1.registerReadArtifactTool)(server);
+    (0, evidence_1.registerGetEvidenceTool)(server);
     return server;
 }
 /**
