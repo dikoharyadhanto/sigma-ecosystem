@@ -15,7 +15,7 @@
 | Gate | Hasil | Dasar |
 |---|---|---|
 | Stage 0 | SELESAI | Capability matrix 59 operasi + 3 mismatch registry terdokumentasi |
-| Gate 0.5 (Stage A) | **REOPENED** | R-01…R-04, R-06…R-10 CLOSED (§11, §13). Hanya R-05 tersisa: perlu bukti via Hermes `sigma-lab` |
+| Gate 0.5 (Stage A) | **REOPENED** | R-01…R-04, R-06…R-10 CLOSED. R-05 sebagian: discovery/binding/isolasi terbukti via Hermes (§14), pemanggilan tool belum — butuh credential Director |
 | Gate B1 (Stage B) | **REOPENED** | R-01 dan R-10 CLOSED; 10 regression test pada reader artifact (§11, §13), menunggu re-review terakhir |
 
 ## 2. Bukti eksekusi
@@ -467,3 +467,82 @@ Perhatikan test kelima: ia sengaja menjaga agar pelebaran folder tidak menjadi p
 ### 13.6 Status gate
 
 **Gate 0.5 dan B1 tetap REOPENED.** R-10 tertutup, R-05 belum: evidence runtime masih reference-client subprocess, bukan Hermes sebagai consumer aktual. Sesuai urutan yang Director tetapkan, langkah berikutnya adalah otorisasi pengujian melalui profile Hermes `sigma-lab`, lalu re-review terakhir. Dokumen ini tidak menaikkan gate apa pun.
+
+## 14. R-05 — bukti melalui Hermes sebagai consumer aktual
+
+Dijalankan 2026-09-15 atas otorisasi Director, memakai profile `sigma-lab` dan proyek lab `HERMESLAB`. **R-05 sebagian tertutup**; satu bagian tidak dapat diselesaikan sesi ini — lihat §14.4.
+
+Runtime: Hermes Agent `v0.21.3 (2026.9.14)`, upstream `8f785318` — versi yang sama dengan Phase 0.
+
+### 14.1 Temuan pertama: profile tidak terikat sama sekali
+
+Sebelum apa pun dijalankan, `profiles/sigma-lab/config.yaml` berbunyi:
+
+```yaml
+mcp_servers:
+  sigma:
+    command: C:\Users\dikoh\AppData\Roaming\npm\sigma-mcp.cmd
+    connect_timeout: 30.0
+    enabled: true
+```
+
+Tanpa `args`. Consumer nyata karena itu menjalankan server dalam **discovery mode** — tidak terikat, `binding_verified:false`, dan root diselesaikan lewat `resolveRoot()` legacy dari `cwd`. Persis kelemahan yang Stage A dibuat untuk menutup, masih hidup pada konfigurasi consumer.
+
+Ini adalah alasan R-05 ada. Seluruh test contract dan reference-client smoke hijau, dan tidak satu pun dapat melihat fakta ini, karena tidak satu pun membaca konfigurasi consumer.
+
+### 14.2 Yang terbukti
+
+| Bukti | Hasil |
+|---|---|
+| Discovery tool | **9 tool ditemukan Hermes**, termasuk `sigma_verify_binding`, `sigma_get_effective_policy`, `sigma_read_artifact` |
+| Koneksi | `✓ Connected (953ms)`, transport stdio, auth none |
+| Binding sebelum perbaikan config | `sigma-mcp running on stdio (mode=query binding=discovery verified=false)` |
+| Binding sesudah perbaikan config | `sigma-mcp running on stdio (mode=query binding=verified verified=true)` |
+| cwd saat uji | `C:\Users\dikoh` — netral, bukan root proyek; binding tetap `HERMESLAB` |
+| Isolasi toolset | Seluruh toolset built-in `disabled`; hanya `sigma  all tools enabled` |
+| Non-mutasi | **41/41 file governance lab byte-identical** sebelum dan sesudah seluruh aktivitas |
+
+Baris binding berasal dari `profiles/sigma-lab/logs/mcp-stderr.log` — stderr proses yang **Hermes sendiri** spawn, bukan proses yang saya jalankan.
+
+### 14.3 R-02 terlihat di log Hermes, termasuk secara historis
+
+Log yang sama merekam sesi Phase 0:
+
+```
+===== [2026-09-15 15:52:00] starting MCP server 'sigma' =====
+sigma-mcp running on stdio
+sigma-mcp running on stdio          ← dua server, satu stdio
+
+===== [2026-09-15 19:24:46] starting MCP server 'sigma' =====
+sigma-mcp running on stdio (mode=query binding=verified verified=true)   ← satu
+```
+
+Dua baris per start pada sesi Phase 0 adalah R-02, terekam oleh consumer nyata pada hari Phase 0 dinyatakan PASS. Ini bukti independen bahwa cacat itu mendahului Batch 1 dan lolos dari evidence Phase 0 — dan bahwa perbaikannya benar-benar sampai ke consumer.
+
+### 14.4 Yang TIDAK terbukti, dan kenapa
+
+**Pemanggilan tool yang digerakkan model belum dijalankan.** Profile lab tidak menyimpan credential — sesuai desain Phase 0 ("credential tidak dipersist ke profile lab"). Satu giliran percobaan gagal bersih:
+
+```
+hermes -z: agent failed: No usable credentials found for provider 'deepseek'.
+Set DEEPSEEK_API_KEY.
+```
+
+Saya **tidak meminta, mencari, atau menyuntikkan** credential apa pun. Karena itu belum terbukti melalui Hermes: paritas isi payload antara Hermes dan CLI, paritas `structuredContent`/text, dan penolakan cross-project pada level pemanggilan. Ketiganya terbukti pada reference-client (§6.2) tetapi bukan pada consumer aktual.
+
+**Probe credential child-environment juga tidak dijalankan.** Percobaannya diblokir oleh guardrail sesi ini sebagai eksplorasi credential, dan saya tidak mengakalinya. Nilainya rendah: Batch 1 tidak mengubah apa pun soal spawn proses, dan Phase 0 §4 sudah membuktikan isolasi ini.
+
+### 14.5 Perubahan yang saya buat pada lingkungan Director
+
+| Perubahan | Detail |
+|---|---|
+| `profiles/sigma-lab/config.yaml` | Ditambahkan `args:` binding (`--mode query --project-root <lab> --project-id HERMESLAB`) pada entri `mcp_servers.sigma` |
+| Backup | `%TEMP%/sigma-lab-config.yaml.bak` — salin kembali untuk mengembalikan keadaan semula |
+
+Saya mempertahankan perubahan ini, bukan mengembalikannya: tanpa `args`, lab kembali ke discovery mode, yang lebih buruk. Tetapi ini profile milik Director dan keputusan akhir ada pada Director.
+
+Tidak ada perubahan lain: profile `default` tidak disentuh, gateway tidak dijalankan, tidak ada entri MCP baru yang tertinggal, dan pohon governance lab tidak berubah satu byte pun.
+
+### 14.6 Status
+
+**Gate 0.5 dan B1 tetap REOPENED.** R-05 belum dapat dinyatakan tertutup penuh: discovery, binding, isolasi, dan non-mutasi terbukti pada consumer aktual, tetapi pemanggilan tool belum. Untuk menutupnya dibutuhkan satu giliran model pada profile `sigma-lab` — keputusan credential yang menjadi milik Director, bukan saya.
