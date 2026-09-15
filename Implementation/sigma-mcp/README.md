@@ -8,7 +8,7 @@ Folder ini berisi plan canonical untuk menjadikan Sigma MCP sebagai interface go
 |---|---|
 | `PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE-20260915.md` | APPROVED (Batch 1) — Director menyetujui eksekusi 2026-09-15; keputusan Q1–Q6 tercatat di §21.1 |
 | `SIGMA-MCP-OPERATION-CAPABILITY-MATRIX-20260915.md` | Stage 0 deliverable — klasifikasi 59 operasi registry |
-| `RESULT-IMPL-SIGMA-MCP-BATCH1-20260915.md` | Batch 1 selesai 2026-09-15 — Gate 0.5 `contract PASS / runtime UNPROVEN`, Gate B1 PASS |
+| `RESULT-IMPL-SIGMA-MCP-BATCH1-20260915.md` | Batch 1 selesai 2026-09-15 — Gate 0.5 PASS (contract + runtime), Gate B1 PASS |
 
 ## Urutan eksekusi
 

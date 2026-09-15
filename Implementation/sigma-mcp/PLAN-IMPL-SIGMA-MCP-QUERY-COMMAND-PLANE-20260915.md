@@ -571,7 +571,7 @@ Jangan log credential, raw approval secret/signature, full prompt, D3 content, a
 ## 19. Definition of Done plan keseluruhan
 
 - [ ] Operation capability matrix seluruh registry selesai dan direview.
-- [ ] Query binding server-side lulus Gate 0.5 pada level contract. Klaim runtime hanya sah bila smoke test Hermes benar-benar dijalankan; tanpa itu statusnya `contract PASS / runtime UNPROVEN` (keputusan Q5, §21.1).
+- [x] Query binding server-side lulus Gate 0.5 pada level contract **dan** runtime. Smoke test out-of-process terhadap lab `HERMESLAB` dijalankan 2026-09-15; bukti dan skrip reproducible di `RESULT-IMPL-SIGMA-MCP-BATCH1-20260915.md` §6 dan `evidence/gate05-runtime-smoke.mjs`.
 - [ ] Response contract versioned, lulus reference client, dan runtime-tested di Hermes sebagai consumer pertama.
 - [ ] Policy dan bounded artifact query lulus Gate B.
 - [ ] Control server terpisah, disabled by default, dan W1 pilot lulus Gate C.

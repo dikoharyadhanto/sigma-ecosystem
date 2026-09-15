@@ -3,8 +3,10 @@
 **Plan**: `PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE-20260915.md` (APPROVED Batch 1, keputusan Q1–Q6 di §21.1)
 **Tanggal**: 2026-09-15
 **Scope dieksekusi**: Stage 0 + Stage A + Stage B1
-**Status**: **Stage 0 SELESAI. Gate 0.5 `contract PASS / runtime UNPROVEN`. Gate B1 PASS.**
-**Commit/push**: tidak dilakukan.
+**Status**: **Stage 0 SELESAI. Gate 0.5 PASS (contract + runtime). Gate B1 PASS.**
+**Commit/push**: branch `hermes-integration`, dua commit, sudah di-push. Tidak di-merge ke `main`.
+
+> **Revisi 2026-09-15.** Versi pertama dokumen ini menutup Gate 0.5 sebagai `runtime UNPROVEN` atas dasar klaim bahwa lab Hermes memakai binary global yang lama. **Klaim itu salah** dan dikoreksi di §6. Setelah Director mengotorisasi `npm link`, pemeriksaan pertama menunjukkan global `sigma-mcp` sudah berupa symlink ke repo ini sejak sebelum Batch 1 — sehingga `npm link` tidak diperlukan dan smoke test runtime dapat langsung dijalankan.
 
 ---
 
@@ -13,10 +15,8 @@
 | Gate | Hasil | Dasar |
 |---|---|---|
 | Stage 0 | SELESAI | Capability matrix 59 operasi + 3 mismatch registry terdokumentasi |
-| Gate 0.5 (Stage A) | **contract PASS / runtime UNPROVEN** | Seluruh kriteria contract lulus by test; smoke test Hermes **tidak dijalankan** — lihat §6 |
+| Gate 0.5 (Stage A) | **PASS** | Contract lulus by test; runtime dibuktikan out-of-process terhadap lab `HERMESLAB` — §6 |
 | Gate B1 (Stage B) | PASS | `sigma_get_effective_policy` + bounded `sigma_read_artifact` lulus test, nol mutasi |
-
-**Gate 0.5 tidak boleh dinyatakan PASS tanpa kualifikasi.** Sesuai keputusan Q5, binary global host tidak disentuh, sehingga lab Hermes masih memanggil `sigma-mcp.cmd` versi lama. Klaim runtime akan valid hanya setelah Director mengotorisasi `npm link`.
 
 ## 2. Bukti eksekusi
 
@@ -24,6 +24,7 @@
 |---|---|
 | `npm run build` (`tsc`) | Bersih, nol error |
 | `npm test` | **50 file / 519 test pass** |
+| Smoke test runtime (§6.2) | **30 assertion, ALL CHECKS PASSED**, out-of-process terhadap lab `HERMESLAB` |
 | Baseline pra-Batch 1 | 49 file / 487 test pass |
 | Delta | +1 file, +32 test. **Nol test hilang, nol test di-skip** |
 | `git diff --check` | Bersih (satu warning CRLF pada `dist/` yang sudah ada sebelumnya) |
@@ -85,19 +86,49 @@ Tiga, semuanya disengaja.
 
 | Risiko | Status |
 |---|---|
-| Lab Hermes masih memakai binary lama | Gate 0.5 runtime belum terbukti (§6) |
-| Config terpasang masih bentuk posisional | Berfungsi sebagai `bound`/unverified sampai Director menjalankan `project sync` |
+| Config terpasang masih bentuk posisional | Terbukti berfungsi sebagai `bound`/unverified (§6.2 kasus A). Menjadi `verified` hanya setelah Director menjalankan `project sync` |
+| Global `sigma-mcp` adalah symlink ke working tree | Setiap `npm run build` di repo ini langsung mengubah perilaku seluruh client MCP di host. Bukan temuan Batch 1, tetapi baru terlihat sekarang dan layak Director ketahui |
 | Role binding hanya sekuat pemilik proses | Sudah masuk kriteria berhenti §22; memblokir Stage C di luar host lokal |
 | `dist/` ter-track di git | Build mengubah 20 file `dist/`. Konvensi repo yang sudah ada, tidak saya ubah |
 | Konflik semantik `inbox_read`/`memo_read` | Terdokumentasi di plan §9.1; keputusan milik Stage B2 |
 
-## 6. Kenapa runtime belum terbukti
+## 6. Bukti runtime Gate 0.5
 
-Evidence Phase 0 §1 menunjukkan lab Hermes memanggil `C:\Users\dikoh\AppData\Roaming\npm\sigma-mcp.cmd` — binary global. Membuktikan Gate 0.5 secara runtime menuntut penggantian binary itu (`npm link` atau setara), yaitu tindakan pada host yang §20.2 kecualikan dan yang keputusan Q5 arahkan ke cabang aman.
+### 6.1 Koreksi: `npm link` tidak pernah diperlukan
 
-Yang **sudah** terbukti: kontrak, binding, isolasi, non-mutasi, dan kompatibilitas — seluruhnya lewat in-process reference client di atas transport in-memory SDK. Yang **belum**: bahwa consumer nyata di luar proses berbicara dengan server ini tanpa kejutan.
+Versi pertama dokumen ini menyatakan lab Hermes "masih memakai binary lama". Itu **keliru**, dan saya tidak memverifikasinya sebelum menulisnya. Pemeriksaan aktual:
 
-Untuk menutupnya, Director cukup mengotorisasi `npm link` pada sesi terpisah. Sampai itu terjadi, dokumen ini dan plan §19 sama-sama menahan klaim pada `contract PASS / runtime UNPROVEN`.
+```
+%APPDATA%\npm\node_modules\sigma-ecosystem -> I:\Works\Project\sigma-ecosystem   (symlink, 2026-09-15 07:38)
+%APPDATA%\npm\sigma-mcp.cmd                 -> ...\node_modules\sigma-ecosystem\bin\sigma-mcp.js
+```
+
+Global `sigma-mcp` sudah merupakan symlink ke repo ini **sejak sebelum Batch 1 dimulai**. Artinya lab Hermes selalu menjalankan `dist/` repo ini, dan kode Stage A sudah terjangkau lewat path global begitu `npm run build` selesai — dikonfirmasi dengan membaca `binding.js` melalui path global dan menemukan marker `BINDING_REQUIRED`.
+
+Konsekuensinya, penahanan Gate 0.5 pada versi pertama didasarkan pada asumsi yang tidak diperiksa, bukan pada batas teknis yang nyata. Otorisasi `npm link` dari Director tetap yang membuka pemeriksaan ini — tetapi tindakannya sendiri tidak dibutuhkan, dan **tidak ada perubahan host yang dilakukan**.
+
+### 6.2 Smoke test out-of-process
+
+Skrip: `Implementation/sigma-mcp/evidence/gate05-runtime-smoke.mjs` — dapat dijalankan ulang, path host sebagai parameter.
+
+```
+node Implementation/sigma-mcp/evidence/gate05-runtime-smoke.mjs <LAB_ROOT>
+```
+
+Ini bukan in-process reference client. Ia men-spawn subprocess nyata atas file yang sama dengan yang dieksekusi shim global, berbicara JSON-RPC lewat stdio, terhadap proyek lab `HERMESLAB` yang sesungguhnya.
+
+| Kasus | Hasil |
+|---|---|
+| **A — config lama × binary baru** (§7.4 sel kiri-atas) | 9 tool ditemukan; `project_id` HERMESLAB; `binding.kind=bound`, `verified=false`; fingerprint ada, root absolut tidak bocor |
+| **B — config baru × binary baru** | `binding.kind=verified`, `verified=true`; `state_revision` valid; `sigma_verify_binding` usable; ekspektasi keliru dilaporkan tanpa memindah binding; enam tool Phase 0 tetap `active`+`source:engine`; policy meliputi 59 operasi dan menyatakan diri advisory; tidak ada operasi `implemented` yang bukan `observe`; `read_artifact` mengembalikan intent v1 dengan path relatif |
+| **B negatif — cross-project** | `project_root` ke proyek lain ditolak `BOUNDARY_VIOLATION`; penolakan tidak membocorkan detail proyek lain |
+| **C — `--project-id` salah** | Proses menolak start, exit code 2, `PROJECT_ID_MISMATCH` di stderr, tidak satu pun ID di-echo |
+| **D — control mode tanpa binding** | Proses menolak start, exit code 2, `BINDING_REQUIRED` di stderr |
+| **Non-mutasi** | **41/41 file governance lab byte-identical** sebelum dan sesudah seluruh pemanggilan di atas |
+
+`ALL CHECKS PASSED` — 30 assertion, nol gagal.
+
+Perhatikan kasus A: `.mcp.json` lab masih berbentuk posisional dan **tidak saya ubah**. Sel kompatibilitas itu karena itu terbukti pada config produksi apa adanya, bukan pada fixture.
 
 ## 7. Daftar file berubah
 
