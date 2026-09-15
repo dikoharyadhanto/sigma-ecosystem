@@ -594,15 +594,31 @@ Ditolak oleh server, bukan oleh model. Penolakannya tidak menyebut nama, path, m
 
 **41/41 file governance lab byte-identical** sebelum dan sesudah seluruh sesi, termasuk kesembilan pemanggilan tool yang digerakkan model.
 
-### 15.4 Temuan baru: credential terpersist ke profile lab
+### 15.4 KOREKSI — credential TIDAK terpersist ke profile lab
 
-`profiles/sigma-lab/auth.json` berukuran 802 byte dan **termodifikasi pada 19:37**, tepat saat giliran model pertama yang berhasil. Sebelum itu profile tidak memilikinya secara aktif (`auth.lock` bertanggal 15:29).
+**Versi pertama bagian ini keliru, dan alarmnya tidak berdasar.** Saya menyimpulkan dari ukuran dan waktu modifikasi `auth.json` bahwa Hermes mempersist credential provider ke profile, tanpa pernah memeriksa isinya.
 
-Artinya Hermes tampaknya **mempersist credential provider ke profile** begitu sebuah giliran berhasil, walaupun Director hanya menaruhnya sebagai environment variable proses. Ini membatalkan properti baseline Phase 0 §1: *"Credential: tidak dipersist ke profile lab"*.
+Director mengizinkan pemeriksaan dan menyatakan key DeepSeek-nya sudah di-revoke. Pemeriksaan struktural — nilai diredaksi, tidak pernah dicetak — menunjukkan yang tersimpan adalah **metadata**, bukan rahasia:
 
-Saya **tidak membuka file itu** — hanya ukuran dan waktu modifikasinya yang diperiksa. Rekomendasi: Director memeriksa dan, bila benar berisi key, menghapusnya (`hermes -p sigma-lab logout`, atau hapus file itu) serta memutar ulang key DeepSeek bila profile lab dianggap tidak tepercaya.
+```
+credential_pool.deepseek.0.label              "DEEPSEEK_API_KEY"
+credential_pool.deepseek.0.auth_type          "api_key"
+credential_pool.deepseek.0.source             "env:DEEPSEEK_API_KEY"
+credential_pool.deepseek.0.base_url           "https://api.deepseek.com/v1"
+credential_pool.deepseek.0.last_status        "exhausted"
+credential_pool.deepseek.0.last_error_code    401
+credential_pool.deepseek.0.failure_reason     "auth"
+credential_pool.deepseek.0.request_count      1
+credential_pool.deepseek.0.secret_fingerprint string(len=23)   <- fingerprint, bukan key
+```
 
-Ini perilaku Hermes, bukan perilaku Sigma, dan bukan akibat perubahan Batch 1. Tetapi ia mengubah asumsi keamanan lab dan karena itu harus tercatat di sini, bukan di catatan sesi.
+Yang direkam Hermes adalah **dari mana** credential dibaca (`env:DEEPSEEK_API_KEY`), sidik jari turunan sepanjang 23 karakter, dan telemetri kesehatan. Nilai key tidak ada di file itu: key DeepSeek berukuran ~35 karakter berawalan `sk-`, dan tidak ada string sepanjang itu di seluruh struktur.
+
+**Baseline Phase 0 §1 tetap berlaku** — profile lab tidak memegang credential. Yang bertambah hanya entri pool berisi rujukan dan status.
+
+Entri itu bertanda `last_status: exhausted` dengan `401`: jejak percobaan yang gagal akibat cacat panduan saya, ketika perintah tertelan prompt `Read-Host` dan terkirim sebagai key. Pembersihan opsional: `hermes -p sigma-lab logout`.
+
+**Kenapa koreksi ini ditulis, bukan dihapus diam-diam.** Saya menaikkan sebuah temuan keamanan dari ukuran file dan timestamp saja. Itu inferensi, bukan bukti — kesalahan yang sama persis dengan klaim `npm link` di §6.1, dua kali dalam satu batch. Pola yang perlu dijaga reviewer berikutnya: klaim saya paling lemah justru ketika menyangkut lingkungan, bukan kode.
 
 ### 15.5 Status R-05
 
