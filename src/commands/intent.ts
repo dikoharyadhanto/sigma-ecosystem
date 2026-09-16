@@ -4,15 +4,12 @@ import path from 'path';
 import readline from 'readline';
 import {
   ChainState,
-  createInitialChain,
-  nextChainVersion,
   listChainVersions,
   resolveActiveChainVersion,
   readChain,
   writeChain,
   readActiveChain,
   writeActivateStatus,
-  ratifyIntent,
   assertChainCanMutate,
   previewIntentSupersedeCascade,
   supersedeIntentVersion,
@@ -27,13 +24,14 @@ import {
 import { findProjectRoot, toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import {
-  ensureSigmaDocEligible,
   printSigmaDocReport,
   validateSigmaDocFile,
 } from '../utils/docCheck';
 import { renderIntentHistoryFile } from '../utils/intentHistory';
 import { renderAmendmentHistory } from '../utils/amendmentHistory';
 import { INTENT_AMENDMENT_LOG_FILE } from '../config';
+import { createIntentDraft, IntentDraftError } from '../services/intentDraftService';
+import { ratifyIntentDraft } from '../services/intentRatifyService';
 
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
 // onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
@@ -54,20 +52,6 @@ function intentDocPath(projectRoot: string, chain: ChainState): string {
   return path.join(projectRoot, chain.intent.file ?? path.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`));
 }
 
-// PLAN-EVAL-06 §6.2 — intent-history.md is a plain pipe-split table, and
-// doctor --reconstruct parses it back to recover title/focus. "|"/newlines would
-// corrupt both the render and the recovery parser.
-function assertRequiredIntentMetadata(title: string | undefined, focus: string | undefined): void {
-  if (!title?.trim()) throw new Error('sigma intent new requires --title <title>');
-  if (!focus?.trim()) throw new Error('sigma intent new requires --focus <focus>');
-  if (/[|\n\r]/.test(title)) {
-    throw new Error('--title cannot contain "|" or a newline (breaks the intent-history.md table and its recovery parser)');
-  }
-  if (/[|\n\r]/.test(focus)) {
-    throw new Error('--focus cannot contain "|" or a newline (breaks the intent-history.md table and its recovery parser)');
-  }
-}
-
 export function intentCommand(): Command {
   const cmd = new Command('intent');
   cmd.description('Manage DIR-INTENT artifact');
@@ -79,12 +63,13 @@ export function intentCommand(): Command {
     .option('--yes', 'Skip interactive APPROVE prompt when reopening a CLOSED project')
     .action(async (opts: { title?: string; focus?: string; yes?: boolean }) => {
       try {
-        assertRequiredIntentMetadata(opts.title, opts.focus);
         const projectRoot = findProjectRoot();
 
         // Preflight is read-only and best-effort — a brand-new project with
         // no chain yet has nothing to check CLOSED-ness against (PLAN-EVAL-01
-        // §4).
+        // §4). Only used here to decide whether to show the interactive
+        // prompt; createIntentDraft() enforces the rule itself regardless of
+        // what this preflight finds.
         let activeForPreflight: ChainState | null = null;
         try {
           activeForPreflight = readActiveChain(projectRoot).data;
@@ -92,30 +77,35 @@ export function intentCommand(): Command {
           // no chain exists yet — first `intent new` on this project
         }
 
+        // Not CLOSED → nothing to confirm; createIntentDraft()'s check is a
+        // no-op either way. CLOSED → this flag is only ever set true once
+        // confirmation (interactive or --yes) has actually happened below.
+        let allowReopenClosed = activeForPreflight?.lifecycle_state !== 'CLOSED';
         if (activeForPreflight?.lifecycle_state === 'CLOSED') {
           console.log('\nReopen Preflight\n');
           console.log(
             'The active chain is currently CLOSED. Running this command will create a new, ' +
             'fully isolated chain and activate it — the CLOSED chain is left untouched.\n'
           );
-          if (!opts.yes) {
+          if (opts.yes) {
+            allowReopenClosed = true;
+          } else {
             const approved = await promptApprove('Do you wish to continue?');
             if (!approved) {
               console.log('Intent creation cancelled.');
               process.exit(0);
             }
+            allowReopenClosed = true;
           }
         }
 
-        const chainVersion = nextChainVersion(projectRoot);
-        const relPath = toPosix(path.join('Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`));
+        const { chainVersion, relPath } = createIntentDraft({
+          projectRoot,
+          title: opts.title ?? '',
+          focus: opts.focus ?? '',
+          allowReopenClosed,
+        });
         const absPath = path.join(projectRoot, relPath);
-        copyTemplateToArtifact('DIR-INTENT-TEMPLATE.md', absPath);
-
-        const chain = createInitialChain(chainVersion, relPath, opts.title, opts.focus);
-        writeChain(projectRoot, chainVersion, chain); // chain file first
-        writeActivateStatus(projectRoot, chainVersion); // manifest last — PLAN-EVAL-01 §5.9 write order
-        renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — trigger 1/4
 
         console.log(`Created: ${relPath} — open this file and fill in the intent.`);
         console.log(`Chain ${chainVersion} is now active.`);
@@ -124,7 +114,11 @@ export function intentCommand(): Command {
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
       } catch (e) {
-        console.error((e as Error).message);
+        if (e instanceof IntentDraftError) {
+          console.error(e.message);
+        } else {
+          console.error((e as Error).message);
+        }
         process.exit(1);
       }
     });
@@ -134,20 +128,25 @@ export function intentCommand(): Command {
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
-        const { chainVersion, data: chain } = readActiveChain(projectRoot);
+        const { data: chain } = readActiveChain(projectRoot);
+        // Same guard ratifyIntentDraft() runs internally — called here too,
+        // ahead of the doc report below, so a semantically corrupted chain
+        // (e.g. intent.version/chain_version mismatch) fails with its own
+        // clear error instead of an ENOENT from trying to read a doc path
+        // that guard would have refused to trust in the first place.
+        // Read-only, so duplicating it costs nothing beyond one extra call.
         assertChainCanMutate(chain);
-        if (chain.intent.state !== 'DRAFT') {
-          throw new Error('Active DIR-INTENT is not in DRAFT state. Cannot ratify.');
+
+        // Printed unconditionally when DRAFT, pass or fail on what follows —
+        // Director needs to see why a ratify was refused. ratifyIntentDraft()
+        // re-validates internally rather than trusting this report object, so
+        // there is no staleness risk from computing it twice.
+        if (chain.intent.state === 'DRAFT') {
+          const absPath = intentDocPath(projectRoot, chain);
+          printSigmaDocReport(validateSigmaDocFile(absPath, 'intent'), projectRoot);
         }
-        const absPath = intentDocPath(projectRoot, chain);
-        const report = validateSigmaDocFile(absPath, 'intent');
-        printSigmaDocReport(report, projectRoot);
-        ensureSigmaDocEligible(report, 'intent');
-        const version = chain.intent.version;
-        ratifyIntent(chain);
-        certifyIntentDoc(chain, absPath); // Amendment mechanism — establishes the baseline hash a later edit is compared against
-        writeChain(projectRoot, chainVersion, chain);
-        renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — trigger 2/4
+
+        const { version } = ratifyIntentDraft(projectRoot);
         console.log(`DIR-INTENT ${version} RATIFIED. Gate 1 open. Lifecycle → BUILD. Next: sigma roadmap new`);
       } catch (e) {
         console.error((e as Error).message);

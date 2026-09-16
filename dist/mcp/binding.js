@@ -195,6 +195,14 @@ function resolveBinding(parsed) {
     else if (parsed.mode === 'control') {
         throw new BindingError('BINDING_REQUIRED', 'Control mode requires --project-id. Refusing to start on an unverified binding.');
     }
+    // Stage C — every control tool is role-gated (plan §9.2); a control server
+    // bound with no role could never authorize a single write, so failing fast
+    // here is better than starting a process that can only ever answer
+    // ROLE_NOT_AUTHORIZED. Query mode is unaffected — it has no role-scoped
+    // tool (see the `role` field comment above).
+    if (parsed.mode === 'control' && !parsed.role) {
+        throw new BindingError('BINDING_REQUIRED', 'Control mode requires --role. Refusing to start unbound to a role.');
+    }
     return {
         mode: parsed.mode,
         kind: parsed.projectId ? 'verified' : 'bound',

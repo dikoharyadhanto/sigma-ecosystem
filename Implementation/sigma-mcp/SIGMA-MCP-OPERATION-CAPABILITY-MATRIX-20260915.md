@@ -64,10 +64,10 @@ Kolom **Owner role** bersifat **turunan dan belum diratifikasi**. Ia berasal dar
 
 | Operation | Registry role | Owner role | Tool MCP | Status |
 |---|---|---|---|---|
-| `intent_new` | any | ARC | `sigma_create_intent_draft` | deferred Stage C — **pilot W1** |
-| `plan_new` | any | FMN | `sigma_create_plan_draft` | deferred Stage C |
-| `exec_new` | any | DEV | `sigma_create_exec_draft` | deferred Stage C |
-| `plan_update` | any | FMN | `sigma_update_artifact_draft` | deferred Stage C |
+| `intent_new` | any | ARC | `sigma_create_intent_draft` | **implemented — Stage C pilot** (2026-09-15, self-verified pending Codex/Director review; see RESULT-IMPL-SIGMA-MCP-STAGE-C-20260915.md) |
+| `plan_new` | any | FMN | `sigma_create_plan_draft` | deferred Stage E — Stage C pilot scope is intent only (plan §14 Stage C item 4: "satu lifecycle sempit") |
+| `exec_new` | any | DEV | `sigma_create_exec_draft` | deferred Stage E — same pilot-scope reason as `plan_new` |
+| `plan_update` | any | FMN | `sigma_update_artifact_draft` | deferred Stage E for `plan` — **correction**: `sigma_update_artifact_draft` was implemented in Stage C, but pinned to `type:"intent"` only (schema `z.literal('intent')` + a server-side check), not `plan`. This row's original tool mapping assumed the tool would cover every artifact type from the start; the pilot narrowed that on purpose. There is no `intent_update` registry operation to pair the intent-scoped implementation with — the CLI never had one (a human edits the DRAFT file directly), so this is a new capability, not a migrated one. |
 | `send` | any | semua | `sigma_send_message` | deferred Stage C |
 | `memo_write` | any | semua | `sigma_write_memo` | deferred Stage C |
 | `memo_read` | any | semua | — | deferred, tanpa jadwal — MCP memo tidak direncanakan (keputusan Director 2026-09-15, §3.6); tetap CLI/skill (`sigma memo read`, skill `read-memo`) |
@@ -87,7 +87,7 @@ Seluruhnya memakai `typed prepare → durable Director approval → typed commit
 
 | Operation | Registry role | Owner role | Status | Catatan |
 |---|---|---|---|---|
-| `intent_ratify` | director | DIRECTOR | deferred Stage D — **pilot W2** | Transisi tunggal pertama |
+| `intent_ratify` | director | DIRECTOR | **implemented — Stage D pilot** (2026-09-15, self-verified pending Codex/Director review; see RESULT-IMPL-SIGMA-MCP-STAGE-D-20260915.md) | Transisi tunggal pertama. **Klarifikasi "Owner role: DIRECTOR"**: `DIRECTOR` bukan role MCP yang bisa di-bind (`--role` hanya menerima ARC/FMN/DEV/AUD, empat AI role plan §6.2 — Director adalah manusia, bukan binding MCP). Kedua tool (`sigma_prepare_intent_ratify`, `sigma_commit_intent_ratify`) di-gate ke `binding.role === 'ARC'` (pemilik DIR-INTENT) untuk pemanggilan mekanis; otoritas DIRECTOR ditegakkan lewat approval record terpisah yang hanya bisa direkam via `sigma control approve/reject` (trusted local CLI, di luar MCP sepenuhnya) — bukan lewat binding role. Ini realisasi langsung invarian §5.8 "Director finality", bukan penyimpangan darinya. |
 | `intent_amendment` | director | DIRECTOR | deferred Stage D+ | Operationalization only |
 | `intent_score` | director | DIRECTOR | deferred Stage D+ | Prasyarat Gate 3.5 |
 | `intent_supersede` | director | DIRECTOR | deferred Stage D+ | Cascade ke ROADMAP/PLAN/EXEC |

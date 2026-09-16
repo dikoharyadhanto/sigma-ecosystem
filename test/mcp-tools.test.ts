@@ -359,12 +359,16 @@ describe('sigma-mcp project root resolution fallbacks', () => {
 
 describe('sigma-mcp read-only guard', () => {
   it('no query-plane file imports a state-mutating engine function', () => {
-    // Widened for Batch 1: Stage A/B1 added binding.ts, contract.ts and
-    // policy.ts directly under src/mcp/, which the old tools-only sweep would
-    // never have looked at. src/mcp/control/ is deliberately NOT excluded here
-    // — when Stage C creates it, this guard must be split, not silently
-    // inherited, and failing loudly is how that gets noticed.
+    // Stage C split this guard as promised: src/mcp/control/ is now excluded
+    // from the sweep — it exists precisely to hold the write tools, and
+    // scanning it for writer references would be asserting the opposite of
+    // what Stage C is. Everything else directly under src/mcp/ (binding.ts,
+    // contract.ts, policy.ts, shared.ts, artifactPath.ts, errors.ts,
+    // index.ts, and tools/) must still never reference one of these names —
+    // that boundary is what makes "query is always non-mutating" (plan §5.4)
+    // true of the actual module graph, not just of intent.
     const mcpDir = path.resolve(__dirname, '..', 'src', 'mcp');
+    const controlDir = path.join(mcpDir, 'control');
     const writerNames = [
       'writeChain',
       'writeActivateStatus',
@@ -373,10 +377,20 @@ describe('sigma-mcp read-only guard', () => {
       'recordArcScore',
       'registerRoadmapDraft',
       'createInitialChain',
+      // Stage C additions — defense in depth: these are only ever imported
+      // from src/mcp/control/ and src/commands/, but a query tool importing
+      // one by accident should fail this guard, not a mutation-check months
+      // later.
+      'createIntentDraft',
+      'writeCanonicalArtifactFile',
+      'updateArtifactDraft',
+      'writeIdempotencyRecord',
+      'appendAuditEntry',
     ];
 
     const files: string[] = [];
     const walk = (dir: string): void => {
+      if (dir === controlDir) return;
       for (const name of fs.readdirSync(dir)) {
         const abs = path.join(dir, name);
         if (fs.statSync(abs).isDirectory()) walk(abs);
