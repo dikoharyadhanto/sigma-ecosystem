@@ -12,7 +12,6 @@
 // instead of ever putting a host path in a title field.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import fs from 'fs-extra';
 import path from 'path';
 import { readActiveChain, listChainVersions, ArtifactVersion } from '../../engine/chain';
@@ -84,9 +83,7 @@ export function registerPlanStatusTool(server: McpServer): void {
         'DRAFTs, LOCKED plans with their DEV-EXEC pairing, pending (unversioned) plans, a count of SUPERSEDED ' +
         'plans not otherwise listed, and Gate 2. Read-only. Returns { active, active_chain, drafts, locked, ' +
         'pending, superseded_count, gate_2_open, source }.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -94,7 +91,7 @@ export function registerPlanStatusTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_plan_status', project_root, (root) => computePlanStatus(root))
+    async () =>
+      respond('sigma_plan_status', undefined, (root) => computePlanStatus(root))
   );
 }

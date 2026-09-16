@@ -48,6 +48,21 @@ function parseTimeBound(value: string, flag: string): Date {
   return parsed;
 }
 
+// Allowlist projection, not a type cast: a JSONL line parses to `unknown`
+// shape at runtime, and OperationLogEntry's declared fields say nothing about
+// what a legacy or corrupt line might actually contain. Every field returned
+// to the model is picked explicitly so an unexpected extra property (e.g. a
+// host path from some other log format) can never pass through unfiltered.
+function toSafeEntry(raw: unknown): OperationLogEntry | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.operation !== 'string') return null;
+  if (typeof r.timestamp !== 'string') return null;
+  if (r.status !== 'success' && r.status !== 'error') return null;
+  if (typeof r.exit_code !== 'number') return null;
+  return { operation: r.operation, timestamp: r.timestamp, status: r.status, exit_code: r.exit_code };
+}
+
 function readAllEntries(root: string): OperationLogEntry[] {
   const filePath = path.join(root, OPERATIONS_LOG_FILE);
   if (!fs.existsSync(filePath)) return [];
@@ -55,7 +70,8 @@ function readAllEntries(root: string): OperationLogEntry[] {
   const entries: OperationLogEntry[] = [];
   for (const line of lines) {
     try {
-      entries.push(JSON.parse(line) as OperationLogEntry);
+      const safe = toSafeEntry(JSON.parse(line));
+      if (safe) entries.push(safe);
     } catch {
       // Corrupt line — skip rather than fail the whole report, same as CLI.
     }
@@ -107,7 +123,6 @@ export function registerGetOperationLogTool(server: McpServer): void {
         since: z.string().optional().describe('ISO date/time, or a relative offset like "1d", "12h", "30m".'),
         until: z.string().optional().describe('ISO date/time, or a relative offset like "1d", "12h", "30m".'),
         limit: z.number().int().positive().optional().describe('Return only the last N matching entries.'),
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
       },
       annotations: {
         readOnlyHint: true,
@@ -116,8 +131,8 @@ export function registerGetOperationLogTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ status, operation, since, until, limit, project_root }: GetOperationLogFilters & { project_root?: string }) =>
-      respond('sigma_get_operation_log', project_root, (root) =>
+    async ({ status, operation, since, until, limit }: GetOperationLogFilters) =>
+      respond('sigma_get_operation_log', undefined, (root) =>
         computeGetOperationLog(root, { status, operation, since, until, limit })
       )
   );

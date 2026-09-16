@@ -6,7 +6,6 @@
 // concern already resolved once.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import fs from 'fs-extra';
 import path from 'path';
 import { readActiveChain, listChainVersions } from '../../engine/chain';
@@ -57,9 +56,7 @@ export function registerListPlansTool(server: McpServer): void {
         'sigma_plan_status which hides SUPERSEDED), plus pending (unversioned) plans. The query-plane equivalent ' +
         'of `sigma plan list`. Read-only. Returns { active_chain, versions: [{ version, state, ' +
         'intent_version_ref, created_at }], pending: [{ id, title, created_at }], source }.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -67,7 +64,7 @@ export function registerListPlansTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_list_plans', project_root, (root) => computeListPlans(root))
+    async () =>
+      respond('sigma_list_plans', undefined, (root) => computeListPlans(root))
   );
 }

@@ -6,7 +6,6 @@
 // SigmaDocCheckReport.file, no redaction needed).
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import path from 'path';
 import { readActiveChain, listChainVersions, isIntentDocUncertified, ChainState } from '../../engine/chain';
 import { SOURCE_ENGINE, noProject } from '../shared';
@@ -50,9 +49,7 @@ export function registerIntentStatusTool(server: McpServer): void {
         'certified/ratified, and Gate 1. Read-only. Returns { active, active_chain, version, state, ratified_at, ' +
         'file, doc_uncertified, doc_uncertified_since, gate_1_open, source }, or { active: false, gate_1_open: ' +
         'false, source } when no chain exists yet.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -60,7 +57,7 @@ export function registerIntentStatusTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_intent_status', project_root, (root) => computeIntentStatus(root))
+    async () =>
+      respond('sigma_intent_status', undefined, (root) => computeIntentStatus(root))
   );
 }

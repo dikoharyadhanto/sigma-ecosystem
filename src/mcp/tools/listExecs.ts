@@ -3,7 +3,6 @@
 // sigma_exec_status, which hides SUPERSEDED). No pending concept for exec.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import { readActiveChain, listChainVersions } from '../../engine/chain';
 import { SOURCE_ENGINE, noProject } from '../shared';
 import { respond } from '../contract';
@@ -35,9 +34,7 @@ export function registerListExecsTool(server: McpServer): void {
         'List every DEV-EXEC version in the active chain (all states — DRAFT, LOCKED, SUPERSEDED — unlike ' +
         'sigma_exec_status which hides SUPERSEDED). The query-plane equivalent of `sigma exec list`. Read-only. ' +
         'Returns { active_chain, versions: [{ version, state, plan_version_ref, created_at }], source }.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -45,7 +42,7 @@ export function registerListExecsTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_list_execs', project_root, (root) => computeListExecs(root))
+    async () =>
+      respond('sigma_list_execs', undefined, (root) => computeListExecs(root))
   );
 }

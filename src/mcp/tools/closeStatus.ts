@@ -3,7 +3,6 @@
 // plus the chain's overall lifecycle_state.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import { readActiveChain, listChainVersions } from '../../engine/chain';
 import { SOURCE_ENGINE, noProject } from '../shared';
 import { respond } from '../contract';
@@ -41,9 +40,7 @@ export function registerCloseStatusTool(server: McpServer): void {
         'Return the active chain\'s DIR-CLOSE status — the query-plane equivalent of `sigma close status`: ' +
         'version, state, lock timestamp, and the chain\'s overall lifecycle_state. Read-only. Returns { active, ' +
         'active_chain, close, lifecycle_state, source } — close is null when no DIR-CLOSE has been created yet.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -51,7 +48,7 @@ export function registerCloseStatusTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_close_status', project_root, (root) => computeCloseStatus(root))
+    async () =>
+      respond('sigma_close_status', undefined, (root) => computeCloseStatus(root))
   );
 }

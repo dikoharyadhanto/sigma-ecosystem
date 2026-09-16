@@ -124,6 +124,24 @@ describe('sigma_get_operation_log', () => {
     expect(out.entries).toEqual([]);
   });
 
+  // Codex review finding (2026-09-16, §9 HIGH-2): the previous
+  // `JSON.parse(line) as OperationLogEntry` was a type cast, not a runtime
+  // filter — an entry carrying an unexpected field (e.g. a host path some
+  // other log source wrote) passed through untouched. toSafeEntry() now
+  // projects onto an explicit allowlist.
+  it('strips unknown fields from a log entry rather than passing them through (e.g. a leaked host_path)', () => {
+    const env = project();
+    writeLog(env, [
+      { operation: 'intent new', timestamp: new Date().toISOString(), status: 'success', exit_code: 0, host_path: 'C:\\Users\\dikoh\\secret\\project' },
+    ]);
+    const out = computeGetOperationLog(env.projectDir, {}) as Payload;
+    const entries = out.entries as Payload[];
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual({ operation: 'intent new', timestamp: entries[0].timestamp, status: 'success', exit_code: 0 });
+    expect(JSON.stringify(out)).not.toContain('host_path');
+    expect(JSON.stringify(out)).not.toContain('secret');
+  });
+
   it('filters by status and operation substring', () => {
     const env = project();
     writeLog(env, [
@@ -183,5 +201,32 @@ describe('sigma_get_git_evidence', () => {
     expect(commit.subject).toBe('initial');
     expect(out.changed_files).toContain('a.txt');
     expect(out.diff_stat).toContain('a.txt');
+  });
+
+  // Codex review finding (2026-09-16, §9 HIGH-1): plain `git status --short`
+  // refreshes Git's stat cache as a side effect, changing .git/index's mtime
+  // even though nothing in the working tree changed — a real mutation from a
+  // tool contracted to be read-only. `--no-optional-locks` was verified to
+  // report the identical status without touching the index.
+  it('does not mutate .git/index (mtime and bytes unchanged) when called twice in a row', () => {
+    const env = project();
+    const opts = { cwd: env.projectDir, stdio: 'ignore' as const };
+    execSync('git init -q', opts);
+    execSync('git config user.email test@example.com', opts);
+    execSync('git config user.name Test', opts);
+    fs.writeFileSync(path.join(env.projectDir, 'a.txt'), 'hello\n');
+    execSync('git add a.txt', opts);
+    execSync('git commit -q -m "initial"', opts);
+
+    const indexPath = path.join(env.projectDir, '.git', 'index');
+    const before = fs.readFileSync(indexPath);
+    const beforeMtime = fs.statSync(indexPath).mtimeMs;
+
+    computeGetGitEvidence(env.projectDir);
+    computeGetGitEvidence(env.projectDir);
+
+    const after = fs.readFileSync(indexPath);
+    expect(after.equals(before)).toBe(true);
+    expect(fs.statSync(indexPath).mtimeMs).toBe(beforeMtime);
   });
 });

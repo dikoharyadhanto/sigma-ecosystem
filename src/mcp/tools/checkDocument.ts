@@ -138,7 +138,6 @@ export function registerCheckDocumentTool(server: McpServer): void {
           .string()
           .optional()
           .describe('Target version, e.g. "v1" (intent/roadmap/close) or "v0.1" (plan/exec). Defaults to the active version.'),
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
       },
       annotations: {
         readOnlyHint: true,
@@ -147,7 +146,7 @@ export function registerCheckDocumentTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ type, version, project_root }: { type: CheckDocumentType; version?: string; project_root?: string }) =>
-      respond('sigma_check_document', project_root, (root) => computeCheckDocument(root, type, version))
+    async ({ type, version }: { type: CheckDocumentType; version?: string }) =>
+      respond('sigma_check_document', undefined, (root) => computeCheckDocument(root, type, version))
   );
 }

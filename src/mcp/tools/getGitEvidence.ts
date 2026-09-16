@@ -11,7 +11,6 @@
 // design, not by oversight.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import { execSync } from 'child_process';
 import { SOURCE_ENGINE } from '../shared';
 import { respond } from '../contract';
@@ -45,7 +44,7 @@ export function computeGetGitEvidence(root: string | null): unknown {
     date = d ?? null;
   } catch { /* ok */ }
   try {
-    const status = run('git status --short', root);
+    const status = run('git --no-optional-locks status --short', root);
     if (status) changedFiles = status;
   } catch { /* ok */ }
   try {
@@ -69,15 +68,14 @@ export function registerGetGitEvidenceTool(server: McpServer): void {
     {
       title: 'Get git repository evidence',
       description:
-        'Return git branch, latest commit, changed files (git status --short), and diff summary (git diff ' +
-        '--stat HEAD) for the project root — the query-plane equivalent of `sigma git evidence`. Reports on the ' +
-        'ENTIRE working tree, not scoped to Sigma/ (Director decision, full CLI parity) — can surface paths and ' +
-        'change summaries for application code outside Sigma governance artifacts. Read-only (does not mutate ' +
-        'the repository). Returns { present, branch, commit: { hash, subject, date }, changed_files, diff_stat, ' +
-        'source }, or { present: false, source } when no git repository exists.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+        'Return git branch, latest commit, changed files (git --no-optional-locks status --short), and diff ' +
+        'summary (git diff --stat HEAD) for the project root — the query-plane equivalent of `sigma git ' +
+        'evidence`. Reports on the ENTIRE working tree, not scoped to Sigma/ (Director decision, full CLI parity) ' +
+        '— can surface paths and change summaries for application code outside Sigma governance artifacts. ' +
+        'Read-only (does not mutate the repository or its index). Returns { present, branch, commit: { hash, ' +
+        'subject, date }, changed_files, diff_stat, source }, or { present: false, source } when no git ' +
+        'repository exists.',
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -85,7 +83,7 @@ export function registerGetGitEvidenceTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_get_git_evidence', project_root, (root) => computeGetGitEvidence(root))
+    async () =>
+      respond('sigma_get_git_evidence', undefined, (root) => computeGetGitEvidence(root))
   );
 }

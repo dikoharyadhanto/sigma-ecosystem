@@ -5,7 +5,6 @@
 // as the CLI, nothing added.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import { readProjectConfig, resolveAutoOutdateKeep, resolveMemoLimit } from '../../engine/projectConfig';
 import { SOURCE_ENGINE } from '../shared';
 import { respond } from '../contract';
@@ -37,9 +36,7 @@ export function registerGetConfigTool(server: McpServer): void {
         'print them either). Read-only. Returns { active, interaction_language, document_language, ' +
         'output_document_language, notion_humanize_gate_enabled, mailbox_auto_outdate_keep, memo_unread_limit, ' +
         'source }.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -47,7 +44,7 @@ export function registerGetConfigTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_get_config', project_root, (root) => computeGetConfig(root))
+    async () =>
+      respond('sigma_get_config', undefined, (root) => computeGetConfig(root))
   );
 }

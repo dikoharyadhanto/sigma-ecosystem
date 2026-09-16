@@ -14,7 +14,6 @@
 // separately (capability matrix §5 mismatch-tracking, not fixed here).
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import { readActiveChain, listChainVersions } from '../../engine/chain';
 import { getStagePlansForRoadmap } from '../../utils/roadmap';
 import { SOURCE_ENGINE, noProject } from '../shared';
@@ -55,9 +54,7 @@ export function registerListRoadmapStagesTool(server: McpServer): void {
         '`sigma roadmap list`. A chain has at most one ROADMAP; this lists the stages within it, not multiple ' +
         'ROADMAP versions. Read-only. Returns { active_chain, roadmap_version, stages: [{ version, state, title, ' +
         'focus }], source }.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -65,7 +62,7 @@ export function registerListRoadmapStagesTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_list_roadmap_stages', project_root, (root) => computeListRoadmapStages(root))
+    async () =>
+      respond('sigma_list_roadmap_stages', undefined, (root) => computeListRoadmapStages(root))
   );
 }

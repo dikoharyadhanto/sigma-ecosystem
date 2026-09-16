@@ -12,7 +12,6 @@
 // message bodies.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import fs from 'fs-extra';
 import path from 'path';
 import { MESSAGING_ROLES, VALID_ROLES, VALID_MESSAGE_TYPES } from '../../config';
@@ -102,9 +101,7 @@ export function registerCheckMailboxIntegrityTool(server: McpServer): void {
         'invalid role/type/status field values. Applies to the whole mailbox, not one role\'s inbox — never ' +
         'returns subject lines or message content. Read-only. Returns { ok, passes, warnings, failures, ' +
         'findings: { missing_files, orphan_files, missing_attachments, duplicate_ids, invalid_fields }, source }.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -112,7 +109,7 @@ export function registerCheckMailboxIntegrityTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_check_mailbox_integrity', project_root, (root) => computeCheckMailboxIntegrity(root))
+    async () =>
+      respond('sigma_check_mailbox_integrity', undefined, (root) => computeCheckMailboxIntegrity(root))
   );
 }

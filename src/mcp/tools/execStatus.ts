@@ -4,7 +4,6 @@
 // pending concept.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import { readActiveChain, listChainVersions, ArtifactVersion } from '../../engine/chain';
 import { SOURCE_ENGINE, noProject } from '../shared';
 import { respond } from '../contract';
@@ -42,9 +41,7 @@ export function registerExecStatusTool(server: McpServer): void {
         'Return the active chain\'s DEV-EXEC status — the query-plane equivalent of `sigma exec status`: open ' +
         'DRAFTs with plan pairing, LOCKED execs, a count of SUPERSEDED execs not otherwise listed, and Gate 3. ' +
         'Read-only. Returns { active, active_chain, drafts, locked, superseded_count, gate_3_satisfied, source }.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -52,7 +49,7 @@ export function registerExecStatusTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_exec_status', project_root, (root) => computeExecStatus(root))
+    async () =>
+      respond('sigma_exec_status', undefined, (root) => computeExecStatus(root))
   );
 }

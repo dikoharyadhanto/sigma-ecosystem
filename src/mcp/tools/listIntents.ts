@@ -6,7 +6,6 @@
 // multiple chains, and this lists all of them.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import { readChain, listChainVersions, resolveActiveChainVersion } from '../../engine/chain';
 import { SOURCE_ENGINE, noProject } from '../shared';
 import { respond } from '../contract';
@@ -51,9 +50,7 @@ export function registerListIntentsTool(server: McpServer): void {
         'B2 tool that is cross-chain: every other tool in this project reports on the active chain only. ' +
         'Read-only. Returns { chains: [{ chain_version, intent_state, lifecycle_state, gate_1_open, gate_2_open, ' +
         'gate_3_satisfied, active }], source }.',
-      inputSchema: {
-        project_root: z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-      },
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -61,7 +58,7 @@ export function registerListIntentsTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ project_root }: { project_root?: string }) =>
-      respond('sigma_list_intents', project_root, (root) => computeListIntents(root))
+    async () =>
+      respond('sigma_list_intents', undefined, (root) => computeListIntents(root))
   );
 }

@@ -341,6 +341,46 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
     await server.close();
   });
 
+  // Codex review finding (2026-09-16, RESULT-IMPL-SIGMA-MCP-STAGE-B2-QUERY-
+  // BATCH-20260916.md §9 HIGH-3): Plan Doc §7.1 rule 4 reserves the
+  // project_root per-call parameter for exactly six legacy tools; every tool
+  // added since (Stage B1/B2/E) must resolve the root purely from the
+  // binding. This is an exact-schema assertion, not a behavioural probe, so
+  // a future tool that re-adds the parameter by copy-paste fails immediately.
+  it('project_root per-call parameter exists only on the six legacy tools, never on tools added since', async () => {
+    env = setupTestEnv();
+    projectWithChain(env, makeChainWithLockedExec());
+    process.chdir(env.projectDir);
+
+    const server = buildServer();
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+    const legacySix = new Set([
+      'sigma_get_state',
+      'sigma_get_gates',
+      'sigma_list_artifacts',
+      'sigma_doctor',
+      'sigma_get_orientation',
+      'sigma_get_memory',
+    ]);
+
+    const { tools } = await client.listTools();
+    for (const tool of tools) {
+      const props = (tool.inputSchema as { properties?: Record<string, unknown> } | undefined)?.properties ?? {};
+      const hasProjectRoot = 'project_root' in props;
+      if (legacySix.has(tool.name)) {
+        expect(hasProjectRoot, `${tool.name} is a legacy tool and should still accept project_root`).toBe(true);
+      } else {
+        expect(hasProjectRoot, `${tool.name} must not accept project_root per-call (Plan Doc §7.1 rule 4)`).toBe(false);
+      }
+    }
+
+    await client.close();
+    await server.close();
+  });
+
   it('computeMemory returns valid role memory payload for all roles', () => {
     for (const role of ['ARC', 'FMN', 'DEV', 'AUD'] as const) {
       const res = computeMemory(null, role) as Payload;
