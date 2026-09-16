@@ -1,7 +1,7 @@
 # SIGMA MCP — Operation Capability Matrix
 
 **Deliverable**: Stage 0 dari `PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE-20260915.md` §14.
-**Tanggal**: 2026-09-15
+**Tanggal**: 2026-09-15, diperbarui 2026-09-16 (batch Stage E W1 + review Codex putaran 1/2; batch B2 query-plane).
 **Sumber**: `Sigma/SIGMA-OPERATION-REGISTRY.json` (59 operasi) diverifikasi silang terhadap `src/commands/*.ts` dan `src/cli.ts`.
 **Status**: Klasifikasi lengkap. Bukan doktrin Sigma dan tidak mengubah registry — lihat §5.
 
@@ -39,47 +39,50 @@ Kolom **Owner role** bersifat **turunan dan belum diratifikasi**. Ia berasal dar
 | `session_bootstrap` | read_only | any | semua | `sigma_get_orientation` | **implemented** (Phase 0) |
 | `memory` | read_only | any | semua | `sigma_get_memory` | **implemented** (Phase 0) |
 | `doctor` (diagnosis saja) | semantic | any | semua | `sigma_doctor` (`applied:false`) | **implemented** (Phase 0) — lihat split di §3.4 |
-| `intent_status` | read_only | any | ARC | `sigma_list_artifacts` (parsial) | deferred B2 |
-| `plan_status` | read_only | any | FMN | `sigma_list_artifacts` (parsial), `sigma_get_evidence` (versi tunggal, parsial) | deferred B2 — masih tidak mencakup daftar seluruh versi |
-| `exec_status` | read_only | any | DEV | `sigma_list_artifacts` (parsial), `sigma_get_evidence` (versi tunggal, parsial) | deferred B2 — masih tidak mencakup daftar seluruh versi |
-| `close_status` | read_only | any | AUD | `sigma_list_artifacts` (parsial) | deferred B2 |
-| `intent_list` | read_only | any | semua | — | deferred B2 |
-| `plan_list` | read_only | any | FMN | — | deferred B2 |
-| `exec_list` | read_only | any | DEV | — | deferred B2 |
-| `roadmap_list` | read_only | any | FMN | — | deferred B2 |
-| `intent_check` | read_only | any | ARC | — | deferred B2 |
-| `plan_check` | read_only | any | FMN | — | deferred B2 |
-| `exec_check` | read_only | any | DEV | — | deferred B2 |
-| `close_check` | read_only | any | AUD | — | deferred B2 |
-| `roadmap_check` | read_only | any | FMN | — | deferred B2 |
+| `intent_status` | read_only | any | ARC | `sigma_intent_status` | **implemented — B2 batch** (2026-09-16) |
+| `plan_status` | read_only | any | FMN | `sigma_plan_status` | **implemented — B2 batch** (2026-09-16). Mencakup daftar DRAFT/LOCKED penuh, pairing plan↔exec, dan pending — bukan lagi parsial. |
+| `exec_status` | read_only | any | DEV | `sigma_exec_status` | **implemented — B2 batch** (2026-09-16). Mencakup daftar DRAFT/LOCKED penuh dengan `plan_version_ref` — bukan lagi parsial. |
+| `close_status` | read_only | any | AUD | `sigma_close_status` | **implemented — B2 batch** (2026-09-16) |
+| `intent_list` | read_only | any | semua | `sigma_list_intents` | **implemented — B2 batch** (2026-09-16). Satu-satunya tool query-plane yang lintas-chain — membaca seluruh `progress-v<N>.json`, bukan hanya chain aktif. |
+| `plan_list` | read_only | any | FMN | `sigma_list_plans` | **implemented — B2 batch** (2026-09-16). Menutup bug CLI `readPendingTitle()`: fallback title CLI adalah absolute host path bila file pending tanpa heading `# `; tool ini fallback ke `null`. |
+| `exec_list` | read_only | any | DEV | `sigma_list_execs` | **implemented — B2 batch** (2026-09-16) |
+| `roadmap_list` | read_only | any | FMN | `sigma_list_roadmap_stages` | **implemented — B2 batch** (2026-09-16). **Nama sengaja diubah dari pola `sigma_list_roadmaps`** — deskripsi `outputs` registry untuk operasi ini ("Table of ROADMAP versions") **tidak cocok** dengan implementasi CLI aktual (menampilkan stage/plan, bukan versi roadmap; chain hanya punya satu ROADMAP). Drift dokumentasi ini dicatat sebagai mismatch baru — lihat §5.4. |
+| `intent_check` | read_only | any | ARC | `sigma_check_document` | **implemented — B2 batch** (2026-09-16). Satu tool generik `type` enum menutup kelima operasi `*_check` (intent/roadmap/plan/exec/close) — lihat baris di bawah. |
+| `plan_check` | read_only | any | FMN | `sigma_check_document` | **implemented — B2 batch** (2026-09-16) — lihat `intent_check` |
+| `exec_check` | read_only | any | DEV | `sigma_check_document` | **implemented — B2 batch** (2026-09-16) — lihat `intent_check` |
+| `close_check` | read_only | any | AUD | `sigma_check_document` | **implemented — B2 batch** (2026-09-16) — lihat `intent_check` |
+| `roadmap_check` | read_only | any | FMN | `sigma_check_document` | **implemented — B2 batch** (2026-09-16) — lihat `intent_check`. **Catatan keamanan**: `SigmaDocCheckReport.file` yang mendasari kelima operasi ini adalah absolute host path; tool meredaksinya lewat `redactPath()` (primitif yang sama dipakai `sigma_get_memory`) sebelum dikembalikan. |
 | `inbox` | read_only | any | semua | — | deferred, tanpa jadwal — MCP mailbox dibangun lalu **ditarik** oleh keputusan Director setelah review Codex (2026-09-15). Lihat §3.6 |
-| `inbox_check` | read_only | any | semua | — | deferred B2 |
-| `memo_list` | read_only | any | semua | — | deferred B2 |
-| `config_show` | read_only | any | semua | — | deferred B2 |
-| `report_logs` | read_only | any | AUD | — | deferred B2 — **caveat**: `operations.jsonl` memuat path host |
-| `git_evidence` | read_only | any | DEV / AUD | — | deferred B2 — **caveat**: membaca state di luar pohon `Sigma/` |
+| `inbox_check` | read_only | any | semua | `sigma_check_mailbox_integrity` | **implemented — B2 batch** (2026-09-16). Berbeda struktur dari `sigma_check_document` meski namanya mirip — integrity check index-vs-disk (file hilang, orphan, attachment hilang, field tidak valid), bukan `SigmaDocCheckReport`. Tidak ada konsep role/`--role`; tidak pernah mengembalikan subject/isi pesan. |
+| `memo_list` | read_only | any | semua | — | deferred B2 — **dikecualikan secara eksplisit** dari batch ini (keputusan Director 2026-09-16), bukan lupa. Menyentuh domain mailbox yang sama dengan `inbox`/`inbox_read` yang ditarik §3.6; berbeda dari `inbox_check` karena `memo_list` mengembalikan metadata pesan (subject, ref, status) per role, bukan hanya integrity count. |
+| `config_show` | read_only | any | semua | `sigma_get_config` | **implemented — B2 batch** (2026-09-16). Tidak ada field credential di `ProjectConfig`; `notion.parent_page_id`/`database_id` ada di tipe tapi tidak pernah dicetak CLI, tool ini pun tidak. |
+| `report_logs` | read_only | any | AUD | `sigma_get_operation_log` | **implemented — B2 batch** (2026-09-16). **Caveat lama dicabut**: diverifikasi langsung ke `OperationLogEntry` (`src/utils/operationLog.ts`) — field-nya hanya `{operation, timestamp, status, exit_code}`, tidak ada path host sama sekali. Catatan "memuat path host" pada versi matrix sebelumnya tidak terkonfirmasi kode aktual `hermes-integration`. |
+| `git_evidence` | read_only | any | DEV / AUD | `sigma_get_git_evidence` | **implemented — B2 batch** (2026-09-16). **Caveat lama terkonfirmasi dan dipertahankan by design**: tool ini membaca `git status`/`git diff` atas SELURUH working tree, bukan hanya `Sigma/` — keputusan Director eksplisit (parity penuh dengan CLI), bukan kelalaian. |
 | `scan` | read_only | any | — | — | **NOT ADMISSIBLE** — lihat §3.5 |
 
-### 3.2 Tier W1 — Bounded command (16 operasi)
+### 3.2 Tier W1 — Bounded command (17 operasi)
+
+Ketujuh belas baris di bawah = 16 operasi registry asli + `record_evidence` (tidak ada padanan registry, seperti `sigma_read_artifact` di §4). Status "reviewed PASS" merujuk pada review teknis independen Codex putaran 2 (2026-09-16), yang membuka source/test secara langsung (bukan review naratif putaran 1, yang klaimnya sudah dicabut — lihat masing-masing RESULT report §8/§9).
 
 | Operation | Registry role | Owner role | Tool MCP | Status |
 |---|---|---|---|---|
-| `intent_new` | any | ARC | `sigma_create_intent_draft` | **implemented — Stage C pilot** (2026-09-15, self-verified pending Codex/Director review; see RESULT-IMPL-SIGMA-MCP-STAGE-C-20260915.md) |
-| `plan_new` | any | FMN | `sigma_create_plan_draft` | deferred Stage E — Stage C pilot scope is intent only (plan §14 Stage C item 4: "satu lifecycle sempit") |
-| `exec_new` | any | DEV | `sigma_create_exec_draft` | deferred Stage E — same pilot-scope reason as `plan_new` |
-| `plan_update` | any | FMN | `sigma_update_artifact_draft` | deferred Stage E for `plan` — **correction**: `sigma_update_artifact_draft` was implemented in Stage C, but pinned to `type:"intent"` only (schema `z.literal('intent')` + a server-side check), not `plan`. This row's original tool mapping assumed the tool would cover every artifact type from the start; the pilot narrowed that on purpose. There is no `intent_update` registry operation to pair the intent-scoped implementation with — the CLI never had one (a human edits the DRAFT file directly), so this is a new capability, not a migrated one. |
+| `intent_new` | any | ARC | `sigma_create_intent_draft` | **implemented — Stage C pilot** (2026-09-15; see RESULT-IMPL-SIGMA-MCP-STAGE-C-20260915.md) |
+| `plan_new` | any | FMN | `sigma_create_plan_draft` | **implemented — reviewed PASS WITH DIRECTOR DECISION** (2026-09-16). D-01 (guard `\|`/newline pada `sigma plan new`) dan D-02 (cakupan `expected_artifact_sha256`) diputuskan Director — lihat RESULT-IMPL-SIGMA-MCP-STAGE-E-PLAN-DRAFT-20260916.md §8. |
+| `exec_new` | any | DEV | `sigma_create_exec_draft` | **implemented — reviewed PASS WITH DIRECTOR DECISION** (2026-09-16). D-01 (cakupan `expected_artifact_sha256`, sama keputusan dengan `plan_new`) — lihat RESULT-IMPL-SIGMA-MCP-STAGE-E-EXEC-DRAFT-20260916.md §8. |
+| `plan_update` | any | FMN | `sigma_update_artifact_draft` | **implemented — reviewed PASS** (2026-09-16, bersih, satu saran non-blocking soal coverage test EXEC — lihat RESULT-IMPL-SIGMA-MCP-STAGE-E-UPDATE-ARTIFACT-DRAFT-PLAN-EXEC-20260916.md §8). Same tool now also covers `exec` (role DEV) — there is no separate `exec_update` registry row to pair it with, same reason `plan_update`/`intent_new` have none: the CLI never had an `exec update`/`intent update` command (a human edits the DRAFT file directly), so both are new capabilities, not migrated ones. Scope: `type` is `z.enum(['intent','plan','exec'])`; `roadmap`/`close` remain out of scope, rejected at both the schema and service layer. |
 | `send` | any | semua | `sigma_send_message` | deferred Stage C |
 | `memo_write` | any | semua | `sigma_write_memo` | deferred Stage C |
 | `memo_read` | any | semua | — | deferred, tanpa jadwal — MCP memo tidak direncanakan (keputusan Director 2026-09-15, §3.6); tetap CLI/skill (`sigma memo read`, skill `read-memo`) |
 | `inbox_read` | any | semua | — | deferred, tanpa jadwal — MCP mailbox tidak direncanakan (keputusan Director 2026-09-15, §3.6); tetap CLI (`sigma inbox read`) |
-| `inbox_archive` | any | semua | — | deferred Stage E |
-| `roadmap_new` | any | FMN | — | deferred Stage E |
-| `roadmap_render` | any | FMN | — | deferred Stage E — derivasi deterministik dari chain state |
-| `reference_update` | any | semua | — | deferred Stage E |
-| `config_set_language` | any | DIRECTOR | — | deferred Stage E — nilai rendah bagi AI role |
-| `intent_humanize` | any | ARC | — | deferred Stage E |
-| `exec_humanize` | any | DEV | — | deferred Stage E |
-| `close_humanize` | any | AUD | — | deferred Stage E |
+| `inbox_archive` | any | semua | `sigma_inbox_archive` | **implemented — reviewed PASS** (refactored 2026-09-16 setelah review Codex putaran 2 temuan H-02; follow-up direview ulang, verdict PASS WITH LOW-SEVERITY DOCUMENTATION NIT — lihat RESULT-IMPL-SIGMA-MCP-STAGE-E-REVIEW-FOLLOWUP-20260916.md §7). Logic dipindah ke `src/services/inboxArchiveService.ts` — satu service dipakai CLI dan MCP (§13, §5 invarian #9), dengan parameter `actorRole: string \| null`: `null` untuk CLI trusted-terminal (tanpa ownership check, perilaku identik dengan sebelumnya), role string untuk MCP bound-role (`entry.to === actorRole` ditegakkan, `ROLE_NOT_AUTHORIZED` bila tidak). Sebelumnya sempat MCP-only (`src/mcp/control/inboxArchive.ts`, dihapus) — deviasi itu sudah ditutup, bukan lagi deviasi terbuka. |
+| `roadmap_new` | any | FMN | `sigma_create_roadmap_draft` | **implemented — Stage E W1** (2026-09-16; lihat RESULT-IMPL-SIGMA-MCP-STAGE-E-W1-COMPLETION-20260916.md) |
+| `roadmap_render` | any | FMN | `sigma_render_roadmap` | **implemented — Stage E W1** (2026-09-16). Tidak menyentuh `progress-v<N>.json` sama sekali — `state_revision` tidak bergerak akibat operasi ini. |
+| `reference_update` | any | semua | `sigma_update_reference` | **implemented — Stage E W1** (2026-09-16). Tidak tersentuh sama sekali oleh chain/gate — "Not tracked in progress-v<N>.json" (dikonfirmasi kode). |
+| `config_set_language` | any | DIRECTOR | — | deferred Stage E — nilai rendah bagi AI role (dilewati atas kesepakatan Director, di luar batch ini) |
+| `intent_humanize` | any | ARC | `sigma_intent_humanize` | **implemented — Stage E W1** (2026-09-16) |
+| `exec_humanize` | any | DEV | `sigma_exec_humanize` | **implemented — Stage E W1** (2026-09-16) |
+| `close_humanize` | any | AUD | `sigma_close_humanize` | **implemented — Stage E W1** (2026-09-16) |
+| `record_evidence` (tanpa padanan registry) | — | DEV | `sigma_record_evidence` | **implemented — reviewed PASS** (2026-09-16, menutup temuan H-01 — item asli Plan Doc §9.2 pilot yang sempat terlewat dari batch "W1 completion"; verdict review Codex PASS WITH LOW-SEVERITY DOCUMENTATION NIT, kedua item sisa sudah ditutup — lihat RESULT-IMPL-SIGMA-MCP-STAGE-E-REVIEW-FOLLOWUP-20260916.md §7–§8). Control-plane only, tanpa padanan CLI. `ref_path` adalah satu-satunya path di permukaan MCP ini yang tidak diturunkan dari tracker chain.ts (berbeda dari model allowlist `artifactPath.ts`) — dibatasi via project-root containment (realpath, tolak traversal/symlink escape termasuk directory junction), bukan allowlist; `ref_sha256` selalu dihitung server-side dari isi file, tidak pernah dipercaya dari input caller. Disimpan di `chain.exec.versions[].evidence[]`. Lihat `src/mcp/control/recordEvidence.ts`. |
 
 ### 3.3 Tier W2 — Governance transition (11 operasi)
 
@@ -155,7 +158,7 @@ Stage B2 semula menambah tiga tool (`sigma_get_evidence`, `sigma_list_messages`,
 
 ## 5. Mismatch registry vs implementasi
 
-Plan §14 Stage 0 butir 2 meminta mismatch ditandai. Tiga ditemukan.
+Plan §14 Stage 0 butir 2 meminta mismatch ditandai. Empat ditemukan (§5.4 ditambahkan saat implementasi B2 batch, 2026-09-16).
 
 ### 5.1 `notion` tidak ada di registry sama sekali
 
@@ -170,6 +173,10 @@ Artinya seluruh permukaan **credential handling dan sinkronisasi eksternal** Sig
 ### 5.3 `doctor` mencampur dua sifat dalam satu entri
 
 Lihat §3.4.
+
+### 5.4 `roadmap_list`'s `outputs.description` tidak cocok dengan implementasi CLI
+
+Registry mendeskripsikan output `roadmap_list` sebagai "Table of ROADMAP versions: version, state, file path". Implementasi aktual (`src/commands/roadmap.ts`'s `roadmap list`, dikonfirmasi baca kode langsung) menampilkan **daftar stage/plan** (`getStagePlansForRoadmap()`) — version/state/title/focus per PLAN, bukan per versi ROADMAP. Ini konsisten dengan model data chain: satu chain hanya punya **satu** ROADMAP (objek tunggal `chain.roadmap`, bukan array), jadi "daftar versi ROADMAP" secara struktural tidak mungkin lebih dari satu baris. Tool MCP (`sigma_list_roadmap_stages`) dinamai mengikuti perilaku aktual, bukan deskripsi registry yang usang.
 
 ## 6. Kesimpulan yang mengikat implementasi
 

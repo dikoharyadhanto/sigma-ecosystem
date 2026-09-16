@@ -1,10 +1,19 @@
-// Stage C pilot — sigma_update_artifact_draft. Control-plane only. Scope
-// pinned to type "intent" at the schema level (z.literal) as well as inside
+// Stage C pilot (intent) + Stage E W1 extension (plan/exec) —
+// sigma_update_artifact_draft. Control-plane only. Scope pinned to
+// intent/plan/exec at the schema level (z.enum) as well as inside
 // updateArtifactDraft() itself — see artifactDraftUpdate.ts's header.
+// Role is derived from `type`, not hardcoded — ARC owns intent, FMN owns
+// plan, DEV owns exec (ownerRoleForArtifactType()), computed per call so it
+// can never be supplied by the caller.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { updateArtifactDraft, updateArtifactDraftTransactionFiles } from '../artifactDraftUpdate';
+import {
+  updateArtifactDraft,
+  updateArtifactDraftTransactionFiles,
+  ownerRoleForArtifactType,
+  UpdatableArtifactType,
+} from '../artifactDraftUpdate';
 import { respondControlWrite, staleStateCheck } from '../shared';
 
 export function registerUpdateArtifactDraftTool(server: McpServer): void {
@@ -13,13 +22,13 @@ export function registerUpdateArtifactDraftTool(server: McpServer): void {
     {
       title: 'Update artifact DRAFT content',
       description:
-        'Replaces the full content of a registered DRAFT artifact. Stage C pilot scope: intent only, and ' +
-        'only the active chain\'s own intent version. ARC role only. Requires idempotency_key, ' +
+        'Replaces the full content of a registered DRAFT artifact — intent (ARC role), plan (FMN role), or ' +
+        'exec (DEV role) — and only the active chain\'s own version of that type. Requires idempotency_key, ' +
         'expected_state_revision (from sigma_get_state), and expected_artifact_sha256 (from a prior ' +
         'sigma_read_artifact call) — a mismatch on either is rejected rather than silently overwritten.',
       inputSchema: {
-        type: z.literal('intent'),
-        version: z.string().min(1).describe('Must match the active chain\'s current intent version, e.g. "v1".'),
+        type: z.enum(['intent', 'plan', 'exec']),
+        version: z.string().min(1).describe('Must match an existing DRAFT version of that type in the active chain, e.g. "v1" (intent) or "v0.1" (plan/exec).'),
         content: z.string().describe('Full replacement content of the DRAFT file (not a diff).'),
         expected_artifact_sha256: z.string().min(1),
         idempotency_key: z.string().min(1),
@@ -33,7 +42,7 @@ export function registerUpdateArtifactDraftTool(server: McpServer): void {
       },
     },
     async (args: {
-      type: 'intent';
+      type: UpdatableArtifactType;
       version: string;
       content: string;
       expected_artifact_sha256: string;
@@ -51,7 +60,7 @@ export function registerUpdateArtifactDraftTool(server: McpServer): void {
             content: args.content,
             expected_artifact_sha256: args.expected_artifact_sha256,
           },
-          allowedRoles: ['ARC'],
+          allowedRoles: [ownerRoleForArtifactType(args.type)],
           checkPreconditions: staleStateCheck(args.expected_state_revision),
           artifactHashBefore: args.expected_artifact_sha256,
           transactionFiles: (root) => updateArtifactDraftTransactionFiles({

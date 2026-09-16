@@ -15,6 +15,7 @@ import {
 } from '../engine/mailbox';
 import { readProjectConfig, resolveAutoOutdateKeep } from '../engine/projectConfig';
 import { findProjectRoot, toPosix } from '../utils/fs';
+import { archiveMessage } from '../services/inboxArchiveService';
 
 function validateRole(value: string): MessagingRole {
   const upper = value.toUpperCase() as MessagingRole;
@@ -181,11 +182,7 @@ function runClear(opts: {
 
 function runArchive(messageId: string): void {
   const projectRoot = findProjectRoot();
-  const index = readIndex(projectRoot);
-
-  updateMessageStatus(index, messageId, 'ARCHIVED');
-  writeIndex(projectRoot, index);
-
+  archiveMessage({ projectRoot, messageId, actorRole: null });
   console.log(`Message ${messageId} archived.`);
 }
 

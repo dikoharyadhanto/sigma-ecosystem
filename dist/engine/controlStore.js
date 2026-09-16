@@ -58,6 +58,7 @@ const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
 const proper_lockfile_1 = __importDefault(require("proper-lockfile"));
 const config_1 = require("../config");
+const fs_1 = require("../utils/fs");
 const CONTROL_DIR = path_1.default.join(config_1.PROJECT_SIGMA_DIR, '.mcp-control');
 const IDEMPOTENCY_DIR = path_1.default.join(CONTROL_DIR, 'idempotency');
 const TICKET_DIR = path_1.default.join(CONTROL_DIR, 'tickets');
@@ -98,7 +99,7 @@ function writeJsonAtomic(filePath, value) {
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(filePath));
     const tmpPath = `${filePath}.tmp-${process.pid}-${crypto_1.default.randomUUID()}`;
     fs_extra_1.default.writeJsonSync(tmpPath, value, { spaces: 2 });
-    fs_extra_1.default.moveSync(tmpPath, filePath, { overwrite: true });
+    (0, fs_1.atomicReplaceFileSync)(tmpPath, filePath); // see src/utils/fs.ts — §21.9
 }
 /** Test-only crash injection used by out-of-process recovery tests. */
 function controlTestFailpoint(name) {
@@ -268,7 +269,7 @@ function appendAuditEntry(root, entry) {
     if (!fs_extra_1.default.existsSync(migrationMarker)) {
         const markerTmp = `${migrationMarker}.tmp-${process.pid}-${crypto_1.default.randomUUID()}`;
         fs_extra_1.default.writeFileSync(markerTmp, '1\n', 'utf8');
-        fs_extra_1.default.moveSync(markerTmp, migrationMarker, { overwrite: true });
+        (0, fs_1.atomicReplaceFileSync)(markerTmp, migrationMarker);
     }
     const entryName = crypto_1.default.createHash('sha256').update(entry.correlation_id).digest('hex') + '.json';
     const entryPath = path_1.default.join(entryDir, entryName);
@@ -288,7 +289,7 @@ function appendAuditEntry(root, entry) {
     const projection = entries.map((item) => JSON.stringify(item)).join('\n') + (entries.length ? '\n' : '');
     const projectionTmp = `${auditFile}.tmp-${process.pid}-${crypto_1.default.randomUUID()}`;
     fs_extra_1.default.writeFileSync(projectionTmp, projection, 'utf8');
-    fs_extra_1.default.moveSync(projectionTmp, auditFile, { overwrite: true });
+    (0, fs_1.atomicReplaceFileSync)(projectionTmp, auditFile);
 }
 function transactionPath(root, transactionId) {
     return path_1.default.join(root, JOURNAL_DIR, `${transactionId}.json`);
@@ -339,7 +340,7 @@ function restoreSnapshots(root, snapshots) {
         fs_extra_1.default.ensureDirSync(path_1.default.dirname(absolute));
         const tmpPath = `${absolute}.rollback-${process.pid}-${crypto_1.default.randomUUID()}`;
         fs_extra_1.default.writeFileSync(tmpPath, Buffer.from(snapshot.content_base64, 'base64'));
-        fs_extra_1.default.moveSync(tmpPath, absolute, { overwrite: true });
+        (0, fs_1.atomicReplaceFileSync)(tmpPath, absolute);
     }
 }
 function writeControlTransaction(root, journal) {

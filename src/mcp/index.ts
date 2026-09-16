@@ -39,6 +39,19 @@ import { registerVerifyBindingTool } from './tools/verifyBinding';
 import { registerEffectivePolicyTool } from './tools/effectivePolicy';
 import { registerReadArtifactTool } from './tools/readArtifact';
 import { registerGetEvidenceTool } from './tools/evidence';
+import { registerCheckDocumentTool } from './tools/checkDocument';
+import { registerIntentStatusTool } from './tools/intentStatus';
+import { registerCloseStatusTool } from './tools/closeStatus';
+import { registerPlanStatusTool } from './tools/planStatus';
+import { registerExecStatusTool } from './tools/execStatus';
+import { registerListIntentsTool } from './tools/listIntents';
+import { registerListPlansTool } from './tools/listPlans';
+import { registerListExecsTool } from './tools/listExecs';
+import { registerListRoadmapStagesTool } from './tools/listRoadmapStages';
+import { registerCheckMailboxIntegrityTool } from './tools/checkMailboxIntegrity';
+import { registerGetConfigTool } from './tools/getConfig';
+import { registerGetOperationLogTool } from './tools/getOperationLog';
+import { registerGetGitEvidenceTool } from './tools/getGitEvidence';
 import { addClientRoot, setBinding, getBinding } from './shared';
 import { parseBindingArgs, resolveBinding, BindingError } from './binding';
 
@@ -55,6 +68,36 @@ export function buildServer(): McpServer {
   registerEffectivePolicyTool(server);
   registerReadArtifactTool(server);
   registerGetEvidenceTool(server);
+  // Stage B2 — first primitive: sigma_check_document. See checkDocument.ts's
+  // header for why this is one generic typed tool where the rest of B2 is
+  // not.
+  registerCheckDocumentTool(server);
+  // Stage B2 — STATUS group: four separate tools, not one generic tool —
+  // intent/close are single-object + gate, plan/exec are
+  // DRAFT/LOCKED-categorized with pairing/pending, genuinely different
+  // shapes (see each tool's header).
+  registerIntentStatusTool(server);
+  registerCloseStatusTool(server);
+  registerPlanStatusTool(server);
+  registerExecStatusTool(server);
+  // Stage B2 — LIST group: four separate tools, not one generic tool —
+  // intent_list is the only cross-chain operation in this project,
+  // plan_list has a pending sub-list exec_list doesn't, and roadmap_list is
+  // actually a stage listing, not a roadmap-version listing (see
+  // listRoadmapStages.ts's header — registry description mismatch).
+  registerListIntentsTool(server);
+  registerListPlansTool(server);
+  registerListExecsTool(server);
+  registerListRoadmapStagesTool(server);
+  // Stage B2 — final four: inbox_check (mailbox integrity, NOT the same
+  // family as sigma_check_document despite the name — see
+  // checkMailboxIntegrity.ts), config_show, report_logs, git_evidence.
+  // memo_list stays excluded from this batch — Director decision
+  // 2026-09-16, mailbox domain stays untouched beyond the integrity check.
+  registerCheckMailboxIntegrityTool(server);
+  registerGetConfigTool(server);
+  registerGetOperationLogTool(server);
+  registerGetGitEvidenceTool(server);
   return server;
 }
 

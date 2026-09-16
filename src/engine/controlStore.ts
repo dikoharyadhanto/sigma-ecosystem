@@ -32,6 +32,7 @@ import path from 'path';
 import crypto from 'crypto';
 import lockfile from 'proper-lockfile';
 import { PROJECT_SIGMA_DIR } from '../config';
+import { atomicReplaceFileSync } from '../utils/fs';
 
 const CONTROL_DIR = path.join(PROJECT_SIGMA_DIR, '.mcp-control');
 const IDEMPOTENCY_DIR = path.join(CONTROL_DIR, 'idempotency');
@@ -80,7 +81,7 @@ function writeJsonAtomic(filePath: string, value: unknown): void {
   fs.ensureDirSync(path.dirname(filePath));
   const tmpPath = `${filePath}.tmp-${process.pid}-${crypto.randomUUID()}`;
   fs.writeJsonSync(tmpPath, value, { spaces: 2 });
-  fs.moveSync(tmpPath, filePath, { overwrite: true });
+  atomicReplaceFileSync(tmpPath, filePath); // see src/utils/fs.ts — §21.9
 }
 
 /** Test-only crash injection used by out-of-process recovery tests. */
@@ -329,7 +330,7 @@ export function appendAuditEntry(root: string, entry: AuditEntry): void {
   if (!fs.existsSync(migrationMarker)) {
     const markerTmp = `${migrationMarker}.tmp-${process.pid}-${crypto.randomUUID()}`;
     fs.writeFileSync(markerTmp, '1\n', 'utf8');
-    fs.moveSync(markerTmp, migrationMarker, { overwrite: true });
+    atomicReplaceFileSync(markerTmp, migrationMarker);
   }
 
   const entryName = crypto.createHash('sha256').update(entry.correlation_id).digest('hex') + '.json';
@@ -350,7 +351,7 @@ export function appendAuditEntry(root: string, entry: AuditEntry): void {
   const projection = entries.map((item) => JSON.stringify(item)).join('\n') + (entries.length ? '\n' : '');
   const projectionTmp = `${auditFile}.tmp-${process.pid}-${crypto.randomUUID()}`;
   fs.writeFileSync(projectionTmp, projection, 'utf8');
-  fs.moveSync(projectionTmp, auditFile, { overwrite: true });
+  atomicReplaceFileSync(projectionTmp, auditFile);
 }
 
 // ── Durable control transaction journal ─────────────────────────────────
@@ -438,7 +439,7 @@ function restoreSnapshots(root: string, snapshots: ControlFileSnapshot[]): void 
     fs.ensureDirSync(path.dirname(absolute));
     const tmpPath = `${absolute}.rollback-${process.pid}-${crypto.randomUUID()}`;
     fs.writeFileSync(tmpPath, Buffer.from(snapshot.content_base64, 'base64'));
-    fs.moveSync(tmpPath, absolute, { overwrite: true });
+    atomicReplaceFileSync(tmpPath, absolute);
   }
 }
 

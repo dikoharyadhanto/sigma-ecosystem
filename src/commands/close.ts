@@ -24,6 +24,7 @@ import {
   printSigmaDocReport,
   validateSigmaDocFile,
 } from '../utils/docCheck';
+import { humanizeClose, CloseHumanizeError } from '../services/closeHumanizeService';
 
 // PLAN-EVAL-01 Fase 3 — `close lock` already auto-locks the chain's roadmap
 // as a side effect *before* this migration (see `lockActiveRoadmap` call
@@ -194,35 +195,7 @@ export function closeCommand(): Command {
     .action((opts: { force?: boolean }) => {
       try {
         const projectRoot = findProjectRoot();
-        const { chainVersion, data: chain } = readActiveChain(projectRoot);
-
-        if (!chain.close) {
-          throw new Error('No active DIR-CLOSE found. Run: sigma close new');
-        }
-        if (chain.close.state !== 'LOCKED') {
-          throw new Error(
-            `DIR-CLOSE ${chain.close.version} is in state "${chain.close.state}"; humanize requires LOCKED.\n` +
-            'Run: sigma close lock'
-          );
-        }
-        if (chain.close.human && !opts.force) {
-          throw new Error(
-            `A human projection for DIR-CLOSE ${chain.close.version} already exists ` +
-            `(generated ${chain.close.human.generated_at}).\n` +
-            'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.'
-          );
-        }
-
-        const humanRelPath = toPosix(path.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.md`));
-        const ledgerRelPath = toPosix(path.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.fidelity.md`));
-        copyTemplateToArtifact('DIR-CLOSE-HUMAN-TEMPLATE.md', path.join(projectRoot, humanRelPath));
-        copyTemplateToArtifact('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path.join(projectRoot, ledgerRelPath));
-
-        chain.close.human = {
-          version: chain.close.version,
-          generated_at: new Date().toISOString(),
-        };
-        writeChain(projectRoot, chainVersion, chain);
+        const { humanRelPath, ledgerRelPath } = humanizeClose({ projectRoot, force: opts.force });
 
         console.log(`Created: ${humanRelPath}`);
         console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
@@ -231,7 +204,11 @@ export function closeCommand(): Command {
         console.log(`Drafting ${humanRelPath} using /humanize style rules.`);
         console.log('Fill in both files, then run: sigma notion push');
       } catch (e) {
-        console.error((e as Error).message);
+        if (e instanceof CloseHumanizeError) {
+          console.error(e.message);
+        } else {
+          console.error((e as Error).message);
+        }
         process.exit(1);
       }
     });

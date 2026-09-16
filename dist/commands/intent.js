@@ -10,13 +10,13 @@ const path_1 = __importDefault(require("path"));
 const readline_1 = __importDefault(require("readline"));
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
-const artifacts_1 = require("../utils/artifacts");
 const docCheck_1 = require("../utils/docCheck");
 const intentHistory_1 = require("../utils/intentHistory");
 const amendmentHistory_1 = require("../utils/amendmentHistory");
 const config_1 = require("../config");
 const intentDraftService_1 = require("../services/intentDraftService");
 const intentRatifyService_1 = require("../services/intentRatifyService");
+const intentHumanizeService_1 = require("../services/intentHumanizeService");
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
 // onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
 // (a different progress-v<N>.json), not an array entry within one file —
@@ -143,27 +143,7 @@ function intentCommand() {
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = opts.v
-                ? { chainVersion: opts.v, data: (0, chain_1.readChain)(projectRoot, opts.v) }
-                : (0, chain_1.readActiveChain)(projectRoot);
-            if (chain.intent.state !== 'RATIFIED') {
-                throw new Error(`INTENT ${chain.intent.version} is in state "${chain.intent.state}"; humanize requires RATIFIED.\n` +
-                    'Run: sigma intent ratify');
-            }
-            if (chain.intent.human && !opts.force) {
-                throw new Error(`A human projection for INTENT ${chain.intent.version} already exists ` +
-                    `(generated ${chain.intent.human.generated_at}).\n` +
-                    'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.');
-            }
-            const humanRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `DIR-INTENT-HUMAN-${chain.intent.version}.md`));
-            const ledgerRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `DIR-INTENT-HUMAN-${chain.intent.version}.fidelity.md`));
-            (0, artifacts_1.copyTemplateToArtifact)('DIR-INTENT-HUMAN-TEMPLATE.md', path_1.default.join(projectRoot, humanRelPath));
-            (0, artifacts_1.copyTemplateToArtifact)('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path_1.default.join(projectRoot, ledgerRelPath));
-            chain.intent.human = {
-                version: chain.intent.version,
-                generated_at: new Date().toISOString(),
-            };
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+            const { humanRelPath, ledgerRelPath } = (0, intentHumanizeService_1.humanizeIntent)({ projectRoot, version: opts.v, force: opts.force });
             console.log(`Created: ${humanRelPath}`);
             console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
             console.log('');
@@ -172,7 +152,12 @@ function intentCommand() {
             console.log('Fill in both files, then run: sigma notion push');
         }
         catch (e) {
-            console.error(e.message);
+            if (e instanceof intentHumanizeService_1.IntentHumanizeError) {
+                console.error(e.message);
+            }
+            else {
+                console.error(e.message);
+            }
             process.exit(1);
         }
     });

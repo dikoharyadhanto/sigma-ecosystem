@@ -63,6 +63,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
 const config_1 = require("../config");
+const fs_1 = require("../utils/fs");
 // ── Overrides (read by doctor.ts / override.ts) ─────────────────────────────
 function readOverrides(projectRoot) {
     const filePath = path_1.default.join(projectRoot, config_1.OVERRIDES_FILE);
@@ -168,7 +169,7 @@ function writeActivateStatus(projectRoot, activeChain) {
     const tmpPath = `${filePath}.tmp`;
     const data = { active_chain: activeChain };
     fs_extra_1.default.writeJsonSync(tmpPath, data, { spaces: 2 });
-    fs_extra_1.default.moveSync(tmpPath, filePath, { overwrite: true });
+    (0, fs_1.atomicReplaceFileSync)(tmpPath, filePath); // see src/utils/fs.ts — §21.9
 }
 // ── Invariant: exactly one ACTIVE chain ─────────────────────────────────────
 // PLAN-EVAL-01 §4 / DISCUSSION §12 — if active_chain is missing/invalid
@@ -322,7 +323,7 @@ function writeChain(projectRoot, chainVersion, data) {
     data.updated_at = new Date().toISOString();
     delete data._migratedOnRead; // in-memory only — never persisted
     fs_extra_1.default.writeJsonSync(tmpPath, data, { spaces: 2 });
-    fs_extra_1.default.moveSync(tmpPath, filePath, { overwrite: true });
+    (0, fs_1.atomicReplaceFileSync)(tmpPath, filePath); // see src/utils/fs.ts — §21.9
 }
 // Combined helper — near drop-in replacement for readProgress() at call
 // sites that operate on "whatever chain is currently active".

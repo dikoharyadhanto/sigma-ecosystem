@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
 import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, OVERRIDES_FILE, SCHEMA_VERSION } from '../config';
+import { atomicReplaceFileSync } from '../utils/fs';
 
 // PLAN-EVAL-01 (Core Storage & Schema Migration, Opsi C) — foundation module.
 // `intent`/`roadmap`/`close` are single objects per chain file here (not
@@ -36,6 +37,22 @@ export interface HumanArtifactState {
   notion_page_url?: string;
 }
 
+// PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE §9.2, Stage E W1 — one structured
+// citation of supporting evidence (a test report, a build log) for a
+// DEV-EXEC version. `ref_sha256` is always computed server-side by reading
+// `ref_path` at record time (never trusted from caller input) so the
+// record is a verified fact, not an unverified claim — see
+// src/mcp/control/recordEvidence.ts.
+export interface EvidenceRecord {
+  description: string;
+  /** Project-root-relative path — the one path in the MCP surface not
+   *  derived from a tracker entry; bounded by containment, not allowlist. */
+  ref_path: string;
+  ref_sha256: string;
+  recorded_by: string;
+  recorded_at: string;
+}
+
 export interface ArtifactVersion {
   version: string;
   state: string;
@@ -53,6 +70,9 @@ export interface ArtifactVersion {
   // one PLAN-EXEC-HUMAN document per plan+exec version pair (§2.1), tracked
   // against the exec side since exec always mirrors its plan's version.
   human?: HumanArtifactState;
+  // Only ever populated on an `exec` entry — DEV-recorded evidence
+  // citations, appended by `sigma_record_evidence`. No CLI equivalent.
+  evidence?: EvidenceRecord[];
 }
 
 export interface ArtifactTracker {
@@ -354,7 +374,7 @@ export function writeActivateStatus(projectRoot: string, activeChain: string | n
   const tmpPath = `${filePath}.tmp`;
   const data: ActivateStatus = { active_chain: activeChain };
   fs.writeJsonSync(tmpPath, data, { spaces: 2 });
-  fs.moveSync(tmpPath, filePath, { overwrite: true });
+  atomicReplaceFileSync(tmpPath, filePath); // see src/utils/fs.ts — §21.9
 }
 
 // ── Invariant: exactly one ACTIVE chain ─────────────────────────────────────
@@ -514,7 +534,7 @@ export function writeChain(projectRoot: string, chainVersion: string, data: Chai
   data.updated_at = new Date().toISOString();
   delete data._migratedOnRead; // in-memory only — never persisted
   fs.writeJsonSync(tmpPath, data, { spaces: 2 });
-  fs.moveSync(tmpPath, filePath, { overwrite: true });
+  atomicReplaceFileSync(tmpPath, filePath); // see src/utils/fs.ts — §21.9
 }
 
 // Combined helper — near drop-in replacement for readProgress() at call

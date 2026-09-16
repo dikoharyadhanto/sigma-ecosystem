@@ -30,6 +30,16 @@ const createIntentDraft_1 = require("./tools/createIntentDraft");
 const updateArtifactDraft_1 = require("./tools/updateArtifactDraft");
 const prepareIntentRatify_1 = require("./tools/prepareIntentRatify");
 const commitIntentRatify_1 = require("./tools/commitIntentRatify");
+const createPlanDraft_1 = require("./tools/createPlanDraft");
+const createExecDraft_1 = require("./tools/createExecDraft");
+const createRoadmapDraft_1 = require("./tools/createRoadmapDraft");
+const renderRoadmap_1 = require("./tools/renderRoadmap");
+const updateReference_1 = require("./tools/updateReference");
+const intentHumanize_1 = require("./tools/intentHumanize");
+const execHumanize_1 = require("./tools/execHumanize");
+const closeHumanize_1 = require("./tools/closeHumanize");
+const archiveMessage_1 = require("./tools/archiveMessage");
+const recordEvidence_1 = require("./tools/recordEvidence");
 function buildControlServer() {
     const server = new mcp_js_1.McpServer({ name: 'sigma-control-server', version: config_1.SIGMA_VERSION });
     // Stage C — W1 bounded command pilot (create + update DRAFT).
@@ -41,6 +51,33 @@ function buildControlServer() {
     // src/commands/control.ts.
     (0, prepareIntentRatify_1.registerPrepareIntentRatifyTool)(server);
     (0, commitIntentRatify_1.registerCommitIntentRatifyTool)(server);
+    // Stage E W1 pilot — one primitive at a time (plan §14 Stage E item 1).
+    // First: create-only, mirroring the intent_draft pattern for an
+    // array-of-versions artifact type instead of a single-object one.
+    (0, createPlanDraft_1.registerCreatePlanDraftTool)(server);
+    // Second: exec_draft — version is the referenced PLAN's own version (no
+    // independent counter), and target-PLAN selection is real business logic
+    // (PLAN-IMPL-MULTIDRAFT-LOCK §4), not a formality.
+    (0, createExecDraft_1.registerCreateExecDraftTool)(server);
+    // Stage E W1 — remaining primitives batch: roadmap (single-object chain
+    // domain, no independent version counter).
+    (0, createRoadmapDraft_1.registerCreateRoadmapDraftTool)(server);
+    (0, renderRoadmap_1.registerRenderRoadmapTool)(server);
+    (0, updateReference_1.registerUpdateReferenceTool)(server);
+    // Stage E W1 — human projection family (Notion scaffolding), three
+    // separate primitives (ARC/DEV/AUD) rather than one generic tool — see
+    // intentHumanizeService.ts's header for why.
+    (0, intentHumanize_1.registerIntentHumanizeTool)(server);
+    (0, execHumanize_1.registerExecHumanizeTool)(server);
+    (0, closeHumanize_1.registerCloseHumanizeTool)(server);
+    // Stage E W1 — inbox_archive. New ownership check the CLI doesn't have;
+    // reconciled with the CLI/MCP shared-service invariant via a shared
+    // service with an actor-context parameter — see
+    // src/services/inboxArchiveService.ts's header.
+    (0, archiveMessage_1.registerArchiveMessageTool)(server);
+    // Stage E W1 — record_evidence. No CLI equivalent — see
+    // recordEvidence.ts's header.
+    (0, recordEvidence_1.registerRecordEvidenceTool)(server);
     return server;
 }
 /**

@@ -375,19 +375,24 @@ describe('sigma_update_artifact_draft — scope and boundary', () => {
     return 'sha256:' + crypto.createHash('sha256').update(Buffer.from(content, 'utf-8')).digest('hex');
   }
 
-  it('refuses a type other than intent (pilot scope)', () => {
+  it('refuses a type still outside scope after the Stage E plan/exec extension (roadmap, close)', () => {
+    // plan/exec moved into scope in the Stage E W1 extension
+    // (test/control-artifact-draft-update-plan-exec.test.ts covers those two
+    // directly) — roadmap/close remain deliberately out, per Director's W1
+    // list which only names "plan/exec".
     const env = setupTestEnv();
     projectWithDraftIntent(env, '# draft');
-    expect(() =>
-      updateArtifactDraft({
-        projectRoot: env.projectDir,
-        // @ts-expect-error — deliberately outside the pilot's typed scope
-        type: 'plan',
-        version: 'v1',
-        content: 'x',
-        expectedArtifactSha256: sha256('# draft'),
-      })
-    ).toThrowError(/pilot scope/);
+    for (const outOfScopeType of ['roadmap', 'close'] as const) {
+      expect(() =>
+        updateArtifactDraft({
+          projectRoot: env.projectDir,
+          type: outOfScopeType,
+          version: 'v1',
+          content: 'x',
+          expectedArtifactSha256: sha256('# draft'),
+        })
+      ).toThrowError(/pilot scope/);
+    }
     env.cleanup();
   });
 
@@ -483,7 +488,7 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
     env?.cleanup();
   });
 
-  it('lists exactly the four control-plane pilot tools (Stage C + Stage D) and executes a create through a real client', async () => {
+  it('lists exactly the control-plane pilot tools (Stage C + Stage D + Stage E W1) and executes a create through a real client', async () => {
     env = setupTestEnv();
     bootstrapProject(env);
     setControlBinding(env.projectDir, 'ARC');
@@ -495,10 +500,20 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      'sigma_close_humanize',
       'sigma_commit_intent_ratify',
+      'sigma_create_exec_draft',
       'sigma_create_intent_draft',
+      'sigma_create_plan_draft',
+      'sigma_create_roadmap_draft',
+      'sigma_exec_humanize',
+      'sigma_inbox_archive',
+      'sigma_intent_humanize',
       'sigma_prepare_intent_ratify',
+      'sigma_record_evidence',
+      'sigma_render_roadmap',
       'sigma_update_artifact_draft',
+      'sigma_update_reference',
     ]);
     for (const t of tools) {
       expect(t.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });

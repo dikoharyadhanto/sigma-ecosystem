@@ -21,8 +21,7 @@ import {
   recordIntentAmendment,
   normalizeVersionArg,
 } from '../engine/chain';
-import { findProjectRoot, toPosix } from '../utils/fs';
-import { copyTemplateToArtifact } from '../utils/artifacts';
+import { findProjectRoot } from '../utils/fs';
 import {
   printSigmaDocReport,
   validateSigmaDocFile,
@@ -32,6 +31,7 @@ import { renderAmendmentHistory } from '../utils/amendmentHistory';
 import { INTENT_AMENDMENT_LOG_FILE } from '../config';
 import { createIntentDraft, IntentDraftError } from '../services/intentDraftService';
 import { ratifyIntentDraft } from '../services/intentRatifyService';
+import { humanizeIntent, IntentHumanizeError } from '../services/intentHumanizeService';
 
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
 // onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
@@ -167,35 +167,7 @@ export function intentCommand(): Command {
     .action((opts: { v?: string; force?: boolean }) => {
       try {
         const projectRoot = findProjectRoot();
-        const { chainVersion, data: chain } = opts.v
-          ? { chainVersion: opts.v, data: readChain(projectRoot, opts.v) }
-          : readActiveChain(projectRoot);
-
-        if (chain.intent.state !== 'RATIFIED') {
-          throw new Error(
-            `INTENT ${chain.intent.version} is in state "${chain.intent.state}"; humanize requires RATIFIED.\n` +
-            'Run: sigma intent ratify'
-          );
-        }
-
-        if (chain.intent.human && !opts.force) {
-          throw new Error(
-            `A human projection for INTENT ${chain.intent.version} already exists ` +
-            `(generated ${chain.intent.human.generated_at}).\n` +
-            'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.'
-          );
-        }
-
-        const humanRelPath = toPosix(path.join('Sigma', 'human', `DIR-INTENT-HUMAN-${chain.intent.version}.md`));
-        const ledgerRelPath = toPosix(path.join('Sigma', 'human', `DIR-INTENT-HUMAN-${chain.intent.version}.fidelity.md`));
-        copyTemplateToArtifact('DIR-INTENT-HUMAN-TEMPLATE.md', path.join(projectRoot, humanRelPath));
-        copyTemplateToArtifact('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path.join(projectRoot, ledgerRelPath));
-
-        chain.intent.human = {
-          version: chain.intent.version,
-          generated_at: new Date().toISOString(),
-        };
-        writeChain(projectRoot, chainVersion, chain);
+        const { humanRelPath, ledgerRelPath } = humanizeIntent({ projectRoot, version: opts.v, force: opts.force });
 
         console.log(`Created: ${humanRelPath}`);
         console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
@@ -204,7 +176,11 @@ export function intentCommand(): Command {
         console.log(`Drafting ${humanRelPath} using /humanize style rules.`);
         console.log('Fill in both files, then run: sigma notion push');
       } catch (e) {
-        console.error((e as Error).message);
+        if (e instanceof IntentHumanizeError) {
+          console.error(e.message);
+        } else {
+          console.error((e as Error).message);
+        }
         process.exit(1);
       }
     });

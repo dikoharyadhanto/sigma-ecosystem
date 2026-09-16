@@ -7,6 +7,7 @@ exports.ensureDir = ensureDir;
 exports.copyFile = copyFile;
 exports.copyDir = copyDir;
 exports.fileExists = fileExists;
+exports.atomicReplaceFileSync = atomicReplaceFileSync;
 exports.toPosix = toPosix;
 exports.findProjectRoot = findProjectRoot;
 const fs_extra_1 = __importDefault(require("fs-extra"));
@@ -24,6 +25,48 @@ function copyDir(src, dest) {
 }
 function fileExists(filePath) {
     return fs_extra_1.default.existsSync(filePath);
+}
+// Atomic replace for the tmp+rename write idiom used throughout the engine
+// (chain.ts, controlStore.ts, mcp/control/canonicalWrite.ts). Replaces
+// fs-extra's `moveSync(tmp, dest, {overwrite:true})`, which internally does
+// `removeSync(dest)` then `rename()` — two syscalls, not one atomic replace.
+// An empirical two-thread reproduction measured ~55% of concurrent reads
+// observing the destination missing entirely during that window
+// (RESULT-IMPL-SIGMA-MCP-STAGE-C-20260915.md §21.9).
+//
+// A single fs.renameSync(tmp, dest) is the real atomic replace on both POSIX
+// and Windows, but on Windows it can transiently fail with EPERM/EACCES/EBUSY
+// if something else (AV, indexer, or — reproduced directly by
+// test/atomic-write-regression.test.ts — a concurrent reader's stat) has the
+// *destination* file momentarily open. graceful-fs's own win32 rename patch
+// (node_modules/graceful-fs/polyfills.js) does not cover this: it only
+// retries when the destination does not exist yet (fresh-file creation), and
+// gives up immediately if the destination is present — which is exactly the
+// overwrite case every caller here has. This retries the rename itself,
+// yielding between attempts so Windows scheduling doesn't starve whatever
+// holds the transient lock (same rationale graceful-fs's own comment gives
+// for not busy-spinning).
+const RENAME_RETRY_BUDGET_MS = 5000;
+const RENAME_RETRY_STEP_MS = 5;
+const RENAME_RETRYABLE_CODES = new Set(['EPERM', 'EACCES', 'EBUSY']);
+function sleepSync(ms) {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+function atomicReplaceFileSync(tmpPath, destPath) {
+    const deadline = Date.now() + RENAME_RETRY_BUDGET_MS;
+    for (;;) {
+        try {
+            fs_extra_1.default.renameSync(tmpPath, destPath);
+            return;
+        }
+        catch (err) {
+            const code = err.code;
+            if (!code || !RENAME_RETRYABLE_CODES.has(code) || Date.now() >= deadline) {
+                throw err;
+            }
+            sleepSync(RENAME_RETRY_STEP_MS);
+        }
+    }
 }
 // Cross-platform path portability (bug report 2026-08-30, BUG B + follow-up).
 // A relative path that Sigma *persists* (into progress-v<N>.json `entry.file`,

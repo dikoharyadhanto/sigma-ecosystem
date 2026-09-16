@@ -26,6 +26,16 @@ import { registerCreateIntentDraftTool } from './tools/createIntentDraft';
 import { registerUpdateArtifactDraftTool } from './tools/updateArtifactDraft';
 import { registerPrepareIntentRatifyTool } from './tools/prepareIntentRatify';
 import { registerCommitIntentRatifyTool } from './tools/commitIntentRatify';
+import { registerCreatePlanDraftTool } from './tools/createPlanDraft';
+import { registerCreateExecDraftTool } from './tools/createExecDraft';
+import { registerCreateRoadmapDraftTool } from './tools/createRoadmapDraft';
+import { registerRenderRoadmapTool } from './tools/renderRoadmap';
+import { registerUpdateReferenceTool } from './tools/updateReference';
+import { registerIntentHumanizeTool } from './tools/intentHumanize';
+import { registerExecHumanizeTool } from './tools/execHumanize';
+import { registerCloseHumanizeTool } from './tools/closeHumanize';
+import { registerArchiveMessageTool } from './tools/archiveMessage';
+import { registerRecordEvidenceTool } from './tools/recordEvidence';
 
 export function buildControlServer(): McpServer {
   const server = new McpServer({ name: 'sigma-control-server', version: SIGMA_VERSION });
@@ -38,6 +48,33 @@ export function buildControlServer(): McpServer {
   // src/commands/control.ts.
   registerPrepareIntentRatifyTool(server);
   registerCommitIntentRatifyTool(server);
+  // Stage E W1 pilot — one primitive at a time (plan §14 Stage E item 1).
+  // First: create-only, mirroring the intent_draft pattern for an
+  // array-of-versions artifact type instead of a single-object one.
+  registerCreatePlanDraftTool(server);
+  // Second: exec_draft — version is the referenced PLAN's own version (no
+  // independent counter), and target-PLAN selection is real business logic
+  // (PLAN-IMPL-MULTIDRAFT-LOCK §4), not a formality.
+  registerCreateExecDraftTool(server);
+  // Stage E W1 — remaining primitives batch: roadmap (single-object chain
+  // domain, no independent version counter).
+  registerCreateRoadmapDraftTool(server);
+  registerRenderRoadmapTool(server);
+  registerUpdateReferenceTool(server);
+  // Stage E W1 — human projection family (Notion scaffolding), three
+  // separate primitives (ARC/DEV/AUD) rather than one generic tool — see
+  // intentHumanizeService.ts's header for why.
+  registerIntentHumanizeTool(server);
+  registerExecHumanizeTool(server);
+  registerCloseHumanizeTool(server);
+  // Stage E W1 — inbox_archive. New ownership check the CLI doesn't have;
+  // reconciled with the CLI/MCP shared-service invariant via a shared
+  // service with an actor-context parameter — see
+  // src/services/inboxArchiveService.ts's header.
+  registerArchiveMessageTool(server);
+  // Stage E W1 — record_evidence. No CLI equivalent — see
+  // recordEvidence.ts's header.
+  registerRecordEvidenceTool(server);
   return server;
 }
 

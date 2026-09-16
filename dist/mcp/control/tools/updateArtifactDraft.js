@@ -1,7 +1,11 @@
 "use strict";
-// Stage C pilot — sigma_update_artifact_draft. Control-plane only. Scope
-// pinned to type "intent" at the schema level (z.literal) as well as inside
+// Stage C pilot (intent) + Stage E W1 extension (plan/exec) —
+// sigma_update_artifact_draft. Control-plane only. Scope pinned to
+// intent/plan/exec at the schema level (z.enum) as well as inside
 // updateArtifactDraft() itself — see artifactDraftUpdate.ts's header.
+// Role is derived from `type`, not hardcoded — ARC owns intent, FMN owns
+// plan, DEV owns exec (ownerRoleForArtifactType()), computed per call so it
+// can never be supplied by the caller.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerUpdateArtifactDraftTool = registerUpdateArtifactDraftTool;
 const zod_1 = require("zod");
@@ -10,13 +14,13 @@ const shared_1 = require("../shared");
 function registerUpdateArtifactDraftTool(server) {
     server.registerTool('sigma_update_artifact_draft', {
         title: 'Update artifact DRAFT content',
-        description: 'Replaces the full content of a registered DRAFT artifact. Stage C pilot scope: intent only, and ' +
-            'only the active chain\'s own intent version. ARC role only. Requires idempotency_key, ' +
+        description: 'Replaces the full content of a registered DRAFT artifact — intent (ARC role), plan (FMN role), or ' +
+            'exec (DEV role) — and only the active chain\'s own version of that type. Requires idempotency_key, ' +
             'expected_state_revision (from sigma_get_state), and expected_artifact_sha256 (from a prior ' +
             'sigma_read_artifact call) — a mismatch on either is rejected rather than silently overwritten.',
         inputSchema: {
-            type: zod_1.z.literal('intent'),
-            version: zod_1.z.string().min(1).describe('Must match the active chain\'s current intent version, e.g. "v1".'),
+            type: zod_1.z.enum(['intent', 'plan', 'exec']),
+            version: zod_1.z.string().min(1).describe('Must match an existing DRAFT version of that type in the active chain, e.g. "v1" (intent) or "v0.1" (plan/exec).'),
             content: zod_1.z.string().describe('Full replacement content of the DRAFT file (not a diff).'),
             expected_artifact_sha256: zod_1.z.string().min(1),
             idempotency_key: zod_1.z.string().min(1),
@@ -38,7 +42,7 @@ function registerUpdateArtifactDraftTool(server) {
             content: args.content,
             expected_artifact_sha256: args.expected_artifact_sha256,
         },
-        allowedRoles: ['ARC'],
+        allowedRoles: [(0, artifactDraftUpdate_1.ownerRoleForArtifactType)(args.type)],
         checkPreconditions: (0, shared_1.staleStateCheck)(args.expected_state_revision),
         artifactHashBefore: args.expected_artifact_sha256,
         transactionFiles: (root) => (0, artifactDraftUpdate_1.updateArtifactDraftTransactionFiles)({

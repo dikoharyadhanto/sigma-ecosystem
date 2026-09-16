@@ -6,7 +6,6 @@ import {
   readActiveChain,
   writeChain,
   nextPlanVersion,
-  registerPlanDraft,
   lockPlanVersion,
   resolveTargetVersion,
   supersedePlanVersion,
@@ -20,12 +19,12 @@ import {
 import { findProjectRoot, toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { renderRoadmapFile } from '../utils/roadmap';
-import { readProjectConfig } from '../engine/projectConfig';
 import {
   ensureSigmaDocEligible,
   printSigmaDocReport,
   validateSigmaDocFile,
 } from '../utils/docCheck';
+import { createPlanDraft, PlanDraftError } from '../services/planDraftService';
 
 function generatePendingId(): string {
   return Math.random().toString(36).slice(2, 6).toLowerCase();
@@ -116,65 +115,12 @@ export function planCommand(): Command {
           return;
         }
 
-        if (!getOperationalGate(chain, 'gate_1_open')) {
-          throw new Error('GATE 1 BLOCKED: No ratified DIR-INTENT. Run: sigma intent ratify');
-        }
-        if (chain.intent.state !== 'RATIFIED') {
-          throw new Error('GATE 1 BLOCKED: No ratified DIR-INTENT. Run: sigma intent ratify');
-        }
-        // Gate 1.5: require a ROADMAP that exists and isn't SUPERSEDED (§3.5)
-        const roadmapAbsPathForGate = getRoadmapPathIfEligible(projectRoot, chain);
-        if (!roadmapAbsPathForGate) {
-          throw new Error(
-            'Gate 1.5 blocked: A ROADMAP must exist for this chain before FMN-PLAN can be created.\n' +
-            'Run: sigma roadmap new'
-          );
-        }
-
-        // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.4/§4 Fase 6 (CR-01) — checked
-        // here, never at `intent ratify`/`exec lock` themselves (that would
-        // recreate the circular dependency the audit found: a command
-        // gated on a requirement it alone can satisfy). Two things get
-        // checked because this command is the enforcement point for BOTH:
-        // the RATIFIED intent that opened this chain, and — on a second or
-        // later plan iteration — the most recently LOCKED exec.
-        const humanizeGate = readProjectConfig(projectRoot).notion_humanize_gate;
-        if (humanizeGate?.enabled) {
-          const blockers: string[] = [];
-          if (!chain.intent.human?.pushed_to_notion_at) {
-            blockers.push(
-              `DIR-INTENT ${chain.intent.version} has no human projection pushed to Notion yet.\n` +
-              '    Run: sigma intent humanize   (then)   sigma notion push'
-            );
-          }
-          const latestLockedExec = chain.exec.versions
-            .filter(v => v.state === 'LOCKED')
-            .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
-          if (latestLockedExec && !latestLockedExec.human?.pushed_to_notion_at) {
-            blockers.push(
-              `DEV-EXEC ${latestLockedExec.version} has no human projection pushed to Notion yet.\n` +
-              `    Run: sigma exec humanize --v ${latestLockedExec.version}   (then)   sigma notion push`
-            );
-          }
-          if (blockers.length > 0) {
-            throw new Error(
-              'HUMANIZE GATE BLOCKED (notion_humanize_gate.enabled):\n  - ' + blockers.join('\n  - ')
-            );
-          }
-        }
-
-        const intentVersionRef = chain.intent.version;
-        const version = nextPlanVersion(chain, intentVersionRef);
-        const relPath = toPosix(path.join('Sigma', 'contract', `FMN-PLAN-${version}.md`));
+        const { version, relPath, intentVersionRef } = createPlanDraft({
+          projectRoot,
+          title: opts.title ?? '',
+          focus: opts.focus ?? '',
+        });
         const absPath = path.join(projectRoot, relPath);
-
-        // Artifact writes first, writeChain last
-        copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);
-        registerPlanDraft(chain, version, relPath, intentVersionRef, opts.title, opts.focus);
-        writeChain(projectRoot, chainVersion, chain);
-
-        // Render after state is written (idempotent re-sync)
-        renderRoadmapFile(roadmapAbsPathForGate, chain);
 
         console.log(`Created: ${relPath} (references INTENT ${intentVersionRef})`);
         console.log('Running automatic validation...\n');
@@ -183,7 +129,11 @@ export function planCommand(): Command {
         if (!report.ok) process.exit(1);
         console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${version.replace(/^v/, '')}`);
       } catch (e) {
-        console.error((e as Error).message);
+        if (e instanceof PlanDraftError) {
+          console.error(e.message);
+        } else {
+          console.error((e as Error).message);
+        }
         process.exit(1);
       }
     });

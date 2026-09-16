@@ -43,6 +43,19 @@ const verifyBinding_1 = require("./tools/verifyBinding");
 const effectivePolicy_1 = require("./tools/effectivePolicy");
 const readArtifact_1 = require("./tools/readArtifact");
 const evidence_1 = require("./tools/evidence");
+const checkDocument_1 = require("./tools/checkDocument");
+const intentStatus_1 = require("./tools/intentStatus");
+const closeStatus_1 = require("./tools/closeStatus");
+const planStatus_1 = require("./tools/planStatus");
+const execStatus_1 = require("./tools/execStatus");
+const listIntents_1 = require("./tools/listIntents");
+const listPlans_1 = require("./tools/listPlans");
+const listExecs_1 = require("./tools/listExecs");
+const listRoadmapStages_1 = require("./tools/listRoadmapStages");
+const checkMailboxIntegrity_1 = require("./tools/checkMailboxIntegrity");
+const getConfig_1 = require("./tools/getConfig");
+const getOperationLog_1 = require("./tools/getOperationLog");
+const getGitEvidence_1 = require("./tools/getGitEvidence");
 const shared_1 = require("./shared");
 const binding_1 = require("./binding");
 // Exported so tests can boot the server in-process (PLAN-IMPL-01 §4).
@@ -58,6 +71,36 @@ function buildServer() {
     (0, effectivePolicy_1.registerEffectivePolicyTool)(server);
     (0, readArtifact_1.registerReadArtifactTool)(server);
     (0, evidence_1.registerGetEvidenceTool)(server);
+    // Stage B2 — first primitive: sigma_check_document. See checkDocument.ts's
+    // header for why this is one generic typed tool where the rest of B2 is
+    // not.
+    (0, checkDocument_1.registerCheckDocumentTool)(server);
+    // Stage B2 — STATUS group: four separate tools, not one generic tool —
+    // intent/close are single-object + gate, plan/exec are
+    // DRAFT/LOCKED-categorized with pairing/pending, genuinely different
+    // shapes (see each tool's header).
+    (0, intentStatus_1.registerIntentStatusTool)(server);
+    (0, closeStatus_1.registerCloseStatusTool)(server);
+    (0, planStatus_1.registerPlanStatusTool)(server);
+    (0, execStatus_1.registerExecStatusTool)(server);
+    // Stage B2 — LIST group: four separate tools, not one generic tool —
+    // intent_list is the only cross-chain operation in this project,
+    // plan_list has a pending sub-list exec_list doesn't, and roadmap_list is
+    // actually a stage listing, not a roadmap-version listing (see
+    // listRoadmapStages.ts's header — registry description mismatch).
+    (0, listIntents_1.registerListIntentsTool)(server);
+    (0, listPlans_1.registerListPlansTool)(server);
+    (0, listExecs_1.registerListExecsTool)(server);
+    (0, listRoadmapStages_1.registerListRoadmapStagesTool)(server);
+    // Stage B2 — final four: inbox_check (mailbox integrity, NOT the same
+    // family as sigma_check_document despite the name — see
+    // checkMailboxIntegrity.ts), config_show, report_logs, git_evidence.
+    // memo_list stays excluded from this batch — Director decision
+    // 2026-09-16, mailbox domain stays untouched beyond the integrity check.
+    (0, checkMailboxIntegrity_1.registerCheckMailboxIntegrityTool)(server);
+    (0, getConfig_1.registerGetConfigTool)(server);
+    (0, getOperationLog_1.registerGetOperationLogTool)(server);
+    (0, getGitEvidence_1.registerGetGitEvidenceTool)(server);
     return server;
 }
 /**

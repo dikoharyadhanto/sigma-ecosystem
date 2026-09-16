@@ -5,12 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.execCommand = execCommand;
 const commander_1 = require("commander");
-const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
-const artifacts_1 = require("../utils/artifacts");
 const docCheck_1 = require("../utils/docCheck");
+const execDraftService_1 = require("../services/execDraftService");
+const execHumanizeService_1 = require("../services/execHumanizeService");
 function execDocPath(projectRoot, chain, version) {
     const entry = version
         ? chain.exec.versions.find(v => v.version === version)
@@ -40,69 +40,8 @@ function execCommand() {
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            (0, chain_1.assertChainCanMutate)(chain);
-            if (!(0, chain_1.getOperationalGate)(chain, 'gate_2_open')) {
-                throw new Error('GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
-            }
-            // PLAN-IMPL-MULTIDRAFT-LOCK §4 — the old chain-wide guard ("any exec
-            // not LOCKED/SUPERSEDED blocks every new exec, regardless of which
-            // plan it references") is replaced by a per-PLAN guard: at most one
-            // non-final exec per plan (§2.2 of the source discussion,
-            // Director-confirmed cardinality invariant), evaluated against the
-            // specific plan being targeted. Candidates for auto-resolution are
-            // LOCKED plans with no exec at all in a non-SUPERSEDED state — a
-            // plan with an open DRAFT exec is not a candidate for a *new* exec,
-            // it already has one to continue.
-            const lockedPlans = chain.plan.versions.filter(v => v.state === 'LOCKED');
-            const plansWithOpenExec = new Set(chain.exec.versions
-                .filter(v => v.state !== 'SUPERSEDED')
-                .map(v => v.plan_version_ref)
-                .filter((ref) => Boolean(ref)));
-            const unexecutedPlans = lockedPlans.filter(p => !plansWithOpenExec.has(p.version));
-            let planVersionRef;
-            if (opts.plan) {
-                planVersionRef = opts.plan;
-                const target = lockedPlans.find(p => p.version === planVersionRef);
-                if (!target) {
-                    const available = lockedPlans.map(p => p.version).join(', ') || '(none)';
-                    throw new Error(`FMN-PLAN ${planVersionRef} is not a LOCKED plan.\n` +
-                        `LOCKED plans: ${available}`);
-                }
-                const openExecForPlan = chain.exec.versions.find(v => v.plan_version_ref === planVersionRef && v.state !== 'SUPERSEDED');
-                if (openExecForPlan) {
-                    throw new Error(`EXEC CONFLICT: FMN-PLAN ${planVersionRef} already has DEV-EXEC ${openExecForPlan.version} in ${openExecForPlan.state} state.\n` +
-                        'A plan has at most one execution — continue that DEV-EXEC instead of creating a new one:\n' +
-                        `  ${openExecForPlan.file ?? `Sigma/build/DEV-EXEC-${openExecForPlan.version}.md`}\n` +
-                        `  sigma exec check --v ${openExecForPlan.version}\n` +
-                        'To abandon it instead, supersede its plan and open a new plan version:\n' +
-                        `  sigma plan supersede --v ${planVersionRef} --reason "..."`);
-                }
-            }
-            else if (unexecutedPlans.length === 0) {
-                throw new Error('All locked plans already have an exec.\n' +
-                    'Run: sigma plan new   to create a new plan');
-            }
-            else if (unexecutedPlans.length === 1) {
-                planVersionRef = unexecutedPlans[0].version;
-            }
-            else {
-                const versions = unexecutedPlans.map(p => p.version).join(', ');
-                throw new Error(`${unexecutedPlans.length} unexecuted locked plans found: ${versions}\n` +
-                    `Specify which to execute: sigma exec new --plan ${unexecutedPlans[0].version}`);
-            }
-            const version = (0, chain_1.nextExecVersion)(chain, planVersionRef);
-            const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'evidence', `DEV-EXEC-${version}.md`));
+            const { relPath, planVersionRef } = (0, execDraftService_1.createExecDraft)({ projectRoot, planVersion: opts.plan });
             const absPath = path_1.default.join(projectRoot, relPath);
-            if (chain.exec.versions.some(v => v.version === version)) {
-                throw new Error(`EXEC CONFLICT: DEV-EXEC ${version} already exists in progress-${chainVersion}.json`);
-            }
-            if (fs_extra_1.default.existsSync(absPath)) {
-                throw new Error(`EXEC FILE CONFLICT: ${relPath} already exists. Refusing to overwrite existing DEV-EXEC artifact.`);
-            }
-            (0, artifacts_1.copyTemplateToArtifact)('DEV-EXEC-TEMPLATE.md', absPath);
-            (0, chain_1.registerExecDraft)(chain, version, relPath, planVersionRef);
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
             console.log(`Created: ${relPath} (references PLAN ${planVersionRef})`);
             console.log('Running automatic validation...\n');
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'exec');
@@ -111,7 +50,12 @@ function execCommand() {
                 process.exit(1);
         }
         catch (e) {
-            console.error(e.message);
+            if (e instanceof execDraftService_1.ExecDraftError) {
+                console.error(e.message);
+            }
+            else {
+                console.error(e.message);
+            }
             process.exit(1);
         }
     });
@@ -168,39 +112,8 @@ function execCommand() {
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            const execEntry = opts.v
-                ? chain.exec.versions.find(v => v.version === opts.v)
-                : chain.exec.versions.find(v => v.version === chain.exec.active_version);
-            if (!execEntry) {
-                throw new Error(opts.v ? `DEV-EXEC ${opts.v} not found.` : 'No active DEV-EXEC found. Run: sigma exec new');
-            }
-            if (execEntry.state !== 'LOCKED') {
-                throw new Error(`DEV-EXEC ${execEntry.version} is in state "${execEntry.state}"; humanize requires LOCKED.\n` +
-                    `Run: sigma exec lock --v ${execEntry.version}`);
-            }
-            const planEntry = execEntry.plan_version_ref
-                ? chain.plan.versions.find(v => v.version === execEntry.plan_version_ref)
-                : undefined;
-            if (!planEntry || planEntry.state !== 'LOCKED') {
-                throw new Error(`DEV-EXEC ${execEntry.version}'s referenced FMN-PLAN (${execEntry.plan_version_ref ?? 'none'}) ` +
-                    `is not LOCKED. A plan+exec pair must both be LOCKED before humanize can run.`);
-            }
-            if (execEntry.human && !opts.force) {
-                throw new Error(`A human projection for DEV-EXEC ${execEntry.version} already exists ` +
-                    `(generated ${execEntry.human.generated_at}).\n` +
-                    'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.');
-            }
-            const humanRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.md`));
-            const ledgerRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `PLAN-EXEC-HUMAN-${execEntry.version}.fidelity.md`));
-            (0, artifacts_1.copyTemplateToArtifact)('PLAN-EXEC-HUMAN-TEMPLATE.md', path_1.default.join(projectRoot, humanRelPath));
-            (0, artifacts_1.copyTemplateToArtifact)('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path_1.default.join(projectRoot, ledgerRelPath));
-            execEntry.human = {
-                version: execEntry.version,
-                generated_at: new Date().toISOString(),
-            };
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
-            console.log(`Created: ${humanRelPath} (sources: FMN-PLAN ${planEntry.version} + DEV-EXEC ${execEntry.version})`);
+            const { version, planVersionRef, humanRelPath, ledgerRelPath } = (0, execHumanizeService_1.humanizeExec)({ projectRoot, version: opts.v, force: opts.force });
+            console.log(`Created: ${humanRelPath} (sources: FMN-PLAN ${planVersionRef} + DEV-EXEC ${version})`);
             console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
             console.log('');
             console.log('Reading /humanize writing rules (setup/targets/claude_code/humanize.md)...');
@@ -208,7 +121,12 @@ function execCommand() {
             console.log('Fill in both files, then run: sigma notion push');
         }
         catch (e) {
-            console.error(e.message);
+            if (e instanceof execHumanizeService_1.ExecHumanizeError) {
+                console.error(e.message);
+            }
+            else {
+                console.error(e.message);
+            }
             process.exit(1);
         }
     });

@@ -266,8 +266,13 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     // Six from Phase 0, three added by Batch 1 (Stage A + Stage B1), one added
-    // by Stage B2 (sigma_get_evidence). MCP mailbox tools were built and
-    // reviewed during Stage B2 but withdrawn by Director decision — see
+    // by Stage B2 evidence-only (sigma_get_evidence), thirteen added by
+    // Stage B2 continuation (sigma_check_document + STATUS group + LIST
+    // group + the final four: inbox_check/config_show/report_logs/
+    // git_evidence). memo_list stays excluded — Director decision
+    // 2026-09-16, mailbox domain stays untouched beyond the integrity
+    // check. MCP mailbox READ tools were built and reviewed during Stage B2
+    // but withdrawn by Director decision — see
     // RESULT-IMPL-SIGMA-MCP-STAGE-B2-20260915.md §9.
     expect(names).toEqual(
       [
@@ -281,6 +286,19 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
         'sigma_get_effective_policy',
         'sigma_read_artifact',
         'sigma_get_evidence',
+        'sigma_check_document',
+        'sigma_intent_status',
+        'sigma_close_status',
+        'sigma_plan_status',
+        'sigma_exec_status',
+        'sigma_list_intents',
+        'sigma_list_plans',
+        'sigma_list_execs',
+        'sigma_list_roadmap_stages',
+        'sigma_check_mailbox_integrity',
+        'sigma_get_config',
+        'sigma_get_operation_log',
+        'sigma_get_git_evidence',
       ].sort(),
     );
 
@@ -386,6 +404,18 @@ describe('sigma-mcp read-only guard', () => {
       'updateArtifactDraft',
       'writeIdempotencyRecord',
       'appendAuditEntry',
+      // Stage E W1 addition — same defense-in-depth rationale as the Stage C
+      // additions above.
+      'createPlanDraft',
+      'createExecDraft',
+      'createRoadmapDraft',
+      'renderActiveRoadmap',
+      'updateReferenceList',
+      'humanizeIntent',
+      'humanizeExec',
+      'humanizeClose',
+      'archiveMessage',
+      'recordEvidence',
     ];
 
     const files: string[] = [];

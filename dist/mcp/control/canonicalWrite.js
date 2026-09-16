@@ -24,6 +24,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const artifactPath_1 = require("../artifactPath");
 const contract_1 = require("../contract");
 const errors_1 = require("../errors");
+const fs_1 = require("../../utils/fs");
 function writeCanonicalArtifactFile(root, type, version, trackerFile, content) {
     const { abs, rel } = (0, artifactPath_1.assertCanonicalLocation)(root, type, version, trackerFile);
     const buf = Buffer.from(content, 'utf-8');
@@ -32,7 +33,7 @@ function writeCanonicalArtifactFile(root, type, version, trackerFile, content) {
     }
     const tmpPath = `${abs}.tmp`;
     fs_extra_1.default.writeFileSync(tmpPath, buf);
-    fs_extra_1.default.moveSync(tmpPath, abs, { overwrite: true });
+    (0, fs_1.atomicReplaceFileSync)(tmpPath, abs); // see src/utils/fs.ts — §21.9
     return {
         abs,
         rel,

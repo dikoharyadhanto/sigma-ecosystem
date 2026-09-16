@@ -19,6 +19,7 @@ import crypto from 'crypto';
 import { assertCanonicalLocation, MAX_ARTIFACT_BYTES, ArtifactType } from '../artifactPath';
 import { ERROR_CODES } from '../contract';
 import { McpQueryError } from '../errors';
+import { atomicReplaceFileSync } from '../../utils/fs';
 
 export interface CanonicalWriteResult {
   abs: string;
@@ -46,7 +47,7 @@ export function writeCanonicalArtifactFile(
 
   const tmpPath = `${abs}.tmp`;
   fs.writeFileSync(tmpPath, buf);
-  fs.moveSync(tmpPath, abs, { overwrite: true });
+  atomicReplaceFileSync(tmpPath, abs); // see src/utils/fs.ts — §21.9
 
   return {
     abs,

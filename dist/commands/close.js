@@ -12,6 +12,7 @@ const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const projectConfig_1 = require("../engine/projectConfig");
 const docCheck_1 = require("../utils/docCheck");
+const closeHumanizeService_1 = require("../services/closeHumanizeService");
 // PLAN-EVAL-01 Fase 3 — `close lock` already auto-locks the chain's roadmap
 // as a side effect *before* this migration (see `lockActiveRoadmap` call
 // below) — this is existing behavior being preserved under the new storage,
@@ -166,28 +167,7 @@ function closeCommand() {
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            if (!chain.close) {
-                throw new Error('No active DIR-CLOSE found. Run: sigma close new');
-            }
-            if (chain.close.state !== 'LOCKED') {
-                throw new Error(`DIR-CLOSE ${chain.close.version} is in state "${chain.close.state}"; humanize requires LOCKED.\n` +
-                    'Run: sigma close lock');
-            }
-            if (chain.close.human && !opts.force) {
-                throw new Error(`A human projection for DIR-CLOSE ${chain.close.version} already exists ` +
-                    `(generated ${chain.close.human.generated_at}).\n` +
-                    'Re-running would overwrite any content already written into it. Pass --force to proceed anyway.');
-            }
-            const humanRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.md`));
-            const ledgerRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'human', `DIR-CLOSE-HUMAN-${chain.close.version}.fidelity.md`));
-            (0, artifacts_1.copyTemplateToArtifact)('DIR-CLOSE-HUMAN-TEMPLATE.md', path_1.default.join(projectRoot, humanRelPath));
-            (0, artifacts_1.copyTemplateToArtifact)('HUMAN-FIDELITY-LEDGER-TEMPLATE.md', path_1.default.join(projectRoot, ledgerRelPath));
-            chain.close.human = {
-                version: chain.close.version,
-                generated_at: new Date().toISOString(),
-            };
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+            const { humanRelPath, ledgerRelPath } = (0, closeHumanizeService_1.humanizeClose)({ projectRoot, force: opts.force });
             console.log(`Created: ${humanRelPath}`);
             console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
             console.log('');
@@ -196,7 +176,12 @@ function closeCommand() {
             console.log('Fill in both files, then run: sigma notion push');
         }
         catch (e) {
-            console.error(e.message);
+            if (e instanceof closeHumanizeService_1.CloseHumanizeError) {
+                console.error(e.message);
+            }
+            else {
+                console.error(e.message);
+            }
             process.exit(1);
         }
     });

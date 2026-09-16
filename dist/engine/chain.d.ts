@@ -5,6 +5,15 @@ export interface HumanArtifactState {
     pushed_to_notion_at?: string;
     notion_page_url?: string;
 }
+export interface EvidenceRecord {
+    description: string;
+    /** Project-root-relative path — the one path in the MCP surface not
+     *  derived from a tracker entry; bounded by containment, not allowlist. */
+    ref_path: string;
+    ref_sha256: string;
+    recorded_by: string;
+    recorded_at: string;
+}
 export interface ArtifactVersion {
     version: string;
     state: string;
@@ -19,6 +28,7 @@ export interface ArtifactVersion {
     title?: string;
     focus?: string;
     human?: HumanArtifactState;
+    evidence?: EvidenceRecord[];
 }
 export interface ArtifactTracker {
     active_version: string | null;
