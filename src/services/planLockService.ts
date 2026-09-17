@@ -42,7 +42,8 @@ export function resolvePlanLockTarget(chain: ChainState, explicitVersion?: strin
   if (resolution.kind === 'ambiguous') {
     throw new PlanLockError(
       'INVALID_OPERATION',
-      `${resolution.candidates.length} DRAFT FMN-PLANs are open: ${resolution.candidates.join(', ')}. Specify which one to lock.`
+      `${resolution.candidates.length} DRAFT FMN-PLANs are open: ${resolution.candidates.join(', ')}\n` +
+        `Specify which one to lock: sigma plan lock --v ${resolution.candidates[0]}`
     );
   }
   return resolution.version;

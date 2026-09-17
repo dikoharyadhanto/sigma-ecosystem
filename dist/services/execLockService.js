@@ -46,7 +46,8 @@ function resolveExecLockTarget(chain, explicitVersion) {
             return entry?.plan_version_ref ? `${v} (plan ${entry.plan_version_ref})` : v;
         })
             .join(', ');
-        throw new ExecLockError('INVALID_OPERATION', `${resolution.candidates.length} DRAFT DEV-EXECs are open: ${described}. Specify which one to lock.`);
+        throw new ExecLockError('INVALID_OPERATION', `${resolution.candidates.length} DRAFT DEV-EXECs are open: ${described}\n` +
+            `Specify which one to lock: sigma exec lock --v ${resolution.candidates[0]}`);
     }
     return resolution.version;
 }
