@@ -1,0 +1,95 @@
+# HERMES — Default Model Routing Config (live, operatif)
+#
+# Satu-satunya rujukan routing model HERMES. Diedit langsung oleh Director,
+# kapan saja. HERMES membaca apa adanya, tidak menyimpan salinan/ticket/log
+# di tempat lain (mekanisme lengkap: proposal 2026-09-17
+# "hermes-director-model-routing-checkpoint" §1-§6).
+#
+# Rasional lengkap tiap keputusan (kenapa Terra bukan Sol, kenapa
+# eksekusi+testing digabung, kenapa Sonnet jadi default bukan Opus, dll)
+# ada di catatan historis: 2026-09-17_hermes-default-model-routing-config.md
+# (snapshot diskusi, bukan file live — jangan diedit lagi mulai file ini ada).
+#
+# Aturan kapan sesi DEV boleh/harus berakhir (dan kapan model boleh
+# dipertimbangkan ulang) TIDAK diulang di sini — lihat proposal
+# 2026-09-15 "specialist-session-lifecycle-and-memo-policy" §5-§6.
+# Ringkas: model tetap sepanjang satu sesi/mandat DEV aktif; sesi baru
+# (dan model boleh beda) hanya dipicu sinyal konkret (selesai, blocker,
+# dua kali gagal fix tanpa kemajuan, ubah scope, atau handoff ke role lain).
+#
+# Versi model menyesuaikan saat implementasi nyata bila ada rilis lebih baru.
+
+updated_at: "2026-09-17"
+
+arc:
+  # Anthropic — beda model antar sesi, tiap sub-scope sudah sesi terpisah secara alami.
+  interview_draft_intent:
+    provider: anthropic
+    model: claude-opus-5
+    effort: high
+  revisi_pasca_audit:
+    provider: anthropic
+    model: claude-sonnet-5
+    effort: medium
+  closure_scoring:
+    provider: anthropic
+    model: claude-sonnet-5
+    effort: high  # gating decision — salah skor lebih mahal dari effort tambahan
+  amandemen_proses:
+    provider: anthropic
+    model: claude-sonnet-5
+    effort: medium  # sesi baru terpisah, terjadi saat fase implementasi+amendment
+
+fmn:
+  # DeepSeek — beda model antar sesi per sub-scope.
+  draft_plan:
+    provider: deepseek
+    model: deepseek-flash
+    effort: high
+  revisi_pasca_audit:
+    provider: deepseek
+    model: deepseek-flash
+    effort: medium
+  review_dev_exec:
+    provider: deepseek
+    model: deepseek-flash
+    effort: medium  # pre-build dan post-build sama-sama medium
+
+dev:
+  # Anthropic — satu model per sesi/mandat aktif; effort bervariasi per sub-scope.
+  # Sonnet 5 adalah DEFAULT (bukan Opus) supaya usage limit tidak cepat habis.
+  draft_rencana_implementasi:
+    provider: anthropic
+    model: claude-sonnet-5
+    effort: high
+  eksekusi_testing_verifikasi:
+    provider: anthropic
+    model: claude-sonnet-5
+    effort: high  # digabung sengaja — tidak boleh ganti model di tengah sesi ini
+  fix_bug_gap:
+    provider: anthropic
+    model: claude-sonnet-5
+    effort: medium  # umumnya setelah post-build review FMN (sesi baru, scope sempit)
+  eskalasi_kompleks:
+    # Dipakai sadar untuk kasus D3-berat, BUKAN default — trigger: teridentifikasi
+    # berat sejak awal, atau dua kali gagal fix tanpa kemajuan (circuit breaker).
+    provider: anthropic
+    model: claude-opus-5
+    effort: high
+  fallback: []  # diisi Director bila ingin urutan eksplisit; hindari untuk DEV bila memungkinkan
+
+aud:
+  # OpenAI via OpenCode Zen — API metered per token, sama untuk kedua mode.
+  critic:
+    provider: openai
+    via: opencode-zen
+    model: gpt-5.6-terra  # dikoreksi 2026-09-17 — nama "gpt-terra-5.6" tidak valid, terverifikasi via `opencode models`
+    effort: high
+  verificator:
+    provider: openai
+    via: opencode-zen
+    model: gpt-5.6-terra  # dikoreksi 2026-09-17 — nama "gpt-terra-5.6" tidak valid, terverifikasi via `opencode models`
+    effort: high
+  # Upgrade manual (bukan otomatis): bila Codex subscription aktif, AUD bisa
+  # diarahkan ke Codex CLI tier setara Sol tanpa kekhawatiran biaya (subscription,
+  # bukan API metered). Director edit dua entri di atas manual saat kondisi berlaku.

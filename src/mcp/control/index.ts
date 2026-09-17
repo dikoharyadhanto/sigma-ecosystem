@@ -36,6 +36,24 @@ import { registerExecHumanizeTool } from './tools/execHumanize';
 import { registerCloseHumanizeTool } from './tools/closeHumanize';
 import { registerArchiveMessageTool } from './tools/archiveMessage';
 import { registerRecordEvidenceTool } from './tools/recordEvidence';
+import { registerPrepareIntentAmendmentTool } from './tools/prepareIntentAmendment';
+import { registerCommitIntentAmendmentTool } from './tools/commitIntentAmendment';
+import { registerPrepareIntentScoreTool } from './tools/prepareIntentScore';
+import { registerCommitIntentScoreTool } from './tools/commitIntentScore';
+import { registerPreparePlanLockTool } from './tools/preparePlanLock';
+import { registerCommitPlanLockTool } from './tools/commitPlanLock';
+import { registerPrepareExecLockTool } from './tools/prepareExecLock';
+import { registerCommitExecLockTool } from './tools/commitExecLock';
+import { registerPrepareCloseNewTool } from './tools/prepareCloseNew';
+import { registerCommitCloseNewTool } from './tools/commitCloseNew';
+import { registerPrepareIntentSupersedeTool } from './tools/prepareIntentSupersede';
+import { registerCommitIntentSupersedeTool } from './tools/commitIntentSupersede';
+import { registerPreparePlanSupersedeTool } from './tools/preparePlanSupersede';
+import { registerCommitPlanSupersedeTool } from './tools/commitPlanSupersede';
+import { registerPrepareCloseLockTool } from './tools/prepareCloseLock';
+import { registerCommitCloseLockTool } from './tools/commitCloseLock';
+import { registerPreparePlanPromoteTool } from './tools/preparePlanPromote';
+import { registerCommitPlanPromoteTool } from './tools/commitPlanPromote';
 
 export function buildControlServer(): McpServer {
   const server = new McpServer({ name: 'sigma-control-server', version: SIGMA_VERSION });
@@ -75,6 +93,31 @@ export function buildControlServer(): McpServer {
   // Stage E W1 — record_evidence. No CLI equivalent — see
   // recordEvidence.ts's header.
   registerRecordEvidenceTool(server);
+  // Stage F — W2 governance transition batch (5 of 10 operations; see
+  // SIGMA-MCP-OPERATION-CAPABILITY-MATRIX §3.3). Each follows Stage D's
+  // prepare -> Director approval (trusted local CLI) -> commit shape.
+  registerPrepareIntentAmendmentTool(server);
+  registerCommitIntentAmendmentTool(server);
+  registerPrepareIntentScoreTool(server);
+  registerCommitIntentScoreTool(server);
+  registerPreparePlanLockTool(server);
+  registerCommitPlanLockTool(server);
+  registerPrepareExecLockTool(server);
+  registerCommitExecLockTool(server);
+  registerPrepareCloseNewTool(server);
+  registerCommitCloseNewTool(server);
+  // Stage F continued — 3 more W2 operations (8 of 10 total in this tier).
+  registerPrepareIntentSupersedeTool(server);
+  registerCommitIntentSupersedeTool(server);
+  registerPreparePlanSupersedeTool(server);
+  registerCommitPlanSupersedeTool(server);
+  registerPrepareCloseLockTool(server);
+  registerCommitCloseLockTool(server);
+  // Stage F — plan_promote closes out 9 of 10 W2 operations (intent_activate
+  // deliberately NOT built as an MCP primitive — Director decision
+  // 2026-09-17, see SIGMA-MCP-OPERATION-CAPABILITY-MATRIX §3.3).
+  registerPreparePlanPromoteTool(server);
+  registerCommitPlanPromoteTool(server);
   return server;
 }
 

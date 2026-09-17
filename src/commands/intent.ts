@@ -1,5 +1,4 @@
 import { Command } from 'commander';
-import fs from 'fs-extra';
 import path from 'path';
 import readline from 'readline';
 import {
@@ -7,18 +6,12 @@ import {
   listChainVersions,
   resolveActiveChainVersion,
   readChain,
-  writeChain,
   readActiveChain,
   writeActivateStatus,
   assertChainCanMutate,
   previewIntentSupersedeCascade,
-  supersedeIntentVersion,
   arcScoreBand,
-  hasGate35Score,
-  recordArcScore,
-  certifyIntentDoc,
   isIntentDocUncertified,
-  recordIntentAmendment,
   normalizeVersionArg,
 } from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
@@ -27,11 +20,12 @@ import {
   validateSigmaDocFile,
 } from '../utils/docCheck';
 import { renderIntentHistoryFile } from '../utils/intentHistory';
-import { renderAmendmentHistory } from '../utils/amendmentHistory';
-import { INTENT_AMENDMENT_LOG_FILE } from '../config';
 import { createIntentDraft, IntentDraftError } from '../services/intentDraftService';
 import { ratifyIntentDraft } from '../services/intentRatifyService';
 import { humanizeIntent, IntentHumanizeError } from '../services/intentHumanizeService';
+import { recordIntentAmendmentUseCase } from '../services/intentAmendmentService';
+import { recordArcScoreUseCase } from '../services/intentScoreService';
+import { supersedeIntentUseCase } from '../services/intentSupersedeService';
 
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
 // onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
@@ -212,34 +206,7 @@ export function intentCommand(): Command {
     .action((opts: { change: string; v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
-        const { chainVersion, data: chain } = opts.v
-          ? { chainVersion: opts.v, data: readChain(projectRoot, opts.v) }
-          : readActiveChain(projectRoot);
-        assertChainCanMutate(chain);
-
-        // Execution order matters: the entry must exist in chain.intent.amendments
-        // (so effective_amendment points at it) before Section 14 is rendered,
-        // and the hash must be computed AFTER rendering — otherwise the render
-        // itself would immediately trip UNCERTIFIED_EDIT on the document it just
-        // certified.
-        const entry = recordIntentAmendment(chain, opts.change);
-        const absPath = intentDocPath(projectRoot, chain);
-        renderAmendmentHistory(absPath, chain);
-        certifyIntentDoc(chain, absPath);
-        writeChain(projectRoot, chainVersion, chain);
-
-        fs.ensureFileSync(path.join(projectRoot, INTENT_AMENDMENT_LOG_FILE));
-        fs.appendFileSync(
-          path.join(projectRoot, INTENT_AMENDMENT_LOG_FILE),
-          JSON.stringify({
-            chain: chainVersion,
-            id: entry.id,
-            created_at: entry.created_at,
-            director_approved_at: entry.director_approved_at,
-            change: entry.change,
-            doc_sha256: chain.intent.certified_doc_sha256,
-          }) + '\n',
-        );
+        const { chainVersion, entry } = recordIntentAmendmentUseCase(projectRoot, opts.change, opts.v);
 
         console.log(`${entry.id} recorded for DIR-INTENT ${chainVersion}.`);
         console.log(`Change: ${entry.change}`);
@@ -257,20 +224,13 @@ export function intentCommand(): Command {
     .action((n: string, opts: { notes: string; v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
-        const { chainVersion, data: chain } = opts.v
-          ? { chainVersion: opts.v, data: readChain(projectRoot, opts.v) }
-          : readActiveChain(projectRoot);
-        assertChainCanMutate(chain);
-
         const score = Number(n);
-        recordArcScore(chain, score, opts.notes);
-        writeChain(projectRoot, chainVersion, chain);
-        renderIntentHistoryFile(projectRoot);
+        const result = recordArcScoreUseCase(projectRoot, score, opts.notes, opts.v);
 
-        const band = arcScoreBand(score);
-        console.log(`ARC Score recorded: ${band} (${score})`);
-        console.log(`Notes: ${opts.notes}`);
-        console.log(`Gate 3.5 (close new): ${hasGate35Score(chain) ? 'OPEN' : 'BLOCKED'}`);
+        const band = arcScoreBand(result.score);
+        console.log(`ARC Score recorded: ${band} (${result.score})`);
+        console.log(`Notes: ${result.notes}`);
+        console.log(`Gate 3.5 (close new): ${result.score >= 50 ? 'OPEN' : 'BLOCKED'}`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
@@ -317,9 +277,7 @@ export function intentCommand(): Command {
           process.exit(1);
         }
 
-        supersedeIntentVersion(chain, opts.reason);
-        writeChain(projectRoot, opts.v, chain);
-        renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — trigger 3/4
+        supersedeIntentUseCase(projectRoot, opts.reason, opts.v);
 
         console.log(`DIR-INTENT ${opts.v} superseded. Reason: ${opts.reason}`);
         if (total > 0) {

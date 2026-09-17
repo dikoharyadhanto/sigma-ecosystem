@@ -154,14 +154,14 @@ export interface ArtifactFileResult {
  * file that was measured is the file that is read, even if the path is
  * swapped underneath between the pre-open check and the open itself.
  */
-export function readCanonicalArtifactFile(
-  root: string,
-  type: ArtifactType,
-  version: string,
-  trackerFile: string
-): ArtifactFileResult {
-  const { abs, rel } = assertCanonicalLocation(root, type, version, trackerFile);
-
+/**
+ * Shared read body for both readCanonicalArtifactFile() and
+ * readCanonicalPendingPlanFile(): open, verify regular-file + size, re-check
+ * the canonical location after open (TOCTOU), read fully, hash. `recheck` is
+ * the type-specific location assertion, re-run post-open — the only part
+ * that differs between a versioned tracker artifact and a pending plan.
+ */
+function readAtCanonicalLocation(abs: string, rel: string, recheck: () => void): ArtifactFileResult {
   let fd: number;
   try {
     fd = fs.openSync(abs, 'r');
@@ -187,7 +187,7 @@ export function readCanonicalArtifactFile(
 
     // Re-checked after open — residual TOCTOU window between the pre-open
     // check and openSync, not claimed to be zero, only re-verified.
-    assertCanonicalLocation(root, type, version, trackerFile);
+    recheck();
 
     const buf = Buffer.alloc(stat.size);
     let read = 0;
@@ -210,4 +210,49 @@ export function readCanonicalArtifactFile(
   } finally {
     fs.closeSync(fd);
   }
+}
+
+export function readCanonicalArtifactFile(
+  root: string,
+  type: ArtifactType,
+  version: string,
+  trackerFile: string
+): ArtifactFileResult {
+  const { abs, rel } = assertCanonicalLocation(root, type, version, trackerFile);
+  return readAtCanonicalLocation(abs, rel, () => assertCanonicalLocation(root, type, version, trackerFile));
+}
+
+/**
+ * A pending plan (`sigma plan new --pending`) is not a versioned tracker
+ * artifact — it has no ArtifactType/version, only an `id` and a fixed
+ * location (`Sigma/pending/FMN-PLAN-<id>.md`, written exclusively by
+ * registerPendingPlan()). Used by plan_promote to freeze/verify its content
+ * hash with the same boundary posture as readCanonicalArtifactFile(), one
+ * fixed path instead of a multi-directory allowlist.
+ */
+export function assertCanonicalPendingPlanLocation(root: string, id: string, trackerFile: string): { abs: string; rel: string } {
+  if (!/^[a-z0-9]+$/.test(id)) {
+    throw new McpQueryError(ERROR_CODES.INVALID_OPERATION, 'Pending plan id is not a valid token.');
+  }
+  const expected = `${PROJECT_SIGMA_DIR}/pending/FMN-PLAN-${id}.md`;
+  const declared = trackerFile.split('\\').join('/');
+  if (declared !== expected) {
+    throw new McpQueryError(ERROR_CODES.BOUNDARY_VIOLATION, 'Tracker entry does not point at the canonical location for this pending plan id.');
+  }
+
+  const abs = path.resolve(root, declared);
+  const realRoot = canonicalize(root);
+  const realAbs = canonicalize(abs);
+  const rel = path.relative(realRoot, realAbs).split(path.sep).join('/');
+
+  if (rel !== declared) {
+    throw new McpQueryError(ERROR_CODES.BOUNDARY_VIOLATION, 'Pending plan path does not resolve to its canonical location.');
+  }
+
+  return { abs, rel };
+}
+
+export function readCanonicalPendingPlanFile(root: string, id: string, trackerFile: string): ArtifactFileResult {
+  const { abs, rel } = assertCanonicalPendingPlanLocation(root, id, trackerFile);
+  return readAtCanonicalLocation(abs, rel, () => assertCanonicalPendingPlanLocation(root, id, trackerFile));
 }

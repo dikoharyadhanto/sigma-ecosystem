@@ -488,7 +488,7 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
     env?.cleanup();
   });
 
-  it('lists exactly the control-plane pilot tools (Stage C + Stage D + Stage E W1) and executes a create through a real client', async () => {
+  it('lists exactly the control-plane pilot tools (Stage C + Stage D + Stage E W1 + Stage F W2 batch) and executes a create through a real client', async () => {
     env = setupTestEnv();
     bootstrapProject(env);
     setControlBinding(env.projectDir, 'ARC');
@@ -501,7 +501,16 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       'sigma_close_humanize',
+      'sigma_commit_close_lock',
+      'sigma_commit_close_new',
+      'sigma_commit_exec_lock',
+      'sigma_commit_intent_amendment',
       'sigma_commit_intent_ratify',
+      'sigma_commit_intent_score',
+      'sigma_commit_intent_supersede',
+      'sigma_commit_plan_lock',
+      'sigma_commit_plan_promote',
+      'sigma_commit_plan_supersede',
       'sigma_create_exec_draft',
       'sigma_create_intent_draft',
       'sigma_create_plan_draft',
@@ -509,14 +518,35 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
       'sigma_exec_humanize',
       'sigma_inbox_archive',
       'sigma_intent_humanize',
+      'sigma_prepare_close_lock',
+      'sigma_prepare_close_new',
+      'sigma_prepare_exec_lock',
+      'sigma_prepare_intent_amendment',
       'sigma_prepare_intent_ratify',
+      'sigma_prepare_intent_score',
+      'sigma_prepare_intent_supersede',
+      'sigma_prepare_plan_lock',
+      'sigma_prepare_plan_promote',
+      'sigma_prepare_plan_supersede',
       'sigma_record_evidence',
       'sigma_render_roadmap',
       'sigma_update_artifact_draft',
       'sigma_update_reference',
     ]);
+    // Stage F's supersede/close-lock pairs are genuinely high-blast-radius
+    // (cascading, hard-to-reverse status changes) and are annotated
+    // destructiveHint: true accordingly — every other tool remains false.
+    const destructiveTools = new Set([
+      'sigma_prepare_intent_supersede', 'sigma_commit_intent_supersede',
+      'sigma_prepare_plan_supersede', 'sigma_commit_plan_supersede',
+      'sigma_prepare_close_lock', 'sigma_commit_close_lock',
+    ]);
     for (const t of tools) {
-      expect(t.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });
+      expect(t.annotations).toMatchObject({
+        readOnlyHint: false,
+        destructiveHint: destructiveTools.has(t.name),
+        idempotentHint: true,
+      });
     }
 
     const rev = revisionOf(env.projectDir);

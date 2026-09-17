@@ -5,26 +5,23 @@ import {
   ChainState,
   readActiveChain,
   writeChain,
-  nextPlanVersion,
-  lockPlanVersion,
   resolveTargetVersion,
-  supersedePlanVersion,
   registerPendingPlan,
-  promotePendingPlan,
   updatePlanMetadata,
   assertChainCanMutate,
-  getOperationalGate,
   normalizeVersionArg,
 } from '../engine/chain';
 import { findProjectRoot, toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { renderRoadmapFile } from '../utils/roadmap';
 import {
-  ensureSigmaDocEligible,
   printSigmaDocReport,
   validateSigmaDocFile,
 } from '../utils/docCheck';
 import { createPlanDraft, PlanDraftError } from '../services/planDraftService';
+import { lockPlanDraftUseCase, resolvePlanLockTarget } from '../services/planLockService';
+import { supersedePlanUseCase } from '../services/planSupersedeService';
+import { promotePlanUseCase } from '../services/planPromoteService';
 
 function generatePendingId(): string {
   return Math.random().toString(36).slice(2, 6).toLowerCase();
@@ -47,14 +44,6 @@ function assertRequiredStageMetadata(title: string | undefined, focus: string | 
   if (!focus?.trim()) {
     throw new Error(`sigma plan ${command} requires --focus <focus>`);
   }
-}
-
-// PLAN-EVAL-01 §3.5 — Gate 1.5 redefined to match the single-object roadmap
-// (no more ACTIVE state to search for): a chain's roadmap unblocks `plan
-// new` once it exists and hasn't been cascaded to SUPERSEDED.
-function getRoadmapPathIfEligible(projectRoot: string, chain: ChainState): string | null {
-  if (!chain.roadmap || chain.roadmap.state === 'SUPERSEDED') return null;
-  return path.join(projectRoot, chain.roadmap.file ?? path.join('Sigma', 'roadmap', `ROADMAP-${chain.roadmap.version}.md`));
 }
 
 function planDocPath(projectRoot: string, chain: ChainState, version?: string): string {
@@ -144,29 +133,17 @@ export function planCommand(): Command {
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
-        const { chainVersion, data: chain } = readActiveChain(projectRoot);
-        assertChainCanMutate(chain);
+        // Printed unconditionally when a resolvable target exists, pass or
+        // fail on what follows — same precedent as `intent ratify`.
+        // lockPlanDraftUseCase() re-validates internally rather than
+        // trusting this report object, so there is no staleness risk from
+        // computing it twice.
+        const { data: chain } = readActiveChain(projectRoot);
+        const previewVersion = resolvePlanLockTarget(chain, opts.v);
+        printSigmaDocReport(validateSigmaDocFile(planDocPath(projectRoot, chain, previewVersion), 'plan'), projectRoot);
 
-        const resolution = resolveTargetVersion(chain.plan.versions, opts.v);
-        if (resolution.kind === 'empty') {
-          throw new Error('No DRAFT FMN-PLAN to lock. Run: sigma plan new');
-        }
-        if (resolution.kind === 'ambiguous') {
-          throw new Error(
-            `${resolution.candidates.length} DRAFT FMN-PLANs are open: ${resolution.candidates.join(', ')}\n` +
-            `Specify which one to lock: sigma plan lock --v ${resolution.candidates[0]}\n` +
-            'Draft plans are no longer locked in creation order — selection is explicit.'
-          );
-        }
-        const lockTargetVersion = resolution.version;
-
-        const absPath = planDocPath(projectRoot, chain, lockTargetVersion);
-        const report = validateSigmaDocFile(absPath, 'plan');
-        printSigmaDocReport(report, projectRoot);
-        ensureSigmaDocEligible(report, 'plan');
-        const version = lockPlanVersion(chain, lockTargetVersion);
-        writeChain(projectRoot, chainVersion, chain);
-        console.log(`FMN-PLAN ${version} LOCKED. Gate 2 open. Next: sigma exec new`);
+        const result = lockPlanDraftUseCase(projectRoot, opts.v);
+        console.log(`FMN-PLAN ${result.version} LOCKED. Gate 2 open. Next: sigma exec new`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
@@ -180,30 +157,17 @@ export function planCommand(): Command {
     .action((opts: { v: string; reason: string }) => {
       try {
         const projectRoot = findProjectRoot();
-        const { chainVersion, data: chain } = readActiveChain(projectRoot);
-        assertChainCanMutate(chain);
+        const { data: chainBefore } = readActiveChain(projectRoot);
+        const roadmapVersion = chainBefore.roadmap?.version;
 
-        const cascadedExecs = chain.exec.versions
-          .filter(v => v.plan_version_ref === opts.v && v.state !== 'SUPERSEDED')
-          .map(v => v.version);
+        const result = supersedePlanUseCase(projectRoot, opts.v, opts.reason);
 
-        supersedePlanVersion(chain, opts.v, opts.reason);
-        writeChain(projectRoot, chainVersion, chain);
-
-        console.log(`FMN-PLAN ${opts.v} superseded. Reason: ${opts.reason}`);
-        if (cascadedExecs.length > 0) {
-          console.log(`Auto-superseded DEV-EXEC: ${cascadedExecs.join(', ')}`);
+        console.log(`FMN-PLAN ${result.version} superseded. Reason: ${opts.reason}`);
+        if (result.cascadedExecs.length > 0) {
+          console.log(`Auto-superseded DEV-EXEC: ${result.cascadedExecs.join(', ')}`);
         }
-
-        if (chain.roadmap) {
-          const roadmapPath = path.join(
-            projectRoot,
-            chain.roadmap.file ?? path.join('Sigma', 'roadmap', `ROADMAP-${chain.roadmap.version}.md`),
-          );
-          if (fs.existsSync(roadmapPath)) {
-            renderRoadmapFile(roadmapPath, chain);
-            console.log(`ROADMAP ${chain.roadmap.version} re-rendered with SUPERSEDED status.`);
-          }
+        if (roadmapVersion) {
+          console.log(`ROADMAP ${roadmapVersion} re-rendered with SUPERSEDED status.`);
         }
       } catch (e) {
         console.error((e as Error).message);
@@ -219,54 +183,16 @@ export function planCommand(): Command {
     .action((opts: { id: string; title?: string; focus?: string }) => {
       try {
         const projectRoot = findProjectRoot();
-        const { chainVersion, data: chain } = readActiveChain(projectRoot);
-        assertChainCanMutate(chain);
         assertRequiredStageMetadata(opts.title, opts.focus, 'promote');
+        const result = promotePlanUseCase(projectRoot, opts.id, opts.title ?? '', opts.focus ?? '');
 
-        const pending = chain.plan.pending.find(p => p.id === opts.id);
-        if (!pending) {
-          throw new Error(
-            `Pending plan ID "${opts.id}" not found.\n` +
-            `Run: sigma plan status   to list pending plans`
-          );
-        }
-
-        if (!getOperationalGate(chain, 'gate_1_open') || chain.intent.state !== 'RATIFIED') {
-          throw new Error('GATE 1 BLOCKED: No ratified DIR-INTENT. Run: sigma intent ratify');
-        }
-
-        const roadmapAbsPathForGate = getRoadmapPathIfEligible(projectRoot, chain);
-        if (!roadmapAbsPathForGate) {
-          throw new Error(
-            'Gate 1.5 blocked: A ROADMAP must exist for this chain to promote a plan.\n' +
-            'Run: sigma roadmap new'
-          );
-        }
-
-        // Compute next version before any writes
-        const newVersion = nextPlanVersion(chain, chain.intent.version);
-        const oldAbsPath = path.join(projectRoot, pending.file);
-        const newRelPath = toPosix(path.join('Sigma', 'contract', `FMN-PLAN-${newVersion}.md`));
-        const newAbsPath = path.join(projectRoot, newRelPath);
-
-        // Artifact writes first: rename file
-        fs.ensureDirSync(path.dirname(newAbsPath));
-        fs.moveSync(oldAbsPath, newAbsPath);
-
-        // Write chain last
-        promotePendingPlan(chain, opts.id, newVersion, newRelPath, chain.intent.version, opts.title, opts.focus);
-        writeChain(projectRoot, chainVersion, chain);
-
-        // Render after state is written (idempotent)
-        renderRoadmapFile(roadmapAbsPathForGate, chain);
-
-        console.log(`Promoted: ${pending.file} → ${newRelPath} (${newVersion})`);
+        console.log(`Promoted: ${result.oldRelPath} → ${result.newRelPath} (${result.version})`);
         console.log('Running automatic validation...\n');
-        const report = validateSigmaDocFile(newAbsPath, 'plan');
+        const report = validateSigmaDocFile(path.join(projectRoot, result.newRelPath), 'plan');
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
-        console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${newVersion.replace(/^v/, '')}`);
-        console.log(`Run: sigma plan lock --v ${newVersion}   to lock it when ready`);
+        console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${result.version.replace(/^v/, '')}`);
+        console.log(`Run: sigma plan lock --v ${result.version}   to lock it when ready`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
