@@ -7,7 +7,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeGetConfig = computeGetConfig;
 exports.registerGetConfigTool = registerGetConfigTool;
-const zod_1 = require("zod");
 const projectConfig_1 = require("../../engine/projectConfig");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -34,15 +33,13 @@ function registerGetConfigTool(server) {
             'print them either). Read-only. Returns { active, interaction_language, document_language, ' +
             'output_document_language, notion_humanize_gate_enabled, mailbox_auto_outdate_keep, memo_unread_limit, ' +
             'source }.',
-        inputSchema: {
-            project_root: zod_1.z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-        },
+        inputSchema: {},
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, contract_1.respond)('sigma_get_config', project_root, (root) => computeGetConfig(root)));
+    }, async () => (0, contract_1.respond)('sigma_get_config', undefined, (root) => computeGetConfig(root)));
 }
 //# sourceMappingURL=getConfig.js.map

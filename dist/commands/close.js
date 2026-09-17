@@ -9,10 +9,10 @@ const path_1 = __importDefault(require("path"));
 const readline_1 = __importDefault(require("readline"));
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
-const artifacts_1 = require("../utils/artifacts");
-const projectConfig_1 = require("../engine/projectConfig");
 const docCheck_1 = require("../utils/docCheck");
 const closeHumanizeService_1 = require("../services/closeHumanizeService");
+const closeNewService_1 = require("../services/closeNewService");
+const closeLockService_1 = require("../services/closeLockService");
 // PLAN-EVAL-01 Fase 3 — `close lock` already auto-locks the chain's roadmap
 // as a side effect *before* this migration (see `lockActiveRoadmap` call
 // below) — this is existing behavior being preserved under the new storage,
@@ -40,57 +40,14 @@ function closeCommand() {
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            (0, chain_1.assertChainCanMutate)(chain);
-            if (!(0, chain_1.hasCleanGate3Chain)(chain)) {
-                const blockers = (0, chain_1.describeGate3Blockers)(chain);
-                const lines = ['GATE 3 BLOCKED: the chain still has open work.'];
-                for (const reason of blockers)
-                    lines.push(`  ${reason}`);
-                lines.push('Every locked plan needs exactly one locked exec, and nothing may be left in DRAFT.');
-                if (blockers.some(r => r.startsWith('DRAFT FMN-PLAN'))) {
-                    lines.push('Abandon what is no longer wanted: sigma plan supersede --v <version> --reason "..."');
-                }
-                if (blockers.some(r => r.includes('has no LOCKED DEV-EXEC'))) {
-                    lines.push('Run: sigma exec new / sigma exec lock to finish an unpaired plan.');
-                }
-                throw new Error(lines.join('\n'));
-            }
-            if (!(0, chain_1.hasGate35Score)(chain)) {
-                throw new Error('GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. ' +
-                    'Run: sigma intent score <n> --notes "..."');
-            }
-            // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.4/§4 Fase 6 (CR-01) — same
-            // enforcement point pattern as `plan new`: never at `exec lock`
-            // itself. Only the latest LOCKED exec is checked here (the intent's
-            // own humanize status was already this chain's `plan new` gate).
-            const humanizeGate = (0, projectConfig_1.readProjectConfig)(projectRoot).notion_humanize_gate;
-            if (humanizeGate?.enabled) {
-                const latestLockedExec = chain.exec.versions
-                    .filter(v => v.state === 'LOCKED')
-                    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
-                if (latestLockedExec && !latestLockedExec.human?.pushed_to_notion_at) {
-                    throw new Error(`HUMANIZE GATE BLOCKED (notion_humanize_gate.enabled): DEV-EXEC ${latestLockedExec.version} ` +
-                        'has no human projection pushed to Notion yet.\n' +
-                        `  Run: sigma exec humanize --v ${latestLockedExec.version}   (then)   sigma notion push`);
-                }
-            }
-            const version = chain.chain_version;
-            const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'close', `DIR-CLOSE-${version}.md`));
-            const absPath = path_1.default.join(projectRoot, relPath);
-            (0, artifacts_1.copyTemplateToArtifact)('DIR-CLOSE-TEMPLATE.md', absPath);
-            (0, chain_1.registerCloseDraft)(chain, relPath);
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
-            console.log(`Created: ${relPath}`);
-            if (chain.intent.arc_score !== undefined && (0, chain_1.arcScoreBand)(chain.intent.arc_score) === 'SATISFIED_NEEDS_REVIEW') {
-                console.log(`Note: ARC Satisfaction Score is SATISFIED_NEEDS_REVIEW (${chain.intent.arc_score}) — ARC does not ` +
+            const result = (0, closeNewService_1.createCloseDraftUseCase)(projectRoot);
+            console.log(`Created: ${result.relPath}`);
+            if (result.arcScoreBand === 'SATISFIED_NEEDS_REVIEW') {
+                console.log(`Note: ARC Satisfaction Score is SATISFIED_NEEDS_REVIEW (${result.arcScore}) — ARC does not ` +
                     'yet recommend closure. Director may still proceed via close lock through explicit authorization.\n');
             }
             console.log('Running automatic validation...\n');
-            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'close');
-            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
-            if (!report.ok)
-                process.exit(1);
+            (0, docCheck_1.printSigmaDocReport)(result.docReport, projectRoot);
         }
         catch (e) {
             console.error(e.message);
@@ -103,7 +60,7 @@ function closeCommand() {
         .action(async (opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
             (0, chain_1.assertChainCanMutate)(chain);
             if (!chain.close || chain.close.state !== 'DRAFT') {
                 throw new Error('Active DIR-CLOSE is not in DRAFT state. Cannot lock.');
@@ -140,15 +97,11 @@ function closeCommand() {
                     process.exit(0);
                 }
             }
-            if (roadmapToLock) {
-                (0, chain_1.lockActiveRoadmap)(chain);
+            const result = (0, closeLockService_1.lockCloseUseCase)(projectRoot);
+            if (result.roadmapLocked) {
+                console.log(`ROADMAP ${result.roadmapLocked} LOCKED.`);
             }
-            (0, chain_1.lockActiveClose)(chain);
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
-            if (roadmapToLock) {
-                console.log(`ROADMAP ${roadmapToLock.version} LOCKED.`);
-            }
-            console.log(`DIR-CLOSE ${closeVersion} LOCKED. Lifecycle → CLOSED. Project is complete.`);
+            console.log(`DIR-CLOSE ${result.version} LOCKED. Lifecycle → CLOSED. Project is complete.`);
         }
         catch (e) {
             console.error(e.message);

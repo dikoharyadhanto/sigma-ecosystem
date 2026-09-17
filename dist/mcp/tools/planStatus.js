@@ -17,7 +17,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computePlanStatus = computePlanStatus;
 exports.registerPlanStatusTool = registerPlanStatusTool;
-const zod_1 = require("zod");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../../engine/chain");
@@ -81,15 +80,13 @@ function registerPlanStatusTool(server) {
             'DRAFTs, LOCKED plans with their DEV-EXEC pairing, pending (unversioned) plans, a count of SUPERSEDED ' +
             'plans not otherwise listed, and Gate 2. Read-only. Returns { active, active_chain, drafts, locked, ' +
             'pending, superseded_count, gate_2_open, source }.',
-        inputSchema: {
-            project_root: zod_1.z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-        },
+        inputSchema: {},
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, contract_1.respond)('sigma_plan_status', project_root, (root) => computePlanStatus(root)));
+    }, async () => (0, contract_1.respond)('sigma_plan_status', undefined, (root) => computePlanStatus(root)));
 }
 //# sourceMappingURL=planStatus.js.map

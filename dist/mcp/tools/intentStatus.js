@@ -11,7 +11,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeIntentStatus = computeIntentStatus;
 exports.registerIntentStatusTool = registerIntentStatusTool;
-const zod_1 = require("zod");
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
@@ -48,15 +47,13 @@ function registerIntentStatusTool(server) {
             'certified/ratified, and Gate 1. Read-only. Returns { active, active_chain, version, state, ratified_at, ' +
             'file, doc_uncertified, doc_uncertified_since, gate_1_open, source }, or { active: false, gate_1_open: ' +
             'false, source } when no chain exists yet.',
-        inputSchema: {
-            project_root: zod_1.z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-        },
+        inputSchema: {},
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, contract_1.respond)('sigma_intent_status', project_root, (root) => computeIntentStatus(root)));
+    }, async () => (0, contract_1.respond)('sigma_intent_status', undefined, (root) => computeIntentStatus(root)));
 }
 //# sourceMappingURL=intentStatus.js.map

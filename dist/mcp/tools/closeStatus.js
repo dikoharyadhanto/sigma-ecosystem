@@ -5,7 +5,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeCloseStatus = computeCloseStatus;
 exports.registerCloseStatusTool = registerCloseStatusTool;
-const zod_1 = require("zod");
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -37,15 +36,13 @@ function registerCloseStatusTool(server) {
         description: 'Return the active chain\'s DIR-CLOSE status — the query-plane equivalent of `sigma close status`: ' +
             'version, state, lock timestamp, and the chain\'s overall lifecycle_state. Read-only. Returns { active, ' +
             'active_chain, close, lifecycle_state, source } — close is null when no DIR-CLOSE has been created yet.',
-        inputSchema: {
-            project_root: zod_1.z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-        },
+        inputSchema: {},
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, contract_1.respond)('sigma_close_status', project_root, (root) => computeCloseStatus(root)));
+    }, async () => (0, contract_1.respond)('sigma_close_status', undefined, (root) => computeCloseStatus(root)));
 }
 //# sourceMappingURL=closeStatus.js.map

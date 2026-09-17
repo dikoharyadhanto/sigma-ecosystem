@@ -8,7 +8,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeListIntents = computeListIntents;
 exports.registerListIntentsTool = registerListIntentsTool;
-const zod_1 = require("zod");
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -49,15 +48,13 @@ function registerListIntentsTool(server) {
             'B2 tool that is cross-chain: every other tool in this project reports on the active chain only. ' +
             'Read-only. Returns { chains: [{ chain_version, intent_state, lifecycle_state, gate_1_open, gate_2_open, ' +
             'gate_3_satisfied, active }], source }.',
-        inputSchema: {
-            project_root: zod_1.z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-        },
+        inputSchema: {},
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, contract_1.respond)('sigma_list_intents', project_root, (root) => computeListIntents(root)));
+    }, async () => (0, contract_1.respond)('sigma_list_intents', undefined, (root) => computeListIntents(root)));
 }
 //# sourceMappingURL=listIntents.js.map

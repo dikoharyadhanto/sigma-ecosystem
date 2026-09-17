@@ -59,19 +59,18 @@ export interface ArtifactFileResult {
     sha256: string | null;
     content: string | null;
 }
-/**
- * Opens, verifies, hashes and reads the one file a tracker entry may occupy
- * for a given type+version — the single place both sigma_read_artifact and
- * sigma_get_evidence go through, so the two cannot drift on what counts as a
- * safe read (reviewer finding R-B2-04: evidence originally re-implemented this
- * with a weaker posture — no BOUNDARY_VIOLATION on a non-regular file, no
- * canonical recheck after open — and R-10 already showed what a second copy
- * of a boundary table does over time).
- *
- * Bytes are read from the descriptor that was stat'd, and the canonical
- * location is re-checked after open, before those bytes are trusted — the
- * file that was measured is the file that is read, even if the path is
- * swapped underneath between the pre-open check and the open itself.
- */
 export declare function readCanonicalArtifactFile(root: string, type: ArtifactType, version: string, trackerFile: string): ArtifactFileResult;
+/**
+ * A pending plan (`sigma plan new --pending`) is not a versioned tracker
+ * artifact — it has no ArtifactType/version, only an `id` and a fixed
+ * location (`Sigma/pending/FMN-PLAN-<id>.md`, written exclusively by
+ * registerPendingPlan()). Used by plan_promote to freeze/verify its content
+ * hash with the same boundary posture as readCanonicalArtifactFile(), one
+ * fixed path instead of a multi-directory allowlist.
+ */
+export declare function assertCanonicalPendingPlanLocation(root: string, id: string, trackerFile: string): {
+    abs: string;
+    rel: string;
+};
+export declare function readCanonicalPendingPlanFile(root: string, id: string, trackerFile: string): ArtifactFileResult;
 //# sourceMappingURL=artifactPath.d.ts.map

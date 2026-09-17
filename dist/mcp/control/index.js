@@ -40,6 +40,24 @@ const execHumanize_1 = require("./tools/execHumanize");
 const closeHumanize_1 = require("./tools/closeHumanize");
 const archiveMessage_1 = require("./tools/archiveMessage");
 const recordEvidence_1 = require("./tools/recordEvidence");
+const prepareIntentAmendment_1 = require("./tools/prepareIntentAmendment");
+const commitIntentAmendment_1 = require("./tools/commitIntentAmendment");
+const prepareIntentScore_1 = require("./tools/prepareIntentScore");
+const commitIntentScore_1 = require("./tools/commitIntentScore");
+const preparePlanLock_1 = require("./tools/preparePlanLock");
+const commitPlanLock_1 = require("./tools/commitPlanLock");
+const prepareExecLock_1 = require("./tools/prepareExecLock");
+const commitExecLock_1 = require("./tools/commitExecLock");
+const prepareCloseNew_1 = require("./tools/prepareCloseNew");
+const commitCloseNew_1 = require("./tools/commitCloseNew");
+const prepareIntentSupersede_1 = require("./tools/prepareIntentSupersede");
+const commitIntentSupersede_1 = require("./tools/commitIntentSupersede");
+const preparePlanSupersede_1 = require("./tools/preparePlanSupersede");
+const commitPlanSupersede_1 = require("./tools/commitPlanSupersede");
+const prepareCloseLock_1 = require("./tools/prepareCloseLock");
+const commitCloseLock_1 = require("./tools/commitCloseLock");
+const preparePlanPromote_1 = require("./tools/preparePlanPromote");
+const commitPlanPromote_1 = require("./tools/commitPlanPromote");
 function buildControlServer() {
     const server = new mcp_js_1.McpServer({ name: 'sigma-control-server', version: config_1.SIGMA_VERSION });
     // Stage C — W1 bounded command pilot (create + update DRAFT).
@@ -78,6 +96,31 @@ function buildControlServer() {
     // Stage E W1 — record_evidence. No CLI equivalent — see
     // recordEvidence.ts's header.
     (0, recordEvidence_1.registerRecordEvidenceTool)(server);
+    // Stage F — W2 governance transition batch (5 of 10 operations; see
+    // SIGMA-MCP-OPERATION-CAPABILITY-MATRIX §3.3). Each follows Stage D's
+    // prepare -> Director approval (trusted local CLI) -> commit shape.
+    (0, prepareIntentAmendment_1.registerPrepareIntentAmendmentTool)(server);
+    (0, commitIntentAmendment_1.registerCommitIntentAmendmentTool)(server);
+    (0, prepareIntentScore_1.registerPrepareIntentScoreTool)(server);
+    (0, commitIntentScore_1.registerCommitIntentScoreTool)(server);
+    (0, preparePlanLock_1.registerPreparePlanLockTool)(server);
+    (0, commitPlanLock_1.registerCommitPlanLockTool)(server);
+    (0, prepareExecLock_1.registerPrepareExecLockTool)(server);
+    (0, commitExecLock_1.registerCommitExecLockTool)(server);
+    (0, prepareCloseNew_1.registerPrepareCloseNewTool)(server);
+    (0, commitCloseNew_1.registerCommitCloseNewTool)(server);
+    // Stage F continued — 3 more W2 operations (8 of 10 total in this tier).
+    (0, prepareIntentSupersede_1.registerPrepareIntentSupersedeTool)(server);
+    (0, commitIntentSupersede_1.registerCommitIntentSupersedeTool)(server);
+    (0, preparePlanSupersede_1.registerPreparePlanSupersedeTool)(server);
+    (0, commitPlanSupersede_1.registerCommitPlanSupersedeTool)(server);
+    (0, prepareCloseLock_1.registerPrepareCloseLockTool)(server);
+    (0, commitCloseLock_1.registerCommitCloseLockTool)(server);
+    // Stage F — plan_promote closes out 9 of 10 W2 operations (intent_activate
+    // deliberately NOT built as an MCP primitive — Director decision
+    // 2026-09-17, see SIGMA-MCP-OPERATION-CAPABILITY-MATRIX §3.3).
+    (0, preparePlanPromote_1.registerPreparePlanPromoteTool)(server);
+    (0, commitPlanPromote_1.registerCommitPlanPromoteTool)(server);
     return server;
 }
 /**

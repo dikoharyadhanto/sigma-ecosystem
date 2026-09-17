@@ -5,18 +5,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.intentCommand = intentCommand;
 const commander_1 = require("commander");
-const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const readline_1 = __importDefault(require("readline"));
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const docCheck_1 = require("../utils/docCheck");
 const intentHistory_1 = require("../utils/intentHistory");
-const amendmentHistory_1 = require("../utils/amendmentHistory");
-const config_1 = require("../config");
 const intentDraftService_1 = require("../services/intentDraftService");
 const intentRatifyService_1 = require("../services/intentRatifyService");
 const intentHumanizeService_1 = require("../services/intentHumanizeService");
+const intentAmendmentService_1 = require("../services/intentAmendmentService");
+const intentScoreService_1 = require("../services/intentScoreService");
+const intentSupersedeService_1 = require("../services/intentSupersedeService");
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
 // onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
 // (a different progress-v<N>.json), not an array entry within one file —
@@ -187,29 +187,7 @@ function intentCommand() {
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = opts.v
-                ? { chainVersion: opts.v, data: (0, chain_1.readChain)(projectRoot, opts.v) }
-                : (0, chain_1.readActiveChain)(projectRoot);
-            (0, chain_1.assertChainCanMutate)(chain);
-            // Execution order matters: the entry must exist in chain.intent.amendments
-            // (so effective_amendment points at it) before Section 14 is rendered,
-            // and the hash must be computed AFTER rendering — otherwise the render
-            // itself would immediately trip UNCERTIFIED_EDIT on the document it just
-            // certified.
-            const entry = (0, chain_1.recordIntentAmendment)(chain, opts.change);
-            const absPath = intentDocPath(projectRoot, chain);
-            (0, amendmentHistory_1.renderAmendmentHistory)(absPath, chain);
-            (0, chain_1.certifyIntentDoc)(chain, absPath);
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
-            fs_extra_1.default.ensureFileSync(path_1.default.join(projectRoot, config_1.INTENT_AMENDMENT_LOG_FILE));
-            fs_extra_1.default.appendFileSync(path_1.default.join(projectRoot, config_1.INTENT_AMENDMENT_LOG_FILE), JSON.stringify({
-                chain: chainVersion,
-                id: entry.id,
-                created_at: entry.created_at,
-                director_approved_at: entry.director_approved_at,
-                change: entry.change,
-                doc_sha256: chain.intent.certified_doc_sha256,
-            }) + '\n');
+            const { chainVersion, entry } = (0, intentAmendmentService_1.recordIntentAmendmentUseCase)(projectRoot, opts.change, opts.v);
             console.log(`${entry.id} recorded for DIR-INTENT ${chainVersion}.`);
             console.log(`Change: ${entry.change}`);
             console.log('Section 14 (Amendment History) re-rendered. Document re-certified.');
@@ -226,18 +204,12 @@ function intentCommand() {
         .action((n, opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = opts.v
-                ? { chainVersion: opts.v, data: (0, chain_1.readChain)(projectRoot, opts.v) }
-                : (0, chain_1.readActiveChain)(projectRoot);
-            (0, chain_1.assertChainCanMutate)(chain);
             const score = Number(n);
-            (0, chain_1.recordArcScore)(chain, score, opts.notes);
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
-            (0, intentHistory_1.renderIntentHistoryFile)(projectRoot);
-            const band = (0, chain_1.arcScoreBand)(score);
-            console.log(`ARC Score recorded: ${band} (${score})`);
-            console.log(`Notes: ${opts.notes}`);
-            console.log(`Gate 3.5 (close new): ${(0, chain_1.hasGate35Score)(chain) ? 'OPEN' : 'BLOCKED'}`);
+            const result = (0, intentScoreService_1.recordArcScoreUseCase)(projectRoot, score, opts.notes, opts.v);
+            const band = (0, chain_1.arcScoreBand)(result.score);
+            console.log(`ARC Score recorded: ${band} (${result.score})`);
+            console.log(`Notes: ${result.notes}`);
+            console.log(`Gate 3.5 (close new): ${result.score >= 50 ? 'OPEN' : 'BLOCKED'}`);
         }
         catch (e) {
             console.error(e.message);
@@ -283,9 +255,7 @@ function intentCommand() {
                 console.error('Add --director-confirm to proceed.');
                 process.exit(1);
             }
-            (0, chain_1.supersedeIntentVersion)(chain, opts.reason);
-            (0, chain_1.writeChain)(projectRoot, opts.v, chain);
-            (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — trigger 3/4
+            (0, intentSupersedeService_1.supersedeIntentUseCase)(projectRoot, opts.reason, opts.v);
             console.log(`DIR-INTENT ${opts.v} superseded. Reason: ${opts.reason}`);
             if (total > 0) {
                 console.log(`Cascaded to SUPERSEDED: ${cascade.roadmap ? 1 : 0} roadmap, ${cascade.plan.length} plan, ${cascade.exec.length} exec, ${cascade.close ? 1 : 0} close.`);

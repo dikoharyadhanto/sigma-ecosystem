@@ -35,9 +35,9 @@ export function detectTools(): DetectedTools {
   const t = targetPaths();
   const home = os.homedir();
   return {
-    claudeCode: fs.existsSync(t.claudeCommands),
+    claudeCode: fs.existsSync(path.join(home, '.claude')),
     codex: fs.existsSync(t.codexSkills),
-    reasonix: fs.existsSync(t.reasonixSkills),
+    reasonix: fs.existsSync(path.join(home, '.reasonix')),
     antigravity: fs.existsSync(path.join(home, '.gemini')),
     cursor: fs.existsSync(t.cursorRules),
   };

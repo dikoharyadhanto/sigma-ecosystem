@@ -6,7 +6,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeExecStatus = computeExecStatus;
 exports.registerExecStatusTool = registerExecStatusTool;
-const zod_1 = require("zod");
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -37,15 +36,13 @@ function registerExecStatusTool(server) {
         description: 'Return the active chain\'s DEV-EXEC status — the query-plane equivalent of `sigma exec status`: open ' +
             'DRAFTs with plan pairing, LOCKED execs, a count of SUPERSEDED execs not otherwise listed, and Gate 3. ' +
             'Read-only. Returns { active, active_chain, drafts, locked, superseded_count, gate_3_satisfied, source }.',
-        inputSchema: {
-            project_root: zod_1.z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-        },
+        inputSchema: {},
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, contract_1.respond)('sigma_exec_status', project_root, (root) => computeExecStatus(root)));
+    }, async () => (0, contract_1.respond)('sigma_exec_status', undefined, (root) => computeExecStatus(root)));
 }
 //# sourceMappingURL=execStatus.js.map

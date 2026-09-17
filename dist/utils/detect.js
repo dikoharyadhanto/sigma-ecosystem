@@ -23,9 +23,9 @@ function detectTools() {
     const t = targetPaths();
     const home = os_1.default.homedir();
     return {
-        claudeCode: fs_extra_1.default.existsSync(t.claudeCommands),
+        claudeCode: fs_extra_1.default.existsSync(path_1.default.join(home, '.claude')),
         codex: fs_extra_1.default.existsSync(t.codexSkills),
-        reasonix: fs_extra_1.default.existsSync(t.reasonixSkills),
+        reasonix: fs_extra_1.default.existsSync(path_1.default.join(home, '.reasonix')),
         antigravity: fs_extra_1.default.existsSync(path_1.default.join(home, '.gemini')),
         cursor: fs_extra_1.default.existsSync(t.cursorRules),
     };

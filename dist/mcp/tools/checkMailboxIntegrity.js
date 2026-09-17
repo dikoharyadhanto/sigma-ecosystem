@@ -17,7 +17,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeCheckMailboxIntegrity = computeCheckMailboxIntegrity;
 exports.registerCheckMailboxIntegrityTool = registerCheckMailboxIntegrityTool;
-const zod_1 = require("zod");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../../config");
@@ -103,15 +102,13 @@ function registerCheckMailboxIntegrityTool(server) {
             'invalid role/type/status field values. Applies to the whole mailbox, not one role\'s inbox — never ' +
             'returns subject lines or message content. Read-only. Returns { ok, passes, warnings, failures, ' +
             'findings: { missing_files, orphan_files, missing_attachments, duplicate_ids, invalid_fields }, source }.',
-        inputSchema: {
-            project_root: zod_1.z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-        },
+        inputSchema: {},
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, contract_1.respond)('sigma_check_mailbox_integrity', project_root, (root) => computeCheckMailboxIntegrity(root)));
+    }, async () => (0, contract_1.respond)('sigma_check_mailbox_integrity', undefined, (root) => computeCheckMailboxIntegrity(root)));
 }
 //# sourceMappingURL=checkMailboxIntegrity.js.map

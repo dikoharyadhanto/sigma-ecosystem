@@ -13,7 +13,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeGetGitEvidence = computeGetGitEvidence;
 exports.registerGetGitEvidenceTool = registerGetGitEvidenceTool;
-const zod_1 = require("zod");
 const child_process_1 = require("child_process");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -48,7 +47,7 @@ function computeGetGitEvidence(root) {
     }
     catch { /* ok */ }
     try {
-        const status = run('git status --short', root);
+        const status = run('git --no-optional-locks status --short', root);
         if (status)
             changedFiles = status;
     }
@@ -71,21 +70,20 @@ function computeGetGitEvidence(root) {
 function registerGetGitEvidenceTool(server) {
     server.registerTool('sigma_get_git_evidence', {
         title: 'Get git repository evidence',
-        description: 'Return git branch, latest commit, changed files (git status --short), and diff summary (git diff ' +
-            '--stat HEAD) for the project root — the query-plane equivalent of `sigma git evidence`. Reports on the ' +
-            'ENTIRE working tree, not scoped to Sigma/ (Director decision, full CLI parity) — can surface paths and ' +
-            'change summaries for application code outside Sigma governance artifacts. Read-only (does not mutate ' +
-            'the repository). Returns { present, branch, commit: { hash, subject, date }, changed_files, diff_stat, ' +
-            'source }, or { present: false, source } when no git repository exists.',
-        inputSchema: {
-            project_root: zod_1.z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-        },
+        description: 'Return git branch, latest commit, changed files (git --no-optional-locks status --short), and diff ' +
+            'summary (git diff --stat HEAD) for the project root — the query-plane equivalent of `sigma git ' +
+            'evidence`. Reports on the ENTIRE working tree, not scoped to Sigma/ (Director decision, full CLI parity) ' +
+            '— can surface paths and change summaries for application code outside Sigma governance artifacts. ' +
+            'Read-only (does not mutate the repository or its index). Returns { present, branch, commit: { hash, ' +
+            'subject, date }, changed_files, diff_stat, source }, or { present: false, source } when no git ' +
+            'repository exists.',
+        inputSchema: {},
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, contract_1.respond)('sigma_get_git_evidence', project_root, (root) => computeGetGitEvidence(root)));
+    }, async () => (0, contract_1.respond)('sigma_get_git_evidence', undefined, (root) => computeGetGitEvidence(root)));
 }
 //# sourceMappingURL=getGitEvidence.js.map

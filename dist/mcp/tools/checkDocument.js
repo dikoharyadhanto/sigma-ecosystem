@@ -110,7 +110,6 @@ function registerCheckDocumentTool(server) {
                 .string()
                 .optional()
                 .describe('Target version, e.g. "v1" (intent/roadmap/close) or "v0.1" (plan/exec). Defaults to the active version.'),
-            project_root: zod_1.z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
         },
         annotations: {
             readOnlyHint: true,
@@ -118,6 +117,6 @@ function registerCheckDocumentTool(server) {
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ type, version, project_root }) => (0, contract_1.respond)('sigma_check_document', project_root, (root) => computeCheckDocument(root, type, version)));
+    }, async ({ type, version }) => (0, contract_1.respond)('sigma_check_document', undefined, (root) => computeCheckDocument(root, type, version)));
 }
 //# sourceMappingURL=checkDocument.js.map

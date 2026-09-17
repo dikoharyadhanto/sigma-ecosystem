@@ -16,7 +16,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeListRoadmapStages = computeListRoadmapStages;
 exports.registerListRoadmapStagesTool = registerListRoadmapStagesTool;
-const zod_1 = require("zod");
 const chain_1 = require("../../engine/chain");
 const roadmap_1 = require("../../utils/roadmap");
 const shared_1 = require("../shared");
@@ -51,15 +50,13 @@ function registerListRoadmapStagesTool(server) {
             '`sigma roadmap list`. A chain has at most one ROADMAP; this lists the stages within it, not multiple ' +
             'ROADMAP versions. Read-only. Returns { active_chain, roadmap_version, stages: [{ version, state, title, ' +
             'focus }], source }.',
-        inputSchema: {
-            project_root: zod_1.z.string().optional().describe('Optional absolute path to the Sigma project root directory.'),
-        },
+        inputSchema: {},
         annotations: {
             readOnlyHint: true,
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ project_root }) => (0, contract_1.respond)('sigma_list_roadmap_stages', project_root, (root) => computeListRoadmapStages(root)));
+    }, async () => (0, contract_1.respond)('sigma_list_roadmap_stages', undefined, (root) => computeListRoadmapStages(root)));
 }
 //# sourceMappingURL=listRoadmapStages.js.map

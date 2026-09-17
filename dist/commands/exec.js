@@ -11,6 +11,7 @@ const fs_1 = require("../utils/fs");
 const docCheck_1 = require("../utils/docCheck");
 const execDraftService_1 = require("../services/execDraftService");
 const execHumanizeService_1 = require("../services/execHumanizeService");
+const execLockService_1 = require("../services/execLockService");
 function execDocPath(projectRoot, chain, version) {
     const entry = version
         ? chain.exec.versions.find(v => v.version === version)
@@ -65,33 +66,17 @@ function execCommand() {
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            (0, chain_1.assertChainCanMutate)(chain);
-            const resolution = (0, chain_1.resolveTargetVersion)(chain.exec.versions, opts.v);
-            if (resolution.kind === 'empty') {
-                throw new Error('No DRAFT DEV-EXEC to lock. Run: sigma exec new');
-            }
-            if (resolution.kind === 'ambiguous') {
-                const described = resolution.candidates
-                    .map(v => {
-                    const entry = chain.exec.versions.find(e => e.version === v);
-                    return entry?.plan_version_ref ? `${v} (plan ${entry.plan_version_ref})` : v;
-                })
-                    .join(', ');
-                throw new Error(`${resolution.candidates.length} DRAFT DEV-EXECs are open: ${described}\n` +
-                    `Specify which one to lock: sigma exec lock --v ${resolution.candidates[0]}`);
-            }
-            const lockTargetVersion = resolution.version;
-            const absPath = execDocPath(projectRoot, chain, lockTargetVersion);
-            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'exec');
-            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
-            (0, docCheck_1.ensureSigmaDocEligible)(report, 'exec');
-            (0, chain_1.lockExecVersion)(chain, lockTargetVersion);
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
-            const gate3 = chain.gates.gate_3_satisfied
-                ? 'SATISFIED'
-                : 'not satisfied — open work remains';
-            console.log(`DEV-EXEC ${lockTargetVersion} LOCKED. Gate 3: ${gate3}`);
+            // Printed unconditionally when a resolvable target exists, pass or
+            // fail on what follows — same precedent as `intent ratify`.
+            // lockExecDraftUseCase() re-validates internally rather than
+            // trusting this report object, so there is no staleness risk from
+            // computing it twice.
+            const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+            const previewVersion = (0, execLockService_1.resolveExecLockTarget)(chain, opts.v);
+            (0, docCheck_1.printSigmaDocReport)((0, docCheck_1.validateSigmaDocFile)(execDocPath(projectRoot, chain, previewVersion), 'exec'), projectRoot);
+            const result = (0, execLockService_1.lockExecDraftUseCase)(projectRoot, opts.v);
+            const gate3 = result.gate3Satisfied ? 'SATISFIED' : 'not satisfied — open work remains';
+            console.log(`DEV-EXEC ${result.version} LOCKED. Gate 3: ${gate3}`);
         }
         catch (e) {
             console.error(e.message);
