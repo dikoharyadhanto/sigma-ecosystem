@@ -7,11 +7,13 @@
 // record — see planPromoteService.ts's header.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import path from 'path';
 import { z } from 'zod';
 import { readActiveChain, nextPlanVersion } from '../../../engine/chain';
 import { readCanonicalPendingPlanFile } from '../../artifactPath';
 import { generateId, writeTicket, ticketPath, OperationTicket, TICKET_TTL_MS } from '../../../engine/controlStore';
 import { assertValidPromoteArgs, assertPlanPromoteGatesOpen, findPendingPlan, PlanPromoteError } from '../../../services/planPromoteService';
+import { validateSigmaDocFile } from '../../../utils/docCheck';
 import { computeStateRevision, ERROR_CODES } from '../../contract';
 import { McpQueryError } from '../../errors';
 import { getBinding } from '../../shared';
@@ -72,6 +74,13 @@ export function registerPreparePlanPromoteTool(server: McpServer): void {
           if (!doc.present || !doc.sha256) {
             throw new McpQueryError(ERROR_CODES.INVALID_OPERATION, 'The pending plan file is not present on disk.');
           }
+          // Informational only — a structurally malformed pending doc is
+          // still promotable (a DRAFT is not required to be lock-eligible),
+          // but Director should see this before approving. Re-validated
+          // again after the actual promotion in commit's mutate() —
+          // content can drift between prepare and commit like anything
+          // else this ticket freezes.
+          const docReport = validateSigmaDocFile(path.resolve(root, doc.path), 'plan');
 
           const { revision } = computeStateRevision(root);
           if (!revision) {
@@ -95,6 +104,7 @@ export function registerPreparePlanPromoteTool(server: McpServer): void {
               `plan.pending: -1 entry (id: ${args.id})`,
               `plan.${projectedVersion}: created (DRAFT, title: "${args.title}")`,
               `roadmap.${chain.roadmap.version}: Stage Overview re-rendered`,
+              `pending doc structure: ${docReport.ok ? 'valid' : 'INVALID — will promote a malformed DRAFT, see doc_report'}`,
             ],
             authority: 'director',
             issued_at: now.toISOString(),
@@ -109,6 +119,7 @@ export function registerPreparePlanPromoteTool(server: McpServer): void {
             target: ticket.target,
             effects: ticket.effects,
             projected_version: projectedVersion,
+            doc_report: docReport,
             expected_state_revision: ticket.expected_state_revision,
             expires_at: ticket.expires_at,
           };

@@ -31,8 +31,10 @@ export function registerCommitPlanPromoteTool(server: McpServer): void {
         'Promotes the pending plan frozen by operation_ticket_id into the official FMN-PLAN DRAFT queue with ' +
         'an assigned version — the MCP control-plane equivalent of `sigma plan promote`. Requires a Director ' +
         'approval record for that exact ticket, recorded via the trusted local CLI (`sigma control approve ' +
-        '<ticket_id>`). `id`/`title`/`focus` must match what was frozen at prepare time exactly. The approval ' +
-        'is consumed on a successful commit and cannot be reused. FMN role only.',
+        '<ticket_id>`). `id`/`title`/`focus` must match what was frozen at prepare time exactly. The promoted ' +
+        'document is structurally validated after promotion; `doc_report.ok` in the result says whether it ' +
+        'still needs fixing before `sigma_commit_plan_lock` — an invalid result does not roll the promotion ' +
+        'back, matching the CLI. The approval is consumed on a successful commit and cannot be reused. FMN role only.',
       inputSchema: {
         operation_ticket_id: z.string().min(1),
         approval_id: z.string().min(1),
@@ -156,6 +158,7 @@ export function registerCommitPlanPromoteTool(server: McpServer): void {
             chainVersion: result.chainVersion,
             version: result.version,
             newRelPath: result.newRelPath,
+            doc_report: result.docReport,
             operation_ticket_id: args.operation_ticket_id,
             approval_id: args.approval_id,
           };
