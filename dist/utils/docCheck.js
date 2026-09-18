@@ -99,6 +99,7 @@ const DOC_SPECS = {
         requiredSections: [
             'OVERVIEW',
             'CORE_PROCESS_FLOW',
+            'PLANNED_STAGE',
             'STAGE_OVERVIEW',
         ],
     },

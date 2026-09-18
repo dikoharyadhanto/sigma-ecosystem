@@ -245,7 +245,15 @@ DEV should report in DEV-EXEC:
 
 **Director Instruction (verbatim)** *(required only if SKIP_FOR_AUDIT is checked — transcribe the Director's exact words, not a paraphrase)*: [...]
 
-**Major Findings**:
+**Major Findings** *(append-only — never overwrite a prior round's
+entries when a new audit runs. Add a new labeled block per round
+instead. FMN-PLAN audit is always Critic Mode, so no mode prefix is
+needed — unlike DIR-INTENT's AUD Findings section)*:
+
+> Format: an `Audit <N>` line, followed by that round's numbered
+> findings. Keep every prior round's block; do not edit or remove it.
+
+Audit 1:
 
 1. [...]
 2. [...]

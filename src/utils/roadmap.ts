@@ -23,7 +23,7 @@ export function getStagePlansForRoadmap(chain: ChainState): ArtifactVersion[] {
 export function generateStageOverview(chain: ChainState): string {
   const header = [
     '<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->',
-    '## 3. Stage Overview',
+    '## 4. Stage Overview',
     '',
     '| Stage | Title | Focus | Status | Reason |',
     '| :--- | :--- | :--- | :--- | :--- |',

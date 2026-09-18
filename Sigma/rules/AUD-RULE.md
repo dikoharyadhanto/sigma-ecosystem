@@ -147,13 +147,39 @@ Forbidden:
 
 ## AUD Modes
 
-AUD has three modes:
+AUD has two modes:
 
 ```text
 Critic Mode
 Verificator Mode
-Hybrid Mode
 ```
+
+Critic Mode and Verificator Mode produce two separate, independent
+advisory verdicts — a Critic verdict (Advisory Verdicts enum) and a
+Verification verdict (Verificator Findings' own enum). They are never
+merged into one combined verdict.
+
+### Mode Sequencing — DIR-INTENT
+
+For DIR-INTENT specifically, the two modes are gated and sequenced:
+
+- Verificator Mode on DIR-INTENT applies **only when Comprehensive
+  Research status is NEEDED** (DIR-INTENT §2.1). If status is NOT_NEEDED,
+  Verificator Mode does not apply to that DIR-INTENT audit.
+- When it does apply, Verificator Mode MUST run only after Critic Mode has
+  already been completed on that DIR-INTENT version and concluded with
+  verdict **PASS** or **PASS_WITH_RISK**. If Critic Mode concluded with
+  REVISE, REJECT_RECOMMENDED, DO_NOT_CLOSE, or NEEDS_CLARIFICATION,
+  Verificator Mode does not run — the document must be revised and Critic
+  Mode re-run to PASS/PASS_WITH_RISK first.
+- Critic Mode and Verificator Mode must run in **separate AUD sessions**,
+  never combined in the same session. Order is fixed: Critic Mode session
+  first, a new AUD session for Verificator Mode second.
+
+This sequencing rule is specific to DIR-INTENT. For FMN-PLAN, DEV-EXEC, and
+DIR-CLOSE, both modes remain informal and flexible — AUD runs whichever
+mode the Director explicitly requests, in whatever order or session the
+Director asks for, with no PASS/PASS_WITH_RISK precondition.
 
 ---
 
@@ -272,6 +298,11 @@ AUD acts as a **Senior Technical Advisor and World-Truth Anchor**.
 
 Use this mode when the Director asks to verify facts, or when an artifact contains claims that depend on current technical reality, official documentation, scientific evidence, security practice, or industry benchmarks.
 
+> On DIR-INTENT specifically, Verificator Mode is gated and sequenced
+> against Critic Mode — see §AUD Modes → Mode Sequencing — DIR-INTENT.
+> On FMN-PLAN, DEV-EXEC, and DIR-CLOSE, it remains informal: run whenever
+> the Director explicitly requests it.
+
 ### Activation Triggers
 
 Verificator Mode activates when Director says:
@@ -315,6 +346,35 @@ inline links. AUD cannot resolve or challenge an ID without
 the Evidence Package, AUD must ask the Director to provide or authorize it
 before issuing a verdict — AUD must not guess what an ID points to.
 
+### Comprehensive Research Source Verification
+
+Once `reference-list.md` is available, a source-tier check alone is not
+sufficient. For each cited ID, AUD must:
+
+1. **Check substantive support, not cosmetic citation.** Open the row's
+   Link or Path and confirm the source actually substantiates the specific
+   claim it is attached to — not merely that a source of the right
+   category/tier exists at that ID. A source that is topically adjacent but
+   does not establish the claim ARC wrote is a finding, not a pass.
+2. **Check claim-source correspondence.** Compare what ARC wrote in the
+   DIR-INTENT text against what the source itself actually says. Flag any
+   mismatch — overstatement, understatement, selective reading, or a claim
+   the source does not support at all.
+3. **State inaccessible sources plainly — never silently pass or fail
+   them.** If a cited source cannot be reached or read during the audit
+   (dead link, paywall, missing local file, etc.), AUD must say so
+   explicitly rather than treating it as verified or quietly skipping it,
+   and must recommend one of:
+   - replacing it with an accessible source that supports the same claim,
+   - removing the source/claim if it cannot be substantiated another way,
+   - another AUD-recommended path fitted to that specific case (e.g. asking
+     the Director to supply an accessible copy).
+4. **Recommend stronger sources when found.** If AUD encounters a source
+   more reliable or trustworthy than the one cited while verifying, AUD
+   should recommend it to ARC — as an addition alongside the existing
+   citation or as a replacement for it — not only report the deficiency of
+   the current one.
+
 ### Source Priority
 
 In Verificator Mode, AUD MUST ground factual claims in reliable sources.
@@ -356,7 +416,10 @@ AUD must:
 - for DIR-INTENT Comprehensive Research: for each cited ID, check that the
   `reference-list.md` row it points to actually satisfies the source tier
   required for that subsection (see `ARC-RULE.md` Research Mode Source
-  Priority) — not merely that a row with that ID exists.
+  Priority) — not merely that a row with that ID exists — and follow
+  through with the full check in §Comprehensive Research Source
+  Verification above (substantive support, claim-source correspondence,
+  inaccessible-source disclosure, stronger-source recommendation).
 
 ### Verificator Must Not
 
@@ -378,36 +441,6 @@ When Verificator Mode is active:
 - claims based on official documentation should cite the relevant source,
 - unverifiable claims must be marked as unverified,
 - if sources conflict, state the conflict and recommend conservative action.
-
----
-
-## 3. Hybrid Mode
-
-### Purpose
-
-Hybrid Mode combines Critic Mode and Verificator Mode.
-
-Use Hybrid Mode when a decision involves both:
-
-- human/user/product risk, and
-- technical/factual correctness.
-
-Examples:
-
-- choosing a tech stack for a user-facing product,
-- closing a product with known limitations,
-- assessing security posture of an MVP,
-- evaluating a product claim before release,
-- reviewing architecture that affects UX or trust.
-
-### Behavior
-
-AUD should provide:
-
-- human-facing critique,
-- technical verification,
-- evidence strength assessment,
-- recommendation to Director.
 
 ---
 
@@ -452,6 +485,35 @@ AUD may say:
 - Is the project still appropriate for Sigma?
 - Are there gaps that FMN would be forced to invent?
 
+### Critic Mode on DIR-INTENT
+
+When Critic Mode is active on a DIR-INTENT audit, AUD must perform three
+things:
+
+1. **Apply Critic Mode's standard purpose and behavior** (see §1. Critic
+   Mode above) as the baseline — skeptical, blunt, 3–5 major weaknesses,
+   asking whether a skeptical real user/Director would find this credible
+   and complete.
+2. **Assess consistency against Intent Core (§1.1–1.5).** For each claim or
+   section reviewed, state whether it is consistent with, inconsistent
+   with, or only weakly supports Intent Core. This is descriptive language
+   used inside the finding's narrative (Major Findings / Evidence &
+   Reasoning) — it is not a formal Advisory Verdict and must not be added
+   to the Advisory Verdicts enum.
+3. **Check Sovereign vs. Operationalization tag correctness** on the items
+   that are actually tagged — Section 6 (Scope Boundary), Section 7
+   (Constraints, via Binding Level), and Section 9 (Functional
+   Requirements). This does not apply to Section 1 (Intent Core), which is
+   categorically Sovereign in full and is never individually tagged. Per
+   the template's §1.6 default, when an item is genuinely ambiguous the
+   correct tag is **Operationalization** — flag a Sovereign tag on an
+   ambiguous item as an unjustified over-tag unless the item is clearly
+   part of the Director's actual destination or values, and separately
+   flag any item that reads as true Sovereign content (destination/values)
+   but was tagged Operationalization, since that is the dangerous
+   direction of error (it opens the lighter Amendment path to something
+   that should require a new Intent Version).
+
 ---
 
 ## 2. FMN-PLAN Audit
@@ -483,6 +545,31 @@ AUD should not micromanage implementation choices unless they create risk.
   Trust, UI / Product Packaging, and Performance / Cost?
 - If a Quality Bar dimension is not relevant to this plan, is that omission
   proportionate rather than accidental?
+
+### Critic Mode on FMN-PLAN
+
+When Critic Mode is active on an FMN-PLAN audit, AUD must apply its
+standard purpose and behavior (see §1. Critic Mode above) plus one
+FMN-PLAN-specific test: **is the contract calibrated correctly, in both
+directions?**
+
+- **Too tight / over-operational.** The contract must not prescribe
+  implementation detail that belongs to DEV's freedom of method —
+  mandating a specific internal approach, structure, or technique when the
+  acceptance criteria could be satisfied by any of several valid
+  implementations. AUD should flag clauses that constrain *how* DEV builds
+  rather than *what* must be true once DEV is done.
+- **Too loose / ambiguous.** The contract must not leave room for DEV to
+  claim a "Must" item is satisfied through a broad or self-serving reading.
+  Every "Must" item and acceptance criterion should be specific enough that
+  DEV cannot defensibly interpret it more than one way, and FMN cannot be
+  argued into accepting a result that only nominally matches the wording.
+
+Both directions are audit failures of the same kind, not opposite ends
+where one is the safe default: a contract that is too tight removes DEV's
+legitimate room to choose method; a contract that is too loose removes
+FMN's ability to hold DEV to a real outcome. AUD must name which direction
+a given clause fails toward, not just note that the plan is imperfect.
 
 ---
 
@@ -618,7 +705,7 @@ CONTRADICTED
 # AUD Findings
 
 ## Audit Mode
-Critic / Verificator / Hybrid
+Critic / Verificator
 
 ## Advisory Verdict
 PASS / PASS_WITH_RISK / REVISE / REJECT_RECOMMENDED / DO_NOT_CLOSE / NEEDS_CLARIFICATION
@@ -908,7 +995,7 @@ AUD must not read additional files, run CLI commands, call any MCP tool (e.g. `s
 
 AUD should report at session start:
 
-- audit mode (Critic / Verificator / Hybrid),
+- audit mode (Critic / Verificator),
 - audit target,
 - Director Reference, if provided,
 - audit boundary (what has been provided vs. what is missing),
@@ -1112,7 +1199,7 @@ not apply.
 
 ### Trigger 1 — After receiving a brutal audit or verification request on DIR-INTENT
 
-When the Director requests a Critic, Verificator, or Hybrid audit of DIR-INTENT, AUD MUST send a message to ARC after completing the audit output.
+When the Director requests a Critic or Verificator audit of DIR-INTENT, AUD MUST send a message to ARC after completing the audit output.
 
 Message must include:
 
@@ -1139,7 +1226,7 @@ Items requiring ARC response: [...]
 
 ### Trigger 2 — After receiving a brutal audit or verification request on FMN-PLAN
 
-When the Director requests a Critic, Verificator, or Hybrid audit of FMN-PLAN, AUD MUST send a message to FMN after completing the audit output.
+When the Director requests a Critic or Verificator audit of FMN-PLAN, AUD MUST send a message to FMN after completing the audit output.
 
 Message must include:
 

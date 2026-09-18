@@ -57,11 +57,11 @@
   intent, it is the normal function of a working boundary getting
   sharper.
 
-**Default when uncertain: Sovereign.** Tagging something Sovereign by
-mistake only forces the heavier path (a new Intent Version instead of an
-Amendment). Tagging something Operationalization by mistake risks becoming
-exactly the loophole this taxonomy exists to close — silently reinterpreting
-sovereign intent through the lighter Amendment mechanism.
+**Default when uncertain: Operationalization.** Tagging something Sovereign
+by mistake forces the heavier path unnecessarily (a new Intent Version
+instead of an Amendment). Tagging something Operationalization by mistake
+is the lower-cost error to correct — it only takes an Amendment to re-tag
+it Sovereign, not a new Intent Version to undo.
 
 ---
 
@@ -471,7 +471,26 @@ AUD may not: replace Director intent, re-rank Director values, or treat advisory
 
 **Director Instruction (verbatim)** *(required only if SKIP_FOR_AUDIT is checked — transcribe the Director's exact words, not a paraphrase)*: [...]
 
-**Major Findings**:
+**Verification Status** *(independent of the Advisory Verdict above —
+tracks whether a Verificator Mode audit applies to this DIR-INTENT; see
+`AUD-RULE.md` §Mode Sequencing — DIR-INTENT. Not part of the Advisory
+Verdict checkbox set and not lock-validated by CLI.)*:
+
+- [ ] NEED_VERIFICATION — Comprehensive Research status is NEEDED and the
+  Verificator Mode audit is still pending.
+- [ ] NO_NEED_VERIFICATION — Comprehensive Research status is NOT_NEEDED;
+  no Verificator Mode audit applies.
+- [ ] SKIP_VERIFICATION — Comprehensive Research is NEEDED, but the
+  Director explicitly waived the Verificator Mode audit for this cycle.
+
+**Major Findings** *(append-only — never overwrite a prior round's
+entries when a new audit runs. Add a new labeled block per mode per
+round instead)*:
+
+> Format: a `<Mode> — Audit <N>` line, followed by that round's numbered
+> findings. Keep every prior round's block; do not edit or remove it.
+
+Critic Mode — Audit 1:
 
 1. [...]
 2. [...]

@@ -26,7 +26,7 @@ function getStagePlansForRoadmap(chain) {
 function generateStageOverview(chain) {
     const header = [
         '<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->',
-        '## 3. Stage Overview',
+        '## 4. Stage Overview',
         '',
         '| Stage | Title | Focus | Status | Reason |',
         '| :--- | :--- | :--- | :--- | :--- |',

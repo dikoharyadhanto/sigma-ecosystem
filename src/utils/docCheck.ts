@@ -165,6 +165,7 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
     requiredSections: [
       'OVERVIEW',
       'CORE_PROCESS_FLOW',
+      'PLANNED_STAGE',
       'STAGE_OVERVIEW',
     ],
   },

@@ -174,7 +174,7 @@ ARC should recommend heavier process only when:
 
 ## Research Mode
 
-Mirrors the existing `AUD-RULE.md` mode pattern (Critic Mode / Verificator Mode / Hybrid Mode) so ARC's research responsibility is a distinct, bounded gear — not blended into open-ended interviewing, and not handed to AUD. AUD's Verificator Mode is scope-guarded to verifying claims already present in a Director-authorized artifact, which is reactive fact-checking that runs structurally after ARC drafts — too late to inform Intent Core.
+Mirrors the existing `AUD-RULE.md` mode pattern (Critic Mode / Verificator Mode) so ARC's research responsibility is a distinct, bounded gear — not blended into open-ended interviewing, and not handed to AUD. AUD's Verificator Mode is scope-guarded to verifying claims already present in a Director-authorized artifact, which is reactive fact-checking that runs structurally after ARC drafts — too late to inform Intent Core.
 
 ### Purpose
 

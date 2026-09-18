@@ -38,16 +38,22 @@ const ROADMAP_TEMPLATE = [
   '<!-- SIGMA:ROADMAP:SECTION:CORE_PROCESS_FLOW -->',
   '## 2. Core Process Flow',
   '',
+  '<!-- SIGMA:ROADMAP:SECTION:PLANNED_STAGE -->',
+  '## 3. Planned Stage',
+  '',
+  '| Stage | Title | Focus |',
+  '| :--- | :--- | :--- |',
+  '',
   '<!-- SIGMA:RENDER:START:stage-overview -->',
   '<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->',
-  '## 3. Stage Overview',
+  '## 4. Stage Overview',
   '',
   '| Stage | Title | Focus | Status | Reason |',
   '| :--- | :--- | :--- | :--- | :--- |',
   '<!-- SIGMA:RENDER:END:stage-overview -->',
 ].join('\n');
 
-describe('ROADMAP Stage Overview (3-section format)', () => {
+describe('ROADMAP Stage Overview (4-section format)', () => {
   const tempPaths: string[] = [];
 
   afterEach(() => {
@@ -65,7 +71,7 @@ describe('ROADMAP Stage Overview (3-section format)', () => {
     return filePath;
   }
 
-  it('validator accepts the 3-section roadmap format (Overview, Core Process Flow, Stage Overview)', () => {
+  it('validator accepts the 4-section roadmap format (Overview, Core Process Flow, Planned Stage, Stage Overview)', () => {
     const filePath = writeTempRoadmap(ROADMAP_TEMPLATE);
 
     const report = validateSigmaDocFile(filePath, 'roadmap');
