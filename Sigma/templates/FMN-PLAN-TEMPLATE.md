@@ -56,7 +56,7 @@
 <!-- SIGMA:FMN_PLAN:SECTION:KEY_OUTPUT -->
 ## Key Output
 
-> Only final outputs the Director will look for, named in the Objective. Intermediate files and logs belong in Work Order or Constraints. If the result is a behavior change with no file, write one row: "No file output". An output made of many files (for example a source tree) is one row; Location gives the folder and its name.
+> Only final outputs the Director will look for, named in the Objective. Intermediate files and logs belong in Work Order or Constraints. If the result is a behavior change with no file, write one row: "No file output". An output made of many files (for example a source tree) is one row; Location gives the folder and its name. Location may be left empty for Modification.
 
 | No | Output | Category | Description | Location |
 |:-- |:------ |:-------- |:----------- |:-------- |

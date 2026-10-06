@@ -95,3 +95,8 @@ Kewajiban baru (tidak ada padanan lama), seluruhnya dari keputusan Director 7 Ok
 ## 5. Memory FMN
 
 Butir "run `sigma close check` sebelum merekomendasikan `close lock`" dihapus dari `fmn-memory.json` karena bertentangan dengan FMN-RULE (closure adalah tanggung jawab ARC).
+
+## 6. Revisi setelah penutupan E02 (7 Oktober 2026)
+
+- Keputusan Director: kolom Location pada Key Output kategori `Modification` boleh dikosongkan. Alasan: lokasi perubahan kode adalah hasil analisis DEV, dan FMN tidak boleh terdorong memindai source code untuk mengisinya. Mengubah aturan kategori di E02 A-3 (Location wajib berisi path untuk `Modification`).
+- Dampak pada FMN-RULE: syarat "item yang sama ada di Requirement dengan Role `Input`" berlaku hanya bila Location terisi dengan file atau folder. Tidak ada kewajiban MUST/MUST NOT yang berubah.
