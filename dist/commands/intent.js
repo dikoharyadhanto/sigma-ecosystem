@@ -178,10 +178,10 @@ function intentCommand() {
     // — no --director-confirm: the blast radius is one append-only entry on one
     // chain, not the cross-domain cascade --director-confirm exists for
     // (override, intent supersede). What Director authorizes here is the act of
-    // *recording* an amendment ARC has already classified as Operationalization
-    // — not a judgment on the content itself.
+    // *recording* an amendment ARC has already evaluated — not a judgment on
+    // the content itself.
     cmd.command('amendment')
-        .description('Record a Director-approved Amendment against a RATIFIED DIR-INTENT (Operationalization only — see SIGMA_PROTOCOL §5.1.1)')
+        .description('Record a Director-approved Amendment against a RATIFIED DIR-INTENT')
         .requiredOption('--change <change>', 'Free-text description of the change, commit-message style')
         .option('--v <version>', 'Chain version to amend instead of the active one', chain_1.normalizeVersionArg)
         .action((opts) => {

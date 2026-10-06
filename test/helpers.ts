@@ -459,6 +459,86 @@ Test checklist.
 `;
 }
 
+// DIR_INTENT schema 5: unnumbered sections, Director Summary first, no Final
+// Validation Checklist. Filled to satisfy every ratify requirement.
+export function validIntentDocV5(version: string): string {
+  return `<!-- SIGMA:DOC type=DIR_INTENT schema=5 -->
+# DIR-INTENT ${version}
+
+<!-- SIGMA:DIR_INTENT:SECTION:DIRECTOR_SUMMARY -->
+## Director Summary
+
+### Summary
+
+Test summary.
+
+### Included Scenarios
+
+- Included one.
+- Included two.
+- Included three.
+
+### Excluded Scenarios
+
+- Excluded one.
+- Excluded two.
+- Excluded three.
+
+<!-- SIGMA:DIR_INTENT:SECTION:PURPOSE_AND_PROBLEM -->
+## Purpose and Problem
+
+Test purpose.
+
+<!-- SIGMA:DIR_INTENT:SECTION:DESIRED_OUTCOME_AND_MEASUREMENT -->
+## Desired Outcome and Measurement
+
+Test outcome.
+
+<!-- SIGMA:DIR_INTENT:SECTION:SCOPE -->
+## Scope
+
+Test scope.
+
+<!-- SIGMA:DIR_INTENT:SECTION:QUALITY_STANDARDS -->
+## Quality Standards
+
+| Dimension | Minimum Standard | Must Not Happen | Evidence Required |
+|:--------- |:---------------- |:--------------- |:----------------- |
+| Security | N/A | N/A | N/A |
+| UX Trust | N/A | N/A | N/A |
+| UI / Product Packaging | N/A | N/A | N/A |
+| Performance / Cost | N/A | N/A | N/A |
+
+<!-- SIGMA:DIR_INTENT:SECTION:PRIORITIES_AND_CONSTRAINTS -->
+## Priorities and Constraints
+
+Test priorities.
+
+<!-- SIGMA:DIR_INTENT:SECTION:ASSUMPTIONS_AND_RISKS -->
+## Assumptions and Risks
+
+Test assumptions.
+
+<!-- SIGMA:DIR_INTENT:SECTION:FUNCTIONAL_REQUIREMENTS -->
+## Functional Requirements
+
+Test functional requirements.
+
+<!-- SIGMA:DIR_INTENT:SECTION:GUIDANCE_FOR_FMN -->
+## Guidance for FMN
+
+Test guidance.
+
+<!-- SIGMA:DIR_INTENT:SECTION:AUD_NOTES -->
+## AUD Notes
+
+### Verdict
+
+- [x] PASS
+- [ ] REVISE
+`;
+}
+
 export function validPlanDoc(version: string): string {
   return `<!-- SIGMA:DOC type=FMN_PLAN schema=1 -->
 # FMN-PLAN ${version}

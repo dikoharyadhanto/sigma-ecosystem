@@ -19,7 +19,7 @@ const SECTION_HEADING = '## 14. Amendment History';
 const SECTION_NOTE = [
     '> Auto-rendered by `sigma intent amendment`. Do not edit by hand — the',
     '> content between the delimiters is overwritten in full every time the',
-    '> command runs. Operationalization content changes happen *in place* in',
+    '> command runs. Content changes happen *in place* in',
     '> the relevant section above; this table is only the record of it.',
 ].join('\n');
 const RENDER_START = '<!-- SIGMA:RENDER:START:amendment-history -->';

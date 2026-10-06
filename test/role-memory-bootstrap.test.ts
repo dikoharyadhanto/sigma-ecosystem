@@ -83,7 +83,7 @@ describe('Role memory and bootstrap regressions', () => {
     expect(result.stdout).toMatch(/Role:\s+ARC/);
     expect(result.stdout).toMatch(/Reminder only\./);
     expect(result.stdout).toMatch(/Use Sigma CLI for all runtime operations/);
-    expect(result.stdout).toMatch(/stop immediately and ask whether the Director wants to open a new DIR-INTENT/i);
+    expect(result.stdout).toMatch(/stop immediately and ask whether the Director wants to open a new INTENT/i);
     expect(result.stdout).not.toMatch(/FMN-PLAN-v\d/i);
     expect(result.stdout).not.toMatch(/DEV-EXEC-v\d/i);
   });

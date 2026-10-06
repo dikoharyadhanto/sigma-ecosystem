@@ -49,6 +49,45 @@ const CLOSE_VERDICT_LABELS = new Set([
 ]);
 const CLOSE_VERDICT_ALLOWED_LABELS = new Set(['CLOSE_ACCEPTED', 'CLOSE_ACCEPTED_WITH_LIMITATIONS']);
 const FINAL_DIRECTOR_DECISION_SECTION_ID = 'FINAL_DIRECTOR_DECISION';
+// First DIR_INTENT schema version that uses the unnumbered section layout
+// (Director Summary first, no Final Validation Checklist). Documents on an
+// earlier schema keep validating against DOC_SPECS.intent unchanged.
+const INTENT_SCHEMA_V5 = 5;
+const INTENT_SPEC_V5 = {
+    heading: 'Sigma Intent Check',
+    expectedType: 'DIR_INTENT',
+    fallbackPath: path_1.default.join('Sigma', 'charter', 'DIR-INTENT.md'),
+    requiredSections: [
+        'DIRECTOR_SUMMARY',
+        'PURPOSE_AND_PROBLEM',
+        'DESIRED_OUTCOME_AND_MEASUREMENT',
+        'SCOPE',
+        'QUALITY_STANDARDS',
+        'PRIORITIES_AND_CONSTRAINTS',
+        'ASSUMPTIONS_AND_RISKS',
+        'FUNCTIONAL_REQUIREMENTS',
+        'GUIDANCE_FOR_FMN',
+        'AUD_NOTES',
+    ],
+    // RESEARCH is present only when needed. AMENDMENT_HISTORY stays optional
+    // until the Git-based amendment flow replaces `sigma intent amendment` (F05).
+    optionalSections: ['RESEARCH', 'AMENDMENT_HISTORY'],
+    sectionOrder: [
+        'DIRECTOR_SUMMARY',
+        'PURPOSE_AND_PROBLEM',
+        'DESIRED_OUTCOME_AND_MEASUREMENT',
+        'SCOPE',
+        'QUALITY_STANDARDS',
+        'PRIORITIES_AND_CONSTRAINTS',
+        'ASSUMPTIONS_AND_RISKS',
+        'FUNCTIONAL_REQUIREMENTS',
+        'GUIDANCE_FOR_FMN',
+        'RESEARCH',
+        'AUD_NOTES',
+        'AMENDMENT_HISTORY',
+    ],
+    verdictSectionId: 'AUD_NOTES',
+};
 const DOC_SPECS = {
     intent: {
         heading: 'Sigma Intent Check',
@@ -201,6 +240,14 @@ const DOC_SPECS = {
         ],
     },
 };
+function resolveDocSpec(domain, schema) {
+    if (domain === 'intent') {
+        const version = schema === null ? NaN : Number(schema);
+        if (Number.isInteger(version) && version >= INTENT_SCHEMA_V5)
+            return INTENT_SPEC_V5;
+    }
+    return DOC_SPECS[domain];
+}
 function parseDocMarker(line) {
     const match = line.match(/^<!--\s*SIGMA:DOC\s+type=([A-Z_]+)\s+schema=(\S+)\s*-->$/);
     if (!match)
@@ -273,8 +320,7 @@ function isPlaceholderContent(text) {
         return true;
     return /^\[.*\]$/.test(text.trim());
 }
-function evaluateAudVerdictGate(domain, relevantMarkers, lines, requirements, passes, warnings) {
-    const verdictSectionId = VERDICT_SECTION_ID[domain];
+function evaluateAudVerdictGate(verdictSectionId, relevantMarkers, lines, requirements, passes, warnings) {
     if (!verdictSectionId)
         return;
     const marker = relevantMarkers.find(m => m.sectionId === verdictSectionId);
@@ -349,6 +395,75 @@ function evaluateFinalChecklistGate(relevantMarkers, lines, requirements) {
             requirements.push({
                 label: `Quality Bar — ${dimension} minimum standard stated or N/A`,
                 satisfied: !/^\[.*\]$/.test(standardCell),
+                scope: 'lock',
+            });
+        }
+    }
+}
+/** Non-placeholder bullet items directly under a heading matching `headingRegex`, within `[start, end)`. */
+function countFilledBullets(lines, start, end, headingRegex) {
+    let headingIndex = -1;
+    for (let i = start; i < end; i += 1) {
+        if (headingRegex.test(lines[i].trim())) {
+            headingIndex = i;
+            break;
+        }
+    }
+    if (headingIndex === -1)
+        return 0;
+    let count = 0;
+    for (let i = headingIndex + 1; i < end; i += 1) {
+        const text = lines[i].trim();
+        if (/^#{2,3}\s+/.test(text))
+            break;
+        const bullet = text.match(/^[-*]\s+(.+)$/);
+        if (bullet && !isPlaceholderContent(bullet[1]))
+            count += 1;
+    }
+    return count;
+}
+const EXPECTED_BOUNDARY_EXAMPLES = 3;
+// Ratify requirements for DIR_INTENT schema 5. Replaces the 15-checkbox Final
+// Validation Checklist: each requirement reads the content it names.
+function evaluateIntentV5Gate(relevantMarkers, lines, requirements, passes, warnings) {
+    const summaryMarker = relevantMarkers.find(m => m.sectionId === 'DIRECTOR_SUMMARY');
+    if (summaryMarker) {
+        const end = sectionEndLine(relevantMarkers, summaryMarker, lines.length);
+        const summaryText = findHeadingBody(lines, summaryMarker.line, end, /^###\s*Summary\s*$/i);
+        const summaryStated = !isPlaceholderContent(summaryText);
+        requirements.push({ label: 'Director Summary is stated', satisfied: summaryStated, scope: 'lock' });
+        const included = countFilledBullets(lines, summaryMarker.line, end, /^###\s*Included Scenarios\s*$/i);
+        const excluded = countFilledBullets(lines, summaryMarker.line, end, /^###\s*Excluded Scenarios\s*$/i);
+        requirements.push({
+            label: 'Director Summary boundary examples stated (included and excluded)',
+            satisfied: included > 0 && excluded > 0,
+            scope: 'lock',
+        });
+        // Count is advisory until the pilot confirms the starting value of 3 and 3.
+        if (included > 0 && excluded > 0 && (included !== EXPECTED_BOUNDARY_EXAMPLES || excluded !== EXPECTED_BOUNDARY_EXAMPLES)) {
+            warnings.push(`Director Summary: ${EXPECTED_BOUNDARY_EXAMPLES} included and ${EXPECTED_BOUNDARY_EXAMPLES} excluded scenarios expected (found ${included} and ${excluded})`);
+        }
+        else if (included === EXPECTED_BOUNDARY_EXAMPLES && excluded === EXPECTED_BOUNDARY_EXAMPLES) {
+            passes.push('Director Summary: boundary examples complete (3 included, 3 excluded)');
+        }
+    }
+    const qualityMarker = relevantMarkers.find(m => m.sectionId === 'QUALITY_STANDARDS');
+    if (qualityMarker) {
+        const end = sectionEndLine(relevantMarkers, qualityMarker, lines.length);
+        const stated = new Map();
+        for (let i = qualityMarker.line; i < end; i += 1) {
+            const rowMatch = lines[i].match(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/);
+            if (!rowMatch)
+                continue;
+            const dimension = rowMatch[1].trim();
+            if (!QUALITY_BAR_DIMENSIONS.includes(dimension))
+                continue;
+            stated.set(dimension, !isPlaceholderContent(rowMatch[2]));
+        }
+        for (const dimension of QUALITY_BAR_DIMENSIONS) {
+            requirements.push({
+                label: `Quality Standards — ${dimension} minimum standard stated or N/A`,
+                satisfied: stated.get(dimension) === true,
                 scope: 'lock',
             });
         }
@@ -433,7 +548,6 @@ function evaluateFinalDirectorDecisionGate(relevantMarkers, lines, requirements,
     }
 }
 function validateSigmaDocFile(absPath, domain) {
-    const spec = DOC_SPECS[domain];
     const content = fs_extra_1.default.readFileSync(absPath, 'utf8');
     const lines = content.split(/\r?\n/);
     const docMarkers = [];
@@ -467,6 +581,7 @@ function validateSigmaDocFile(absPath, domain) {
             });
         }
     }
+    const spec = resolveDocSpec(domain, schema);
     pushResult(docMarkers.length > 0, 'Document marker found', 'Missing document marker', passes, errors);
     if (docMarkers.length > 1) {
         errors.push(`Duplicate document marker found (${docMarkers.length})`);
@@ -548,9 +663,14 @@ function validateSigmaDocFile(absPath, domain) {
     // this same function the same way) so the two commands can never disagree; see the
     // Lock Validation Equivalence invariant on SigmaDocRequirement above.
     const requirements = [];
-    evaluateAudVerdictGate(domain, relevantMarkers, lines, requirements, passes, warnings);
+    evaluateAudVerdictGate(spec.verdictSectionId ?? VERDICT_SECTION_ID[domain], relevantMarkers, lines, requirements, passes, warnings);
     if (domain === 'intent') {
-        evaluateFinalChecklistGate(relevantMarkers, lines, requirements);
+        if (spec === INTENT_SPEC_V5) {
+            evaluateIntentV5Gate(relevantMarkers, lines, requirements, passes, warnings);
+        }
+        else {
+            evaluateFinalChecklistGate(relevantMarkers, lines, requirements);
+        }
     }
     if (domain === 'exec') {
         evaluateExecVerdictGate(relevantMarkers, lines, requirements, passes, warnings);
