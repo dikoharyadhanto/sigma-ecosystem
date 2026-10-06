@@ -640,6 +640,17 @@ function evaluatePlanV3Gate(
       satisfied: INTENT_VERSION_REFERENCE.test(body),
       scope: 'lock',
     });
+
+    let requirementsServed: string | null = null;
+    for (let i = sourceMarker.line; i < end; i += 1) {
+      const row = lines[i].trim().match(/^\|\s*Requirements served\s*\|\s*([^|]*?)\s*\|/i);
+      if (row) requirementsServed = row[1];
+    }
+    if (isPlaceholderContent(requirementsServed)) {
+      warnings.push('Source Alignment: Requirements served (REQ IDs) not stated');
+    } else {
+      passes.push('Source Alignment: Requirements served stated');
+    }
   }
 
   for (const [sectionId, label] of [['REQUIREMENT', 'Requirement'], ['KEY_OUTPUT', 'Key Output']] as const) {

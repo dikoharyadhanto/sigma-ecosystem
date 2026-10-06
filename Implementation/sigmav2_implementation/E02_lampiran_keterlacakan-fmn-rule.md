@@ -55,7 +55,7 @@ Pembanding: FMN-RULE pada HEAD sebelum E02 (35 paragraf). Status: **identik** (t
 | O15 | MUST NOT blindly accept AUD criticism | Key Rules & Constraints | identik |
 | O16 | MUST preserve DEV freedom of method | Key Rules & Constraints | identik; pengecualian Location Key Output ditulis di PLAN Creation Rules (N3) |
 | O17 | MUST create a ROADMAP before any PLAN | Mandatory: ROADMAP as Staging | nama |
-| O18 | MUST reference the source stage in PLAN | Mandatory: ROADMAP as Staging | diubah: "Section 1 (Source Alignment)" menjadi nama section; ditambah baris versi INTENT (syarat lock A-9) |
+| O18 | MUST reference the source stage in PLAN | Mandatory: ROADMAP as Staging | diubah: Source Alignment menjadi tabel rujukan ID (versi INTENT, REQ, SC/OS, CON, RR, Quality Standards, Planned Stage atau N/A); rujukan roadmap adalah Planned Stage, bukan Stage Overview (keputusan Director 7 Oktober 2026) |
 | O19 | MUST fill Protocol Overrides & Expansions when work is outside INTENT | PLAN Creation Rules | diubah (A-5): menjadi "Work Outside Intent"; kosakata status dipertahankan; bila tidak ada, section dihapus (opsional) |
 | O20 | MUST check highest minted ID before assigning a new one | PLAN Creation Rules | diubah: prefix `TC-` dan `RQ-` dihapus (TC digabung ke AC, A-2) |
 | O21 | Post-build content tidak ditulis di PLAN; MUST fill Director's Summary | PLAN Creation Rules | dipecah: larangan konten pasca-build dipertahankan; kewajiban mengisi Director Summary dipertahankan (dipulihkan setelah pemeriksaan ini) |
@@ -84,6 +84,7 @@ Kewajiban baru (tidak ada padanan lama), seluruhnya dari keputusan Director 7 Ok
 | N4 | Objective ditulis pertama; 1-3 kalimat, tanpa ID dan tanpa daftar tugas | PLAN Creation Rules | E02 bagian 7 butir 5 |
 | N5 | Aturan Quality Standards bersyarat | Core Responsibilities | B-2 |
 | N6 | Writing Style Rules (4 butir) | Behavioral Standards | B-6 |
+| N7 | Sebelum `sigma plan new`, FMN MUST bertanya dua hal berurutan: Objective (maknanya dari Director, disetujui sebelum lanjut) dan butir spesifik (setiap butir MUST masuk PLAN tanpa perubahan makna kecuali disetujui Director); FMN boleh menyatakan butir tidak realistis atau sulit diukur dan menegosiasikannya; konflik dengan Objective: perluas Objective atau simpan butir untuk PLAN berikutnya; konflik dengan INTENT: Amendment Request | Role Activation | Keputusan Director 7 Oktober 2026 (setelah penutupan E02) |
 
 ## 4. Penghapusan tanpa kewajiban MUST
 
@@ -100,3 +101,4 @@ Butir "run `sigma close check` sebelum merekomendasikan `close lock`" dihapus da
 
 - Keputusan Director: kolom Location pada Key Output kategori `Modification` boleh dikosongkan. Alasan: lokasi perubahan kode adalah hasil analisis DEV, dan FMN tidak boleh terdorong memindai source code untuk mengisinya. Mengubah aturan kategori di E02 A-3 (Location wajib berisi path untuk `Modification`).
 - Dampak pada FMN-RULE: syarat "item yang sama ada di Requirement dengan Role `Input`" berlaku hanya bila Location terisi dengan file atau folder. Tidak ada kewajiban MUST/MUST NOT yang berubah.
+- Source Alignment ditulis ulang menjadi tabel rujukan ID. Sel hanya memuat ID dan nama; tidak ada penjelasan. Baris "Success criteria supported" dihapus karena duplikat Acceptance Criteria. Validator memberi peringatan (tidak memblokir) bila "Requirements served" kosong.

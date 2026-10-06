@@ -606,8 +606,10 @@ Test summary.
 <!-- SIGMA:FMN_PLAN:SECTION:SOURCE_ALIGNMENT -->
 ## Source Alignment
 
-- Intent version: INTENT-v1
-- Intent point served: Test intent point.
+| Link | References |
+|:---- |:---------- |
+| Intent version | INTENT-v1 |
+| Requirements served | REQ-001 |
 
 <!-- SIGMA:FMN_PLAN:SECTION:OBJECTIVE -->
 ## Objective

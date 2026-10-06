@@ -26,10 +26,17 @@
 <!-- SIGMA:FMN_PLAN:SECTION:SOURCE_ALIGNMENT -->
 ## Source Alignment
 
-- Intent version: INTENT-v{X}
-- Intent point served: [...]
-- Scope boundary and constraints respected: [...]
-- Source Roadmap Stage: ROADMAP-v{X} - Stage {N} ({Name}) / N/A
+> IDs only: from the INTENT, and the stage from the ROADMAP Planned Stage.
+
+| Link | References |
+|:---- |:---------- |
+| Intent version | INTENT-v{X} |
+| Requirements served | [REQ-xxx, ...] |
+| Scope respected | [SC-xxx, ...]; excluded: [OS-xxx, ...] |
+| Constraints respected | [CON-xxx, ...] / none |
+| Risks addressed | [RR-xxx, ...] / none |
+| Quality Standards applied | [dimension names] / N/A |
+| Planned Stage realized | Stage {N} ({Title}) / N/A |
 
 ---
 
@@ -56,7 +63,7 @@
 <!-- SIGMA:FMN_PLAN:SECTION:KEY_OUTPUT -->
 ## Key Output
 
-> Only final outputs the Director will look for, named in the Objective. Intermediate files and logs belong in Work Order or Constraints. If the result is a behavior change with no file, write one row: "No file output". An output made of many files (for example a source tree) is one row; Location gives the folder and its name. Location may be left empty for Modification.
+> Only final outputs named in the Objective. Intermediate files and logs go in Work Order or Constraints. A behavior change with no file is one row: "No file output". An output of many files (for example a source tree) is one row, with the folder as Location. Location may be empty for Modification.
 
 | No | Output | Category | Description | Location |
 |:-- |:------ |:-------- |:----------- |:-------- |

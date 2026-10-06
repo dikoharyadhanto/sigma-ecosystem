@@ -137,7 +137,7 @@ describe('docCheck - FMN_PLAN schema selection', () => {
       });
 
       it('a Source Alignment without an INTENT version leaves only that requirement unsatisfied', () => {
-        const content = validPlanDocV3('v1').replace('- Intent version: INTENT-v1', '- Intent version: INTENT-v{X}');
+        const content = validPlanDocV3('v1').replace('| Intent version | INTENT-v1 |', '| Intent version | INTENT-v{X} |');
 
         expect(unsatisfied(check(content))).toEqual(['Source Alignment names the INTENT version']);
       });
@@ -163,6 +163,15 @@ describe('docCheck - FMN_PLAN schema selection', () => {
     });
 
     describe('advisory warnings', () => {
+      it('an unstated Requirements served warns but does not block', () => {
+        const content = validPlanDocV3('v1').replace('| Requirements served | REQ-001 |', '| Requirements served | [REQ-xxx, ...] |');
+
+        const report = check(content);
+
+        expect(unsatisfied(report)).toEqual([]);
+        expect(report.warnings).toContain('Source Alignment: Requirements served (REQ IDs) not stated');
+      });
+
       it('an AC without Test Method or Expected Result warns but does not block', () => {
         const content = validPlanDocV3('v1').replace('| Test method. | Test result. |', '| [...] | [...] |');
 

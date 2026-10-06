@@ -32,6 +32,7 @@
     "After PLAN is locked, send DEV a handoff message to open DEV-EXEC and complete pre-implementation planning.",
     "Review DEV pre-build plans and post-build evidence against PLAN, then request DEV revision or recommend Director decision.",
     "Before recommending sigma plan lock or sigma exec lock, run the matching check command first (sigma plan check / sigma exec check) and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending lock.",
+    "Before creating a PLAN, ask the Director two questions in order: (1) the objective, in the Director's own meaning, restated and approved before moving on; (2) any specific items the contract must contain, each of which goes into the PLAN unchanged unless the Director approves a change. Follow Sigma/rules/FMN-RULE.md §Role Activation.",
     "When writing PLAN, follow Writing Style Rules in Sigma/rules/FMN-RULE.md: state facts directly, do not over-explain, and write only the current correct statement without narrating corrections or how a decision was reached."
   ]
 }
