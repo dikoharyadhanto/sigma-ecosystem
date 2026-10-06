@@ -17,7 +17,7 @@ Director dapat mengarahkan FMN atau DEV berpindah pekerjaan antar versi. Pergant
 3. Pengiriman message hanya diblokir oleh message UNREAD milik pengirim pada major intent yang sama dengan pekerjaan/pesan yang dituju. Message UNREAD pada major intent lain tidak memblokir.
 4. Memo dan message intent lain tetap tersimpan; beralih intent mengubah konteks yang relevan, bukan menganggap pesan sudah dibaca.
 
-Poin 4 adalah penjabaran pemahaman asisten atas usulan, belum keputusan tambahan Director. Pengelompokan mengikuti major intent/chain; perpindahan minor di dalam intent yang sama tetap berbagi kuota dan kewajiban baca.
+Pengelompokan mengikuti major intent/chain; perpindahan minor di dalam intent yang sama tetap berbagi kuota dan kewajiban baca. Pergantian intent biasa tidak mengubah status pesan; pengecualian yang diputuskan kemudian adalah migrasi pesan/memo lama melalui doctor ke LEGACY dengan UNREAD diubah menjadi READ.
 
 ### Fakta terverifikasi dari kode main pada f707085
 
@@ -49,18 +49,21 @@ Contoh memakai identitas intent, bukan prefix versi PLAN legacy:
 
 - Simpan identitas chain/intent secara eksplisit sebagai metadata message/memo, terpisah dari related_artifact. Resolusi referensi PLAN/EXEC mengikuti keanggotaan chain sebenarnya.
 - Terapkan batas konteks secara konsisten pada daftar, indikator memo inbox, perhitungan kuota, send gate, dan evaluasi auto-outdate; mengganti tampilan saja tidak menyelesaikan seluruh pencampuran.
-- Pertahankan kuota berbasis UNREAD agar pembacaan memo tetap membebaskan slot. Detail ini belum dikonfirmasi sebagai keputusan baru.
-- Pertahankan keterlacakan pesan lama dan akses riwayat eksplisit; jangan mengubah UNREAD menjadi READ hanya karena intent berganti.
+- Director kemudian menetapkan kuota default lima memo UNREAD per intent per role; pembacaan membebaskan slot.
+- Pertahankan keterlacakan dan akses riwayat; pergantian intent biasa tidak mengubah UNREAD, sedangkan migrasi LEGACY melalui doctor mengikuti keputusan Director yang lebih baru.
 
-### Detail yang belum diputuskan
+### Penetapan lanjutan Director dan detail tersisa
 
-- Apakah angka 5 tetap menghitung memo UNREAD, atau total memo tersimpan. Rekomendasi: UNREAD, sesuai mekanisme sekarang.
-- Perlakuan memo GENERAL, message N/A, serta keadaan tanpa intent aktif. Rekomendasi: konteks umum tersendiri dengan aturan yang dinyatakan eksplisit.
-- Penentuan chain message/memo lama yang tidak mempunyai metadata chain, termasuk referensi artefak yang tidak dapat dipastikan. Rekomendasi: gunakan bukti referensi/isi yang tersedia; jangan menebak kepemilikan chain.
-- Perilaku pengiriman jika related_artifact menunjuk chain berbeda dari intent aktif, serta balasan lintas chain. Rekomendasi: konteks harus jelas sebelum gate dievaluasi.
-- Cakupan filter tampilan inbox message, opsi riwayat lintas intent, dan kebijakan auto-outdate per chain. Keluhan awal menyebut tampilan message; rumusan usulan pengiriman sudah jelas, tetapi detail tampilan/riwayat belum lengkap.
+- Kuota ditetapkan: default lima memo UNREAD per intent per role.
+- Message dan memo dipisahkan menjadi Sigma/messages/<ROLE>/<KONTEKS>/ dan Sigma/memo/<ROLE>/<KONTEKS>/; KONTEKS mencakup major v1/v2/v3 untuk INTENT/ROADMAP/CLOSE, minor seperti v1.1/v1.2 untuk PLAN/EXEC, serta GENERAL dan LEGACY.
+- Doctor memindahkan seluruh message/memo format Sigma lama ke LEGACY masing-masing role, termasuk yang referensinya dapat diketahui; UNREAD diubah paksa menjadi READ sebelum dipindahkan. Ini menggantikan rekomendasi klasifikasi ulang pesan lama ke chain dan mempertahankan UNREAD saat migrasi.
+- Pengiriman lintas intent ditolak: pesan bertanda v2.1 memerlukan INTENT v2 aktif pada standar baru; untuk chain legacy, resolusi tetap mengikuti keanggotaan chain dan penomoran yang berlaku.
+- Tampilan normal mengikuti intent aktif; seluruh kategori action diperlakukan sama untuk send gate, termasuk FYI, RESPOND, REVIEW, UNBLOCK dan OTHER.
+- GENERAL digunakan sebagai cadangan bila versi tidak dapat dihubungkan; GENERAL UNREAD selalu tampil, termasuk ketika intent aktif berbeda atau belum tersedia. Detail gate/kuota GENERAL, balasan dengan konteks tidak sesuai dan kebijakan retensi/akses riwayat masih perlu spesifikasi.
 
-Status: keluhan terverifikasi; usulan Director dicatat; rincian desain masih dalam diskusi; belum ada implementasi.
+Rincian struktur, agregasi major dan migrasi tercatat pada bagian Keputusan lanjutan Director di bawah.
+
+Status: keluhan terverifikasi dan keputusan mailbox lanjutan Director dicatat; detail yang disebut terbuka masih membutuhkan keputusan; belum ada implementasi.
 
 ## Temuan 02 - Penomoran PLAN/EXEC selaras dengan INTENT, kompatibilitas per chain
 
@@ -104,10 +107,10 @@ Ini adalah arah desain dan batas kompatibilitas dari Director dalam diskusi, buk
 
 Message dan memo tetap harus memakai identitas intent/chain sebenarnya. Pada proyek campuran, PLAN v1.x dapat menjadi turunan INTENT v2 legacy, sedangkan PLAN v3.x menjadi turunan INTENT v3 baru. Prefix PLAN/EXEC bukan pengganti metadata keanggotaan chain.
 
-### Detail yang masih terbuka
+### Penetapan kompatibilitas DRAFT dan detail teknis
 
-- Perlakuan intent DRAFT yang sudah ada sebelum upgrade dan belum pernah mengunci PLAN. Director secara eksplisit menyebut chain yang telah terlanjur mengunci aturan lama; cakupan DRAFT lama belum dinyatakan. Rekomendasi asisten: semua chain yang sudah ada mempertahankan aturan awal, termasuk yang belum mempunyai PLAN, agar aturan tidak berubah di tengah chain.
-- Bentuk penanda permanen aturan penomoran dan bukti pemulihannya.
+- Director menetapkan INTENT DRAFT yang sudah ada sebelum upgrade tetap memakai skema legacy, termasuk ketika belum mempunyai PLAN.
+- Bentuk penanda permanen aturan penomoran dan bukti pemulihannya masih perlu spesifikasi.
 
 Status: aturan sekarang terverifikasi; arah penyelarasan dan kompatibilitas Director dicatat; rincian desain masih dalam diskusi; belum ada implementasi.
 
@@ -428,7 +431,7 @@ HEAD yang diperiksa: f707085 pada main. Perbedaan terhadap snapshot audit harus 
 
 Audit ini membahas alur memahami, menyetujui dan mengoreksi pekerjaan; dokumen keputusan desain sebelumnya lebih banyak membahas struktur artefak dan perubahan lifecycle. Sampel KLHK memberi bukti tambahan tentang pengulangan, ringkasan di akhir, placeholder dan pertanyaan makna yang masih muncul pada PLAN panjang, tetapi tidak mengukur frekuensi atau durasi keluhan K1-K3.
 
-R1 dan R3 dibahas bersama penyederhanaan artefak yang direkomendasikan sebelumnya. Sebelum elaborasi INTENT penuh, ARC menyampaikan ulang pemahamannya, asumsi dan contoh batas scope agar Director dapat mengoreksi salah paham lebih awal. Rekomendasi: tempatkan fungsi brief pada bagian awal draft INTENT; belum direkomendasikan dokumen wajib dan approval tambahan. Hash harus mengikat sumber yang disetujui dan hubungan kartu ke sumber, bukan hanya ringkasan yang dapat tetap sama ketika detail kontrak berubah. Perubahan sumber setelah review harus ditampilkan untuk dinilai kembali; persetujuan versi sebelumnya tidak otomatis mencakup perubahan itu.
+R1 dan R3 dibahas bersama penyederhanaan artefak yang direkomendasikan sebelumnya. Sebelum elaborasi INTENT penuh, ARC menyampaikan ulang pemahamannya, asumsi dan contoh batas scope agar Director dapat mengoreksi salah paham lebih awal. Kesepahaman yang diterima Director: brief menjadi section awal di dalam INTENT dan wajib terisi sebelum ratify, tanpa artefak atau persetujuan terpisah; jumlah tetap 3 contoh termasuk dan 3 tidak termasuk diuji saat pilot, bukan dikunci sekarang. Hash harus mengikat sumber yang disetujui dan hubungan kartu ke sumber, bukan hanya ringkasan yang dapat tetap sama ketika detail kontrak berubah. Perubahan sumber setelah review harus ditampilkan untuk dinilai kembali; persetujuan versi sebelumnya tidak otomatis mencakup perubahan itu.
 
 Penegasan hasil check: tampilkan kelayakan struktur/persyaratan administratif secara terpisah dari persetujuan makna. Label Eligible tidak boleh menyiratkan bahwa tujuan, scope dan kriteria keberhasilan telah sesuai maksud Director. Mekanisme persetujuan tersimpan pada MCP menjadi fondasi yang sudah tersedia, dengan batas kemampuan sebagaimana verifikasi di atas.
 
@@ -474,17 +477,37 @@ Batas verifikasi: sebagian artefak/section KLHK dibaca terarah untuk memeriksa k
 
 ### Pertimbangan Director dan penilaian asisten
 
-Director mempertimbangkan penghapusan tier Sovereign/Operationalization, sehingga seluruh substansi INTENT boleh diamandemen. Alasannya: tier membantu ketika kualitas intent baik, tetapi dapat menjadi jebakan ketika klasifikasi atau intent awal keliru. Pengaman yang diusulkan berpindah ke otoritas perubahan: hanya ARC yang mengaktifkan amandemen atas instruksi eksplisit Director secara langsung; pesan atau permintaan AI role lain bukan pemicu atau otorisasi. ARC wajib meminta konfirmasi ulang persetujuan amandemen.
+Director menetapkan penghapusan tier Sovereign/Operationalization pada Sigma v2, sehingga seluruh substansi INTENT boleh diamandemen. INTENT lama tetap ada beserta tag historisnya; setelah Sigma v2 resmi digunakan pada device, tag tersebut boleh diabaikan. INTENT baru tidak menuliskan tier, dan seluruh aturan tier direncanakan dihapus dari rules, template, memory dan protocol saat perapihan implementasi. Tidak diperlukan warning tier khusus; Director dapat menjelaskan pengabaian tag lama dalam chat. Pengaman perubahan: hanya ARC mengaktifkan amandemen atas instruksi eksplisit Director secara langsung; pesan atau permintaan AI role lain bukan pemicu atau otorisasi, dan ARC wajib meminta konfirmasi ulang persetujuan amandemen.
 
-Asisten mendukung arah tersebut. Usulan alur: instruksi langsung Director mengotorisasi penyusunan; ARC menampilkan perubahan konkret sebelum-sesudah dan dampak pada pekerjaan; konfirmasi akhir Director mengotorisasi penerapan isi yang telah ditinjau. Laporan role lain dapat menjadi informasi masalah, tanpa memulai workflow amandemen. ARC menjelaskan konsekuensi dan dapat menyampaikan keberatan, tetapi tidak menjadi pemegang veto atas perubahan tujuan Director.
+Asisten mendukung arah tersebut. Alur otoritas perubahan yang diterima Director melalui kesepahaman review: instruksi langsung Director mengotorisasi penyusunan; ARC menampilkan perubahan konkret sebelum-sesudah dan dampak pada pekerjaan; konfirmasi akhir Director mengotorisasi penerapan isi yang telah ditinjau. Laporan role lain dapat menjadi informasi masalah, tanpa memulai workflow amandemen. ARC menjelaskan konsekuensi dan dapat menyampaikan keberatan, tetapi tidak menjadi pemegang veto atas perubahan tujuan Director. Review amandemen menyatakan apakah tujuan atau hasil inti berubah; keterangan ini informatif, bukan tier atau gate baru.
 
-Ini masih pertimbangan desain, belum keputusan penerapan. Usulan pemeriksaan tier pada bagian kasus AUD adalah alternatif pada model lama; jangan memperlakukannya sebagai kewajiban tambahan untuk model tanpa tier. Pengaman riwayat, non-retroaktivitas dan penyelarasan kontrak terdampak yang telah dicatat tetap relevan. PLAN perlu menunjuk revisi/snapshot INTENT yang dipakai karena nomor major saja tidak menunjukkan keadaan setelah amandemen. Pilihan INTENT baru tetap tersedia atas keputusan Director untuk memisahkan tujuan/workstream.
+Keputusan ini menggantikan batas amandemen bertier pada model lama dan belum mengotorisasi implementasi dalam sesi diskusi. Catatan pemeriksaan tier pada kasus AUD merupakan evaluasi historis model lama, bukan kewajiban Sigma v2. Pengaman riwayat, non-retroaktivitas dan penyelarasan kontrak terdampak yang telah dicatat tetap relevan. PLAN perlu menunjuk revisi/snapshot INTENT yang dipakai karena nomor major saja tidak menunjukkan keadaan setelah amandemen. Pilihan INTENT baru tetap tersedia atas keputusan Director untuk memisahkan tujuan/workstream.
 
 ### Preferensi Director - gunakan Git tanpa salinan artefak usang
 
 Director tidak menginginkan banyak backup artefak Sigma yang outdated. Riwayat Git dan git diff dipilih sebagai pendekatan perbandingan; ARC perlu memastikan INTENT yang ada di Git merupakan versi terbaru sebelum amandemen. Preferensi ini menggantikan usulan salinan snapshot terpisah: acuan isi dapat berupa commit Git, sementara Sigma menyimpan metadata amandemen dan rujukan yang diperlukan, tanpa duplikasi dokumen.
 
 Penegasan asisten: baseline terbaru harus merupakan isi sah yang persetujuan/sertifikasinya dapat ditelusuri, bukan hanya HEAD. Sebelum penyusunan delta, pastikan file INTENT sesuai chain aktif, dilacak Git, dan cocok dengan baseline sah; tetapkan commit acuan. Perubahan INTENT yang belum tercatat atau belum disahkan dijelaskan terlebih dahulu agar tidak ikut terbawa. Pemeriksaan terarah pada INTENT; perubahan berkas pekerjaan lain tidak otomatis menghalangi amandemen. Rancangan atau sumber yang berubah setelah review memerlukan pembaruan persetujuan.
+
+### Kesepahaman riwayat Git dan tag - diterima Director
+
+Director menerima rekomendasi bersama Codex dan Claude pada 6 Oktober 2026 untuk rancangan berikut; penerimaan desain tidak mengotorisasi perubahan kode atau Git dalam sesi diskusi.
+
+- Git lokal menjadi prasyarat alur amandemen berbasis Git; penggunaan Sigma lainnya tetap sah tanpa Git, sesuai prepareLocalGit pada src/commands/project.ts:119-146.
+- Baseline ratifikasi dan setiap hasil amandemen yang disahkan tersedia sebagai commit dengan tag Git lokal, tanpa backup dokumen terpisah; contoh sigma/intent-v2-amd-003 menunjuk hasil amandemen ketiga, sedangkan baseline sebelumnya tetap tersedia.
+- Tag dibuat terhadap commit eksplisit yang memuat isi INTENT final yang telah ditinjau dan disahkan; tag pada HEAD tidak menyimpan edit yang belum masuk commit, dan perubahan isi setelah review memerlukan review/persetujuan yang diperbarui.
+- Metadata Sigma mengikat chain, ID amandemen, baseline sebelum perubahan, commit/tag hasil dan SHA-256 isi tersertifikasi; hash membuktikan kecocokan tetapi tidak menyimpan isi lama.
+- Sigma tidak memindahkan atau menimpa tag yang sudah dicatat; tag mempertahankan objek commit dari pembersihan Git selama referensinya tersedia, tanpa membuat tag kebal terhadap penghapusan manual.
+- Director menetapkan push ke remote dilakukan sendiri; Sigma tidak melakukan push otomatis. Distribusi tag tetap perlu dicakup dalam workflow manual Director karena push branch biasa tidak otomatis mengirim semua tag. Director menerima commit lokal atas arahan eksplisitnya, dengan pelaksanaan dapat dibantu AI; Sigma memverifikasi acuan dan membuat tag, tanpa commit otomatis.
+- Alur saat ini pada src/services/intentAmendmentService.ts belum membuat commit/tag; rancangan harus menangani kegagalan pencatatan, sertifikasi, commit dan tag agar tidak melaporkan amandemen selesai dengan acuan yang belum tersedia.
+
+Verifikasi read-only mengacu pada [Git GC](https://git-scm.com/docs/git-gc#_notes), [Git Tag](https://git-scm.com/docs/git-tag) dan [Git Push](https://git-scm.com/docs/git-push); belum dilakukan uji pembuatan tag, rewrite history atau recovery.
+
+### Keputusan commit lokal - diterima Director
+
+Director menerima commit lokal atas arahannya dengan pelaksanaan dapat dibantu AI; pemilihan berkas dan waktu pencatatan tetap berada dalam kendali Director, terutama ketika working tree memuat pekerjaan lain. Manual tidak mengharuskan Director mengetik perintah Git sendiri. Sigma dapat menampilkan berkas/diff yang diperlukan, memeriksa commit baseline dan commit hasil terhadap isi yang disahkan, serta membuat tag lokal tanpa melakukan stage/commit otomatis atau push.
+
+Penyelesaian alur amandemen perlu menunggu commit hasil yang sesuai dan tag tersedia; jika commit belum dibuat atau isinya tidak cocok, Sigma melaporkan langkah yang belum selesai, bukan menerima HEAD secara sembarang. Urutan persetujuan, pencatatan dan sertifikasi akhir tetap harus dirancang konsisten pada implementasi.
 
 ### Verifikasi gitignore - read-only
 
@@ -493,24 +516,174 @@ Penegasan asisten: baseline terbaru harus merupakan isi sah yang persetujuan/ser
 - git check-ignore --no-index -v terhadap Sigma/charter/DIR-INTENT-v5.md dan DIR-INTENT-v6.md di KLHK tidak menghasilkan aturan ignore yang cocok. git ls-files mengonfirmasi kedua berkas dilacak.
 - Kesimpulan terbatas: penggunaan riwayat/diff Git untuk INTENT tidak terhalang konfigurasi ignore yang diperiksa. Pemeriksaan ini belum mensertifikasi bahwa isi kedua INTENT sama dengan baseline sah terbaru.
 
-Status: pertimbangan amandemen, preferensi riwayat Git, dan hasil verifikasi dicatat; belum ada perubahan sistem, amandemen proyek, commit, push/pull, atau perubahan gitignore.
+Status: penghapusan tier, pengaman amandemen, riwayat Git/tag dan push manual Director ditetapkan sebagai arah desain; belum ada perubahan sistem, amandemen proyek, commit, tag, push/pull, atau perubahan gitignore oleh asisten.
+
+## Rekonsiliasi review Codex dan Claude - 6 Oktober 2026
+
+Director menyatakan mengikuti rekomendasi kesepahaman bersama dan mengotorisasi pembaruan dokumen diskusi. Status berikut memperjelas perubahan terhadap catatan 28 September; tidak menggantikan seluruh D-01 sampai D-22 atau memberi otorisasi implementasi.
+
+| Acuan | Status dan penegasan |
+| :--- | :--- |
+| D-04 - Amandemen | Batas amandemen bertier digantikan keputusan Sigma v2 tanpa tier; INTENT lama tetap ada dan tag historis boleh diabaikan, dengan pengaman otoritas serta riwayat pada bagian amandemen. |
+| D-05 - APPROVED/LOCKED | Keputusan lifecycle sudah tercatat dan tidak dibuka ulang; spesifikasi pelaksanaan serta kompatibilitas chain lama masih perlu dilengkapi. |
+| D-12 - Kompatibilitas | Penomoran lama dipertahankan tanpa renumber otomatis; migrasi lifecycle melalui doctor kini ditetapkan secara terbatas sebagaimana keputusan lanjutan, bukan migrasi bebas seluruh chain. |
+| D-13 - HUMAN | Keputusan pada sumber tetap tercatat; review ini belum membuka ulang atau mengotorisasi penerapannya. |
+| D-15 - Brief | Brief wajib berada dalam INTENT tanpa artefak/approval terpisah; jumlah contoh batas diuji melalui pilot. |
+| D-22 - sigma note/notes | Tetap track terpisah rilis 1.1.0; arah terbaru menambah daftar/update dan pembatasan Markdown sebagaimana bagian Klarifikasi Sigma notes, memperluas rancangan awal new/list dengan penyimpanan daftar yang masih perlu ditetapkan. |
+
+Koreksi bukti: cakupan validator EXEC saat ini menjelaskan bagaimana placeholder dapat lolos, tetapi bukan kepastian penyebab historis KLHK; rekomendasi kelengkapan berfokus pada bagian substantif dengan alasan singkat untuk bagian yang tidak berlaku. Director kemudian menetapkan seluruh kategori pesan diperlakukan sama oleh send gate; tidak ada pengecualian FYI atau kategori action lain. Claude mengoreksi contoh CanopySense sebagai pelebaran PLAN, bukan rangkaian amandemen; koreksi itu laporan Claude, belum diverifikasi pada proyek tersebut.
+
+Pembaruan basis pemeriksaan: main lokal dan referensi lokal origin/main berada di da4e831, dengan f707085 sebagai pendahulu; diff keduanya hanya empat dokumen evaluasi dan working tree bersih sebelum pembaruan ini. Pemeriksaan langsung remote gagal karena koneksi, sehingga kondisi server terkini belum dikonfirmasi; informasi review bahwa f707085 hanya berada lokal tidak dipakai sebagai fakta terkini.
+
+## Keputusan lanjutan Director - Jawaban open question
+
+Keputusan berikut diberikan pada 6 Oktober 2026; pencatatan tidak mengotorisasi perubahan kode, state proyek atau Git dalam sesi diskusi.
+
+### Struktur message/memo dan transisi LEGACY
+
+Contoh struktur yang ditetapkan, dengan role FMN:
+
+```text
+Sigma/
+  messages/FMN/
+    v1/
+    v2/
+    v3/
+    v1.1/
+    v1.2/
+    GENERAL/
+    LEGACY/
+  memo/FMN/
+    v1/
+    v2/
+    v3/
+    v1.1/
+    v1.2/
+    GENERAL/
+    LEGACY/
+```
+
+Director menetapkan folder major v1/v2/v3 untuk message/memo terkait INTENT, ROADMAP atau CLOSE; folder minor tetap tersedia bagi PLAN/EXEC. Tujuan perapihan adalah memudahkan Director memeriksa isi pesan dan AI melacak pekerjaan tanpa penumpukan seluruh file dalam satu folder role. Folder versi memisahkan lokasi file; tampilan, kuota memo dan send gate tetap berbasis intent major. Pada standar baru, v2.1 dan v2.2 milik INTENT v2 sehingga kewajiban unread dan kuota dihitung bersama untuk role yang sama. Pada chain legacy, identitas intent mengikuti keanggotaan chain sebenarnya, bukan prefix nomor PLAN/EXEC.
+
+GENERAL merupakan cadangan yang diperkirakan jarang diperlukan karena role umumnya terikat pada versi artefak dalam sesi. Bila ada GENERAL UNREAD, entry tersebut selalu tampil bersama konteks aktif atau ketika tidak ada intent aktif; tidak disembunyikan oleh filter intent. Penampilan ini belum menetapkan apakah GENERAL ikut send gate atau kuota memo intent.
+
+LEGACY menampung seluruh pesan/memo Sigma lama melalui doctor setelah UNREAD diubah menjadi READ. Pembacaan paksa ini merupakan reset administratif migrasi, bukan bukti bahwa penerima telah memahami isi. Keputusan ini mengesampingkan rekomendasi sebelumnya untuk mengklasifikasikan pesan lama ke chain dan mempertahankan UNREAD; pergantian intent biasa pada sistem baru tetap tidak mengubah status.
+
+Verifikasi read-only: src/commands/memo.ts:153-175 menulis memo ke Sigma/messages/<ROLE>/ sebagai MessageEntry bertipe MEMO dan menggunakan index message yang sama; src/engine/mailbox.ts:112-130,264-265 menegaskan lokasi index dan folder. Inventaris KLHK memperlihatkan file message langsung dalam Sigma/messages/FMN, sementara Sigma/memo belum tersedia. Pemisahan folder baru merupakan perubahan yang akan diimplementasikan, bukan perilaku sekarang.
+
+Rekomendasi teknis untuk implementasi: migrasi memperbarui index dan referensi path sambil mempertahankan ID/relasi balasan, mencatat reset status, dan tidak mengarsipkan ulang pesan format v2 saat doctor dijalankan lagi. Belum ada doctor, pemindahan file atau reset status yang dijalankan.
+
+### Transisi lifecycle melalui doctor
+
+| Kondisi pasangan | Keputusan Director untuk doctor Sigma v2 |
+| :--- | :--- |
+| PLAN LOCKED dan EXEC pasangannya LOCKED | Keduanya tetap LOCKED. |
+| PLAN LOCKED dan EXEC pasangannya DRAFT | PLAN otomatis menjadi APPROVED; EXEC tetap DRAFT. |
+
+Ini menetapkan migrasi lifecycle terbatas pada pasangan terkait tanpa renumber artefak; tidak mengubah pasangan selesai secara retroaktif. Kode sekarang belum menerima APPROVED pada state PLAN/EXEC, sehingga validator, gate, service dan orientasi harus diselaraskan ketika implementasi dilakukan. Perlakuan PLAN LOCKED tanpa EXEC pasangan atau pasangan ambigu belum ditetapkan.
+
+### Pertanyaan yang belum dijawab atau memerlukan rincian
+
+- Nomor 7 sudah diputuskan: INTENT DRAFT sebelum upgrade tetap legacy; folder major bagi INTENT/ROADMAP/CLOSE dan tampilan GENERAL UNREAD juga sudah ditetapkan di atas.
+- Perhitungan kuota dan send gate bagi GENERAL belum ditetapkan; kemunculan pada tampilan tidak otomatis menjadikan GENERAL pemblokir semua intent.
+- Commit lokal sudah diputuskan atas arahan Director dan dapat dikerjakan AI; Sigma memverifikasi acuan serta membuat tag lokal, sementara push tetap dilakukan Director sendiri.
+- Retensi/auto-outdate, akses riwayat dan kondisi pasangan lifecycle di luar tabel di atas perlu spesifikasi, tanpa mengubah keputusan yang sudah diberikan.
+
+## Klarifikasi Sigma notes - Katalog catatan bebas Markdown
+
+### Kebutuhan dan arahan Director
+
+Sigma/notes merupakan tempat catatan bebas template. Director membutuhkan daftar yang membantu memilih catatan untuk dibuka dan memudahkan AI melacak catatan ketika jumlah file berkembang; acuan pengalaman adalah Sigma/notes pada proyek KLHK. Pola penggunaan diinginkan menyerupai daftar referensi dan sigma reference update. Director menyebut perintah sigma notes update yang wajib menolak berjalan jika ada file selain format .md; folder ini khusus catatan Markdown.
+
+Aturan pembatasan format berlaku pada update, tanpa mengubah isi catatan menjadi kontrak/template wajib dan tanpa menghapus, memindahkan atau mengonversi file non-Markdown secara otomatis.
+
+### Keputusan registrasi - Ralat aturan tanggal
+
+Director menetapkan bahwa hanya catatan yang dibuat melalui sigma notes new dapat teregistrasi. Markdown yang dibuat atau ditambahkan di luar mekanisme tersebut tidak masuk daftar aktif dan diperlakukan sebagai catatan tidak terdaftar, terlepas dari tanggal pembuatan, nama file atau adanya heading. Director kemudian mengganti nama folder penampung LEGACY menjadi unregistered-notes khusus untuk notes. Keputusan ini menggantikan pendekatan tanggal cutover yang sempat dibahas dalam chat dan rekomendasi katalog otomatis untuk seluruh catatan lama.
+
+- new membuat file Markdown dalam Sigma/notes/note-list/ dan mencatat registrasinya; isi catatan tetap bebas template.
+- list dan note-list.md hanya memuat catatan terdaftar, bukan seluruh Markdown yang ditemukan dalam folder.
+- update menyinkronkan daftar catatan terdaftar dan memindahkan Markdown tidak terdaftar ke Sigma/notes/unregistered-notes/ sesuai alur perapihan yang sudah diarahkan; update tidak mengimpor atau mendaftarkan file manual.
+- Catatan lama KLHK menjadi catatan tidak terdaftar tanpa perlu ekstraksi ringkasan atau pengisian kegunaan satu per satu; file manual baru juga mengikuti perlakuan yang sama.
+- Mengedit isi catatan yang sudah dibuat melalui new tetap mempertahankan asal registrasinya; identitas catatan perlu dilacak terpisah dari hash isi yang berubah saat penyuntingan.
+- note-list.md merupakan katalog sistem dan dikecualikan dari klasifikasi catatan; folder unregistered-notes dikecualikan dari katalog aktif dan tidak dipindahkan ulang ke unregistered-notes bertingkat. Berada dalam note-list/ saja tidak membuat Markdown menjadi terdaftar bila file tidak dibuat melalui new.
+
+Rekomendasi teknis asisten: gunakan registry yang dicatat oleh new sebagai sumber identitas, bukan mengenali registrasi dari nama file atau tanggal. Jika registry menggunakan JSON, simpan di luar Sigma/notes agar tidak melanggar pembatasan Markdown. Update tidak membuat entry registrasi baru dari file yang ditemukannya; registry yang rusak/hilang pada proyek yang sebelumnya sudah memakai registrasi perlu penanganan pemulihan, bukan otomatis menganggap seluruh catatan aktif sebagai legacy.
+
+Rincian penyimpanan registry, kolom katalog, rename/file hilang dan validasi cakupan unregistered-notes/subfolder masih perlu spesifikasi; keputusan hanya-new dan perlakuan legacy sudah ditetapkan. Pembatasan update terhadap file non-Markdown tetap berlaku.
+
+### Struktur folder yang ditetapkan Director
+
+```text
+Sigma/notes/
+  unregistered-notes/   # Markdown yang tidak teregistrasi
+  note-list/           # Markdown terdaftar melalui sigma notes new
+  note-list.md         # Katalog catatan terdaftar
+```
+
+Tiga komponen tersebut menjadi struktur aktif folder notes. Saat update, setiap file Markdown asing/tidak terdaftar dalam notes diarahkan ke unregistered-notes, termasuk file manual yang diletakkan langsung di root notes di luar ketiga komponen tersebut. Update tidak mengimpor file asing sebagai catatan aktif dan tidak memperlakukan note-list.md sebagai file asing. File manual yang disisipkan ke note-list/ juga mengikuti aturan registrasi yang sama; posisi folder bukan bukti registrasi.
+
+Rekomendasi implementasi: pertahankan isi file saat pemindahan dan tangani benturan nama tanpa menimpa catatan yang sudah ada; tidak ada pemindahan nyata dalam sesi ini.
+
+### Verifikasi read-only
+
+- KLHK Sigma/notes memiliki 85 file langsung, terdiri atas 73 .md dan 12 non-.md, serta dua subfolder; seluruh subtree memiliki 90 file, terdiri atas 74 .md dan 16 non-.md.
+- Format non-Markdown mencakup PDF, DOCX, PPTX, XLSX, TXT, HTML, JPG, PNG dan JS; aturan penolakan baru akan menolak update pada keadaan folder yang diperiksa, bahkan bila pemeriksaan hanya mencakup file langsung.
+- Sampel bagian awal tiga catatan (rencana ulang sampel 6 Oktober, glosarium dan CATATAN_DISKUSI) memperlihatkan variasi judul, tanggal dan struktur; pemeriksaan ini tidak membaca atau memverifikasi seluruh substansi catatan.
+- src/commands/reference.ts mendaftarkan update saja; daftar sumber disimpan dalam Sigma/reference/reference-list.md. src/services/referenceUpdateService.ts menambah entry baru pada Local Artifact, mempertahankan penilaian Category/Notes yang sudah ada dan melaporkan referensi file hilang tanpa menghapus row. Pemeriksaannya hanya entry tingkat teratas pada reference/data, bukan scan rekursif seluruh file.
+
+### Uji sampel KLHK - Batas ekstraksi otomatis
+
+Director meminta pembuktian pada catatan nyata. Dua variasi penyaring diuji melalui script Node dalam memori pada 10 file yang dipilih untuk variasi format, bukan sampel acak; tidak ada script/katalog yang disimpan atau file KLHK yang diubah. Angka/klaim ilmiah di dalam catatan tidak diverifikasi dalam uji katalog ini.
+
+| Sampel | Hasil ekstraksi dan batasnya |
+| :--- | :--- |
+| Runbook inferensi v5.2 | Judul awal dan kalimat pembuka menjelaskan bahwa ini dokumen operasional untuk DEV-EXEC v5.2; cuplikan membantu pengenalan. |
+| Rencana ulang sampel 6 Oktober | Jika hanya paragraf biasa diterima, cuplikan baru muncul pada rumus di baris 21; menerima butir daftar memberi arahan ukuran pasti pada baris 6. |
+| Glosarium | Selepas metadata, tidak ada paragraf biasa; cuplikan daftar hanya memuat satu regulasi, sedangkan heading bagian lebih menggambarkan variasi topik. |
+| CATATAN_DISKUSI | Penyaring metadata sederhana masih mengambil Peran Director; penyaring lebih luas melewatinya dan menemukan keluaran Proposal Teknis, tanpa merangkum seluruh diskusi. |
+| Register sumber v4.4 | Cuplikan awal mengambil definisi atau keterangan berkas pendukung; judul dan heading bagian lebih berguna daripada menganggap cuplikan sebagai kegunaan lengkap. |
+| RO-TEMPLATE | Paragraf biasa pertama berupa [isi]; penerimaan blockquote mengambil penjelasan format, tetapi judul tetap berisi placeholder karena file memang template. |
+| Proposal hasil ekspor | Memuat gambar base64 besar; heading pertama DAFTAR TABEL berada pada baris 159. Fallback nama file menghindari judul salah, tetapi cuplikan surat pengantar tetap kurang membantu. |
+| Ekspor compass CC-001 | Isi ringkas berbentuk bullet TL;DR; menerima bullet menghasilkan cuplikan substantif, sedangkan pembatasan paragraf biasa melewatkannya. |
+| Diskusi proposal-centric | Penyaring dapat mengambil kalimat status di luar scope alih-alih pokok pembahasan; heading bagian memberi petunjuk tambahan. |
+| AUD_discussion_integrity_checking | Tidak mempunyai heading Markdown; fallback nama file berjalan dan cuplikan menjadi pertanyaan awal percakapan. |
+
+Dalam variasi kedua, delapan file memakai H1 awal dan dua memakai nama file; itu hasil fallback teknis pada sampel, bukan ukuran ketepatan semantik seluruh koleksi. Waktu modifikasi/path dapat diperoleh otomatis, tetapi tanggal modifikasi bukan tanggal pembuatan atau bukti catatan masih berlaku.
+
+Hasil uji ini merupakan evaluasi pendekatan sebelum keputusan hanya-new; seluruh sampel lama tersebut kini ditujukan ke unregistered-notes, bukan diimpor ke katalog aktif. Koreksi klaim asisten: katalog dasar otomatis dapat dibuat tanpa mengisi manual seluruh catatan, tetapi cuplikan awal tidak dijamin cukup untuk memilih catatan. Rekomendasi: prioritaskan judul/nama, tautan dan waktu modifikasi; tambahkan pratinjau heading bagian untuk file terstruktur dan cuplikan literal sebagai cadangan. Cuplikan tetap berlabel pratinjau, bukan ringkasan atau kegunaan. Hindari heading jauh di isi sebagai judul, lewati kode/gambar/base64/placeholder dan batasi panjang keluaran. Angka batas penyaring pada percobaan belum menjadi spesifikasi final.
+
+### Rekomendasi katalog dan perubahan terhadap D-22
+
+Rancangan D-22 sebelumnya menyediakan new/list dengan pembacaan langsung tanpa indeks. Arahan terbaru mewajibkan asal registrasi melalui new dan menyediakan update untuk katalog serta perapihan legacy; rekomendasi berikut disesuaikan dengan keputusan itu:
+
+- Lokasi katalog ditetapkan Director sebagai Sigma/notes/note-list.md dan catatan aktif disimpan dalam Sigma/notes/note-list/; katalog dikecualikan dari daftar dirinya sendiri.
+- Katalog aktif menggunakan judul, identitas, path dan waktu pembuatan yang dicatat saat new, serta waktu modifikasi bila diperlukan; tidak ada kewajiban merangkum seluruh catatan lama yang masuk unregistered-notes. Kegunaan atau pratinjau untuk catatan baru masih perlu keputusan kolom dan tidak dianggap dapat dijamin oleh ekstraksi sederhana.
+- list membaca daftar catatan terdaftar dan mendukung pencarian; update memperbarui katalog dari registry/file terkait tanpa mendaftarkan file manual. Keterangan manual jika disediakan tetap opsional dan dipertahankan.
+- Validasi seluruh cakupan scan sebelum menulis atau membuat katalog; jika ada file non-.md, tampilkan path pelanggaran dan batalkan seluruh update, bukan menghasilkan katalog parsial.
+- new menjadi satu-satunya jalur registrasi catatan aktif; isi tetap bebas template, sedangkan nama/isi catatan manual lama dipertahankan dalam unregistered-notes.
+- Struktur notes kini ditetapkan menjadi unregistered-notes/, note-list/ dan note-list.md; penanganan subfolder lama di luar struktur tersebut serta cakupan validasi non-Markdown masih perlu spesifikasi.
+
+Detail tersisa: penyimpanan registry dan kolom katalog, kebijakan file hilang/rename dan benturan nama, cakupan validasi subfolder/unregistered-notes serta kompatibilitas penamaan command lama sigma note terhadap sigma notes new/list/update yang dipakai dalam arahan terbaru. Registrasi hanya melalui new, katalog aktif, migrasi file manual ke unregistered-notes dan pembatasan Markdown sudah menjadi arahan Director; detail rekomendasi teknis belum seluruhnya diputuskan.
+
+Belum ada file di KLHK yang diubah, katalog yang dibuat, command Sigma yang dijalankan atau implementasi source; pencatatan hanya pada dokumen diskusi ini.
 
 ## Strategy Action - Prioritas dan urutan pekerjaan
 
-Rekomendasi urutan pekerjaan inti Sigma untuk review Director; butir desain yang masih terbuka perlu diputuskan sebelum implementasi terkait.
+Urutan prioritas inti Sigma mengikuti kesepahaman review; sigma note merupakan track terpisah, sedangkan mailbox dan penomoran dapat dikerjakan tanpa menunggu pilot keterbacaan setelah detail masing-masing ditetapkan.
 
 | Urutan | Fokus | Tindakan yang direkomendasikan |
 | :--- | :--- | :--- |
 | 1 | Konsistensi aturan | Petakan perbedaan master, rules proyek, skill dan memory agar perbaikan memakai sumber aturan yang jelas. |
-| 2 | Keputusan governance | Finalkan penghapusan tier, alur amandemen dan model APPROVED/LOCKED beserta kompatibilitas chain lama. |
-| 3 | Pilot keterbacaan | Uji struktur ringkas pada pasangan PLAN/EXEC KLHK v5.3 dan pembanding PLAN v5.4 dengan mempertahankan seluruh kewajiban penting. |
-| 4 | Penyederhanaan dokumen | Terapkan hasil pilot pada template, rules, protocol, constitution dan memory dengan ringkasan di awal serta satu definisi otoritatif per aturan. |
-| 5 | Amandemen melalui Git | Jika model tanpa tier disetujui, terapkan amandemen ARC atas instruksi langsung Director, baseline Git sah, diff dan konfirmasi akhir tanpa backup dokumen terpisah. |
-| 6 | Acuan dan revisi kontrak | Ikat PLAN pada revisi INTENT dan EXEC pada revisi PLAN serta terapkan perubahan kontrak terkendali sesuai lifecycle yang disepakati. |
-| 7 | Review sumber dan kesiapan | Tampilkan teks serta fungsi ID INTENT yang dikutip PLAN dan pisahkan kelayakan struktur, sertifikasi isi serta kesiapan scope. |
-| 8 | Mailbox per intent | Batasi tampilan, kuota default lima memo per role, send gate dan auto-outdate pada konteks intent sesuai arahan Director. |
-| 9 | Penomoran dan bootstrap | Selaraskan major PLAN/EXEC dengan INTENT pada chain baru serta pertahankan pola legacy dengan pemberitahuan bootstrap bersyarat. |
-| 10 | Revisi dari artefak lama | Sediakan pembuatan draft dari versi sebelumnya beserta diff dengan reset identitas, persetujuan dan klaim bukti yang perlu diperiksa ulang. |
-| 11 | Logistik audit dan keputusan | Sediakan paket audit berisi sumber yang tepat serta daftar keputusan tertunda sesuai intent aktif setelah alur review stabil. |
-| 12 | Distribusi dan validasi | Selaraskan skill/bridge seluruh target lalu verifikasi parity aturan, perilaku CLI/MCP dan kompatibilitas pada chain lama serta baru. |
-
+| 2 | Rekonsiliasi keputusan | Tegaskan keputusan D-01 sampai D-22 yang dipertahankan atau dibuka ulang serta lengkapi spesifikasi dan kompatibilitas tanpa membuka ulang D-05. |
+| 3 | sigma notes - track terpisah | Registrasikan melalui new ke note-list/, kelola note-list.md dengan list/update, pindahkan Markdown asing ke unregistered-notes/ dan tolak update pada file non-Markdown. |
+| 4 | Mailbox per intent | Pisahkan folder messages/memo per role dan versi dengan GENERAL/LEGACY, agregasi unread per intent serta migrasi doctor sesuai keputusan Director. |
+| 5 | Penomoran dan bootstrap | Selaraskan major PLAN/EXEC dengan INTENT pada chain baru serta pertahankan pola legacy dengan pemberitahuan bootstrap bersyarat. |
+| 6 | Pilot keterbacaan | Uji struktur ringkas pada PLAN/EXEC KLHK v5.3 dan PLAN v5.4 serta contoh batas brief INTENT dengan mempertahankan kewajiban penting. |
+| 7 | Penyederhanaan dokumen | Terapkan hasil pilot pada template, rules, protocol, constitution dan memory dengan ringkasan di awal serta satu definisi otoritatif per aturan. |
+| 8 | Amandemen melalui Git | Terapkan model tanpa tier dengan otoritas ARC/Director, review diff/dampak, konfirmasi akhir serta baseline Git dan tag tanpa backup terpisah atau push otomatis. |
+| 9 | Acuan dan revisi kontrak | Ikat revisi INTENT/PLAN/EXEC, terapkan revisi terkendali dan migrasi doctor dari PLAN LOCKED ke APPROVED bila EXEC pasangan masih DRAFT. |
+| 10 | Review sumber dan kesiapan | Tampilkan teks serta fungsi ID INTENT yang dikutip PLAN dan pisahkan kelayakan struktur, sertifikasi isi serta kesiapan scope. |
+| 11 | Revisi dari artefak lama | Sediakan pembuatan draft dari versi sebelumnya beserta diff dengan reset identitas, persetujuan dan klaim bukti yang perlu diperiksa ulang. |
+| 12 | Logistik audit dan keputusan | Sediakan paket audit berisi sumber yang tepat serta daftar keputusan tertunda sesuai intent aktif setelah alur review stabil. |
+| 13 | Distribusi dan validasi | Selaraskan skill/bridge seluruh target lalu verifikasi parity aturan, perilaku CLI/MCP dan kompatibilitas pada chain lama serta baru. |
