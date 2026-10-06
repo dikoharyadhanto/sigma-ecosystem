@@ -66,7 +66,6 @@ const INTENT_SPEC_V5 = {
         'PRIORITIES_AND_CONSTRAINTS',
         'ASSUMPTIONS_AND_RISKS',
         'FUNCTIONAL_REQUIREMENTS',
-        'GUIDANCE_FOR_FMN',
         'AUD_NOTES',
     ],
     // RESEARCH is present only when needed. AMENDMENT_HISTORY stays optional
@@ -81,7 +80,6 @@ const INTENT_SPEC_V5 = {
         'PRIORITIES_AND_CONSTRAINTS',
         'ASSUMPTIONS_AND_RISKS',
         'FUNCTIONAL_REQUIREMENTS',
-        'GUIDANCE_FOR_FMN',
         'RESEARCH',
         'AUD_NOTES',
         'AMENDMENT_HISTORY',

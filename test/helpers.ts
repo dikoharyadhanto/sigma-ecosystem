@@ -524,11 +524,6 @@ Test assumptions.
 
 Test functional requirements.
 
-<!-- SIGMA:DIR_INTENT:SECTION:GUIDANCE_FOR_FMN -->
-## Guidance for FMN
-
-Test guidance.
-
 <!-- SIGMA:DIR_INTENT:SECTION:AUD_NOTES -->
 ## AUD Notes
 

@@ -165,17 +165,6 @@
 
 ---
 
-<!-- SIGMA:DIR_INTENT:SECTION:GUIDANCE_FOR_FMN -->
-## Guidance for FMN
-
-> FMN carries the Quality Standards, with their evidence requirements, into every PLAN.
-
-| Focus Area | Why It Matters | Watch-Out |
-|:---------- |:-------------- |:--------- |
-| [...] | [...] | [...] |
-
----
-
 <!-- SIGMA:DIR_INTENT:SECTION:RESEARCH -->
 ## Research
 

@@ -27,6 +27,7 @@ Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigm
 | F09 | Distribusi skill/bridge dan validasi paritas CLI/MCP, chain lama/baru | 13 | Belum dimulai | - |
 | F10 | Penamaan artefak tanpa prefix role untuk artefak baru; proyek/artefak lama tidak diubah | (tambahan, sumber: D-07 dokumen 28 September) | Ditambahkan 6 Oktober atas keputusan Director; urutan ditentukan kemudian | - |
 | F11 | Writing Style Rules pada rules, skill, dan memory ARC, FMN, DEV (AUD dikeluarkan), berlaku untuk artefak INTENT, PLAN, EXEC, CLOSE, dan bagian ROADMAP yang disunting manual | (tambahan, permintaan Director 6 Oktober) | Seluruh keputusan terbuka dijawab; bagian ARC bergabung dengan ARC-RULE batch A | [F11_writing-style-rules.md](F11_writing-style-rules.md) |
+| F12 | Versi Sigma pada identitas proyek dan peringatan "outdated" pada setiap operasi | (tambahan, permintaan Director 7 Oktober) | Ditambahkan 7 Oktober; berkaitan erat dengan F09 dan T-18/T-19; urutan ditentukan kemudian | rencana kasar: [F12_rencana-kasar_versi-sigma-pada-proyek.md](F12_rencana-kasar_versi-sigma-pada-proyek.md) |
 
 Urutan penyusunan yang disetujui Director: F00, F02, F03, F04, F05, F06, F01, F07, F08, F09. Satu fokus per giliran; setiap fokus berakhir dengan pertanyaan terbuka dan rekomendasi, lalu menunggu keputusan Director.
 
@@ -96,6 +97,13 @@ Disalin dari dokumen diskusi sebagai titik awal. Setiap butir dibahas di rencana
 | T-15 | F01 | Seluruh butir ditahan menunggu feedback Director |
 | T-16 | F10 | **TERKUNCI (Director, 6 Oktober 2026):** sejak Sigma v2 terpasang, setiap `intent new`, `plan new`, `exec new`, dan `close new` membuat file tanpa prefix role. Artefak lama tetap berprefix dan tidak diganti nama. Semua operasi yang bergantung pada pengecekan nama file menerima nama dengan maupun tanpa prefix |
 | T-17 | F06 | **TERKUNCI (Director, 6 Oktober 2026):** struktur notes = `unregistered-notes/`, `note-list/`, `note-list.md`; `LEGACY` hanya untuk mailbox. Definisi Director: **auto rejection** = setiap file non-Markdown yang terdeteksi di folder notes ditolak pada setiap `sigma notes update`; **auto move** = setiap Markdown yang tidak dibuat lewat `sigma notes new` dikategorikan tidak terdaftar dan dipindahkan ke `unregistered-notes/` pada setiap `sigma notes update`. Keduanya perilaku `update`, bukan sistem terpisah. Terbuka untuk F06: bentuk penolakan (hentikan seluruh update atau proses sebagian sambil melaporkan) |
+| T-18 | F01 | **TERKUNCI (Director, 7 Oktober 2026):** versi aturan harus bernilai nyata (versi atau hash sumber), tidak boleh `unversioned`, agar drift antar salinan terdeteksi. `source_rule_version` pada role memory dan perbandingan salinan master/proyek menjadi syarat F01. Pembaruan proyek mempertahankan perubahan lokal, tanpa overwrite otomatis. Terbuka: bentuk versi (semver per rule atau hash isi) dan apakah `sigma doctor` yang membandingkan |
+| T-19 | F09 | **Syarat urutan sinkronisasi (7 Oktober 2026):** template INTENT schema 5 tidak boleh disinkronkan ke `~/.sigma/templates` sebelum atau tanpa perubahan AUD-RULE, FMN-RULE, dan Protocol yang menghapus model tier (lihat bagian 8). Jika tidak, AUD diperintahkan memeriksa tag dan section yang tidak ada, dan FMN berpegang pada larangan yang bergantung pada lapisan yang sudah dihapus |
+| T-20 | F12 | Pembanding versi. Rekomendasi: dua nilai pada stempel: `sigma_version` (versi paket) dan `assets_hash` (hash isi set yang disinkronkan: governance, rules, templates, registry, role-memory). Versi semver saja tidak cukup: `package.json` masih 1.0.0 padahal `CHANGELOG` memuat banyak perubahan di bagian Unreleased |
+| T-21 | F12 | Dua tingkat kedaluwarsa: (1) CLI (paket, hidup lewat symlink) lebih baru daripada `~/.sigma` (hanya berubah lewat `sigma setup update`); (2) `~/.sigma` lebih baru daripada proyek (hanya berubah lewat `sigma project sync --confirm`). Apakah peringatan membedakan keduanya dan menyebut perintah yang benar |
+| T-22 | F12 | Cakupan peringatan. Rekomendasi: semua perintah CLI di dalam proyek kecuali `setup`, `project sync/register/start`, `doctor`, dan bantuan; satu baris ke stderr; tidak muncul di luar proyek. MCP: bidang peringatan di respons orientasi/status, bukan di setiap tool |
+| T-23 | F12 | `sigma project sync` menimpa rules dan templates proyek tanpa perbandingan (`overwrite: true`). Peringatan yang mendorong sinkronisasi lebih sering membuat perubahan lokal lebih sering tertimpa. Bertabrakan dengan T-18 (pertahankan perubahan lokal). Rekomendasi: cadangan otomatis dan laporan berkas yang berubah sebelum menimpa |
+| T-24 | F12 | Proyek yang dibuat sebelum stempel ada. Rekomendasi: dianggap "versi tidak diketahui", peringatan yang sama; `sigma doctor` mengisi stempel setelah sinkronisasi berhasil |
 
 ## 6. Disiplin kerja dan build (tentatif)
 
@@ -131,3 +139,41 @@ Konsekuensi: eksekusi INTENT template menyentuh kode dan build sigma-mcp (symlin
 | 3 | Judul section dan keterangan petunjuk section berbahasa Inggris; isi pengisian mengikuti bahasa dokumen proyek. Keterangan petunjuk **harus singkat** karena panjangnya mengganggu; petunjuk yang panjang dipindahkan ke rules ARC (ARC-RULE perlu bagian panduan pengisian INTENT, masuk batch A) |
 | 4 | Nama section v2 usulan asisten disetujui **sementara** (Director Summary; Purpose and Problem; Desired Outcome and Measurement; Scope; Quality Standards; Priorities and Constraints; Assumptions and Risks; Functional Requirements + Guidance for FMN; Research (opsional); AUD Notes) |
 | 5 | "Guidance for FMN" berdiri sebagai section tersendiri dan jumlah contoh uji batas (3 termasuk, 3 tidak termasuk) menjadi nilai awal yang dapat disesuaikan; pilot tidak dijalankan lebih dulu (diterima Director) |
+
+**Catatan E01B (7 Oktober 2026):** bagian "Guidance for FMN berdiri sebagai section tersendiri" pada butir 5, serta "Guidance for FMN" pada daftar section butir 4, DIBATALKAN oleh keputusan Director ("Hapus guidance") dan dieksekusi di [E01B](E01B_revisi-hapus-guidance-for-fmn.md). Bagian lain butir 4 dan 5 (jumlah contoh uji batas 3 dan 3) tetap berlaku. Baris asli tidak diubah.
+
+## 8. Hasil evaluasi menyeluruh (7 Oktober 2026)
+
+Dasar: HEAD 8d20c4b. `tsc --noEmit` bersih; `vitest` 70 file, 922 test lulus. `~/.sigma/templates` masih schema 4, jadi schema 5 belum berlaku di proyek mana pun sampai F09.
+
+**Sisa model tier di master (TERVERIFIKASI, belum diubah).** Seluruhnya termasuk penghapusan tier yang sudah diputuskan Director; daftar ini hanya menetapkan lokasi dan syarat urutan (T-19).
+
+| Lokasi | Isi yang usang | Pemilik pekerjaan |
+|---|---|---|
+| `Sigma/rules/AUD-RULE.md` langkah 3 audit INTENT (sekitar L497-512) dan L167 | Memeriksa ketepatan tag Sovereign/Operationalization; merujuk Intent Core §1.1-1.5, §6, §7, §9, §2.1 yang tidak ada di schema 5. Perlu pemisahan per schema karena INTENT schema 4 masih beredar | F01 (AUD-RULE ditahan) |
+| `Sigma/rules/FMN-RULE.md` L37, L164, L166, L297 | Model dua lapis sebagai dasar larangan FMN; rujukan "Section 14" | Sesi FMN/PLAN |
+| `Sigma/SIGMA_PROTOCOL.md` §5.1 dan §5.1.1, §14 (Audit Doctrine, tabel batas), catatan §16A | Intent Core sovereign, tier per item, mekanisme amandemen Operationalization | Review Protocol (ditahan) |
+| `Sigma/SIGMA-OPERATION-REGISTRY.json` L320 | Deskripsi `intent amendment`: "Operationalization only, never Sovereign". Deskripsi CLI di kode sudah dibersihkan | F09 (jalankan `refresh-registries`) |
+| Kode: `src/commands/intent.ts:213`, komentar `src/engine/chain.ts`, `amendmentHistory.ts` | Teks "Section 14" dan heading "## 14." untuk dokumen tanpa penanda. Render berjalan berdasarkan penanda, bukan heading, jadi tidak ada bug fungsional | F05 |
+
+**Rujukan yang tidak terpenuhi dari E01 (TERVERIFIKASI).** INTENT schema 5 menulis "Verdict meanings are in AUD-RULE". AUD-RULE hanya memuat tabel satu baris per verdict. Kriteria pemilihan verdict yang ditambahkan pada rilis 1.0.0 (kondisi PASS_WITH_RISK, audit ulang pada REVISE, syarat REJECT_RECOMMENDED, batas putaran revisi) dihapus dari INTENT template oleh E01 dan masih ada di FMN-PLAN template. Perbaikan ada di AUD-RULE (F01 ditahan); diajukan sebagai butir B-5 di [E02](E02_review-plan-template-dan-fmn.md).
+
+**Pemetaan temuan EVALUASI-SIGMA ke fokus (diverifikasi pada dokumen diskusi, bagian "Kasus AUD KLHK").**
+
+| Temuan | Posisi di dokumen diskusi | Fokus |
+|---|---|---|
+| K1, K2, K9 (tier) | Tier dihapus total | F05, F07 |
+| K3 (plan check menampilkan teks Intent yang dikutip) | Paket review PLAN menampilkan teks/tier sumber dan peran dukungan tiap ID. Keberadaan ID saja bukan bukti keselarasan | F08 |
+| K4 (status SCOPE_GAP) | Kesiapan scope dinilai terpisah dari status artefak; lifecycle tidak diganti | F08 |
+| K5 (UNCERTIFIED_EDIT tanpa delta) | Snapshot dan diff, recertify dengan klasifikasi dan otorisasi, tidak berlaku retroaktif | F05 |
+| K6 (kelas plan continuation) | Tidak direkomendasikan | - |
+| K7 (send gate) | Gate unread dalam intent yang sama dipertahankan; friksi antar-minor menjadi T-04 | F03 |
+| K8 (handoff peran dalam sesi) | Tidak direkomendasikan; memerlukan desain independensi audit | - |
+
+Catatan: penomoran K1-K9 di sini mengikuti EVALUASI-SIGMA.md. Audit UX 27 September memakai K1-K3 untuk keluhan yang berbeda.
+
+**Status branch `hermes-integration` (TERVERIFIKASI per file).** Dari 455 file yang diubah commit hermes-only sejak merge-base 5d6d771, seluruh kode `src/`, `bin/`, `package*.json`, dan test MCP identik dengan `main`. Perbedaan `src/` hanya komentar dan netralisasi nama Hermes pada test (`mcp-binding.test.ts`, `createIntentDraft.ts`, `mcp/index.ts`); versi `main` yang lebih baru. Konten unik branch hermes: 11 dokumen `Discussion/` Hermes, `RESULT-HERMES-PHASE0-*`, `gate05-runtime-smoke.mjs`, dan revisi `Implementation/hermes/*` serta `README.md`. `dist/mcp/control/inboxArchive.*` hanya ada di branch hermes (artefak build yatim, tidak ada sumbernya). Tidak ada tindakan Git yang dilakukan.
+
+## 9. F12 (7 Oktober 2026)
+
+Permintaan Director: identitas proyek mencatat versi Sigma yang diterapkan; bila versi yang terpasang di perangkat berbeda, setiap operasi Sigma di proyek menampilkan peringatan. Fakta terverifikasi, rencana kasar, dan dependensi ada di [F12](F12_rencana-kasar_versi-sigma-pada-proyek.md). Butir terbuka: T-20 sampai T-24 (bagian 5). Detail disusun saat F12 mulai dikerjakan.

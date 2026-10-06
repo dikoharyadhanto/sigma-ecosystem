@@ -236,7 +236,6 @@ Describes the content each part of `INTENT` must carry. It is written by content
   - **Preference**: desired, but not binding if a better route exists.
 - **Assumptions and risks.** Each assumption states its confidence and what follows if it is wrong. Risks are practical, not decorative: classified as fatal, degrading, or noise, with a mitigation and whether the Director accepts it. One statement defines what makes the project a failure.
 - **Functional requirements.** Each requirement has a priority (Must, Should, or Could), a user story, and measurable or binary acceptance criteria. FMN builds the PLAN task plan and test contract from them.
-- **Guidance for FMN.** Focus areas, why each matters, and what to watch for. INTENT tells FMN to carry the quality standards, with their evidence requirements, into every PLAN.
 - **Research.** Included only when research is needed — see §Research Mode.
 - **AUD notes.** Recorded as described in §AUD Findings Section Authorization.
 

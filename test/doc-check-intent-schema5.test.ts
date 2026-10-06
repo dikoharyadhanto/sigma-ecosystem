@@ -115,6 +115,18 @@ describe('docCheck — DIR_INTENT schema selection', () => {
       expect(report.warnings.some(w => w.includes('Unknown section markers') && w.includes('FINAL_VALIDATION_CHECKLIST'))).toBe(true);
     });
 
+    it('a removed Guidance for FMN section is warned about as unknown, not failed (E01B)', () => {
+      const marker = '<!-- SIGMA:DIR_INTENT:SECTION:AUD_NOTES -->';
+      const guidance = '<!-- SIGMA:DIR_INTENT:SECTION:GUIDANCE_FOR_FMN -->\n## Guidance for FMN\n\nLeftover guidance.\n\n';
+      const content = validIntentDocV5('v1').replace(marker, guidance + marker);
+
+      const report = check(content);
+
+      expect(report.ok).toBe(true);
+      expect(report.errors).toEqual([]);
+      expect(report.warnings.some(w => w.includes('Unknown section markers') && w.includes('GUIDANCE_FOR_FMN'))).toBe(true);
+    });
+
     describe('optional sections', () => {
       it('Amendment History at the end is ok and not flagged as unknown', () => {
         const report = check(validIntentDocV5('v1') + AMENDMENT_BLOCK);
@@ -124,7 +136,7 @@ describe('docCheck — DIR_INTENT schema selection', () => {
         expect(report.passes).toContain('Section order valid');
       });
 
-      it('Research between Guidance for FMN and AUD Notes is ok and order-valid', () => {
+      it('Research between Functional Requirements and AUD Notes is ok and order-valid', () => {
         const marker = '<!-- SIGMA:DIR_INTENT:SECTION:AUD_NOTES -->';
         const original = validIntentDocV5('v1');
         const content = original.replace(marker, RESEARCH_BLOCK + marker);
