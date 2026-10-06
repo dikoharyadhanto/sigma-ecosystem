@@ -599,18 +599,42 @@ Aturan pembatasan format berlaku pada update, tanpa mengubah isi catatan menjadi
 
 ### Keputusan registrasi - Ralat aturan tanggal
 
-Director menetapkan bahwa hanya catatan yang dibuat melalui sigma notes new dapat teregistrasi. Markdown yang dibuat atau ditambahkan di luar mekanisme tersebut tidak masuk daftar aktif dan diperlakukan sebagai legacy, terlepas dari tanggal pembuatan, nama file atau adanya heading. Keputusan ini menggantikan pendekatan tanggal cutover yang sempat dibahas dalam chat dan rekomendasi katalog otomatis untuk seluruh catatan lama.
+Director menetapkan bahwa hanya catatan yang dibuat melalui sigma notes new dapat teregistrasi. Markdown yang dibuat atau ditambahkan di luar mekanisme tersebut tidak masuk daftar aktif dan diperlakukan sebagai catatan tidak terdaftar, terlepas dari tanggal pembuatan, nama file atau adanya heading. Director kemudian mengganti nama folder penampung LEGACY menjadi unregistered-notes khusus untuk notes. Keputusan ini menggantikan pendekatan tanggal cutover yang sempat dibahas dalam chat dan rekomendasi katalog otomatis untuk seluruh catatan lama.
 
-- new membuat file Markdown dan mencatat registrasinya; isi catatan tetap bebas template.
-- list dan notes-list.md hanya memuat catatan terdaftar, bukan seluruh Markdown yang ditemukan dalam folder.
-- update menyinkronkan daftar catatan terdaftar dan memindahkan Markdown tidak terdaftar ke Sigma/notes/LEGACY/ sesuai alur perapihan yang sudah diarahkan; update tidak mengimpor atau mendaftarkan file manual.
-- Catatan lama KLHK menjadi legacy tanpa perlu ekstraksi ringkasan atau pengisian kegunaan satu per satu; file manual baru juga mengikuti perlakuan yang sama.
+- new membuat file Markdown dalam Sigma/notes/note-list/ dan mencatat registrasinya; isi catatan tetap bebas template.
+- list dan note-list.md hanya memuat catatan terdaftar, bukan seluruh Markdown yang ditemukan dalam folder.
+- update menyinkronkan daftar catatan terdaftar dan memindahkan Markdown tidak terdaftar ke Sigma/notes/unregistered-notes/ sesuai alur perapihan yang sudah diarahkan; update tidak mengimpor atau mendaftarkan file manual.
+- Catatan lama KLHK menjadi catatan tidak terdaftar tanpa perlu ekstraksi ringkasan atau pengisian kegunaan satu per satu; file manual baru juga mengikuti perlakuan yang sama.
 - Mengedit isi catatan yang sudah dibuat melalui new tetap mempertahankan asal registrasinya; identitas catatan perlu dilacak terpisah dari hash isi yang berubah saat penyuntingan.
-- notes-list.md merupakan katalog sistem dan dikecualikan dari klasifikasi catatan; folder LEGACY dikecualikan dari katalog aktif dan tidak dipindahkan ulang ke LEGACY bertingkat.
+- note-list.md merupakan katalog sistem dan dikecualikan dari klasifikasi catatan; folder unregistered-notes dikecualikan dari katalog aktif dan tidak dipindahkan ulang ke unregistered-notes bertingkat. Berada dalam note-list/ saja tidak membuat Markdown menjadi terdaftar bila file tidak dibuat melalui new.
 
 Rekomendasi teknis asisten: gunakan registry yang dicatat oleh new sebagai sumber identitas, bukan mengenali registrasi dari nama file atau tanggal. Jika registry menggunakan JSON, simpan di luar Sigma/notes agar tidak melanggar pembatasan Markdown. Update tidak membuat entry registrasi baru dari file yang ditemukannya; registry yang rusak/hilang pada proyek yang sebelumnya sudah memakai registrasi perlu penanganan pemulihan, bukan otomatis menganggap seluruh catatan aktif sebagai legacy.
 
-Rincian penyimpanan registry, kolom katalog, rename/file hilang dan validasi cakupan LEGACY/subfolder masih perlu spesifikasi; keputusan hanya-new dan perlakuan legacy sudah ditetapkan. Pembatasan update terhadap file non-Markdown tetap berlaku.
+Rincian penyimpanan registry, kolom katalog, rename/file hilang dan validasi cakupan unregistered-notes/subfolder masih perlu spesifikasi; keputusan hanya-new dan perlakuan legacy sudah ditetapkan. Pembatasan update terhadap file non-Markdown tetap berlaku.
+
+### Struktur folder yang ditetapkan Director
+
+```text
+Sigma/notes/
+  unregistered-notes/   # Markdown yang tidak teregistrasi
+  note-list/           # Markdown terdaftar melalui sigma notes new
+  note-list.md         # Katalog catatan terdaftar
+```
+
+Tiga komponen tersebut menjadi struktur aktif folder notes. Saat update, setiap file Markdown asing/tidak terdaftar dalam notes diarahkan ke unregistered-notes, termasuk file manual yang diletakkan langsung di root notes di luar ketiga komponen tersebut. Update tidak mengimpor file asing sebagai catatan aktif dan tidak memperlakukan note-list.md sebagai file asing. File manual yang disisipkan ke note-list/ juga mengikuti aturan registrasi yang sama; posisi folder bukan bukti registrasi.
+
+Rekomendasi implementasi: pertahankan isi file saat pemindahan dan tangani benturan nama tanpa menimpa catatan yang sudah ada; tidak ada pemindahan nyata dalam sesi ini.
+
+### Penegasan Director 6 Oktober 2026 - struktur dan sistem otomatis
+
+Director menegaskan struktur notes yang berlaku adalah unregistered-notes/, note-list/ dan note-list.md. Nama LEGACY hanya berlaku pada mailbox (Sigma/messages dan Sigma/memo).
+
+Director mendefinisikan dua perilaku sigma notes update, yang dijalankan setiap kali update dijalankan:
+
+- **Auto rejection:** setiap file non-Markdown yang terdeteksi di folder notes ditolak. Penolakan ini sejalan dengan keputusan sebelumnya bahwa update menolak file selain .md.
+- **Auto move:** setiap file Markdown yang tidak dibuat melalui sigma notes new dikategorikan sebagai catatan tidak terdaftar dan dipindahkan ke folder unregistered-notes.
+
+Detail yang masih perlu spesifikasi di rencana F06: bentuk penolakan (menghentikan seluruh update dengan menampilkan path pelanggaran, sebagaimana rekomendasi sebelumnya, atau memproses file lain sambil melaporkan penolakan) dan penulisan nama folder (unregistered-notes dengan tanda hubung sesuai struktur yang ditetapkan). Keputusan Director belum mengotorisasi implementasi.
 
 ### Verifikasi read-only
 
@@ -638,20 +662,20 @@ Director meminta pembuktian pada catatan nyata. Dua variasi penyaring diuji mela
 
 Dalam variasi kedua, delapan file memakai H1 awal dan dua memakai nama file; itu hasil fallback teknis pada sampel, bukan ukuran ketepatan semantik seluruh koleksi. Waktu modifikasi/path dapat diperoleh otomatis, tetapi tanggal modifikasi bukan tanggal pembuatan atau bukti catatan masih berlaku.
 
-Hasil uji ini merupakan evaluasi pendekatan sebelum keputusan hanya-new; seluruh sampel lama tersebut kini ditujukan ke LEGACY, bukan diimpor ke katalog aktif. Koreksi klaim asisten: katalog dasar otomatis dapat dibuat tanpa mengisi manual seluruh catatan, tetapi cuplikan awal tidak dijamin cukup untuk memilih catatan. Rekomendasi: prioritaskan judul/nama, tautan dan waktu modifikasi; tambahkan pratinjau heading bagian untuk file terstruktur dan cuplikan literal sebagai cadangan. Cuplikan tetap berlabel pratinjau, bukan ringkasan atau kegunaan. Hindari heading jauh di isi sebagai judul, lewati kode/gambar/base64/placeholder dan batasi panjang keluaran. Angka batas penyaring pada percobaan belum menjadi spesifikasi final.
+Hasil uji ini merupakan evaluasi pendekatan sebelum keputusan hanya-new; seluruh sampel lama tersebut kini ditujukan ke unregistered-notes, bukan diimpor ke katalog aktif. Koreksi klaim asisten: katalog dasar otomatis dapat dibuat tanpa mengisi manual seluruh catatan, tetapi cuplikan awal tidak dijamin cukup untuk memilih catatan. Rekomendasi: prioritaskan judul/nama, tautan dan waktu modifikasi; tambahkan pratinjau heading bagian untuk file terstruktur dan cuplikan literal sebagai cadangan. Cuplikan tetap berlabel pratinjau, bukan ringkasan atau kegunaan. Hindari heading jauh di isi sebagai judul, lewati kode/gambar/base64/placeholder dan batasi panjang keluaran. Angka batas penyaring pada percobaan belum menjadi spesifikasi final.
 
 ### Rekomendasi katalog dan perubahan terhadap D-22
 
 Rancangan D-22 sebelumnya menyediakan new/list dengan pembacaan langsung tanpa indeks. Arahan terbaru mewajibkan asal registrasi melalui new dan menyediakan update untuk katalog serta perapihan legacy; rekomendasi berikut disesuaikan dengan keputusan itu:
 
-- Simpan katalog sebagai Sigma/notes/notes-list.md dan kecualikan file katalog dari daftar catatan agar tidak mengindeks dirinya sendiri.
-- Katalog aktif menggunakan judul, identitas, path dan waktu pembuatan yang dicatat saat new, serta waktu modifikasi bila diperlukan; tidak ada kewajiban merangkum seluruh catatan lama yang masuk LEGACY. Kegunaan atau pratinjau untuk catatan baru masih perlu keputusan kolom dan tidak dianggap dapat dijamin oleh ekstraksi sederhana.
+- Lokasi katalog ditetapkan Director sebagai Sigma/notes/note-list.md dan catatan aktif disimpan dalam Sigma/notes/note-list/; katalog dikecualikan dari daftar dirinya sendiri.
+- Katalog aktif menggunakan judul, identitas, path dan waktu pembuatan yang dicatat saat new, serta waktu modifikasi bila diperlukan; tidak ada kewajiban merangkum seluruh catatan lama yang masuk unregistered-notes. Kegunaan atau pratinjau untuk catatan baru masih perlu keputusan kolom dan tidak dianggap dapat dijamin oleh ekstraksi sederhana.
 - list membaca daftar catatan terdaftar dan mendukung pencarian; update memperbarui katalog dari registry/file terkait tanpa mendaftarkan file manual. Keterangan manual jika disediakan tetap opsional dan dipertahankan.
 - Validasi seluruh cakupan scan sebelum menulis atau membuat katalog; jika ada file non-.md, tampilkan path pelanggaran dan batalkan seluruh update, bukan menghasilkan katalog parsial.
-- new menjadi satu-satunya jalur registrasi catatan aktif; isi tetap bebas template, sedangkan nama/isi catatan manual lama dipertahankan dalam LEGACY.
-- Subfolder boleh dipertahankan dengan scan rekursif agar file non-Markdown di dalamnya tidak lolos pembatasan; cakupan ini masih rekomendasi, bukan keputusan Director.
+- new menjadi satu-satunya jalur registrasi catatan aktif; isi tetap bebas template, sedangkan nama/isi catatan manual lama dipertahankan dalam unregistered-notes.
+- Struktur notes kini ditetapkan menjadi unregistered-notes/, note-list/ dan note-list.md; penanganan subfolder lama di luar struktur tersebut serta cakupan validasi non-Markdown masih perlu spesifikasi.
 
-Detail tersisa: penyimpanan registry dan kolom katalog, kebijakan file hilang/rename, cakupan validasi subfolder/LEGACY serta kompatibilitas penamaan command lama sigma note terhadap sigma notes new/list/update yang dipakai dalam arahan terbaru. Registrasi hanya melalui new, katalog aktif, migrasi file manual ke LEGACY dan pembatasan Markdown sudah menjadi arahan Director; detail rekomendasi teknis belum seluruhnya diputuskan.
+Detail tersisa: penyimpanan registry dan kolom katalog, kebijakan file hilang/rename dan benturan nama, cakupan validasi subfolder/unregistered-notes serta kompatibilitas penamaan command lama sigma note terhadap sigma notes new/list/update yang dipakai dalam arahan terbaru. Registrasi hanya melalui new, katalog aktif, migrasi file manual ke unregistered-notes dan pembatasan Markdown sudah menjadi arahan Director; detail rekomendasi teknis belum seluruhnya diputuskan.
 
 Belum ada file di KLHK yang diubah, katalog yang dibuat, command Sigma yang dijalankan atau implementasi source; pencatatan hanya pada dokumen diskusi ini.
 
@@ -663,7 +687,7 @@ Urutan prioritas inti Sigma mengikuti kesepahaman review; sigma note merupakan t
 | :--- | :--- | :--- |
 | 1 | Konsistensi aturan | Petakan perbedaan master, rules proyek, skill dan memory agar perbaikan memakai sumber aturan yang jelas. |
 | 2 | Rekonsiliasi keputusan | Tegaskan keputusan D-01 sampai D-22 yang dipertahankan atau dibuka ulang serta lengkapi spesifikasi dan kompatibilitas tanpa membuka ulang D-05. |
-| 3 | sigma notes - track terpisah | Registrasikan catatan hanya melalui new, sediakan list/update, pindahkan Markdown tidak terdaftar ke LEGACY dan tolak update pada file non-Markdown dalam track D-22. |
+| 3 | sigma notes - track terpisah | Registrasikan melalui new ke note-list/, kelola note-list.md dengan list/update, pindahkan Markdown asing ke unregistered-notes/ dan tolak update pada file non-Markdown. |
 | 4 | Mailbox per intent | Pisahkan folder messages/memo per role dan versi dengan GENERAL/LEGACY, agregasi unread per intent serta migrasi doctor sesuai keputusan Director. |
 | 5 | Penomoran dan bootstrap | Selaraskan major PLAN/EXEC dengan INTENT pada chain baru serta pertahankan pola legacy dengan pemberitahuan bootstrap bersyarat. |
 | 6 | Pilot keterbacaan | Uji struktur ringkas pada PLAN/EXEC KLHK v5.3 dan PLAN v5.4 serta contoh batas brief INTENT dengan mempertahankan kewajiban penting. |

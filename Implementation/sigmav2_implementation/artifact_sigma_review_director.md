@@ -387,3 +387,9 @@ Prioritas revisi menurut dampaknya:
 9. urutan section di rules ini berantakan sekali urutannya dan loncat2. perlu dirapihkan ulang supaya koheren keterbacaannya
 
 
+
+INTENT TEMPLATE
+
+1. ikuti Discussion\Evaluation-06102026\2026-09-28_sigma-v2-keputusan-desain-dan-inventaris.md section 5, 5.1 INTENT tapi Section v2 pakai bahasa inggris. hapus tentang tier karena sudah tidak berlaku
+
+

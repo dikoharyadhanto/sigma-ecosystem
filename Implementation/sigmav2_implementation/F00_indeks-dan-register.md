@@ -26,6 +26,7 @@ Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigm
 | F08 | Review sumber/kesiapan, revisi dari artefak lama, paket audit, keputusan tertunda | 10-12 | Belum dimulai | - |
 | F09 | Distribusi skill/bridge dan validasi paritas CLI/MCP, chain lama/baru | 13 | Belum dimulai | - |
 | F10 | Penamaan artefak tanpa prefix role untuk artefak baru; proyek/artefak lama tidak diubah | (tambahan, sumber: D-07 dokumen 28 September) | Ditambahkan 6 Oktober atas keputusan Director; urutan ditentukan kemudian | - |
+| F11 | Writing Style Rules pada rules, skill, dan memory ARC, FMN, DEV (AUD dikeluarkan), berlaku untuk artefak INTENT, PLAN, EXEC, CLOSE, dan bagian ROADMAP yang disunting manual | (tambahan, permintaan Director 6 Oktober) | Seluruh keputusan terbuka dijawab; bagian ARC bergabung dengan ARC-RULE batch A | [F11_writing-style-rules.md](F11_writing-style-rules.md) |
 
 Urutan penyusunan yang disetujui Director: F00, F02, F03, F04, F05, F06, F01, F07, F08, F09. Satu fokus per giliran; setiap fokus berakhir dengan pertanyaan terbuka dan rekomendasi, lalu menunggu keputusan Director.
 
@@ -94,7 +95,7 @@ Disalin dari dokumen diskusi sebagai titik awal. Setiap butir dibahas di rencana
 | T-14 | F07 | Struktur final template setelah pilot; jumlah contoh brief (3 termasuk, 3 tidak termasuk) |
 | T-15 | F01 | Seluruh butir ditahan menunggu feedback Director |
 | T-16 | F10 | **TERKUNCI (Director, 6 Oktober 2026):** sejak Sigma v2 terpasang, setiap `intent new`, `plan new`, `exec new`, dan `close new` membuat file tanpa prefix role. Artefak lama tetap berprefix dan tidak diganti nama. Semua operasi yang bergantung pada pengecekan nama file menerima nama dengan maupun tanpa prefix |
-| T-17 | F06 | `diskusi_rencana_perubahan_sigma_v2.md` memiliki perubahan belum di-commit (bukan dari asisten) yang membalik struktur notes (`unregistered-notes/`, `note-list/`, `note-list.md` menjadi `LEGACY/`, `notes-list.md`). Menunggu kepastian versi yang berlaku |
+| T-17 | F06 | **TERKUNCI (Director, 6 Oktober 2026):** struktur notes = `unregistered-notes/`, `note-list/`, `note-list.md`; `LEGACY` hanya untuk mailbox. Definisi Director: **auto rejection** = setiap file non-Markdown yang terdeteksi di folder notes ditolak pada setiap `sigma notes update`; **auto move** = setiap Markdown yang tidak dibuat lewat `sigma notes new` dikategorikan tidak terdaftar dan dipindahkan ke `unregistered-notes/` pada setiap `sigma notes update`. Keduanya perilaku `update`, bukan sistem terpisah. Terbuka untuk F06: bentuk penolakan (hentikan seluruh update atau proses sebagian sambil melaporkan) |
 
 ## 6. Disiplin kerja dan build (tentatif)
 
@@ -105,7 +106,7 @@ Disalin dari dokumen diskusi sebagai titik awal. Setiap butir dibahas di rencana
 
 ## 7. Keputusan Director dari review dokumen (6 Oktober 2026)
 
-Jalur eksekusi tiga target: **ARC memory, ARC rule, INTENT template**. Eksekusi dimulai setelah Director menyelesaikan review INTENT template dan ARC memory, lalu menyetujui rencana eksekusi secara eksplisit.
+Jalur eksekusi empat target: **INTENT template beserta kode, ARC rules, ARC skill, ARC memory** (review Director selesai pada 6 Oktober 2026; skill dan memory hanya menerima Writing Style Rules). Rencana eksekusi: [E01_rencana-eksekusi-arc-dan-intent.md](E01_rencana-eksekusi-arc-dan-intent.md), menunggu persetujuan butir E-1 sampai E-10.
 
 **Review ARC-RULE (9 butir, [artifact_sigma_review_director.md](artifact_sigma_review_director.md)) - tujuh jawaban Director:**
 
@@ -120,3 +121,13 @@ Jalur eksekusi tiga target: **ARC memory, ARC rule, INTENT template**. Eksekusi 
 | 7 | Perubahan INTENT template mencakup perubahan kode (validator `docCheck.ts` dan terkait) agar tetap selaras; build/uji mengikuti disiplin di bagian 6 |
 
 Konsekuensi: eksekusi INTENT template menyentuh kode dan build sigma-mcp (symlink global), sehingga titik build dan uji disepakati dalam rencana eksekusi.
+
+**Review INTENT template ([artifact_sigma_review_director.md](artifact_sigma_review_director.md)):**
+
+| No | Keputusan |
+|---|---|
+| 1 | Struktur mengikuti §5.1 dokumen 28 September (9 section + ringkasan), dengan koreksi atas bagian yang usang: tier dihapus total, Final Validation Checklist dihapus (ARC-RULE ratify requirement ditulis ulang), baris "Amandemen terakhir" mengikuti keputusan F05, validator memilih spesifikasi per schema agar INTENT lama tetap valid |
+| 2 | Butir kedua kosong; sengaja dihapus Director |
+| 3 | Judul section dan keterangan petunjuk section berbahasa Inggris; isi pengisian mengikuti bahasa dokumen proyek. Keterangan petunjuk **harus singkat** karena panjangnya mengganggu; petunjuk yang panjang dipindahkan ke rules ARC (ARC-RULE perlu bagian panduan pengisian INTENT, masuk batch A) |
+| 4 | Nama section v2 usulan asisten disetujui **sementara** (Director Summary; Purpose and Problem; Desired Outcome and Measurement; Scope; Quality Standards; Priorities and Constraints; Assumptions and Risks; Functional Requirements + Guidance for FMN; Research (opsional); AUD Notes) |
+| 5 | "Guidance for FMN" berdiri sebagai section tersendiri dan jumlah contoh uji batas (3 termasuk, 3 tidak termasuk) menjadi nilai awal yang dapat disesuaikan; pilot tidak dijalankan lebih dulu (diterima Director) |
