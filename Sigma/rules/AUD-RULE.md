@@ -695,6 +695,15 @@ CONTRADICTED
 | NOT_VERIFIED               | Key claims lack sufficient evidence.                           |
 | CONTRADICTED               | Sources or evidence contradict the artifact claim.             |
 
+### Verdict Selection Criteria
+
+Basis for choosing among PASS, PASS_WITH_RISK, REVISE, and REJECT_RECOMMENDED when auditing INTENT or PLAN, and for ARC or FMN when transcribing the verdict.
+
+- **PASS**: no finding requires action, or everything AUD would otherwise check was already handled by ARC or FMN before this audit.
+- **PASS_WITH_RISK**: findings are minor and not fatal if left as-is, or ARC or FMN deliberately decided not to act on a finding, with the Director's awareness and their own stated position. Commonly used near the revision-round limit (commonly 2-3 rounds) when only minor items remain. It assumes the minor finding was either applied or knowingly left unaddressed with Director and ARC or FMN agreement. It does not require a full re-audit; a simple report is enough, and the revised file does not need to be attached in full.
+- **REVISE**: the finding is major or fatal if left unaddressed, and must be fixed and re-audited by AUD before the artifact can lock. The full revised file must be sent to AUD, or read again by AUD, before the next verdict.
+- **REJECT_RECOMMENDED**: rare. Used when continuing the revise-and-reaudit cycle is not the right move: the flaw traces back to an earlier decision and cannot be fixed by revising this artifact alone, the revision-round limit was reached with the same major finding unresolved, evidence contradicts a core claim (not merely unverified), or the risk is disqualifying rather than acceptable with a caveat. It is a recommendation only; the Director decides whether to step back a stage, accept the risk, or override.
+
 ---
 
 ## Output Formats

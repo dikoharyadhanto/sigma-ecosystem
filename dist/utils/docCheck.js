@@ -86,6 +86,41 @@ const INTENT_SPEC_V5 = {
     ],
     verdictSectionId: 'AUD_NOTES',
 };
+// First FMN_PLAN schema version that uses the unnumbered section layout
+// (Director Summary first, merged Acceptance Criteria and Test Contract).
+// Documents on an earlier schema keep validating against DOC_SPECS.plan.
+const PLAN_SCHEMA_V3 = 3;
+const PLAN_SPEC_V3 = {
+    heading: 'Sigma Plan Check',
+    expectedType: 'FMN_PLAN',
+    fallbackPath: path_1.default.join('Sigma', 'contract', 'FMN-PLAN.md'),
+    requiredSections: [
+        'DIRECTOR_SUMMARY',
+        'SOURCE_ALIGNMENT',
+        'OBJECTIVE',
+        'KEY_OUTPUT',
+        'WORK_ORDER',
+        'ACCEPTANCE_AND_TEST_CONTRACT',
+        'CONSTRAINTS_FOR_DEV',
+        'AUD_NOTES',
+    ],
+    // CONTRACT_CHANGES stays free-form until the checkpoint and approval rules (F04) exist.
+    optionalSections: ['REQUIREMENT', 'WORK_OUTSIDE_INTENT', 'CONTRACT_CHANGES'],
+    sectionOrder: [
+        'DIRECTOR_SUMMARY',
+        'SOURCE_ALIGNMENT',
+        'OBJECTIVE',
+        'REQUIREMENT',
+        'KEY_OUTPUT',
+        'WORK_ORDER',
+        'ACCEPTANCE_AND_TEST_CONTRACT',
+        'CONSTRAINTS_FOR_DEV',
+        'WORK_OUTSIDE_INTENT',
+        'CONTRACT_CHANGES',
+        'AUD_NOTES',
+    ],
+    verdictSectionId: 'AUD_NOTES',
+};
 const DOC_SPECS = {
     intent: {
         heading: 'Sigma Intent Check',
@@ -239,10 +274,12 @@ const DOC_SPECS = {
     },
 };
 function resolveDocSpec(domain, schema) {
-    if (domain === 'intent') {
-        const version = schema === null ? NaN : Number(schema);
-        if (Number.isInteger(version) && version >= INTENT_SCHEMA_V5)
+    const version = schema === null ? NaN : Number(schema);
+    if (Number.isInteger(version)) {
+        if (domain === 'intent' && version >= INTENT_SCHEMA_V5)
             return INTENT_SPEC_V5;
+        if (domain === 'plan' && version >= PLAN_SCHEMA_V3)
+            return PLAN_SPEC_V3;
     }
     return DOC_SPECS[domain];
 }
@@ -467,6 +504,70 @@ function evaluateIntentV5Gate(relevantMarkers, lines, requirements, passes, warn
         }
     }
 }
+const MAX_KEY_ITEM_ROWS = 5;
+const INTENT_VERSION_REFERENCE = /INTENT[-\s]?v?\s*\d+/i;
+function splitTableRow(line) {
+    return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim());
+}
+/** Data rows (first cell is a number) of the table inside `[start, end)`. */
+function numberedTableRows(lines, start, end) {
+    const rows = [];
+    for (let i = start; i < end; i += 1) {
+        if (/^\|\s*\d+\s*\|/.test(lines[i].trim()))
+            rows.push(splitTableRow(lines[i]));
+    }
+    return rows;
+}
+// Lock requirements for FMN_PLAN schema 3. Blocking: Director Summary stated,
+// INTENT version named. Advisory (warnings): oversized key-item tables and
+// acceptance criteria without a test method or expected result.
+function evaluatePlanV3Gate(relevantMarkers, lines, requirements, passes, warnings) {
+    const summaryMarker = relevantMarkers.find(m => m.sectionId === 'DIRECTOR_SUMMARY');
+    if (summaryMarker) {
+        const end = sectionEndLine(relevantMarkers, summaryMarker, lines.length);
+        const summaryText = findHeadingBody(lines, summaryMarker.line, end, /^###\s*Summary\s*$/i);
+        requirements.push({ label: 'Director Summary is stated', satisfied: !isPlaceholderContent(summaryText), scope: 'lock' });
+    }
+    const sourceMarker = relevantMarkers.find(m => m.sectionId === 'SOURCE_ALIGNMENT');
+    if (sourceMarker) {
+        const end = sectionEndLine(relevantMarkers, sourceMarker, lines.length);
+        const body = lines.slice(sourceMarker.line, end).join('\n');
+        requirements.push({
+            label: 'Source Alignment names the INTENT version',
+            satisfied: INTENT_VERSION_REFERENCE.test(body),
+            scope: 'lock',
+        });
+    }
+    for (const [sectionId, label] of [['REQUIREMENT', 'Requirement'], ['KEY_OUTPUT', 'Key Output']]) {
+        const marker = relevantMarkers.find(m => m.sectionId === sectionId);
+        if (!marker)
+            continue;
+        const end = sectionEndLine(relevantMarkers, marker, lines.length);
+        const rowCount = numberedTableRows(lines, marker.line, end).length;
+        if (rowCount > MAX_KEY_ITEM_ROWS) {
+            warnings.push(`${label}: ${rowCount} rows; ${MAX_KEY_ITEM_ROWS} or fewer expected (key items only)`);
+        }
+    }
+    const acMarker = relevantMarkers.find(m => m.sectionId === 'ACCEPTANCE_AND_TEST_CONTRACT');
+    if (acMarker) {
+        const end = sectionEndLine(relevantMarkers, acMarker, lines.length);
+        const incomplete = [];
+        for (let i = acMarker.line; i < end; i += 1) {
+            if (!/^\|\s*AC-\d+/i.test(lines[i].trim()))
+                continue;
+            const cells = splitTableRow(lines[i]);
+            const [acId, , testMethod, expectedResult] = cells;
+            if (isPlaceholderContent(testMethod ?? null) || isPlaceholderContent(expectedResult ?? null))
+                incomplete.push(acId);
+        }
+        if (incomplete.length > 0) {
+            warnings.push(`Acceptance Criteria and Test Contract: no Test Method or Expected Result for ${incomplete.join(', ')}`);
+        }
+        else {
+            passes.push('Acceptance Criteria and Test Contract: every AC has a Test Method and Expected Result');
+        }
+    }
+}
 function evaluateExecVerdictGate(relevantMarkers, lines, requirements, passes, warnings) {
     const marker = relevantMarkers.find(m => m.sectionId === EXEC_VERDICT_SECTION_ID);
     if (!marker)
@@ -669,6 +770,9 @@ function validateSigmaDocFile(absPath, domain) {
         else {
             evaluateFinalChecklistGate(relevantMarkers, lines, requirements);
         }
+    }
+    if (domain === 'plan' && spec === PLAN_SPEC_V3) {
+        evaluatePlanV3Gate(relevantMarkers, lines, requirements, passes, warnings);
     }
     if (domain === 'exec') {
         evaluateExecVerdictGate(relevantMarkers, lines, requirements, passes, warnings);

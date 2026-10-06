@@ -587,6 +587,69 @@ Test director's summary.
 `;
 }
 
+// FMN_PLAN schema 3 (E02): unnumbered layout, Director Summary first.
+export function validPlanDocV3(version: string): string {
+  return `<!-- SIGMA:DOC type=FMN_PLAN schema=3 -->
+# FMN-PLAN ${version}
+
+<!-- SIGMA:FMN_PLAN:SECTION:DIRECTOR_SUMMARY -->
+## Director Summary
+
+### Summary
+
+Test summary.
+
+### Open Question / Unclear Decision
+
+[...]
+
+<!-- SIGMA:FMN_PLAN:SECTION:SOURCE_ALIGNMENT -->
+## Source Alignment
+
+- Intent version: INTENT-v1
+- Intent point served: Test intent point.
+
+<!-- SIGMA:FMN_PLAN:SECTION:OBJECTIVE -->
+## Objective
+
+Test objective.
+
+<!-- SIGMA:FMN_PLAN:SECTION:KEY_OUTPUT -->
+## Key Output
+
+| No | Output | Category | Description | Location |
+|:-- |:------ |:-------- |:----------- |:-------- |
+| 1 | No file output | Creation | Behavior change only. | N/A |
+
+<!-- SIGMA:FMN_PLAN:SECTION:WORK_ORDER -->
+## Work Order
+
+| Task ID | Task | Expected Output | Priority |
+|:------- |:---- |:--------------- |:-------- |
+| TASK-001 | Test task. | Test output. | Must |
+
+<!-- SIGMA:FMN_PLAN:SECTION:ACCEPTANCE_AND_TEST_CONTRACT -->
+## Acceptance Criteria and Test Contract
+
+| AC ID | Criteria | Test Method | Expected Result | Evidence Required |
+|:----- |:-------- |:----------- |:--------------- |:----------------- |
+| AC-001 | Test criteria. | Test method. | Test result. | Test evidence. |
+
+<!-- SIGMA:FMN_PLAN:SECTION:CONSTRAINTS_FOR_DEV -->
+## Constraints for DEV
+
+Test constraints.
+
+<!-- SIGMA:FMN_PLAN:SECTION:AUD_NOTES -->
+## AUD Notes
+
+### Verdict
+
+- [x] PASS
+- [ ] REVISE
+`;
+}
+
 export function validExecDoc(version: string, planVersionRef: string, verdict = 'READY_FOR_LOCK'): string {
   return `<!-- SIGMA:DOC type=DEV_EXEC schema=1 -->
 # DEV-EXEC ${version}

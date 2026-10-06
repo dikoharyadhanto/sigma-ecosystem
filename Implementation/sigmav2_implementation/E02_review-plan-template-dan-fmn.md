@@ -1,7 +1,7 @@
 # E02 - Review: PLAN template, FMN rules, FMN skill, FMN memory
 
 Tanggal: 7 Oktober 2026
-Status: seluruh butir bagian 4 DISETUJUI Director (7 Oktober 2026). Belum ada template, rules, skill, memory, atau kode yang diubah. W1-W6 dimulai setelah E01B ([E01B](E01B_revisi-hapus-guidance-for-fmn.md)) selesai, atas keputusan Director. E01B selesai dieksekusi 7 Oktober 2026 (belum di-commit; D-4 mensyaratkan commit E01B sebelum E02 W1).
+Status: seluruh butir bagian 4 DISETUJUI Director (7 Oktober 2026). E01B selesai dan di-commit (c16095f). Dieksekusi 7 Oktober 2026, belum di-commit: W1 template PLAN schema 3, W2 validator dan test, W3 FMN-RULE (edit isi) dan B-5 (AUD-RULE, Verdict Selection Criteria), W4 skill FMN (4 target), W5 memory FMN, W6 satu build dan `npm test` (71 file, 940 test lulus). Penyusunan ulang urutan FMN-RULE (B-3) selesai sesuai kerangka yang disetujui Director; keterlacakan di [lampiran](E02_lampiran_keterlacakan-fmn-rule.md). Commit per kelompok (E-2) mengikuti instruksi Director setelah seluruh pekerjaan E02 selesai.
 Dasar: persetujuan Director 7 Oktober 2026 atas rencana E02 (butir 1-5), keputusan desain 28 September §5.2, §3, §4, dan [F00](F00_indeks-dan-register.md) bagian 7-8.
 Label: **TERKUNCI** (keputusan Director), **TERVERIFIKASI** (diperiksa pada berkas), **REKOMENDASI** (asisten, belum keputusan).
 
