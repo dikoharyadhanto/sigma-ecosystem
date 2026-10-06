@@ -2,7 +2,7 @@
 # FMN-PLAN
 
 > Build contract and test contract for DEV. FMN fills every section before lock.
-> Lock state is managed by Sigma CLI. Do not record it here. After lock, AUD Notes may be appended.
+> Lock state is managed by Sigma CLI. Do not record it here. After lock, only AUD Notes may be appended.
 
 ---
 
@@ -56,7 +56,7 @@
 <!-- SIGMA:FMN_PLAN:SECTION:KEY_OUTPUT -->
 ## Key Output
 
-> Only final outputs the Director will look for, named in the Objective. Intermediate files and logs belong in Work Order or Constraints. If the result is a behavior change with no file, write one row: "No file output".
+> Only final outputs the Director will look for, named in the Objective. Intermediate files and logs belong in Work Order or Constraints. If the result is a behavior change with no file, write one row: "No file output". An output made of many files (for example a source tree) is one row; Location gives the folder and its name.
 
 | No | Output | Category | Description | Location |
 |:-- |:------ |:-------- |:----------- |:-------- |

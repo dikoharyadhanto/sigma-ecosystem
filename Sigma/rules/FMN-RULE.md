@@ -329,6 +329,7 @@ Control sentence: ROADMAP says how many big stages. PLAN says what to build next
   - `Modification` states in Location the path of the file or folder changed, and the same item appears in Requirement with Role `Input`.
   - `Report` is a report that is itself a result of the contract. EXEC is always produced and is not listed.
   - A result that is a behavior change with no file is written as one row: "No file output".
+  - An output made of many files is one row, and Location names the folder where it is stored.
 - Intermediate files, logs, and supporting files belong in Work Order or Constraints for DEV. The Expected Output column of Work Order holds per-task outputs; Key Output holds only the final outputs of the contract.
 - Location in Key Output is a result of the contract and does not dictate DEV's method. This is the one exception to the rule "FMN MUST preserve DEV freedom of method".
 - Every Key Output MUST be verifiable by at least one acceptance criterion.
