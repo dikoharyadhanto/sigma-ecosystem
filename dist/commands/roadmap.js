@@ -8,9 +8,9 @@ const commander_1 = require("commander");
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
-const artifacts_1 = require("../utils/artifacts");
 const roadmap_1 = require("../utils/roadmap");
 const docCheck_1 = require("../utils/docCheck");
+const roadmapService_1 = require("../services/roadmapService");
 // PLAN-EVAL-01 Fase 3 — `roadmap activate` is REMOVED (§3.5): there is only
 // ever one roadmap per chain now, so there is never a second DRAFT to
 // activate or a current ACTIVE to demote. There is still no `roadmap lock`
@@ -32,17 +32,8 @@ function roadmapCommand() {
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            (0, chain_1.assertChainCanMutate)(chain);
-            if (chain.intent.state !== 'RATIFIED') {
-                throw new Error('ROADMAP requires a ratified DIR-INTENT. Run: sigma intent ratify');
-            }
-            const version = chain.chain_version;
-            const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'roadmap', `ROADMAP-${version}.md`));
+            const { relPath } = (0, roadmapService_1.createRoadmapDraft)({ projectRoot });
             const absPath = path_1.default.join(projectRoot, relPath);
-            (0, artifacts_1.copyTemplateToArtifact)('ROADMAP-TEMPLATE.md', absPath);
-            (0, chain_1.registerRoadmapDraft)(chain, relPath);
-            (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
             console.log(`Created: ${relPath} (DRAFT — plan new is now unblocked)`);
             console.log('Running automatic validation...\n');
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'roadmap');
@@ -51,7 +42,12 @@ function roadmapCommand() {
                 process.exit(1);
         }
         catch (e) {
-            console.error(e.message);
+            if (e instanceof roadmapService_1.RoadmapServiceError) {
+                console.error(e.message);
+            }
+            else {
+                console.error(e.message);
+            }
             process.exit(1);
         }
     });
@@ -77,14 +73,16 @@ function roadmapCommand() {
         .description('Regenerate the derived Stage Overview table in the active chain\'s ROADMAP')
         .action(() => {
         try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            const roadmapPath = roadmapDocPath(projectRoot, chain);
-            (0, roadmap_1.renderRoadmapFile)(roadmapPath, chain);
-            console.log(`ROADMAP ${chain.roadmap.version} Stage Overview regenerated: ${chain.roadmap.file ?? roadmapPath}`);
+            const { version, relPath } = (0, roadmapService_1.renderActiveRoadmap)((0, fs_1.findProjectRoot)());
+            console.log(`ROADMAP ${version} Stage Overview regenerated: ${relPath}`);
         }
         catch (e) {
-            console.error(e.message);
+            if (e instanceof roadmapService_1.RoadmapServiceError) {
+                console.error(e.message);
+            }
+            else {
+                console.error(e.message);
+            }
             process.exit(1);
         }
     });

@@ -11,6 +11,7 @@ const config_1 = require("../config");
 const mailbox_1 = require("../engine/mailbox");
 const projectConfig_1 = require("../engine/projectConfig");
 const fs_1 = require("../utils/fs");
+const inboxArchiveService_1 = require("../services/inboxArchiveService");
 function validateRole(value) {
     const upper = value.toUpperCase();
     if (!config_1.MESSAGING_ROLES.includes(upper)) {
@@ -148,9 +149,7 @@ function runClear(opts) {
 }
 function runArchive(messageId) {
     const projectRoot = (0, fs_1.findProjectRoot)();
-    const index = (0, mailbox_1.readIndex)(projectRoot);
-    (0, mailbox_1.updateMessageStatus)(index, messageId, 'ARCHIVED');
-    (0, mailbox_1.writeIndex)(projectRoot, index);
+    (0, inboxArchiveService_1.archiveMessage)({ projectRoot, messageId, actorRole: null });
     console.log(`Message ${messageId} archived.`);
 }
 function runCheck() {

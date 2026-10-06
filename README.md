@@ -451,13 +451,15 @@ Additional bridge guidance may be provided for Claude Desktop, Gemini CLI, or ot
 
 ---
 
-## sigma-mcp — MCP Orientation Server
+## Sigma MCP — Query and Control Servers
 
 Sigma ships a native, read-only [MCP](https://modelcontextprotocol.io) server, `sigma-mcp`, alongside the `sigma` CLI. It exposes the same orientation data CLI commands like `sigma session bootstrap` print to stdout — but as structured JSON an MCP-aware AI client can call directly, without parsing terminal text.
 
-**CLI remains the sole authority for every write, gate, or lock operation.** `sigma-mcp` is strictly additive and read-only — it cannot lock, supersede, close, or mutate `Sigma/progress-v<N>.json` in any way.
+`sigma-mcp` is read-only: it cannot lock, supersede, close, or mutate `Sigma/progress-v<N>.json`. The separate `sigma-control` server provides bounded writes through the same use cases as the CLI. Governance transitions require a durable Director approval recorded through the local `sigma control` CLI; an MCP tool cannot grant its own approval.
 
 ### Tools
+
+The query server registers 23 tools:
 
 | Tool | Returns |
 |:--- | :--- |
@@ -466,12 +468,42 @@ Sigma ships a native, read-only [MCP](https://modelcontextprotocol.io) server, `
 | `sigma_get_orientation` | Role hint, gate summary, next valid operations, blockers |
 | `sigma_list_artifacts` | Intent/plan/exec/close/roadmap tracker state |
 | `sigma_doctor` | Reconciliation findings (report-only — never writes to disk) |
+| `sigma_get_memory` | Role memory reminders |
+| `sigma_verify_binding` | Verified project identity and root binding |
+| `sigma_get_effective_policy` | Operation availability and approval requirements; advisory, not authorization |
+| `sigma_read_artifact` | Governance document content selected by type and version |
+| `sigma_get_evidence` | Plan/exec status, references, and registered document hash |
+| `sigma_check_document` | Structural and eligibility checks for an artifact |
+| `sigma_intent_status` | Intent state |
+| `sigma_plan_status` | Plan states and plan/exec pairing |
+| `sigma_exec_status` | Execution states and plan references |
+| `sigma_close_status` | Closure state |
+| `sigma_list_intents` | Intent chains |
+| `sigma_list_plans` | Plans and pending drafts |
+| `sigma_list_execs` | Execution versions |
+| `sigma_list_roadmap_stages` | Roadmap stages and plans |
+| `sigma_check_mailbox_integrity` | Mailbox integrity findings, without message content |
+| `sigma_get_config` | Project configuration |
+| `sigma_get_operation_log` | Bounded operation log entries |
+| `sigma_get_git_evidence` | Git status and change evidence |
+
+The control server registers 32 tools: 12 bounded-write tools for drafts, roadmap, references, human projections, evidence, and inbox archiving; and 10 pairs of `prepare`/`commit` tools for intent ratification, amendment, scoring and superseding, plan locking, promotion and superseding, execution locking, and closure creation and locking.
+
+Sending messages and reading inbox/memo content remain CLI/skill operations. The MCP tools for mailbox integrity and inbox archiving do not expose message content.
+
+### Control server
+
+`sigma-control` requires explicit startup binding with `--project-root`, `--project-id`, and `--role` (`ARC`, `FMN`, `DEV`, or `AUD`). Setup commands register only the query server; control access must be configured separately. Writes enforce role, state revision, idempotency, project locking, transaction recovery, and audit recording.
+
+For a governance transition, the role prepares an operation ticket, the Director reviews it with `sigma control show <ticketId>` and authorizes it with `sigma control approve <ticketId> --director-confirm`, then the role commits the approved operation. A stale, expired, rejected, or consumed approval cannot authorize a new transition.
 
 ### Enabling it
 
 `sigma-mcp` is installed as a bin entry alongside `sigma` (see [Install Sigma](#1-install-sigma) above) — no separate install step.
 
 **Registration is automatic** — `sigma project start` and `sigma project sync` write the client config for your AI tools as part of project setup. No manual JSON editing needed.
+
+Project entries bind the query server using `--mode query --project-root <root> --project-id <id>`. Legacy positional-root configurations remain supported. Global entries without a project start in discovery mode.
 
 | Command | Config written | Platforms |
 |:--- |:--- |:--- |

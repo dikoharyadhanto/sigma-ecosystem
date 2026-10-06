@@ -6,8 +6,31 @@
 
 import { fileURLToPath } from 'url';
 import { findProjectRoot } from '../utils/fs';
+import { Binding, discoveryBinding } from './binding';
 
 export const SOURCE_ENGINE = 'engine' as const;
+
+// ── Startup binding (§7.1) ───────────────────────────────────────────────────
+//
+// Set once, from the entry point, out of trusted process arguments. Nothing
+// reachable from a tool call may reassign it — that is the whole point of the
+// binding, and `One binding, one project` (§5.2) is enforced by there being no
+// other writer than startup.
+
+let activeBinding: Binding = discoveryBinding();
+
+export function setBinding(binding: Binding): void {
+  activeBinding = binding;
+}
+
+export function getBinding(): Binding {
+  return activeBinding;
+}
+
+/** Test-only: restores the unbound default between cases. */
+export function resetBindingForTest(): void {
+  activeBinding = discoveryBinding();
+}
 
 const clientRootsCache: string[] = [];
 
@@ -32,7 +55,17 @@ export function addClientRoot(uriOrPath: string): void {
 }
 
 /**
- * Resolves the Sigma project root from multiple candidate sources:
+ * Legacy multi-source resolution — DISCOVERY MODE ONLY.
+ *
+ * Kept because every MCP config written before Stage A launches the server
+ * with no root at all, or with a bare positional one, and those installations
+ * must keep working for one release (§7.1 rule 7, Director decision Q1).
+ *
+ * Once a binding exists this function is not consulted: contract.respond()
+ * takes binding.root directly. Do not call it from new code — a new tool that
+ * reaches for it is reintroducing exactly the hole Stage A closed.
+ *
+ * Candidate order:
  * 1. explicitPath (e.g. passed from an MCP tool argument)
  * 2. Environment variables (SIGMA_PROJECT_ROOT, INIT_CWD, PWD)
  * 3. CLI arguments (--project-root, --cwd, or a positional path)
@@ -40,6 +73,10 @@ export function addClientRoot(uriOrPath: string): void {
  * 5. Current working directory (process.cwd())
  */
 export function resolveRoot(explicitPath?: string): string | null {
+  // A bound server never re-resolves. Guards the case of an old tool calling
+  // resolveRoot() directly instead of going through respond().
+  if (activeBinding.root) return activeBinding.root;
+
   const candidates: string[] = [];
 
   // 1. Explicit path parameter

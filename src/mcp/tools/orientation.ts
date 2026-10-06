@@ -18,7 +18,8 @@ import {
 import { readIndex, getUnreadForRole, countUnreadMemos } from '../../engine/mailbox';
 import { MESSAGING_ROLES, SigmaRole } from '../../config';
 import { buildBootstrapView } from '../../session/bootstrapView';
-import { resolveRoot, okText, noProject, SOURCE_ENGINE } from '../shared';
+import { noProject, SOURCE_ENGINE } from '../shared';
+import { respond } from '../contract';
 
 const GATE_LABELS: Record<InvalidGateKey, string> = {
   gate_1_open: 'Gate 1 (Design Complete)',
@@ -125,6 +126,6 @@ export function registerOrientationTool(server: McpServer): void {
       },
     },
     async ({ role, project_root }: { role?: 'ARC' | 'FMN' | 'DEV' | 'AUD'; project_root?: string }) =>
-      okText(computeOrientation(resolveRoot(project_root), role as SigmaRole | undefined)),
+      respond('sigma_get_orientation', project_root, (root) => computeOrientation(root, role as SigmaRole | undefined)),
   );
 }

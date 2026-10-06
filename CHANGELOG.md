@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file. The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Project-bound MCP queries for policy, artifacts, evidence, status, validation, configuration, operation logs, and Git evidence.
+- A separate `sigma-control` MCP server with bounded writes, operation tickets, durable local Director approvals, transaction recovery, idempotency, and audit records.
+- Shared CLI/MCP services for draft and governance operations, with regression coverage for role boundaries, concurrent writes, and stale approvals.
+
+### Fixed
+
+- Shared current/legacy artifact layout resolution between CLI reconstruction and MCP reads.
+- Atomic JSON writes and explicit version hints for ambiguous plan/exec lock targets.
+- Client MCP configuration binding and tool detection for existing supported clients.
+
 ## [1.0.0] — 2026-09-12
 
 First official stable release.

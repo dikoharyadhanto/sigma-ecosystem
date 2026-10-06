@@ -11,7 +11,8 @@ import {
   getGateStatus,
   hasInvalidRuntime,
 } from '../../engine/chain';
-import { resolveRoot, okText, noProject, SOURCE_ENGINE } from '../shared';
+import { noProject, SOURCE_ENGINE } from '../shared';
+import { respond } from '../contract';
 
 // Core logic exported as a pure function so it can be unit-tested without the
 // MCP transport (PLAN-IMPL-01 §4-A). registerStateTool is a thin wrapper.
@@ -64,6 +65,6 @@ export function registerStateTool(server: McpServer): void {
       },
     },
     async ({ project_root }: { project_root?: string }) =>
-      okText(computeState(resolveRoot(project_root))),
+      respond('sigma_get_state', project_root, computeState),
   );
 }

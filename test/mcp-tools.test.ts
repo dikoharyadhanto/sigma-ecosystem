@@ -251,7 +251,7 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
     env?.cleanup();
   });
 
-  it('lists exactly the six tools and every call returns source:engine', async () => {
+  it('lists the ten tools (Phase 0 + Batch 1 + Stage B2 evidence-only) and every core call returns source:engine', async () => {
     env = setupTestEnv();
     projectWithChain(env, makeChainWithLockedExec());
     // Registered tools resolve the project via findProjectRoot() from cwd.
@@ -265,17 +265,116 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
 
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
+    // Six from Phase 0, three added by Batch 1 (Stage A + Stage B1), one added
+    // by Stage B2 evidence-only (sigma_get_evidence), thirteen added by
+    // Stage B2 continuation (sigma_check_document + STATUS group + LIST
+    // group + the final four: inbox_check/config_show/report_logs/
+    // git_evidence). memo_list stays excluded — Director decision
+    // 2026-09-16, mailbox domain stays untouched beyond the integrity
+    // check. MCP mailbox READ tools were built and reviewed during Stage B2
+    // but withdrawn by Director decision — see
+    // RESULT-IMPL-SIGMA-MCP-STAGE-B2-20260915.md §9.
     expect(names).toEqual(
-      ['sigma_doctor', 'sigma_get_gates', 'sigma_get_orientation', 'sigma_get_state', 'sigma_list_artifacts', 'sigma_get_memory'].sort(),
+      [
+        'sigma_doctor',
+        'sigma_get_gates',
+        'sigma_get_orientation',
+        'sigma_get_state',
+        'sigma_list_artifacts',
+        'sigma_get_memory',
+        'sigma_verify_binding',
+        'sigma_get_effective_policy',
+        'sigma_read_artifact',
+        'sigma_get_evidence',
+        'sigma_check_document',
+        'sigma_intent_status',
+        'sigma_close_status',
+        'sigma_plan_status',
+        'sigma_exec_status',
+        'sigma_list_intents',
+        'sigma_list_plans',
+        'sigma_list_execs',
+        'sigma_list_roadmap_stages',
+        'sigma_check_mailbox_integrity',
+        'sigma_get_config',
+        'sigma_get_operation_log',
+        'sigma_get_git_evidence',
+      ].sort(),
     );
 
-    for (const name of names) {
+    // R-08 — every query-plane tool carries the same safety annotations, so an
+    // orchestrator reading the tool list sees uniform metadata. The three
+    // Batch 1 additions shipped without them at first.
+    for (const t of tools) {
+      expect(t.annotations, `${t.name} must declare annotations`).toMatchObject({
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      });
+    }
+
+    // The original six keep their contract: active project, engine-sourced.
+    const core = [
+      'sigma_doctor',
+      'sigma_get_gates',
+      'sigma_get_orientation',
+      'sigma_get_state',
+      'sigma_list_artifacts',
+      'sigma_get_memory',
+    ];
+    for (const name of core) {
       const args = name === 'sigma_get_memory' ? { role: 'FMN' } : {};
       const res = await client.callTool({ name, arguments: args });
       const text = (res.content as Array<{ type: string; text: string }>)[0].text;
       const payload = JSON.parse(text) as Payload;
       expect(payload.source).toBe('engine');
       expect(payload.active).toBe(true);
+      // §8 — metadata is additive, so it rides alongside the old fields.
+      expect(payload.contract_version).toBe('1.0');
+      expect(payload.tool).toBe(name);
+      // structuredContent carries the identical object (§16.2).
+      expect(res.structuredContent).toEqual(payload);
+    }
+
+    await client.close();
+    await server.close();
+  });
+
+  // Codex review finding (2026-09-16, RESULT-IMPL-SIGMA-MCP-STAGE-B2-QUERY-
+  // BATCH-20260916.md §9 HIGH-3): Plan Doc §7.1 rule 4 reserves the
+  // project_root per-call parameter for exactly six legacy tools; every tool
+  // added since (Stage B1/B2/E) must resolve the root purely from the
+  // binding. This is an exact-schema assertion, not a behavioural probe, so
+  // a future tool that re-adds the parameter by copy-paste fails immediately.
+  it('project_root per-call parameter exists only on the six legacy tools, never on tools added since', async () => {
+    env = setupTestEnv();
+    projectWithChain(env, makeChainWithLockedExec());
+    process.chdir(env.projectDir);
+
+    const server = buildServer();
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+    const legacySix = new Set([
+      'sigma_get_state',
+      'sigma_get_gates',
+      'sigma_list_artifacts',
+      'sigma_doctor',
+      'sigma_get_orientation',
+      'sigma_get_memory',
+    ]);
+
+    const { tools } = await client.listTools();
+    for (const tool of tools) {
+      const props = (tool.inputSchema as { properties?: Record<string, unknown> } | undefined)?.properties ?? {};
+      const hasProjectRoot = 'project_root' in props;
+      if (legacySix.has(tool.name)) {
+        expect(hasProjectRoot, `${tool.name} is a legacy tool and should still accept project_root`).toBe(true);
+      } else {
+        expect(hasProjectRoot, `${tool.name} must not accept project_root per-call (Plan Doc §7.1 rule 4)`).toBe(false);
+      }
     }
 
     await client.close();
@@ -317,8 +416,17 @@ describe('sigma-mcp project root resolution fallbacks', () => {
 });
 
 describe('sigma-mcp read-only guard', () => {
-  it('no tool file imports a state-mutating engine function', () => {
-    const toolsDir = path.resolve(__dirname, '..', 'src', 'mcp', 'tools');
+  it('no query-plane file imports a state-mutating engine function', () => {
+    // Stage C split this guard as promised: src/mcp/control/ is now excluded
+    // from the sweep — it exists precisely to hold the write tools, and
+    // scanning it for writer references would be asserting the opposite of
+    // what Stage C is. Everything else directly under src/mcp/ (binding.ts,
+    // contract.ts, policy.ts, shared.ts, artifactPath.ts, errors.ts,
+    // index.ts, and tools/) must still never reference one of these names —
+    // that boundary is what makes "query is always non-mutating" (plan §5.4)
+    // true of the actual module graph, not just of intent.
+    const mcpDir = path.resolve(__dirname, '..', 'src', 'mcp');
+    const controlDir = path.join(mcpDir, 'control');
     const writerNames = [
       'writeChain',
       'writeActivateStatus',
@@ -327,16 +435,48 @@ describe('sigma-mcp read-only guard', () => {
       'recordArcScore',
       'registerRoadmapDraft',
       'createInitialChain',
+      // Stage C additions — defense in depth: these are only ever imported
+      // from src/mcp/control/ and src/commands/, but a query tool importing
+      // one by accident should fail this guard, not a mutation-check months
+      // later.
+      'createIntentDraft',
+      'writeCanonicalArtifactFile',
+      'updateArtifactDraft',
+      'writeIdempotencyRecord',
+      'appendAuditEntry',
+      // Stage E W1 addition — same defense-in-depth rationale as the Stage C
+      // additions above.
+      'createPlanDraft',
+      'createExecDraft',
+      'createRoadmapDraft',
+      'renderActiveRoadmap',
+      'updateReferenceList',
+      'humanizeIntent',
+      'humanizeExec',
+      'humanizeClose',
+      'archiveMessage',
+      'recordEvidence',
     ];
 
-    for (const file of fs.readdirSync(toolsDir)) {
-      if (!file.endsWith('.ts')) continue;
-      const raw = fs.readFileSync(path.join(toolsDir, file), 'utf8');
+    const files: string[] = [];
+    const walk = (dir: string): void => {
+      if (dir === controlDir) return;
+      for (const name of fs.readdirSync(dir)) {
+        const abs = path.join(dir, name);
+        if (fs.statSync(abs).isDirectory()) walk(abs);
+        else if (name.endsWith('.ts')) files.push(abs);
+      }
+    };
+    walk(mcpDir);
+    expect(files.length).toBeGreaterThan(6);
+
+    for (const file of files) {
+      const raw = fs.readFileSync(file, 'utf8');
       // Strip comments so documentation mentions (e.g. doctor.ts explaining it
       // never calls writeChain) don't trip the guard.
       const code = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
       for (const writer of writerNames) {
-        expect(code, `${file} must not reference writer ${writer}`).not.toMatch(new RegExp(`\\b${writer}\\b`));
+        expect(code, `${path.basename(file)} must not reference writer ${writer}`).not.toMatch(new RegExp(`\\b${writer}\\b`));
       }
     }
   });

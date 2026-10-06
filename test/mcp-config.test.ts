@@ -85,9 +85,18 @@ function reasonixConfigPath(home: string) {
   return path.join(home, '.reasonix', 'config.toml');
 }
 
-const expectedEntry = (root?: string) => ({
+// PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE §7.1/§7.4 — the entry moved from a
+// bare positional root to explicit binding flags. --project-id is appended
+// only when the project actually has a readable .sigma-identity.json, so these
+// fixtures (which write no identity file) exercise the bound-but-unverified
+// form; the verified form is asserted separately below.
+const expectedEntry = (root?: string, projectId?: string) => ({
   command: 'sigma-mcp',
-  args: root ? [root] : [],
+  args: root
+    ? projectId
+      ? ['--mode', 'query', '--project-root', root, '--project-id', projectId]
+      : ['--mode', 'query', '--project-root', root]
+    : [],
 });
 
 // ── writeClaudeMcpConfig ──────────────────────────────────────────────────────
@@ -184,7 +193,7 @@ describe('writeCodexMcpConfig', () => {
     expect(fs.existsSync(filePath)).toBe(true);
     const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
     expect(parsed.mcp_servers?.sigma?.command).toBe('sigma-mcp');
-    expect(parsed.mcp_servers?.sigma?.args).toEqual([tmpProject]);
+    expect(parsed.mcp_servers?.sigma?.args).toEqual(expectedEntry(tmpProject).args);
   });
 
   it('merges sigma without touching other Codex settings', async () => {
@@ -197,7 +206,7 @@ describe('writeCodexMcpConfig', () => {
 
     const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
     expect(parsed.mcp_servers?.sigma?.command).toBe('sigma-mcp');
-    expect(parsed.mcp_servers?.sigma?.args).toEqual([tmpProject]);
+    expect(parsed.mcp_servers?.sigma?.args).toEqual(expectedEntry(tmpProject).args);
     expect(parsed.mcp_servers?.other?.command).toBe('other-mcp');
     expect((parsed.model as any)?.name).toBe('o3');
   });
@@ -209,7 +218,7 @@ describe('writeCodexMcpConfig', () => {
 
     const parsed = parseTOML(fs.readFileSync(codexConfigPath(tmpHome), 'utf-8')) as any;
     expect(parsed.mcp_servers?.sigma?.command).toBe('sigma-mcp');
-    expect(parsed.mcp_servers?.sigma?.args).toEqual([tmpProject]);
+    expect(parsed.mcp_servers?.sigma?.args).toEqual(expectedEntry(tmpProject).args);
     expect(Object.keys(parsed.mcp_servers)).toHaveLength(1);
   });
 });
@@ -380,7 +389,7 @@ describe('writeReasonixMcpConfig', () => {
     expect(sigma.command).toBe('sigma-mcp');
     // Reasonix path is normalized to forward slashes on write (a raw Windows
     // path breaks TOML parsing — `\U` is an invalid unicode escape).
-    expect(sigma.args).toEqual([toPosix(tmpProject)]);
+    expect(sigma.args).toEqual(expectedEntry(toPosix(tmpProject)).args);
   });
 
   it('merges sigma without touching other plugins or settings', async () => {
@@ -398,7 +407,7 @@ describe('writeReasonixMcpConfig', () => {
     const parsed = parseTOML(fs.readFileSync(filePath, 'utf-8')) as any;
     const plugins = parsed.plugins as any[];
     expect(plugins.find((p) => p.name === 'sigma')?.command).toBe('sigma-mcp');
-    expect(plugins.find((p) => p.name === 'sigma')?.args).toEqual([toPosix(tmpProject)]);
+    expect(plugins.find((p) => p.name === 'sigma')?.args).toEqual(expectedEntry(toPosix(tmpProject)).args);
     expect(plugins.find((p) => p.name === 'shell')?.command).toBe('npx');
     expect((parsed as any).config_version).toBe(7);
   });
@@ -446,7 +455,7 @@ describe('writeReasonixMcpConfig', () => {
     const parsed = parseTOML(fs.readFileSync(reasonixConfigPath(tmpHome), 'utf-8')) as any;
     const plugins = parsed.plugins as any[];
     expect(plugins.filter((p) => p.name === 'sigma')).toHaveLength(1);
-    expect(plugins.find((p) => p.name === 'sigma')?.args).toEqual([toPosix(tmpProject)]);
+    expect(plugins.find((p) => p.name === 'sigma')?.args).toEqual(expectedEntry(toPosix(tmpProject)).args);
   });
 
   it('writes empty args when no projectRoot is given', async () => {
@@ -528,5 +537,49 @@ describe('removeReasonixMcpConfig', () => {
     writeReasonixMcpConfig();
     removeReasonixMcpConfig();
     expect(() => removeReasonixMcpConfig()).not.toThrow();
+  });
+});
+
+// ── Binding migration (reviewer finding R-07) ────────────────────────────────
+
+describe('binding flags reach every client writer', () => {
+  function stubIdentity(root: string, id: string) {
+    fs.writeJsonSync(path.join(root, '.sigma-identity.json'), {
+      schema_version: '1.2.0', project_id: id, project_name: id,
+      registered: true, logs_created_at: new Date().toISOString(),
+    });
+  }
+
+  it('Reasonix gets the same verified-binding args as every other client', async () => {
+    const { writeReasonixMcpConfig } = await importMcpConfig();
+    stubIdentity(tmpProject, 'REASONIXPROJ');
+
+    writeReasonixMcpConfig(tmpProject);
+
+    const parsed = parseTOML(fs.readFileSync(reasonixConfigPath(tmpHome), 'utf-8')) as any;
+    const sigma = (parsed.plugins as any[]).find((p) => p.name === 'sigma');
+    // Reasonix used to build its own positional list and so could never reach
+    // binding_verified:true, no matter how often `project sync` ran.
+    expect(sigma.args).toEqual(expectedEntry(toPosix(tmpProject), 'REASONIXPROJ').args);
+    expect(sigma.args).toContain('--project-id');
+  });
+
+  it('every writer agrees on the argument list for the same project', async () => {
+    const m = await importMcpConfig();
+    stubIdentity(tmpProject, 'SAMEPROJ');
+
+    m.writeClaudeMcpConfig(tmpProject);
+    m.writeCursorMcpConfig(tmpProject);
+    m.writeReasonixMcpConfig(tmpProject);
+
+    const claude = fs.readJsonSync(mcpJsonPath(tmpProject)).mcpServers.sigma.args;
+    const cursor = fs.readJsonSync(cursorMcpPath(tmpProject)).mcpServers.sigma.args;
+    const reasonix = ((parseTOML(fs.readFileSync(reasonixConfigPath(tmpHome), 'utf-8')) as any).plugins as any[])
+      .find((p) => p.name === 'sigma').args;
+
+    expect(claude).toEqual(cursor);
+    // Reasonix normalises to posix; compare on that basis, not on separators.
+    expect(reasonix).toEqual(expectedEntry(toPosix(tmpProject), 'SAMEPROJ').args);
+    expect(claude).toContain('--project-id');
   });
 });

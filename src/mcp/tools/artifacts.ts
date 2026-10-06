@@ -7,7 +7,8 @@
 import path from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { readActiveChain, listChainVersions, isIntentDocUncertified } from '../../engine/chain';
-import { resolveRoot, okText, noProject, SOURCE_ENGINE } from '../shared';
+import { noProject, SOURCE_ENGINE } from '../shared';
+import { respond } from '../contract';
 
 // Pure core (PLAN-IMPL-01 §4-A).
 export function computeArtifacts(root: string | null): unknown {
@@ -79,6 +80,6 @@ export function registerArtifactsTool(server: McpServer): void {
       },
     },
     async ({ project_root }: { project_root?: string }) =>
-      okText(computeArtifacts(resolveRoot(project_root))),
+      respond('sigma_list_artifacts', project_root, computeArtifacts),
   );
 }

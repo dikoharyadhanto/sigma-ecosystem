@@ -11,7 +11,8 @@ import {
   getInvalidMarkers,
   InvalidGateKey,
 } from '../../engine/chain';
-import { resolveRoot, okText, noProject, SOURCE_ENGINE } from '../shared';
+import { noProject, SOURCE_ENGINE } from '../shared';
+import { respond } from '../contract';
 
 const GATE_KEYS: InvalidGateKey[] = ['gate_1_open', 'gate_2_open', 'gate_3_satisfied'];
 
@@ -61,6 +62,6 @@ export function registerGatesTool(server: McpServer): void {
       },
     },
     async ({ project_root }: { project_root?: string }) =>
-      okText(computeGates(resolveRoot(project_root))),
+      respond('sigma_get_gates', project_root, computeGates),
   );
 }
