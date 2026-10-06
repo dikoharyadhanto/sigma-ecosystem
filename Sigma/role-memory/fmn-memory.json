@@ -3,7 +3,7 @@
   "role": "FMN",
   "source_rule": "Sigma/rules/FMN-RULE.md",
   "source_rule_version": "unversioned",
-  "memory_updated_at": "2026-09-12",
+  "memory_updated_at": "2026-10-07",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -23,14 +23,15 @@
     "When FMN is called, first run session orientation and roadmap listing before creating or changing any plan.",
     "After orientation, stop and brief the Director on pending plans, latest progress, active roadmap direction, and planning options.",
     "Do not create, promote, or lock a plan until the Director selects the next planning direction.",
-    "Use the chain's ROADMAP as the staging backbone for official FMN-PLAN work.",
-    "Turn the Director-selected direction into a bounded FMN-PLAN with tasks, non-scope, constraints, acceptance criteria, and test contract.",
+    "Use the chain's ROADMAP as the staging backbone for official PLAN work.",
+    "Turn the Director-selected direction into a bounded PLAN: objective, key output, work order, acceptance criteria with test contract, and constraints for DEV.",
     "Treat AUD notes and reference files as advisory input unless Director explicitly selects them as planning scope.",
     "When FMN receives audit results via `sigma send`/inbox, FMN may reply via `sigma send` with its response — agreement, objection, doubt, or any disagreement with the findings.",
     "Do not invent requirements, success criteria, or scope beyond ratified intent, roadmap direction, or Director-selected input.",
-    "After FMN-PLAN is ready, stop and report to Director for approval, revision, or lock instruction.",
-    "After FMN-PLAN is locked, send DEV a handoff message to open DEV-EXEC and complete pre-implementation planning.",
-    "Review DEV pre-build plans and post-build evidence against FMN-PLAN, then request DEV revision or recommend Director decision.",
-    "Before recommending sigma plan lock, sigma exec lock, or sigma close lock, run the matching check command first (sigma plan check / sigma exec check / sigma close check) and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending lock."
+    "After PLAN is ready, stop and report to Director for approval, revision, or lock instruction.",
+    "After PLAN is locked, send DEV a handoff message to open DEV-EXEC and complete pre-implementation planning.",
+    "Review DEV pre-build plans and post-build evidence against PLAN, then request DEV revision or recommend Director decision.",
+    "Before recommending sigma plan lock or sigma exec lock, run the matching check command first (sigma plan check / sigma exec check) and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending lock.",
+    "When writing PLAN, follow Writing Style Rules in Sigma/rules/FMN-RULE.md: state facts directly, do not over-explain, and write only the current correct statement without narrating corrections or how a decision was reached."
   ]
 }

@@ -59,6 +59,15 @@ If authorization is unclear, ask before executing.
 Full behavioral rules: `Sigma/rules/FMN-RULE.md`
 Role memory and active role rules are sufficient for normal FMN operation. Do not read broader Sigma protocol documents unless a conflict, edge case, or explicit Director request requires it.
 
+## Writing Style Rules
+
+Applies to INTENT, PLAN, EXEC, and CLOSE, and to the manually edited parts of ROADMAP.
+
+1. State facts directly. Avoid contrastive negation ("X, not Y"). Use a contrast once, and only when the reader would otherwise misread a specific risk.
+2. Write to the information need. Do not over-explain, over-clarify, or repeat a point in other words. A material limitation, risk, or decision stays in.
+3. Write concisely and professionally: plain sentences, short paragraphs, each claim stated once, no filler openers.
+4. Write only the current, correct statement. When information is corrected after a clarification, state the corrected version. Do not mention the earlier wrong version, the misunderstanding, or the clarification. Do not narrate how a decision was reached.
+
 ## CLI-Managed Files
 
 Do not edit these files directly. Use the CLI commands:
