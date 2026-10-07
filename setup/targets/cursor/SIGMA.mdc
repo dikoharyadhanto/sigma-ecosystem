@@ -22,6 +22,8 @@ Refer to `SIGMA_README.md` at the project root for the full governance protocol.
 - Do not edit `Sigma/progress-v<N>.json` directly — all state changes go through `sigma` CLI commands
 - Do not lock artifacts without explicit Director authorization
 - When a gate is blocked, surface the blocker clearly before proposing work
+- Every new `sigma send` MUST include `--related-artifact` with the actual registered artifact concerned, owned by the active INTENT; use `GENERAL` explicitly only for content unrelated to Sigma artifacts. Never target LEGACY for a new write. Replies may inherit an appropriate, verified parent reference through `--reply-to`.
+- Authorized memo writes require `--ref` under the same policy. Resolve references within role authority; report unknown, ambiguous, or inactive references instead of using GENERAL fallback. Follow the active role's `Sigma/rules/<ROLE>-RULE.md` §Inter-Role Communication Protocol; this does not grant additional command or evidence-access permissions.
 
 ## Artifact Reference
 

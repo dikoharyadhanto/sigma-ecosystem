@@ -60,7 +60,7 @@ The Director may give the activation phrase in whichever language the current se
 ## Steps
 
 1. **Determine the active role.** ARC, FMN, DEV, or AUD — whichever role is active in the current session. DIRECTOR never writes or receives memos.
-2. **Determine `--ref`.** One of `INTENT-vN`, `ROADMAP-vN`, `PLAN-vN.minor`, `EXEC-vN.minor`, `CLOSE-vN` (whichever artifact this memo's content actually concerns — not necessarily the chain's current phase), or `GENERAL` if the memo is not tied to a specific governed artifact (e.g. pre-INTENT Professional Mode exploration, or a purely operational note). If genuinely ambiguous, ask the Director once rather than guessing.
+2. **Determine required `--ref`.** Use the actual registered `INTENT-vN`, `ROADMAP-vN`, `PLAN-vN.minor`, `EXEC-vN.minor`, or `CLOSE-vN` that the memo concerns, owned by the active INTENT — not necessarily the chain's current phase. Use `GENERAL` explicitly only when the content is unrelated to any Sigma artifact; an operational note about PLAN or EXEC still needs that artifact's reference. Verify the reference within the active role's evidence authority. If unknown, ambiguous, or inactive, stop and report/ask the Director; never substitute GENERAL or use the CLI fallback.
 3. **Compose `--topic`.** One sentence, concrete enough that it is useful on its own in a list of memos (`sigma memo list`). This becomes the memo's subject if `--subject` is not given separately.
 4. **Write the four narrative sections**, following `Sigma/templates/MEMO-TEMPLATE.md`. Keep every section brief — see "Keeping Memos Brief" above if something needs more than a couple of sentences:
    - **Context** — 2-3 sentences on the direction of this session's discussion and why it stopped here. Not a summary of artifact content. May be `—` if there is nothing beyond what the artifacts already say.
@@ -81,7 +81,7 @@ The Director may give the activation phrase in whichever language the current se
 ## Forbidden Operations
 
 - `sigma intent ratify`, `sigma plan lock`, `sigma exec lock`, `sigma close lock`, any supersede command, any Sigma governance artifact-creation command (`sigma intent new`, `sigma plan new`, `sigma exec new`, `sigma roadmap new`, `sigma close new`).
-- `--to` on `sigma memo write` — not supported; use `sigma send` for cross-role messages instead.
+- `--to` on `sigma memo write` — not supported; use `sigma send` with explicit `--related-artifact` for new cross-role messages instead.
 - Switching the active role.
 - Treating a memo as a place to record a decision permanently — see the shadow-artifact guardrail above.
 
@@ -93,4 +93,4 @@ Every pointer under "Reorientation — Read" and every instruction under "Next A
 
 ## Mailbox per INTENT
 
-Mailbox context: choose a registered INTENT/ROADMAP/PLAN/EXEC/CLOSE reference owned by the active INTENT, or GENERAL. Legacy PLAN/EXEC numbers resolve through chain membership, not their major prefix. Memo files are generated under Sigma/memo/{ROLE}/{CONTEXT}/. The UNREAD quota is per INTENT and role (default 5); GENERAL has a separate per-role quota. Unknown versions are stored in GENERAL with a warning and never reclassified automatically. If migration is required, report the doctor guidance; do not migrate or reset statuses on your own initiative.
+Mailbox context is selected by required `--ref`, not by a version mentioned in the topic or body. Legacy offset PLAN/EXEC versions resolve through registered chain membership, not their major prefix. GENERAL is reserved for content unrelated to Sigma artifacts; LEGACY only holds migrated old messages and must never be selected for a new memo. Do not rely on the CLI's unknown-reference fallback to GENERAL; resolve the context issue before writing. Memo files are generated under Sigma/memo/{ROLE}/{CONTEXT}/. The UNREAD quota is per INTENT and role (default 5); GENERAL has a separate per-role quota. If migration or INTENT activation is needed, report it; do not migrate, reset statuses, or activate another INTENT without the required authorization.

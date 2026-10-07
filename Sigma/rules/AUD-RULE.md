@@ -1189,7 +1189,7 @@ this rule already assumes AUD has:
 
 - `sigma memory --aud` — read-only, scoped to AUD's own role memory. Run
   once at role activation without asking.
-- `sigma send --from aud ...` — the only channel Mandatory Message Triggers
+- `sigma send --from aud --related-artifact <reference> ...` — the only channel Mandatory Message Triggers
   (below) are allowed to use. Run only to fulfill a Mandatory Message
   Trigger, never to initiate unrelated communication.
 
@@ -1224,10 +1224,20 @@ The authorization rules above are sufficient for normal AUD operation. Do not re
 All inter-role message sending MUST use the Sigma CLI command:
 
 ```
-sigma send --from aud --to <ROLE> --subject "<subject>" --message "<body>"
+sigma send --from aud --to <ROLE> --subject "<subject>" --message "<body>" \
+  --related-artifact "<registered-artifact-reference-or-GENERAL>"
 ```
 
 Use `--message-file <path>` instead of `--message` whenever the body has more than one line — `--message` is truncated by shells on newlines.
+
+### Required Mailbox Context
+
+- Every new `sigma send` message MUST include `--related-artifact`. For artifact-bound content, use the actual registered `INTENT-vN`, `ROADMAP-vN`, `PLAN-vN.minor`, `EXEC-vN.minor`, or `CLOSE-vN` concerned. A version in the subject or body does not select the mailbox.
+- Use `--related-artifact GENERAL` explicitly only when the content is unrelated to any Sigma artifact. Operational discussion about an artifact is still artifact-bound. `LEGACY` holds migrated old messages and is never a target for new messages or memos.
+- Select the artifact from evidence available within the role's existing authority. It must belong to the active INTENT. Legacy offset PLAN/EXEC versions resolve through registered chain membership, not by matching their major number to the INTENT number.
+- A reply may use `--reply-to <message-id>` without repeating `--related-artifact` only when the verified parent reference is appropriate for the reply; the CLI inherits that context. Include the correct reference if the reply concerns another artifact in the same INTENT. Start a new message for a different INTENT or for a change between GENERAL and an artifact context.
+- If the reference is unknown, ambiguous, or belongs to an inactive INTENT, stop and report the context issue. Do not omit the flag, substitute GENERAL, or rely on the CLI's unknown-reference fallback. Do not activate another INTENT, migrate messages, or create an artifact merely to make the send succeed without the required authorization.
+- When a memo write is authorized, its required `--ref` follows the same artifact/GENERAL policy. These context rules do not grant permission to write or read memos, inspect additional evidence, or execute commands outside the role boundary.
 
 This is the only authorized channel for inter-role communication. AUD is prohibited from sending messages to other roles through any other means — including direct conversation, inline notes, or document annotations — unless the Director explicitly authorizes an alternative method in that specific session.
 
@@ -1258,7 +1268,8 @@ Message must include:
 
 ```
 sigma send --from aud --to ARC --subject "AUD Findings: INTENT-v{X}" \
-  --type NOTE --action REVIEW --message-file <path-to-message-body>
+  --type NOTE --action REVIEW --message-file <path-to-message-body> \
+  --related-artifact "INTENT-v{X}"
 ```
 
 Message file content:
@@ -1285,7 +1296,8 @@ Message must include:
 
 ```
 sigma send --from aud --to FMN --subject "AUD Findings: PLAN-v{X}" \
-  --type NOTE --action REVIEW --message-file <path-to-message-body>
+  --type NOTE --action REVIEW --message-file <path-to-message-body> \
+  --related-artifact "PLAN-v{X}"
 ```
 
 Message file content:

@@ -63,6 +63,16 @@ If authorization is unclear, ask before executing.
 Full behavioral rules: `Sigma/rules/ARC-RULE.md`
 Role memory and active role rules are sufficient for normal ARC operation. Do not read broader Sigma protocol documents unless a conflict, edge case, or explicit Director request requires it.
 
+## Message and Memo Context
+
+- Every new `sigma send` MUST include `--related-artifact`: use the actual registered artifact reference concerned, such as `INTENT-vN` or `EXEC-vN.minor`, belonging to the active INTENT. A version in the subject/body does not route the message.
+- Use `--related-artifact GENERAL` explicitly only for content unrelated to any Sigma artifact. Operational notes about an artifact remain artifact-bound. Never target LEGACY for a new write.
+- A reply may inherit the verified, appropriate parent reference through `--reply-to <message-id>`; omission is allowed only for that reply. For other routing cases, follow the full role rule.
+- Resolve references only from evidence authorized for the role. Unknown, ambiguous, or inactive references require reporting/clarification; never omit the flag or use GENERAL as a fallback. Do not activate another INTENT or migrate without the required authorization.
+- Authorized memo writes use required `--ref` with the same artifact/GENERAL policy. Existing command, evidence-access, and memo permissions still apply.
+
+Full routing policy: `Sigma/rules/ARC-RULE.md` §Inter-Role Communication Protocol.
+
 ## Writing Style Rules
 
 Applies to INTENT, PLAN, EXEC, and CLOSE, and to the manually edited parts of ROADMAP.

@@ -153,3 +153,5 @@ Hard prohibitions:
 ## Inter-Role Context Handoff
 
 Inter-role context handoff uses `sigma send` / `sigma inbox`.
+
+Every new `sigma send` MUST include `--related-artifact` with the actual registered artifact concerned, owned by the active INTENT. Use `GENERAL` explicitly only for content unrelated to Sigma artifacts; operational discussion about an artifact still needs its reference. LEGACY is only for migrated old messages. A reply may inherit an appropriate, verified parent reference via `--reply-to`. Authorized memo writes use required `--ref` with the same policy. Resolve references within the active role's evidence authority; report unknown, ambiguous, or inactive references instead of relying on GENERAL fallback. These rules do not authorize additional commands, evidence access, INTENT activation, or migration. Full policy: the active role's `Sigma/rules/<ROLE>-RULE.md` §Inter-Role Communication Protocol.

@@ -11,6 +11,8 @@
     "Maintain independent judgment; state agreement, doubt, disagreement, or ambiguity clearly.",
     "Restate the Director's request in your own words when scope, intent, approval, or next action could be misunderstood.",
     "Use Sigma messaging for all formal role-to-role communication; never bypass it.",
+    "Every new sigma send MUST include --related-artifact with the actual registered artifact reference owned by the active INTENT. Use GENERAL explicitly only for content unrelated to any Sigma artifact; LEGACY is never a target for a new write.",
+    "Replies may inherit the verified, appropriate parent reference via --reply-to. Authorized memo writes require --ref under the same artifact/GENERAL policy. Resolve unknown, ambiguous, or inactive references only within authorized evidence; report/ask instead of using the CLI fallback to GENERAL.",
     "Ask explicit Director approval before locks, risk acceptance, supersession, closure, or authority-sensitive actions.",
     "Stay within the direct evidence chain; stop and ask before expanding investigation scope.",
     "Immediately after reading this role memory on activation, run `sigma config show` to check the current language settings — session bootstrap and other command output are not a consistently reliable substitute for this.",
