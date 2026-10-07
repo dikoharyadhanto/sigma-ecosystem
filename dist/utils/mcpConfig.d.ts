@@ -2,9 +2,10 @@
  * mcpConfig.ts — Wiring sigma-mcp ke AI client configs
  *
  * Menyediakan fungsi tulis dan hapus config MCP untuk platform yang didukung:
- *   Tulis  : writeClaudeMcpConfig, writeCursorMcpConfig,
+ *   Tulis  : writeClaudeMcpConfig, writeOpencodeMcpConfig,
  *            writeCodexMcpConfig, writeAntigravityMcpConfig, writeReasonixMcpConfig
- *   Hapus  : removeCodexMcpConfig, removeAntigravityMcpConfig, removeReasonixMcpConfig
+ *   Hapus  : removeCodexMcpConfig, removeAntigravityMcpConfig, removeReasonixMcpConfig,
+ *            removeOpencodeMcpConfig
  *   Helper : tryMcpOp — wrap operasi MCP dengan try-catch, kembalikan pesan error atau null
  *
  * Prinsip desain:
@@ -31,12 +32,36 @@
  * Merge-aware: entri server lain dipertahankan.
  */
 export declare function writeClaudeMcpConfig(projectRoot: string): void;
+/** Error yang pesannya sudah lengkap dan dipakai apa adanya oleh tryMcpOp —
+ *  bukan kegagalan I/O, melainkan config yang sengaja tidak ditimpa. */
+export declare class McpManualEditRequired extends Error {
+    constructor(message: string);
+}
 /**
- * Tulis/upsert entri sigma ke .cursor/mcp.json di project root.
- * Format identik dengan .mcp.json (Cursor membaca mcpServers JSON yang sama).
- * Merge-aware: entri server lain dipertahankan.
+ * Tentukan berkas config opencode proyek: `opencode.jsonc` bila ada, jika tidak
+ * `opencode.json` (yang sudah ada, atau yang akan dibuat). opencode membaca dan
+ * menggabungkan keduanya bila berdampingan; urutan prioritasnya tidak diuji
+ * (F16 §4.1), jadi `.jsonc` dipilih mengikuti pengguna yang sudah memakainya.
  */
-export declare function writeCursorMcpConfig(projectRoot: string): void;
+export declare function resolveOpencodeConfigPath(projectRoot: string): string;
+/**
+ * Upsert entri `mcp.sigma` ke config opencode di project root (F16 §5.3).
+ * Format: { "mcp": { "sigma": { "type": "local", "command": ["sigma-mcp", ...], "enabled": true } } }
+ *
+ * Berbeda dari writeClaudeMcpConfig: config opencode boleh JSONC (komentar,
+ * koma akhir), sehingga edit dilakukan secara surgical lewat jsonc-parser —
+ * komentar, urutan key, dan server lain dipertahankan. jsonc-parser merapikan
+ * (format ulang) baris sibling terakhir di titik sisip; isi dan baris lain tidak
+ * berubah. Berkas yang tidak dapat di-parse TIDAK ditimpa
+ * (McpManualEditRequired). Idempoten; ditulis atomik.
+ */
+export declare function writeOpencodeMcpConfig(projectRoot: string): void;
+/**
+ * Hapus key `mcp.sigma` dari config opencode di project root.
+ * No-op kalau berkas atau key tidak ada. Berkas yang tidak dapat di-parse
+ * tidak disentuh (McpManualEditRequired).
+ */
+export declare function removeOpencodeMcpConfig(projectRoot: string): void;
 /**
  * Upsert entri sigma ke ~/.codex/config.toml (global Codex config).
  * Bagian: [mcp_servers.sigma]

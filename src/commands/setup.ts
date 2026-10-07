@@ -45,7 +45,7 @@ const ROLE_FILES: Record<string, Record<string, string>> = {
   codex:       { arc: 'arc',    fmn: 'fmn',    dev: 'dev',    aud: 'aud',    report: 'report',    sigmaTest: 'sigma-test',    humanize: 'humanize',    writeMemo: 'write-memo',    readMemo: 'read-memo'    },
   reasonix:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md', humanize: 'humanize.md', writeMemo: 'write-memo.md', readMemo: 'read-memo.md' },
   antigravity: { arc: 'sigma-arc', fmn: 'sigma-fmn', dev: 'sigma-dev', aud: 'sigma-aud', report: 'sigma-report', sigmaTest: 'sigma-test', humanize: 'sigma-humanize', writeMemo: 'sigma-write-memo', readMemo: 'sigma-read-memo' },
-  cursor:      { sigma: 'SIGMA.mdc' },
+  opencode:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md', humanize: 'humanize.md', writeMemo: 'write-memo.md', readMemo: 'read-memo.md' },
 };
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -53,7 +53,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   codex:       'Codex CLI    (~/.codex/skills/)',
   reasonix:    'Reasonix     (~/.reasonix/skills/)',
   antigravity: 'Antigravity  (~/.gemini/config/skills/)',
-  cursor:      'Cursor       (~/.cursor/rules/)',
+  opencode:    'opencode     (~/.config/opencode/commands/)',
 };
 
 const PLATFORM_SOURCE_DIR: Record<string, string> = {
@@ -61,8 +61,28 @@ const PLATFORM_SOURCE_DIR: Record<string, string> = {
   codex:       'codex',
   reasonix:    'reasonix',
   antigravity: 'antigravity',
-  cursor:      'cursor',
+  opencode:    'opencode',
 };
+
+// Plugin proteksi opencode (F16 §5.2) — dipasang bersama command opencode.
+const OPENCODE_PLUGIN_FILE = 'protect-sigma.js';
+const OPENCODE_PLUGIN_MARKER = 'sigma-managed: protect-sigma';
+
+// Marker berkas ~/.cursor/rules/SIGMA.mdc milik Sigma lama (target Cursor dihapus di F16).
+const LEGACY_CURSOR_RULES_FILE = 'SIGMA.mdc';
+const LEGACY_CURSOR_RULES_MARKER = 'Sigma governance protocol for Cursor';
+
+/** Direktori tujuan command/skill per platform (selaras dengan ROLE_FILES). */
+function platformTargetDirs(): Record<string, string> {
+  const paths = targetPaths();
+  return {
+    claudeCode:  paths.claudeCommands,
+    codex:       paths.codexSkills,
+    reasonix:    paths.reasonixSkills,
+    antigravity: paths.antigravitySkills,
+    opencode:    paths.opencodeCommands,
+  };
+}
 
 // ── sigma setup install ──────────────────────────────────────────────────────
 
@@ -149,7 +169,7 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
 
   if (detectedPlatforms.length === 0) {
     info('No AI tool directories detected. Skipping skill deployment.');
-    info('Detected directories: ~/.claude/commands, ~/.codex/skills, ~/.reasonix/skills, ~/.gemini/agents');
+    info('Detected directories: ~/.claude, ~/.codex/skills, ~/.reasonix, ~/.gemini, ~/.config/opencode');
   } else {
     // Select platforms (interactive checkbox, unless --yes)
     let selectedPlatforms: string[];
@@ -210,14 +230,7 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
 async function deploySkillsAndHook(selectedPlatforms: string[]): Promise<void> {
   if (selectedPlatforms.length === 0) return;
 
-  const paths = targetPaths();
-  const targetDirMap: Record<string, string> = {
-    claudeCode:  paths.claudeCommands,
-    codex:       paths.codexSkills,
-    reasonix:    paths.reasonixSkills,
-    antigravity: paths.antigravitySkills,
-    cursor:      paths.cursorRules,
-  };
+  const targetDirMap = platformTargetDirs();
 
   for (const platform of selectedPlatforms) {
     const sourceDir = path.join(SETUP_TARGETS_DIR, PLATFORM_SOURCE_DIR[platform]);
@@ -296,6 +309,60 @@ async function deploySkillsAndHook(selectedPlatforms: string[]): Promise<void> {
   if (selectedPlatforms.includes('claudeCode')) {
     await deployHook();
   }
+
+  // Plugin deployment (opencode only)
+  if (selectedPlatforms.includes('opencode')) {
+    deployOpencodePlugin();
+  }
+}
+
+// ── opencode plugin deployment ───────────────────────────────────────────────
+
+function deployOpencodePlugin(): void {
+  const src = path.join(SETUP_TARGETS_DIR, 'opencode', 'plugins', OPENCODE_PLUGIN_FILE);
+  if (!fileExists(src)) {
+    warn(`${OPENCODE_PLUGIN_FILE} not found in bundle (opencode) — skipping plugin deployment`);
+    return;
+  }
+
+  const pluginsDir = targetPaths().opencodePlugins;
+  ensureDir(pluginsDir);
+  fs.copySync(src, path.join(pluginsDir, OPENCODE_PLUGIN_FILE), { overwrite: true });
+  console.log(`  OK  Plugin: ${OPENCODE_PLUGIN_FILE} deployed to ${pluginsDir}`);
+}
+
+/** Path plugin opencode milik Sigma bila ada dan bertanda Sigma, jika tidak null. */
+function sigmaOpencodePluginPath(): string | null {
+  const dst = path.join(targetPaths().opencodePlugins, OPENCODE_PLUGIN_FILE);
+  if (!fileExists(dst)) return null;
+  try {
+    return fs.readFileSync(dst, 'utf-8').includes(OPENCODE_PLUGIN_MARKER) ? dst : null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Legacy Cursor cleanup ────────────────────────────────────────────────────
+//
+// Target Cursor dihapus di F16. ~/.cursor/rules/SIGMA.mdc yang dulu dipasang
+// Sigma hanya dibersihkan bila berkas itu ada dan memuat penanda Sigma; direktori
+// ~/.cursor dan berkas lain tidak disentuh.
+
+function sigmaLegacyCursorRulesPath(): string | null {
+  const dst = path.join(os.homedir(), '.cursor', 'rules', LEGACY_CURSOR_RULES_FILE);
+  if (!fileExists(dst)) return null;
+  try {
+    return fs.readFileSync(dst, 'utf-8').includes(LEGACY_CURSOR_RULES_MARKER) ? dst : null;
+  } catch {
+    return null;
+  }
+}
+
+function cleanupLegacyCursorRules(): void {
+  const dst = sigmaLegacyCursorRulesPath();
+  if (!dst) return;
+  fs.removeSync(dst);
+  console.log(`  Removed: legacy Cursor rules file ${dst} (Cursor target was removed from Sigma).`);
 }
 
 // ── Hook deployment ──────────────────────────────────────────────────────────
@@ -439,6 +506,8 @@ async function runUpdate(): Promise<void> {
     await deploySkillsAndHook(detectedPlatforms);
   }
 
+  cleanupLegacyCursorRules();
+
   success('Sigma updated successfully.');
   console.log(`  Backup saved to: ${backupBase}`);
   console.log('  Note: existing project Sigma/ folders were NOT touched.');
@@ -530,13 +599,7 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
   const paths = targetPaths();
   const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
 
-  const targetDirMap: Record<string, string> = {
-    claudeCode:  paths.claudeCommands,
-    codex:       paths.codexSkills,
-    reasonix:    paths.reasonixSkills,
-    antigravity: paths.antigravitySkills,
-    cursor:      paths.cursorRules,
-  };
+  const targetDirMap = platformTargetDirs();
 
   const skillFilesToRemove: string[] = [];
   for (const platform of Object.keys(ROLE_FILES)) {
@@ -549,9 +612,11 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
 
   const hasGlobalDir = fileExists(GLOBAL_SIGMA_DIR);
   const hasHookEntry = hookEntryExists(settingsPath);
+  const opencodePlugin = sigmaOpencodePluginPath();
+  const legacyCursorRules = sigmaLegacyCursorRulesPath();
 
-  if (!hasGlobalDir && skillFilesToRemove.length === 0 && !hasHookEntry) {
-    info('Nothing to uninstall — no Sigma global installation, skill files, or hook entry found.');
+  if (!hasGlobalDir && skillFilesToRemove.length === 0 && !hasHookEntry && !opencodePlugin && !legacyCursorRules) {
+    info('Nothing to uninstall — no Sigma global installation, skill files, hook entry, or plugin found.');
     return;
   }
 
@@ -559,11 +624,13 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
     info('Dry run — the following would be removed:');
     if (hasGlobalDir) console.log(`  ${GLOBAL_SIGMA_DIR}/ (entire directory)`);
     for (const f of skillFilesToRemove) console.log(`  ${f}`);
+    if (opencodePlugin) console.log(`  ${opencodePlugin}`);
+    if (legacyCursorRules) console.log(`  ${legacyCursorRules} (legacy Cursor rules file)`);
     if (hasHookEntry) console.log(`  protect-sigma.js hook entry in ${settingsPath}`);
     console.log('  Key "sigma" from ~/.codex/config.toml [mcp_servers] (if exists)');
     console.log('  Key "sigma" from ~/.gemini/config/mcp_config.json [mcpServers] (if exists)');
     warn('Pass --confirm to apply. Local project folders (Sigma/, .sigma-identity.json) are never touched.');
-    warn('NOTE: .mcp.json and .cursor/mcp.json in individual project folders cannot be cleaned automatically — remove them manually if sigma is no longer needed.');
+    warn('NOTE: .mcp.json and opencode.json/opencode.jsonc in individual project folders cannot be cleaned automatically — remove them manually if sigma is no longer needed.');
     return;
   }
 
@@ -600,6 +667,13 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
     console.log(`  Removed: protect-sigma.js hook entry from ${settingsPath}`);
   }
 
+  if (opencodePlugin) {
+    fs.removeSync(opencodePlugin);
+    console.log(`  Removed: ${opencodePlugin}`);
+  }
+
+  cleanupLegacyCursorRules();
+
   // Stage 8 — Hapus entri sigma dari global MCP configs
   {
     const err = tryMcpOp(() => removeCodexMcpConfig(), '~/.codex/config.toml');
@@ -620,8 +694,8 @@ async function runUninstall(opts: { confirm?: boolean }): Promise<void> {
   success('Sigma uninstalled successfully.');
   console.log('  Local project folders (Sigma/, .sigma-identity.json) were not touched.');
   console.log('  The `sigma` command will no longer function until reinstalled.');
-  warn('NOTICE: .mcp.json and .cursor/mcp.json in individual Sigma project folders were NOT cleaned automatically.');
-  warn('  If sigma is no longer needed, remove the "sigma" entry from mcpServers in each project\'s .mcp.json and .cursor/mcp.json manually.');
+  warn('NOTICE: .mcp.json and opencode.json/opencode.jsonc in individual Sigma project folders were NOT cleaned automatically.');
+  warn('  If sigma is no longer needed, remove the "sigma" entry from mcpServers in each project\'s .mcp.json and from mcp in its opencode.json/opencode.jsonc manually.');
 }
 
 // ── Command builder ──────────────────────────────────────────────────────────

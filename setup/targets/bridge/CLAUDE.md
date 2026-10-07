@@ -75,8 +75,8 @@ approval, risk, and closure decisions.
 
 ### Pre-Lock Verification
 
-Before recommending or running any lock/ratify command (`intent ratify`, `plan lock`,
-`exec lock`, `close lock`), run the matching `sigma {domain} check` first
+Before recommending or running any lock/ratify command (`intent ratify`, `plan approve`,
+`exec approve`, `close lock`), run the matching `sigma {domain} check` first
 and confirm it reports `Lock readiness: Eligible` (or `Eligible with
 warnings`). `check` is read-only and never requires Director authorization —
 it shows exactly which Lock Requirements `lock` will enforce, without
@@ -120,7 +120,7 @@ If authorization is unclear, ask before executing.
 
 | File | Command |
 | :--- | :--- |
-| `Sigma/progress-v<N>.json` | `sigma intent ratify`, `sigma plan lock`, `sigma exec lock`, etc. |
+| `Sigma/progress-v<N>.json` | `sigma intent ratify`, `sigma plan approve`, `sigma exec approve`, etc. |
 | `Sigma/SIGMA-REGISTRY.json` | `sigma project sync --confirm` |
 | `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma project sync --confirm` |
 
@@ -153,3 +153,5 @@ Hard prohibitions:
 ## Inter-Role Context Handoff
 
 Inter-role context handoff uses `sigma send` / `sigma inbox`.
+
+Every new `sigma send` MUST include `--related-artifact` with the actual registered artifact concerned, owned by the active INTENT. Use `GENERAL` explicitly only for content unrelated to Sigma artifacts; operational discussion about an artifact still needs its reference. LEGACY is only for migrated old messages. A reply may inherit an appropriate, verified parent reference via `--reply-to`. Authorized memo writes use required `--ref` with the same policy. Resolve references within the active role's evidence authority; report unknown, ambiguous, or inactive references instead of relying on GENERAL fallback. These rules do not authorize additional commands, evidence access, INTENT activation, or migration. Full policy: the active role's `Sigma/rules/<ROLE>-RULE.md` §Inter-Role Communication Protocol.

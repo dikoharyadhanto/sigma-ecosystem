@@ -7,7 +7,7 @@ export interface DetectedTools {
   codex: boolean;
   reasonix: boolean;
   antigravity: boolean;
-  cursor: boolean;
+  opencode: boolean;
 }
 
 export interface ToolTargetPaths {
@@ -16,18 +16,25 @@ export interface ToolTargetPaths {
   reasonixSkills: string;    // ~/.reasonix/skills/
   reasonixConfig: string;    // ~/.reasonix/config.json
   antigravitySkills: string; // ~/.gemini/config/skills/
-  cursorRules: string;       // ~/.cursor/rules/
+  opencodeConfigDir: string; // ~/.config/opencode/
+  opencodeCommands: string;  // ~/.config/opencode/commands/
+  opencodePlugins: string;   // ~/.config/opencode/plugins/
 }
 
 export function targetPaths(): ToolTargetPaths {
   const home = os.homedir();
+  // opencode: XDG_CONFIG_HOME is deliberately ignored (F16 O-9) — the verified
+  // layout on every platform is ~/.config/opencode.
+  const opencodeConfigDir = path.join(home, '.config', 'opencode');
   return {
     claudeCommands: path.join(home, '.claude', 'commands'),
     codexSkills: path.join(home, '.codex', 'skills'),
     reasonixSkills: path.join(home, '.reasonix', 'skills'),
     reasonixConfig: path.join(home, '.reasonix', 'config.json'),
     antigravitySkills: path.join(home, '.gemini', 'config', 'skills'),
-    cursorRules: path.join(home, '.cursor', 'rules'),
+    opencodeConfigDir,
+    opencodeCommands: path.join(opencodeConfigDir, 'commands'),
+    opencodePlugins: path.join(opencodeConfigDir, 'plugins'),
   };
 }
 
@@ -39,6 +46,6 @@ export function detectTools(): DetectedTools {
     codex: fs.existsSync(t.codexSkills),
     reasonix: fs.existsSync(path.join(home, '.reasonix')),
     antigravity: fs.existsSync(path.join(home, '.gemini')),
-    cursor: fs.existsSync(t.cursorRules),
+    opencode: fs.existsSync(t.opencodeConfigDir),
   };
 }

@@ -3,7 +3,8 @@
  *
  * Cakupan:
  *   - writeClaudeMcpConfig     : merge-aware, idempoten, non-destruktif
- *   - writeCursorMcpConfig     : merge-aware, idempoten, non-destruktif
+ *   - writeOpencodeMcpConfig   : JSONC-aware (komentar/koma akhir), idempoten, tidak menimpa file rusak
+ *   - removeOpencodeMcpConfig  : no-op kalau tidak ada, hapus key sigma saja
  *   - writeCodexMcpConfig      : merge-aware, idempoten, non-destruktif (TOML)
  *   - writeAntigravityMcpConfig: merge-aware, idempoten, non-destruktif
  *   - removeCodexMcpConfig     : no-op kalau tidak ada, merge-delete, idempoten
@@ -17,6 +18,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { parse as parseTOML } from 'smol-toml';
+import { parse as parseJsonc } from 'jsonc-parser';
 import { toPosix } from '../src/utils/fs';
 
 // ── Isolasi HOME via env override ─────────────────────────────────────────────
@@ -69,8 +71,12 @@ function mcpJsonPath(dir: string) {
   return path.join(dir, '.mcp.json');
 }
 
-function cursorMcpPath(dir: string) {
-  return path.join(dir, '.cursor', 'mcp.json');
+function opencodeJsonPath(dir: string) {
+  return path.join(dir, 'opencode.json');
+}
+
+function opencodeJsoncPath(dir: string) {
+  return path.join(dir, 'opencode.jsonc');
 }
 
 function codexConfigPath(home: string) {
@@ -83,6 +89,13 @@ function antigravityConfigPath(home: string) {
 
 function reasonixConfigPath(home: string) {
   return path.join(home, '.reasonix', 'config.toml');
+}
+
+function stubIdentity(root: string, id: string) {
+  fs.writeJsonSync(path.join(root, '.sigma-identity.json'), {
+    schema_version: '1.2.0', project_id: id, project_name: id,
+    registered: true, logs_created_at: new Date().toISOString(),
+  });
 }
 
 // PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE §7.1/§7.4 — the entry moved from a
@@ -146,39 +159,230 @@ describe('writeClaudeMcpConfig', () => {
   });
 });
 
-// ── writeCursorMcpConfig ──────────────────────────────────────────────────────
+// ── writeOpencodeMcpConfig / removeOpencodeMcpConfig (F16 U-04) ───────────────
 
-describe('writeCursorMcpConfig', () => {
-  it('creates .cursor/mcp.json with sigma entry when file does not exist', async () => {
-    const { writeCursorMcpConfig } = await importMcpConfig();
-    writeCursorMcpConfig(tmpProject);
+describe('writeOpencodeMcpConfig', () => {
+  const entryFor = (root: string, projectId?: string) => {
+    const e = expectedEntry(root, projectId);
+    return { type: 'local', command: [e.command, ...e.args], enabled: true };
+  };
 
-    expect(fs.existsSync(cursorMcpPath(tmpProject))).toBe(true);
-    const content = fs.readJsonSync(cursorMcpPath(tmpProject));
-    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
+  it('creates opencode.json with $schema and a bound sigma entry when no config exists', async () => {
+    const { writeOpencodeMcpConfig } = await importMcpConfig();
+    writeOpencodeMcpConfig(tmpProject);
+
+    expect(fs.existsSync(opencodeJsoncPath(tmpProject))).toBe(false);
+    const content = fs.readJsonSync(opencodeJsonPath(tmpProject));
+    expect(content.$schema).toBe('https://opencode.ai/config.json');
+    expect(content.mcp.sigma).toEqual(entryFor(tmpProject));
+    expect(content.mcp.sigma.command.slice(0, 3)).toEqual(['sigma-mcp', '--mode', 'query']);
   });
 
-  it('merges sigma entry without touching existing servers', async () => {
-    const { writeCursorMcpConfig } = await importMcpConfig();
-    fs.ensureDirSync(path.join(tmpProject, '.cursor'));
-    fs.writeJsonSync(cursorMcpPath(tmpProject), {
-      mcpServers: { other: { command: 'other-mcp', args: [] } },
+  it('binds the verified project id when .sigma-identity.json exists', async () => {
+    const { writeOpencodeMcpConfig } = await importMcpConfig();
+    stubIdentity(tmpProject, 'OCPROJ');
+    writeOpencodeMcpConfig(tmpProject);
+
+    const content = fs.readJsonSync(opencodeJsonPath(tmpProject));
+    expect(content.mcp.sigma).toEqual(entryFor(tmpProject, 'OCPROJ'));
+    expect(content.mcp.sigma.command).toContain('--project-id');
+  });
+
+  it('merges into an existing opencode.json without touching other keys or servers', async () => {
+    const { writeOpencodeMcpConfig } = await importMcpConfig();
+    fs.writeJsonSync(opencodeJsonPath(tmpProject), {
+      theme: 'dark',
+      mcp: { other: { type: 'local', command: ['other-mcp'], enabled: true } },
     });
 
-    writeCursorMcpConfig(tmpProject);
+    writeOpencodeMcpConfig(tmpProject);
 
-    const content = fs.readJsonSync(cursorMcpPath(tmpProject));
-    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
-    expect(content.mcpServers.other).toEqual({ command: 'other-mcp', args: [] });
+    const content = fs.readJsonSync(opencodeJsonPath(tmpProject));
+    expect(content.theme).toBe('dark');
+    expect(content.mcp.other).toEqual({ type: 'local', command: ['other-mcp'], enabled: true });
+    expect(content.mcp.sigma).toEqual(entryFor(tmpProject));
   });
 
-  it('is idempotent', async () => {
-    const { writeCursorMcpConfig } = await importMcpConfig();
-    writeCursorMcpConfig(tmpProject);
-    writeCursorMcpConfig(tmpProject);
+  it('prefers opencode.jsonc when it exists and preserves its comments and trailing commas', async () => {
+    const { writeOpencodeMcpConfig } = await importMcpConfig();
+    const original = [
+      '{',
+      '  // my own settings',
+      '  "$schema": "https://opencode.ai/config.json",',
+      '  "theme": "dark", /* keep me */',
+      '  "mcp": {',
+      '    // another server',
+      '    "other": { "type": "local", "command": ["other-mcp"], "enabled": true },',
+      '  },',
+      '}',
+      '',
+    ].join('\n');
+    fs.writeFileSync(opencodeJsoncPath(tmpProject), original, 'utf-8');
 
-    const content = fs.readJsonSync(cursorMcpPath(tmpProject));
-    expect(content.mcpServers.sigma).toEqual(expectedEntry(tmpProject));
+    writeOpencodeMcpConfig(tmpProject);
+
+    expect(fs.existsSync(opencodeJsonPath(tmpProject))).toBe(false);
+    const text = fs.readFileSync(opencodeJsoncPath(tmpProject), 'utf-8');
+    // Comments and the lines before the insertion point survive verbatim.
+    expect(text).toContain('  // my own settings\n');
+    expect(text).toContain('  "theme": "dark", /* keep me */\n');
+    expect(text).toContain('    // another server\n');
+    const parsed = parseJsonc(text, [], { allowTrailingComma: true });
+    expect(parsed.mcp.other.command).toEqual(['other-mcp']);
+    expect(parsed.mcp.sigma).toEqual(entryFor(tmpProject));
+  });
+
+  it('adds an mcp section to a commented config that has none', async () => {
+    const { writeOpencodeMcpConfig } = await importMcpConfig();
+    fs.writeFileSync(opencodeJsoncPath(tmpProject), '{\n  // only a comment\n  "theme": "dark"\n}\n', 'utf-8');
+
+    writeOpencodeMcpConfig(tmpProject);
+
+    const text = fs.readFileSync(opencodeJsoncPath(tmpProject), 'utf-8');
+    expect(text).toContain('// only a comment');
+    const parsed = parseJsonc(text, [], { allowTrailingComma: true });
+    expect(parsed.theme).toBe('dark');
+    expect(parsed.mcp.sigma).toEqual(entryFor(tmpProject));
+  });
+
+  it('keeps CRLF line endings and a BOM', async () => {
+    const { writeOpencodeMcpConfig } = await importMcpConfig();
+    fs.writeFileSync(
+      opencodeJsoncPath(tmpProject),
+      '﻿{\r\n  // crlf file\r\n  "theme": "dark"\r\n}\r\n',
+      'utf-8',
+    );
+
+    writeOpencodeMcpConfig(tmpProject);
+
+    const text = fs.readFileSync(opencodeJsoncPath(tmpProject), 'utf-8');
+    expect(text.startsWith('﻿')).toBe(true);
+    expect(text).not.toMatch(/[^\r]\n/);
+    expect(text).toContain('// crlf file');
+    expect(parseJsonc(text.slice(1), [], { allowTrailingComma: true }).mcp.sigma).toEqual(entryFor(tmpProject));
+  });
+
+  it('is idempotent: a second call leaves the file byte-identical', async () => {
+    const { writeOpencodeMcpConfig } = await importMcpConfig();
+    fs.writeFileSync(opencodeJsoncPath(tmpProject), '{\n  // c\n  "theme": "dark",\n}\n', 'utf-8');
+
+    writeOpencodeMcpConfig(tmpProject);
+    const first = fs.readFileSync(opencodeJsoncPath(tmpProject), 'utf-8');
+    writeOpencodeMcpConfig(tmpProject);
+    const second = fs.readFileSync(opencodeJsoncPath(tmpProject), 'utf-8');
+
+    expect(second).toBe(first);
+  });
+
+  it('replaces a stale sigma entry (e.g. after the project moved)', async () => {
+    const { writeOpencodeMcpConfig } = await importMcpConfig();
+    fs.writeJsonSync(opencodeJsonPath(tmpProject), {
+      mcp: { sigma: { type: 'local', command: ['sigma-mcp', '/old/root'], enabled: true } },
+    });
+
+    writeOpencodeMcpConfig(tmpProject);
+
+    expect(fs.readJsonSync(opencodeJsonPath(tmpProject)).mcp.sigma).toEqual(entryFor(tmpProject));
+  });
+
+  it('replaces a non-object mcp value', async () => {
+    const { writeOpencodeMcpConfig } = await importMcpConfig();
+    fs.writeJsonSync(opencodeJsonPath(tmpProject), { mcp: 'invalid' });
+
+    writeOpencodeMcpConfig(tmpProject);
+
+    expect(fs.readJsonSync(opencodeJsonPath(tmpProject)).mcp.sigma).toEqual(entryFor(tmpProject));
+  });
+
+  it('never overwrites a file it cannot parse; the error carries the snippet to add by hand', async () => {
+    const { writeOpencodeMcpConfig, tryMcpOp } = await importMcpConfig();
+    const broken = '{ "theme": "dark", "mcp": { ';
+    fs.writeFileSync(opencodeJsonPath(tmpProject), broken, 'utf-8');
+
+    const err = tryMcpOp(() => writeOpencodeMcpConfig(tmpProject), 'opencode.json');
+
+    expect(fs.readFileSync(opencodeJsonPath(tmpProject), 'utf-8')).toBe(broken);
+    expect(fs.readdirSync(tmpProject).some((f) => f.endsWith('.sigma_tmp'))).toBe(false);
+    expect(err).toContain('left unchanged');
+    expect(err).toContain('"sigma-mcp"');
+    expect(err).not.toContain('locked by another process');
+  });
+
+  it('treats a top-level array as unparseable and leaves it alone', async () => {
+    const { writeOpencodeMcpConfig, tryMcpOp } = await importMcpConfig();
+    fs.writeFileSync(opencodeJsonPath(tmpProject), '[1, 2]', 'utf-8');
+
+    const err = tryMcpOp(() => writeOpencodeMcpConfig(tmpProject), 'opencode.json');
+
+    expect(err).toContain('left unchanged');
+    expect(fs.readFileSync(opencodeJsonPath(tmpProject), 'utf-8')).toBe('[1, 2]');
+  });
+
+  it('treats an empty file as an empty object', async () => {
+    const { writeOpencodeMcpConfig } = await importMcpConfig();
+    fs.writeFileSync(opencodeJsonPath(tmpProject), '', 'utf-8');
+
+    writeOpencodeMcpConfig(tmpProject);
+
+    expect(fs.readJsonSync(opencodeJsonPath(tmpProject)).mcp.sigma).toEqual(entryFor(tmpProject));
+  });
+});
+
+describe('removeOpencodeMcpConfig', () => {
+  it('is a no-op when no config exists', async () => {
+    const { removeOpencodeMcpConfig } = await importMcpConfig();
+    expect(() => removeOpencodeMcpConfig(tmpProject)).not.toThrow();
+    expect(fs.readdirSync(tmpProject)).toEqual([]);
+  });
+
+  it('is a no-op when there is no sigma key', async () => {
+    const { removeOpencodeMcpConfig } = await importMcpConfig();
+    const original = '{\n  // keep\n  "mcp": { "other": { "type": "local", "command": ["x"] } }\n}\n';
+    fs.writeFileSync(opencodeJsoncPath(tmpProject), original, 'utf-8');
+
+    removeOpencodeMcpConfig(tmpProject);
+
+    expect(fs.readFileSync(opencodeJsoncPath(tmpProject), 'utf-8')).toBe(original);
+  });
+
+  it('removes only the sigma key and keeps other servers and comments', async () => {
+    const { writeOpencodeMcpConfig, removeOpencodeMcpConfig } = await importMcpConfig();
+    fs.writeFileSync(
+      opencodeJsoncPath(tmpProject),
+      '{\n  // keep\n  "mcp": {\n    "other": { "type": "local", "command": ["x"] }\n  }\n}\n',
+      'utf-8',
+    );
+    writeOpencodeMcpConfig(tmpProject);
+
+    removeOpencodeMcpConfig(tmpProject);
+
+    const text = fs.readFileSync(opencodeJsoncPath(tmpProject), 'utf-8');
+    expect(text).toContain('// keep');
+    const parsed = parseJsonc(text, [], { allowTrailingComma: true });
+    expect(parsed.mcp.sigma).toBeUndefined();
+    expect(parsed.mcp.other.command).toEqual(['x']);
+  });
+
+  it('drops the empty mcp object when sigma was its only entry, and is idempotent', async () => {
+    const { writeOpencodeMcpConfig, removeOpencodeMcpConfig } = await importMcpConfig();
+    fs.writeJsonSync(opencodeJsonPath(tmpProject), { theme: 'dark' });
+    writeOpencodeMcpConfig(tmpProject);
+
+    removeOpencodeMcpConfig(tmpProject);
+    removeOpencodeMcpConfig(tmpProject);
+
+    expect(fs.readJsonSync(opencodeJsonPath(tmpProject))).toEqual({ theme: 'dark' });
+  });
+
+  it('does not touch a file it cannot parse', async () => {
+    const { removeOpencodeMcpConfig, tryMcpOp } = await importMcpConfig();
+    const broken = '{ "mcp": ';
+    fs.writeFileSync(opencodeJsonPath(tmpProject), broken, 'utf-8');
+
+    const err = tryMcpOp(() => removeOpencodeMcpConfig(tmpProject), 'opencode.json');
+
+    expect(err).toContain('left unchanged');
+    expect(fs.readFileSync(opencodeJsonPath(tmpProject), 'utf-8')).toBe(broken);
   });
 });
 
@@ -543,13 +747,6 @@ describe('removeReasonixMcpConfig', () => {
 // ── Binding migration (reviewer finding R-07) ────────────────────────────────
 
 describe('binding flags reach every client writer', () => {
-  function stubIdentity(root: string, id: string) {
-    fs.writeJsonSync(path.join(root, '.sigma-identity.json'), {
-      schema_version: '1.2.0', project_id: id, project_name: id,
-      registered: true, logs_created_at: new Date().toISOString(),
-    });
-  }
-
   it('Reasonix gets the same verified-binding args as every other client', async () => {
     const { writeReasonixMcpConfig } = await importMcpConfig();
     stubIdentity(tmpProject, 'REASONIXPROJ');
@@ -569,15 +766,15 @@ describe('binding flags reach every client writer', () => {
     stubIdentity(tmpProject, 'SAMEPROJ');
 
     m.writeClaudeMcpConfig(tmpProject);
-    m.writeCursorMcpConfig(tmpProject);
+    m.writeOpencodeMcpConfig(tmpProject);
     m.writeReasonixMcpConfig(tmpProject);
 
     const claude = fs.readJsonSync(mcpJsonPath(tmpProject)).mcpServers.sigma.args;
-    const cursor = fs.readJsonSync(cursorMcpPath(tmpProject)).mcpServers.sigma.args;
+    const opencode = fs.readJsonSync(opencodeJsonPath(tmpProject)).mcp.sigma.command.slice(1);
     const reasonix = ((parseTOML(fs.readFileSync(reasonixConfigPath(tmpHome), 'utf-8')) as any).plugins as any[])
       .find((p) => p.name === 'sigma').args;
 
-    expect(claude).toEqual(cursor);
+    expect(claude).toEqual(opencode);
     // Reasonix normalises to posix; compare on that basis, not on separators.
     expect(reasonix).toEqual(expectedEntry(toPosix(tmpProject), 'SAMEPROJ').args);
     expect(claude).toContain('--project-id');

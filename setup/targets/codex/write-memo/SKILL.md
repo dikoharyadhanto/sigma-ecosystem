@@ -80,7 +80,7 @@ The Director may give the activation phrase in whichever language the current se
 
 ## Forbidden Operations
 
-- `sigma intent ratify`, `sigma plan lock`, `sigma exec lock`, `sigma close lock`, any supersede command, any Sigma governance artifact-creation command (`sigma intent new`, `sigma plan new`, `sigma exec new`, `sigma roadmap new`, `sigma close new`).
+- `sigma intent ratify`, `sigma plan approve`, `sigma exec approve`, `sigma close lock`, any supersede command, any Sigma governance artifact-creation command (`sigma intent new`, `sigma plan new`, `sigma exec new`, `sigma roadmap new`, `sigma close new`).
 - `--to` on `sigma memo write` — not supported; use `sigma send` with explicit `--related-artifact` for new cross-role messages instead.
 - Switching the active role.
 - Treating a memo as a place to record a decision permanently — see the shadow-artifact guardrail above.

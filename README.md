@@ -372,7 +372,7 @@ Role skill files are deployed by:
 sigma setup install
 ```
 
-Supported targets include Claude Code, Codex CLI, Reasonix, and Antigravity when their expected directories are detected.
+Supported targets include Claude Code, Codex CLI, Reasonix, Antigravity, and opencode when their expected directories are detected.
 
 ---
 
@@ -446,6 +446,7 @@ Currently supported targets:
 - Codex CLI
 - Reasonix
 - Antigravity
+- opencode — role commands in `~/.config/opencode/commands/` (`/arc`, `/fmn`, `/dev`, `/aud`, ...) plus a `protect-sigma.js` plugin in `~/.config/opencode/plugins/` that blocks direct edits to `Sigma/progress-v<N>.json`. Detected by `~/.config/opencode/`; `XDG_CONFIG_HOME` is not consulted.
 
 Additional bridge guidance may be provided for Claude Desktop, Gemini CLI, or other supported tools depending on setup support.
 
@@ -508,13 +509,13 @@ Project entries bind the query server using `--mode query --project-root <root> 
 | Command | Config written | Platforms |
 |:--- |:--- |:--- |
 | `sigma setup install` / `sigma setup update` | `~/.codex/config.toml` · `~/.gemini/config/mcp_config.json` | Codex CLI · Antigravity |
-| `sigma project start` / `sigma project sync` | `.mcp.json` · `.cursor/mcp.json` | Claude Code · Reasonix · Cursor |
+| `sigma project start` / `sigma project sync` | `.mcp.json` · `opencode.jsonc` or `opencode.json` | Claude Code · Reasonix · opencode |
 
-All writes are **merge-aware** — existing MCP server entries you've added manually are preserved; only the `sigma` key is upserted. Running the commands twice is safe (idempotent).
+All writes are **merge-aware** — existing MCP server entries you've added manually are preserved; only the `sigma` key is upserted. Running the commands twice is safe (idempotent). The opencode config may contain comments and trailing commas (JSONC): they are preserved, and `opencode.jsonc` is used when it exists. A file that cannot be parsed is never overwritten — Sigma prints the entry to add by hand instead.
 
 If `sigma-mcp` is not yet on your `PATH` when you run these commands, a warning is printed but the config is still written — it will work as soon as you complete the global install.
 
-> **Uninstall note:** `sigma setup uninstall --confirm` automatically removes the `sigma` entry from the two global config files (`~/.codex/config.toml`, `~/.gemini/config/mcp_config.json`). The project-local `.mcp.json` and `.cursor/mcp.json` files are not touched — remove or edit the `sigma` entry from those files manually if sigma is no longer needed.
+> **Uninstall note:** `sigma setup uninstall --confirm` automatically removes the `sigma` entry from the two global config files (`~/.codex/config.toml`, `~/.gemini/config/mcp_config.json`). The project-local `.mcp.json` and `opencode.json`/`opencode.jsonc` files are not touched — remove or edit the `sigma` entry from those files manually if sigma is no longer needed.
 
 <details>
 <summary>Manual registration reference (troubleshooting)</summary>
@@ -529,7 +530,16 @@ If `sigma-mcp` is not yet on your `PATH` when you run these commands, a warning 
 }
 ```
 
-**Cursor** — same shape at `.cursor/mcp.json` at project root.
+**opencode** — `opencode.json` (or `opencode.jsonc`) at project root:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "sigma": { "type": "local", "command": ["sigma-mcp"], "enabled": true }
+  }
+}
+```
 
 **Codex CLI** — `~/.codex/config.toml`:
 

@@ -20,7 +20,7 @@ Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigm
 | F02 | Penomoran chain dan warning bootstrap | 5 | Diterapkan 7 Oktober setelah O-1 sampai O-3 dan eksekusi disetujui; build lulus, 68 berkas / 934 tes lulus, exit 0; di-commit Director dalam 0c3e3b1; push dilaporkan Director | [F02_penomoran-chain-dan-warning-bootstrap.md](F02_penomoran-chain-dan-warning-bootstrap.md) |
 | F03 | Mailbox per intent | 4 | Diterapkan dan divalidasi 7 Oktober: build lulus, 69 berkas / 966 tes lulus exit 0; tes doctor terakhir 6 berkas / 68 tes lulus; di-commit Director dalam 9f1bea6; push berhasil dilaporkan Director, main sama dengan origin/main saat awal F04 | [F03_mailbox-per-intent.md](F03_mailbox-per-intent.md) |
 | F04 | Lifecycle APPROVED/LOCKED, doctor, pengikatan revisi | 2, 9 | F04a/F04b diterapkan dan diverifikasi 7–8 Oktober sesuai persetujuan O-1–O-14; TypeScript/build, 70 tes khusus, dan suite lengkap 71 berkas / 1.036 tes lulus, exit 0; di-commit dalam b8050f8 (memuat src, dist, rules, registry, dan dokumen F04); `main` sama dengan `origin/main` per referensi lokal 8 Oktober | [F04_lifecycle-approved-locked-doctor-dan-revisi.md](F04_lifecycle-approved-locked-doctor-dan-revisi.md) |
-| F05 | Amandemen INTENT melalui Git, penghapusan tier | 8 | Diterapkan dan diverifikasi 8 Oktober 2026 setelah O-1 sampai O-13 disetujui sesuai rekomendasi; TypeScript/build lulus, suite lengkap 72 berkas / 1.072 tes lulus; build `dist/` sudah dijalankan (O-11); belum commit/push | [F05_amandemen-intent-git-dan-penghapusan-tier.md](F05_amandemen-intent-git-dan-penghapusan-tier.md) |
+| F05 | Amandemen INTENT melalui Git, penghapusan tier | 8 | Diterapkan dan diverifikasi 8 Oktober 2026 setelah O-1 sampai O-13 disetujui sesuai rekomendasi; TypeScript/build lulus, suite lengkap 72 berkas / 1.072 tes lulus; build `dist/` sudah dijalankan (O-11); di-commit dalam 90ef165, push dilaporkan Director | [F05_amandemen-intent-git-dan-penghapusan-tier.md](F05_amandemen-intent-git-dan-penghapusan-tier.md) |
 | F06 | sigma notes | 3 | Belum dimulai (track terpisah, rilis 1.1.0) | - |
 | F07 | Pilot keterbacaan dan penyederhanaan dokumen | 6, 7 | Belum dimulai; bergantung pada F01 | - |
 | F08 | Review sumber/kesiapan, revisi dari artefak lama, paket audit, keputusan tertunda | 10-12 | Belum dimulai | - |
@@ -30,6 +30,9 @@ Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigm
 | F12 | Versi Sigma pada identitas proyek dan peringatan "outdated" pada setiap operasi | (tambahan, permintaan Director 7 Oktober) | Ditambahkan 7 Oktober; berkaitan erat dengan F09 dan T-18/T-19; urutan ditentukan kemudian | rencana kasar: [F12_rencana-kasar_versi-sigma-pada-proyek.md](F12_rencana-kasar_versi-sigma-pada-proyek.md) |
 | F13 | Boundary workspace DEV: wilayah tulis `dev/`, `sigma dev create-workspace` dan `status`, catatan pada identitas proyek, pemulihan lewat doctor | (tambahan, permintaan Director 7 Oktober) | Diterapkan 7 Oktober (belum di-commit); seluruh butir terbuka dijawab Director | [F13_boundary-workspace-dev.md](F13_boundary-workspace-dev.md) |
 | F14 | Penghapusan proyeksi HUMAN (D-13) dan integrasi Notion; rekomendasi nasib `sigma humanize` | D-13, F13 O-7 | Rencana disetujui dan W0 sampai W8 dieksekusi 7 Oktober 2026 (belum di-commit); D-13 ditutup; F13 O-7 dirujuk | [F14_penghapusan-human-dan-notion.md](F14_penghapusan-human-dan-notion.md) |
+| F16 | Target opencode (command peran, plugin proteksi, MCP proyek, bridge) dan penghapusan target Cursor | (tambahan, permintaan Director 8 Oktober) | Rencana disusun 8 Oktober 2026 dari evaluasi opencode yang diverifikasi ulang; laporan Cursor: target rules global outdate, config MCP proyek masih berlaku; O-1 sampai O-9 disetujui sesuai rekomendasi 8 Oktober 2026; dieksekusi 8 Oktober 2026 (W0–W7): tsc bersih, 75 berkas / 1.141 tes hijau (termasuk perbaikan dua temuan, 11.6), U-09 (smoke manual) menunggu Director; belum di-commit | [F16_target-opencode-dan-penghapusan-cursor.md](F16_target-opencode-dan-penghapusan-cursor.md) |
+
+Catatan penomoran: F15 tetap dicadangkan untuk usulan amandemen Constitution (belum disetujui).
 
 Urutan penyusunan yang disetujui Director: F00, F02, F03, F04, F05, F06, F01, F07, F08, F09. Satu fokus per giliran; setiap fokus berakhir dengan pertanyaan terbuka dan rekomendasi, lalu menunggu keputusan Director.
 
@@ -142,6 +145,15 @@ Tambahan dari penyusunan F05 (8 Oktober 2026), seluruhnya **TERKUNCI** sesuai re
 | T-37 | F05 | Pembentukan baseline Git untuk chain RATIFIED lama dan chain `UNCERTIFIED_EDIT` tanpa commit yang cocok (rekomendasi: `baseline adopt` terpisah, jalur `imported_current` tanpa delta fiktif; F05 O-2) |
 | T-38 | F05 | Riwayat amandemen keluar dari dokumen INTENT: section `Amendment History` dan baris header "Amandemen terakhir" tidak ditambahkan. Menyimpang dari D-10d (28 September) "satu baris di header"; rekomendasi: status/orientasi menampilkan amandemen terakhir (F05 O-5) |
 | T-39 | F05 | Kosakata `NOTED`/`AMENDMENT_REQUESTED`/`AMENDMENT_RATIFIED` pada PLAN (sisa E02 A-5; rekomendasi: dipertahankan; F05 O-9) |
+
+Tambahan dari penyusunan F16 (8 Oktober 2026), seluruhnya **TERKUNCI** sesuai rekomendasi atas persetujuan Director; eksekusi di sesi baru:
+
+| ID | Fokus | Butir terbuka |
+|---|---|---|
+| T-40 | F16 | Bridge untuk opencode: rekomendasi generalisasi `bridge/AGENTS.md` untuk Codex dan opencode. Usulan dokumen evaluasi (berkas terpisah lewat `instructions`) tidak didukung: `AGENTS.md` proyek selalu termuat dan `instructions` bersifat penambahan, sehingga berlabel-Codex dan berkas opencode termuat bersamaan (F16 O-1) |
+| T-41 | F16 | Command saja pada tahap ini, agent peran ditunda; MCP hanya config proyek terikat (F16 O-2, O-3) |
+| T-42 | F16 | Penulisan config opencode yang aman JSONC; rekomendasi dependensi `jsonc-parser` (F16 O-5) |
+| T-43 | F16 | Penghapusan Cursor: target rules global outdate, config MCP proyek masih berlaku; rekomendasi hapus seluruhnya dan bersihkan `SIGMA.mdc` berpenanda (F16 O-7, O-8) |
 
 ## 6. Disiplin kerja dan build (tentatif)
 

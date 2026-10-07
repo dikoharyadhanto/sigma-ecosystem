@@ -31,16 +31,17 @@ describe('Role memory and bootstrap regressions', () => {
 
   afterEach(() => env?.cleanup());
 
-  it('project start seeds role-memory files and writes MCP config (.mcp.json + .cursor/mcp.json)', () => {
+  it('project start seeds role-memory files and writes MCP config (.mcp.json + opencode.json)', () => {
     env = setupTestEnv();
 
     const result = runCli('project start --id TEST --name "Test Project" --confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'role-memory', 'arc-memory.json'))).toBe(true);
-    // PLAN-EVAL-03: project start now writes .mcp.json and .cursor/mcp.json (intentional change)
+    // PLAN-EVAL-03 / F16: project start writes .mcp.json and the opencode project config (Cursor target removed)
     expect(fs.existsSync(path.join(env.projectDir, '.mcp.json'))).toBe(true);
-    expect(fs.existsSync(path.join(env.projectDir, '.cursor', 'mcp.json'))).toBe(true);
+    expect(fs.existsSync(path.join(env.projectDir, 'opencode.json'))).toBe(true);
+    expect(fs.existsSync(path.join(env.projectDir, '.cursor'))).toBe(false);
     // .vscode/mcp.json was deliberately removed in PLAN-EVAL-07 and is not part of this plan
     expect(fs.existsSync(path.join(env.projectDir, '.vscode', 'mcp.json'))).toBe(false);
   });

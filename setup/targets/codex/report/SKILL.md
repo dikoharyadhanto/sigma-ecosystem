@@ -107,7 +107,7 @@ Options are supporting context, not a decision menu. Maximum 3 options.
 
 During or after `#report` execution, the following are forbidden:
 
-- `sigma intent ratify`, `sigma plan lock`, `sigma exec lock`, `sigma close lock`
+- `sigma intent ratify`, `sigma plan approve`, `sigma exec approve`, `sigma close lock`
 - `sigma plan supersede`, `sigma exec supersede`, `sigma project reset`
 - Any stale-intent acknowledgment command
 - Any artifact creation command

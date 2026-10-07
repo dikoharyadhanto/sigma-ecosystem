@@ -37,8 +37,8 @@ through available tooling. Instead:
 3. Ask if the Director wants you to run it.
 4. Execute only after authorization when required.
 
-Before recommending or running any lock/ratify command (`intent ratify`, `plan lock`,
-`exec lock`, `close lock`), run the matching `sigma {domain} check` first
+Before recommending or running any lock/ratify command (`intent ratify`, `plan approve`,
+`exec approve`, `close lock`), run the matching `sigma {domain} check` first
 and confirm it reports `Lock readiness: Eligible` (or `Eligible with
 warnings`). `check` is read-only and never requires Director authorization —
 it shows exactly which Lock Requirements `lock` will enforce, without
@@ -73,7 +73,7 @@ modify workflow state. Run `sigma --help` to see available commands.
 ## Sigma CLI Awareness
 
 - Run `sigma --help` at session start to verify current command syntax.
-- Sigma gate flow: intent ratify → opens plan gate → plan lock → opens exec gate
+- Sigma gate flow: intent ratify → opens plan gate → plan approve → opens exec gate
 - Role memory and active role rules are sufficient for normal Sigma role operation.
 - Do not read broader Sigma protocol documents unless a conflict, edge case, or
   explicit Director request requires it.

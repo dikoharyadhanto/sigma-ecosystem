@@ -2,9 +2,10 @@
  * mcpConfig.ts — Wiring sigma-mcp ke AI client configs
  *
  * Menyediakan fungsi tulis dan hapus config MCP untuk platform yang didukung:
- *   Tulis  : writeClaudeMcpConfig, writeCursorMcpConfig,
+ *   Tulis  : writeClaudeMcpConfig, writeOpencodeMcpConfig,
  *            writeCodexMcpConfig, writeAntigravityMcpConfig, writeReasonixMcpConfig
- *   Hapus  : removeCodexMcpConfig, removeAntigravityMcpConfig, removeReasonixMcpConfig
+ *   Hapus  : removeCodexMcpConfig, removeAntigravityMcpConfig, removeReasonixMcpConfig,
+ *            removeOpencodeMcpConfig
  *   Helper : tryMcpOp — wrap operasi MCP dengan try-catch, kembalikan pesan error atau null
  *
  * Prinsip desain:
@@ -30,6 +31,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { parse as parseTOML, stringify as stringifyTOML } from 'smol-toml';
+import { applyEdits, modify, parse as parseJsonc, type ParseError } from 'jsonc-parser';
 import { toPosix } from './fs';
 import { PROJECT_IDENTITY_FILE } from '../config';
 
@@ -96,20 +98,19 @@ function readJsonSafe(filePath: string): Record<string, unknown> {
 }
 
 /**
- * Tulis JSON ke path; buat direktori parent bila perlu.
+ * Tulis teks ke path; buat direktori parent bila perlu.
  *
  * Memakai strategi write-to-temp + rename untuk menghindari EPERM pada
  * Windows ketika file target memiliki attribute Hidden (mis. mcp_config.json
  * yang dibuat oleh Antigravity). Node.js libuv tidak bisa membuka file Hidden
  * dengan flag O_TRUNC|O_CREAT, tapi replace via rename selalu berhasil.
  */
-function writeJsonSafe(filePath: string, data: Record<string, unknown>): void {
+function writeTextSafe(filePath: string, text: string): void {
   fs.ensureDirSync(path.dirname(filePath));
-  const json = JSON.stringify(data, null, 2) + '\n';
   const tmp = filePath + '.sigma_tmp';
   try {
     // Tulis ke file temp dulu (tidak pernah Hidden karena baru dibuat)
-    fs.writeFileSync(tmp, json, 'utf-8');
+    fs.writeFileSync(tmp, text, 'utf-8');
     // Rename/replace: aman bahkan untuk file Hidden di Windows
     fs.renameSync(tmp, filePath);
   } catch (e) {
@@ -117,6 +118,11 @@ function writeJsonSafe(filePath: string, data: Record<string, unknown>): void {
     try { fs.unlinkSync(tmp); } catch { /* ignore */ }
     throw e;
   }
+}
+
+/** Tulis JSON polos (tanpa komentar) ke path secara atomik. */
+function writeJsonSafe(filePath: string, data: Record<string, unknown>): void {
+  writeTextSafe(filePath, JSON.stringify(data, null, 2) + '\n');
 }
 
 // ── Stage 2: Project-scoped (ditulis di project start / sync) ─────────────────
@@ -138,21 +144,125 @@ export function writeClaudeMcpConfig(projectRoot: string): void {
   writeJsonSafe(filePath, existing);
 }
 
-/**
- * Tulis/upsert entri sigma ke .cursor/mcp.json di project root.
- * Format identik dengan .mcp.json (Cursor membaca mcpServers JSON yang sama).
- * Merge-aware: entri server lain dipertahankan.
- */
-export function writeCursorMcpConfig(projectRoot: string): void {
-  const filePath = path.join(projectRoot, '.cursor', 'mcp.json');
-  const existing = readJsonSafe(filePath);
-
-  if (!existing.mcpServers || typeof existing.mcpServers !== 'object' || Array.isArray(existing.mcpServers)) {
-    existing.mcpServers = {};
+/** Error yang pesannya sudah lengkap dan dipakai apa adanya oleh tryMcpOp —
+ *  bukan kegagalan I/O, melainkan config yang sengaja tidak ditimpa. */
+export class McpManualEditRequired extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'McpManualEditRequired';
   }
-  (existing.mcpServers as Record<string, unknown>).sigma = makeMcpEntry(projectRoot);
+}
 
-  writeJsonSafe(filePath, existing);
+const OPENCODE_SCHEMA_URL = 'https://opencode.ai/config.json';
+
+/**
+ * Tentukan berkas config opencode proyek: `opencode.jsonc` bila ada, jika tidak
+ * `opencode.json` (yang sudah ada, atau yang akan dibuat). opencode membaca dan
+ * menggabungkan keduanya bila berdampingan; urutan prioritasnya tidak diuji
+ * (F16 §4.1), jadi `.jsonc` dipilih mengikuti pengguna yang sudah memakainya.
+ */
+export function resolveOpencodeConfigPath(projectRoot: string): string {
+  const jsonc = path.join(projectRoot, 'opencode.jsonc');
+  if (fs.existsSync(jsonc)) return jsonc;
+  return path.join(projectRoot, 'opencode.json');
+}
+
+/** Entri `mcp.sigma` untuk opencode: `command` berupa satu array (command + args). */
+function makeOpencodeMcpEntry(projectRoot: string) {
+  const { command, args } = makeMcpEntry(projectRoot);
+  return { type: 'local', command: [command, ...args], enabled: true };
+}
+
+interface ParsedOpencodeConfig {
+  text: string;
+  bom: string;
+  eol: string;
+  root: Record<string, unknown>;
+}
+
+/** Baca config opencode (JSONC). Kembalikan null bila berkas tidak ada. Lempar
+ *  McpManualEditRequired bila tidak dapat di-parse — berkas itu tidak boleh ditimpa. */
+function readOpencodeConfig(filePath: string, manualHint: string): ParsedOpencodeConfig | null {
+  if (!fs.existsSync(filePath)) return null;
+
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  const bom = raw.startsWith('﻿') ? '﻿' : '';
+  const body = raw.slice(bom.length);
+  const eol = body.includes('\r\n') ? '\r\n' : '\n';
+  // Berkas kosong dianggap objek kosong (sama dengan readJsonSafe).
+  const text = body.trim().length === 0 ? '{}' : body;
+
+  const errors: ParseError[] = [];
+  const root = parseJsonc(text, errors, { allowTrailingComma: true });
+  if (errors.length > 0 || !root || typeof root !== 'object' || Array.isArray(root)) {
+    throw new McpManualEditRequired(
+      `${filePath} could not be parsed as JSON/JSONC, so it was left unchanged. ${manualHint}`,
+    );
+  }
+  return { text, bom, eol, root: root as Record<string, unknown> };
+}
+
+function applyOpencodeEdit(text: string, eol: string, jsonPath: string[], value: unknown): string {
+  const edits = modify(text, jsonPath, value, {
+    formattingOptions: { insertSpaces: true, tabSize: 2, eol },
+  });
+  return applyEdits(text, edits);
+}
+
+/**
+ * Upsert entri `mcp.sigma` ke config opencode di project root (F16 §5.3).
+ * Format: { "mcp": { "sigma": { "type": "local", "command": ["sigma-mcp", ...], "enabled": true } } }
+ *
+ * Berbeda dari writeClaudeMcpConfig: config opencode boleh JSONC (komentar,
+ * koma akhir), sehingga edit dilakukan secara surgical lewat jsonc-parser —
+ * komentar, urutan key, dan server lain dipertahankan. jsonc-parser merapikan
+ * (format ulang) baris sibling terakhir di titik sisip; isi dan baris lain tidak
+ * berubah. Berkas yang tidak dapat di-parse TIDAK ditimpa
+ * (McpManualEditRequired). Idempoten; ditulis atomik.
+ */
+export function writeOpencodeMcpConfig(projectRoot: string): void {
+  const filePath = resolveOpencodeConfigPath(projectRoot);
+  const entry = makeOpencodeMcpEntry(projectRoot);
+
+  const parsed = readOpencodeConfig(
+    filePath,
+    `Add this under the top-level object manually:\n${JSON.stringify({ mcp: { sigma: entry } }, null, 2)}`,
+  );
+  if (!parsed) {
+    writeJsonSafe(filePath, { $schema: OPENCODE_SCHEMA_URL, mcp: { sigma: entry } });
+    return;
+  }
+
+  const mcp = parsed.root.mcp;
+  const mcpIsObject = !!mcp && typeof mcp === 'object' && !Array.isArray(mcp);
+  // Sama dengan penulis lain: `mcp` yang bukan objek dianggap rusak dan diganti.
+  const next = mcpIsObject
+    ? applyOpencodeEdit(parsed.text, parsed.eol, ['mcp', 'sigma'], entry)
+    : applyOpencodeEdit(parsed.text, parsed.eol, ['mcp'], { sigma: entry });
+
+  if (next !== parsed.text) writeTextSafe(filePath, parsed.bom + next);
+}
+
+/**
+ * Hapus key `mcp.sigma` dari config opencode di project root.
+ * No-op kalau berkas atau key tidak ada. Berkas yang tidak dapat di-parse
+ * tidak disentuh (McpManualEditRequired).
+ */
+export function removeOpencodeMcpConfig(projectRoot: string): void {
+  const filePath = resolveOpencodeConfigPath(projectRoot);
+  const parsed = readOpencodeConfig(filePath, 'Remove the "sigma" key under "mcp" manually.');
+  if (!parsed) return;
+
+  const mcp = parsed.root.mcp;
+  if (!mcp || typeof mcp !== 'object' || Array.isArray(mcp)) return;
+  if (!Object.prototype.hasOwnProperty.call(mcp, 'sigma')) return;
+
+  let next = applyOpencodeEdit(parsed.text, parsed.eol, ['mcp', 'sigma'], undefined);
+  // Kosongkan juga `mcp` bila sigma satu-satunya isinya, supaya berkas bersih.
+  if (Object.keys(mcp).length === 1) {
+    next = applyOpencodeEdit(next, parsed.eol, ['mcp'], undefined);
+  }
+  writeTextSafe(filePath, parsed.bom + next);
 }
 
 // ── Stage 3: Global-scoped (ditulis di setup install / update & project start / sync) ──
@@ -417,6 +527,7 @@ export function tryMcpOp(op: () => void, targetLabel: string): string | null {
     op();
     return null;
   } catch (e) {
+    if (e instanceof McpManualEditRequired) return e.message;
     const err = e as NodeJS.ErrnoException;
     const code = err.code ? ` [${err.code}]` : '';
     return `Could not write ${targetLabel}${code}: ${err.message ?? String(e)}. The file may be locked by another process (e.g. the AI client itself). Try again with the client closed, or add the entry manually.`;

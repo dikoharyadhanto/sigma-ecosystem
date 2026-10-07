@@ -9,8 +9,19 @@ All notable changes to this project are documented in this file. The format loos
 - Project-bound MCP queries for policy, artifacts, evidence, status, validation, configuration, operation logs, and Git evidence.
 - A separate `sigma-control` MCP server with bounded writes, operation tickets, durable local Director approvals, transaction recovery, idempotency, and audit records.
 - Shared CLI/MCP services for draft and governance operations, with regression coverage for role boundaries, concurrent writes, and stale approvals.
+- opencode as a setup target, detected by `~/.config/opencode/`: the nine role commands (`/arc`, `/fmn`, `/dev`, `/aud`, `/report`, `/sigma-test`, `/humanize`, `/write-memo`, `/read-memo`) are deployed to `~/.config/opencode/commands/`, and a `protect-sigma.js` plugin in `~/.config/opencode/plugins/` blocks direct edits to `Sigma/progress-v<N>.json` (`edit`, `write`, `apply_patch`). `sigma project start` and `sigma project sync` write a project-bound `mcp.sigma` entry to `opencode.jsonc` (when present) or `opencode.json`; comments and trailing commas are preserved, and a file that cannot be parsed is left unchanged with the entry printed for manual addition. This adds the `jsonc-parser` dependency.
+
+### Changed
+
+- The `AGENTS.md` bridge is now written for both Codex and opencode: the ownership line names both, and role activation lists `#arc` (Codex) and `/arc` (opencode). Existing projects keep their current `AGENTS.md`; `sigma project sync` does not touch bridge files, and `sigma project start --reinit --overwrite-bridge` replaces it (discarding local edits).
+- The Claude Code `protect-sigma` hook message names `sigma plan approve` instead of the removed `sigma plan lock`. The same correction (`sigma plan approve` / `sigma exec approve` for the tombstoned `plan lock` / `exec lock`) is applied to every deployed bridge and skill, for all platforms; `close lock` and `intent ratify` are unchanged. The `CLAUDE.md` and `GEMINI.md` bridges now carry the `--related-artifact` handoff rule that `AGENTS.md` already had.
+- `sigma project start` and `sigma project sync` write `~/.codex/config.toml` and `~/.gemini/config/mcp_config.json` only when Codex or Antigravity is detected (the same rule as `sigma setup install`), instead of creating them unconditionally. Run `sigma setup install` or `sigma project sync` after installing either tool to get the project binding.
 
 ### Removed
+
+Breaking: the Cursor target was removed.
+
+- `sigma setup` no longer deploys `SIGMA.mdc` to `~/.cursor/rules/` (current Cursor documentation has no file-based global rules location, so that target had no effect), and `sigma project start` / `sigma project sync` no longer write `.cursor/mcp.json`. `sigma setup update` and `sigma setup uninstall` remove a previously installed `~/.cursor/rules/SIGMA.mdc` only when it carries the Sigma marker; other Cursor files, including existing `.cursor/mcp.json` files in projects, are left alone. Cursor reads `AGENTS.md` natively.
 
 Breaking: the human-readable projections and the Notion integration were removed.
 

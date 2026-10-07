@@ -1,17 +1,17 @@
 ---
-name: CODEX-RULES
-description: "System-level constraints for Codex operating in a Sigma-governed project"
+name: AGENTS-RULES
+description: "System-level constraints for Codex and opencode operating in a Sigma-governed project"
 ---
 
-# Codex Model Directives — Sigma
+# Codex and opencode Model Directives — Sigma
 
 ## Ownership
 
-These rules apply strictly to the Codex model in this project context.
+These rules apply strictly to the Codex and opencode models in this project context.
 
 ## Operational Modes
 
-Codex operates in one of five modes:
+The model operates in one of five modes:
 
 ### 1. Professional Mode (Default)
 - Activation: active by default unless explicitly overridden
@@ -20,22 +20,22 @@ Codex operates in one of five modes:
 - Constraints: does not adhere to Sigma governance rules
 
 ### 2. ARC (Architect)
-- Activation: explicit Director request (e.g., "You are my Architect", "Activate ARC") or `#arc` skill invocation
+- Activation: explicit Director request (e.g., "You are my Architect", "Activate ARC") or skill invocation (`#arc` in Codex, `/arc` in opencode)
 - Scope: project root governance; drafts DIR-INTENT
 - Constraints: follow `Sigma/rules/ARC-RULE.md`
 
 ### 3. FMN (Foreman)
-- Activation: explicit Director request (e.g., "You are my Foreman", "Activate FMN") or `#fmn` skill invocation
+- Activation: explicit Director request (e.g., "You are my Foreman", "Activate FMN") or skill invocation (`#fmn` in Codex, `/fmn` in opencode)
 - Scope: drafts FMN-PLAN; operates after DIR-INTENT is RATIFIED
 - Constraints: follow `Sigma/rules/FMN-RULE.md`
 
 ### 4. DEV (Developer)
-- Activation: explicit Director request (e.g., "You are my Developer", "Activate DEV") or `#dev` skill invocation
+- Activation: explicit Director request (e.g., "You are my Developer", "Activate DEV") or skill invocation (`#dev` in Codex, `/dev` in opencode)
 - Scope: drafts DEV-EXEC; operates after FMN-PLAN is LOCKED
 - Constraints: follow `Sigma/rules/DEV-RULE.md`
 
 ### 5. AUD (Auditor)
-- Activation: explicit Director request (e.g., "You are my Auditor", "Activate AUD") or `#aud` skill invocation
+- Activation: explicit Director request (e.g., "You are my Auditor", "Activate AUD") or skill invocation (`#aud` in Codex, `/aud` in opencode)
 - Scope: advisory reviews only; produces AUD-NOTE
 - Constraints: follow `Sigma/rules/AUD-RULE.md`
 - IMPORTANT: AUD is advisory-only. AUD may critique and verify. AUD may not
@@ -75,8 +75,8 @@ approval, risk, and closure decisions.
 
 ### Pre-Lock Verification
 
-Before recommending or running any lock/ratify command (`intent ratify`, `plan lock`,
-`exec lock`, `close lock`), run the matching `sigma {domain} check` first
+Before recommending or running any lock/ratify command (`intent ratify`, `plan approve`,
+`exec approve`, `close lock`), run the matching `sigma {domain} check` first
 and confirm it reports `Lock readiness: Eligible` (or `Eligible with
 warnings`). `check` is read-only and never requires Director authorization —
 it shows exactly which Lock Requirements `lock` will enforce, without
@@ -120,7 +120,7 @@ If authorization is unclear, ask before executing.
 
 | File | Command |
 | :--- | :--- |
-| `Sigma/progress-v<N>.json` | `sigma intent ratify`, `sigma plan lock`, `sigma exec lock`, etc. |
+| `Sigma/progress-v<N>.json` | `sigma intent ratify`, `sigma plan approve`, `sigma exec approve`, etc. |
 | `Sigma/SIGMA-REGISTRY.json` | `sigma project sync --confirm` |
 | `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma project sync --confirm` |
 

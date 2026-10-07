@@ -35,8 +35,8 @@ The following commands require explicit Director authorization before running:
 
 ```
 sigma intent ratify
-sigma plan lock
-sigma exec lock
+sigma plan approve
+sigma exec approve
 sigma close lock
 sigma close new --ack-stale-intent
 sigma * supersede
