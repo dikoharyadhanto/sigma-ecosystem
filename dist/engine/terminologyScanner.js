@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.scanForSigmaTerminology = scanForSigmaTerminology;
 exports.loadTerminologyList = loadTerminologyList;
-exports.stripTemplateInstructions = stripTemplateInstructions;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
@@ -54,25 +53,5 @@ function loadTerminologyList(projectRoot) {
         }
     };
     return [...new Set([...readTerms(defaultPath), ...readTerms(customPath)])];
-}
-// §2.7 tahap 0 — strips every blockquote line (markdown "> ...") before any
-// scan runs. Safe because every *-HUMAN template (§7) reserves "> " for
-// template-facing instructions exclusively and never uses it for published
-// content — a leftover instruction line is always scaffolding, never real
-// body text, in a document generated from these templates. Must run before
-// scanForSigmaTerminology(): the instructions themselves are full of Sigma
-// vocabulary by design (§2.6), so scanning before stripping would fail
-// every freshly generated document on its own template text.
-function stripTemplateInstructions(content) {
-    const lines = content.split('\n');
-    let stripped = 0;
-    const kept = lines.filter(line => {
-        if (/^\s*>/.test(line)) {
-            stripped += 1;
-            return false;
-        }
-        return true;
-    });
-    return { cleaned: kept.join('\n'), strippedLines: stripped };
 }
 //# sourceMappingURL=terminologyScanner.js.map

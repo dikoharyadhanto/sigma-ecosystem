@@ -31,9 +31,6 @@ import { registerCreateExecDraftTool } from './tools/createExecDraft';
 import { registerCreateRoadmapDraftTool } from './tools/createRoadmapDraft';
 import { registerRenderRoadmapTool } from './tools/renderRoadmap';
 import { registerUpdateReferenceTool } from './tools/updateReference';
-import { registerIntentHumanizeTool } from './tools/intentHumanize';
-import { registerExecHumanizeTool } from './tools/execHumanize';
-import { registerCloseHumanizeTool } from './tools/closeHumanize';
 import { registerArchiveMessageTool } from './tools/archiveMessage';
 import { registerRecordEvidenceTool } from './tools/recordEvidence';
 import { registerPrepareIntentAmendmentTool } from './tools/prepareIntentAmendment';
@@ -79,12 +76,6 @@ export function buildControlServer(): McpServer {
   registerCreateRoadmapDraftTool(server);
   registerRenderRoadmapTool(server);
   registerUpdateReferenceTool(server);
-  // Stage E W1 — human projection family (Notion scaffolding), three
-  // separate primitives (ARC/DEV/AUD) rather than one generic tool — see
-  // intentHumanizeService.ts's header for why.
-  registerIntentHumanizeTool(server);
-  registerExecHumanizeTool(server);
-  registerCloseHumanizeTool(server);
   // Stage E W1 — inbox_archive. New ownership check the CLI doesn't have;
   // reconciled with the CLI/MCP shared-service invariant via a shared
   // service with an actor-context parameter — see

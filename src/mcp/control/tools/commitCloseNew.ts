@@ -2,7 +2,7 @@
 // transition, mirroring commitIntentRatify.ts. `target` is null on this
 // ticket (see prepareCloseNew.ts's header) — staleness is caught by
 // `expected_state_revision` alone, and createCloseDraftUseCase() re-runs
-// every business precondition (Gate 3, Gate 3.5, humanize gate) itself
+// every business precondition (Gate 3, Gate 3.5) itself
 // before writing anything, so there is no separate live-precondition check
 // here beyond the state_revision match.
 

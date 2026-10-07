@@ -35,9 +35,6 @@ const createExecDraft_1 = require("./tools/createExecDraft");
 const createRoadmapDraft_1 = require("./tools/createRoadmapDraft");
 const renderRoadmap_1 = require("./tools/renderRoadmap");
 const updateReference_1 = require("./tools/updateReference");
-const intentHumanize_1 = require("./tools/intentHumanize");
-const execHumanize_1 = require("./tools/execHumanize");
-const closeHumanize_1 = require("./tools/closeHumanize");
 const archiveMessage_1 = require("./tools/archiveMessage");
 const recordEvidence_1 = require("./tools/recordEvidence");
 const prepareIntentAmendment_1 = require("./tools/prepareIntentAmendment");
@@ -82,12 +79,6 @@ function buildControlServer() {
     (0, createRoadmapDraft_1.registerCreateRoadmapDraftTool)(server);
     (0, renderRoadmap_1.registerRenderRoadmapTool)(server);
     (0, updateReference_1.registerUpdateReferenceTool)(server);
-    // Stage E W1 — human projection family (Notion scaffolding), three
-    // separate primitives (ARC/DEV/AUD) rather than one generic tool — see
-    // intentHumanizeService.ts's header for why.
-    (0, intentHumanize_1.registerIntentHumanizeTool)(server);
-    (0, execHumanize_1.registerExecHumanizeTool)(server);
-    (0, closeHumanize_1.registerCloseHumanizeTool)(server);
     // Stage E W1 — inbox_archive. New ownership check the CLI doesn't have;
     // reconciled with the CLI/MCP shared-service invariant via a shared
     // service with an actor-context parameter — see

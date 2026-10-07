@@ -11,10 +11,8 @@ const chalk_1 = __importDefault(require("chalk"));
 const fs_1 = require("../utils/fs");
 const terminologyScanner_1 = require("../engine/terminologyScanner");
 const config_1 = require("../config");
-// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.10 — standalone, top-level (not
-// nested under `notion`/`humanize`): use case is broader than either
-// pipeline — checking source code or any document before it's shared or
-// published externally, independent of Notion entirely. Read-only, never
+// Standalone, top-level command: checks source code or any document for
+// Sigma terminology before it's shared outside Sigma. Read-only, never
 // touches gate/lock/chain state.
 const SIGMA_ARTIFACT_PATTERNS = [/^DIR-INTENT-/, /^FMN-PLAN-/, /^DEV-EXEC-/, /^ROADMAP-/, /^DIR-CLOSE-/];
 function isSigmaArtifactFile(filename) {

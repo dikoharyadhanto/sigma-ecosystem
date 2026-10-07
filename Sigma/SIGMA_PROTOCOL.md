@@ -468,8 +468,7 @@ Gate 3.5 is deliberately narrower than Gate 1/1.5/2/3: it gates only `close new`
 | `Sigma/roadmap/` | BUILD | `ROADMAP-v{VER}.md` |
 | `Sigma/evidence/` | BUILD | `DEV-EXEC-v{VER}.md` |
 | `Sigma/close/` | CLOSE | `DIR-CLOSE-v{VER}.md` |
-| `Sigma/human/` | Any phase (derived, human-facing) | `DIR-INTENT-HUMAN-v{VER}.md`, `PLAN-EXEC-HUMAN-v{VER}.md`, `DIR-CLOSE-HUMAN-v{VER}.md` |
-| `Sigma/notes/` | Any phase | `.fidelity.md` (never published) |
+| `Sigma/notes/` | Any phase | Free-form notes |
 | `Sigma/rules/` | All phases (reference) | `ARC-RULE.md`, `AUD-RULE.md`, `FMN-RULE.md`, `DEV-RULE.md` |
 | `Sigma/logs/` | Any phase | Progress backups, migration logs |
 | `Sigma/reference/` | Any phase (project-wide, cumulative) | `reference-list.md`, `data/` (local research artifacts) |
@@ -553,8 +552,7 @@ Findings Section Authorization.
 | `memory` | Show Sigma role memory reminders (read-only) |
 | `doctor` | Diagnose and reconcile Sigma runtime state |
 | `override` | Bypass the current lifecycle gate under Director authority (recorded in `Sigma/memory/overrides.jsonl`) |
-| `notion` | Notion remote governance dashboard, state backup, and human-projection publishing (setup, status, push, pull, pull-state, enable, disable) — see PLAN-IMPL-NOTION-REMOTE-GOVERNANCE-INTEGRATION-V2-20260816 |
-| `scan` | Scan an arbitrary file for Sigma terminology before sharing it externally (`--file <path>`), independent of the Notion pipeline — see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816 §2.10 |
+| `scan` | Scan an arbitrary file for Sigma terminology before sharing it externally (`--file <path>`) |
 
 Run `sigma --help` or `sigma {domain} --help` for current command syntax. The CLI is authoritative — do not rely on this section for exact flag names.
 
@@ -580,18 +578,14 @@ Sigma CLI is designed to be operated primarily by AI roles under Director author
 
 | Class | Commands | AI May Execute? | Requires Director Instruction? |
 | :--- | :--- | :---: | :---: |
-| Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check`, `notion status`, `scan --file` | Yes | No |
-| Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `reference update`, `send`, `intent humanize`³, `exec humanize`³, `close humanize`³, `notion push`⁴, `notion setup`, `notion pull`, `notion pull-state` | Yes, within role boundary | Usually no |
+| Read-only | `status`, `list`, `session bootstrap`, `git evidence`, `roadmap list`, `inbox`, `intent check`, `plan check`, `exec check`, `close check`, `roadmap check`, `scan --file` | Yes | No |
+| Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `reference update`, `send` | Yes, within role boundary | Usually no |
 | Approval | `intent ratify`, `plan lock`, `exec lock`, `close lock`, `intent score`¹, `intent amendment`² | Only after Director approval | Yes |
-| Risk / Supersession | `intent supersede --director-confirm`, `plan supersede`, `notion enable --director-confirm`, `notion disable --director-confirm`, destructive/reset | Only after Director approval | Yes |
+| Risk / Supersession | `intent supersede --director-confirm`, `plan supersede`, destructive/reset | Only after Director approval | Yes |
 
 ¹ `intent score` is Approval-class with a narrower scope than the others in its row: what the Director approves is the act of **committing** the score to `progress-v<N>.json` — not the **content** of the score itself, which ARC already reasoned through and reported in conversation beforehand (see `Sigma/rules/ARC-RULE.md` §ARC Satisfaction Score Methodology). Authorization language for this command is deliberately distinct from ordinary Approval phrasing (e.g. "catat skor", "masukkan skor ke sigma") — not "do you agree with this score."
 
 ² `intent amendment` follows the same narrow-scope pattern as `intent score`: what the Director authorizes is the act of **recording** an Amendment whose classification (Sovereign vs. Operationalization) ARC has already performed independently — not a re-judgment of that classification. Unlike `intent supersede`, it does not require `--director-confirm`: the blast radius is a single append-only entry on one chain, not a cross-domain cascade.
-
-³ `{domain} humanize` only ever scaffolds from an already-RATIFIED/LOCKED source (`intent ratify`/`plan lock`/`exec lock`/`close lock` are never gated on humanize status themselves — see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816 §3.4/CR-01). When `notion_humanize_gate.enabled`, the *next* lifecycle command (`plan new`, `close new`) checks that humanize + push already happened — that enforcement lives on those commands, not on `humanize` itself.
-
-⁴ `notion push` is Operational, not Approval-class, despite publishing content externally — it never mutates gate/lock state, and manual/explicit invocation (never triggered automatically from inside another command) is itself the safeguard. It can still fail loudly: a terminology leak or an incomplete Fidelity Ledger blocks that artifact's push outright (see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816 §2.7).
 
 ### Explicit Approval Rule
 
@@ -643,10 +637,6 @@ ROADMAP, FMN-PLAN, DEV-EXEC, AUD findings, `progress-v<N>.json`, role rule files
 In normal Sigma operation, the Director interacts primarily through: reviewing or refining DIR-INTENT, approving or rejecting lock decisions, reviewing DIR-CLOSE, and authorizing risk acknowledgment or supersession.
 
 AI roles are responsible for reading operational artifacts, maintaining role boundaries, surfacing only decision-relevant issues to the Director, and translating Director decisions into valid Sigma CLI operations.
-
-### External-Facing Projections — Sigma Humanize Operation
-
-The Human-Facing / AI-Operational split above describes artifacts as Sigma itself reads and writes them — it is not about sharing outside the project. `sigma {domain} humanize` (see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816) produces a **separate, derived document** — never an edit to the source artifact — intended for readers outside the governance process entirely: `DIR-INTENT` → a Project Brief, `FMN-PLAN`+`DEV-EXEC` → a Delivery Summary, `DIR-CLOSE` → a Closing Summary. These carry zero Sigma terminology by construction (mechanically enforced before they can be published — see §2.6/§2.7 of that plan) and never become authoritative: the canonical artifact remains the sole source of truth, and a human projection can drift out of date without invalidating anything until it is regenerated.
 
 ---
 

@@ -10,7 +10,6 @@ const readline_1 = __importDefault(require("readline"));
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const docCheck_1 = require("../utils/docCheck");
-const closeHumanizeService_1 = require("../services/closeHumanizeService");
 const closeNewService_1 = require("../services/closeNewService");
 const closeLockService_1 = require("../services/closeLockService");
 // PLAN-EVAL-01 Fase 3 — `close lock` already auto-locks the chain's roadmap
@@ -105,36 +104,6 @@ function closeCommand() {
         }
         catch (e) {
             console.error(e.message);
-            process.exit(1);
-        }
-    });
-    // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.1/§4 Fase 3. Requires DIR-CLOSE
-    // LOCKED — never scaffold a human projection from a closure decision that
-    // could still change. `close lock` itself is never gated on this (§3.4 /
-    // CR-01): there is no "next" governance command after CLOSE to gate, so
-    // unlike intent/exec this one has no enforcement point at all yet — see
-    // plan §6 poin 1c (open: who runs this, and whether it needs a gate).
-    cmd.command('humanize')
-        .description('Generate a human-readable projection of a LOCKED DIR-CLOSE for Notion (Sigma Humanize Operation)')
-        .option('--force', 'Overwrite an already-generated human projection for this version')
-        .action((opts) => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const { humanRelPath, ledgerRelPath } = (0, closeHumanizeService_1.humanizeClose)({ projectRoot, force: opts.force });
-            console.log(`Created: ${humanRelPath}`);
-            console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
-            console.log('');
-            console.log('Reading /humanize writing rules (setup/targets/claude_code/humanize.md)...');
-            console.log(`Drafting ${humanRelPath} using /humanize style rules.`);
-            console.log('Fill in both files, then run: sigma notion push');
-        }
-        catch (e) {
-            if (e instanceof closeHumanizeService_1.CloseHumanizeError) {
-                console.error(e.message);
-            }
-            else {
-                console.error(e.message);
-            }
             process.exit(1);
         }
     });

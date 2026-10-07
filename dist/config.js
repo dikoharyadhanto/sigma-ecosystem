@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.ARTIFACT_LAYOUT = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.INTENT_AMENDMENT_LOG_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.ACTIVATE_STATUS_FILE = exports.BRIDGE_STUBS = exports.PROJECT_REMOTE_STATE_FILE = exports.DEV_WORKSPACE_MARKER_FILE = exports.DEV_WORKSPACE_DIR = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_NOTION_CREDENTIALS_FILE = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
+exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.ARTIFACT_LAYOUT = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.INTENT_AMENDMENT_LOG_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.ACTIVATE_STATUS_FILE = exports.BRIDGE_STUBS = exports.DEV_WORKSPACE_MARKER_FILE = exports.DEV_WORKSPACE_DIR = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 exports.SIGMA_VERSION = '2.0.0';
@@ -21,6 +21,9 @@ exports.SIGMA_VERSION = '2.0.0';
 // direction. Bumped anyway to follow the established convention (this
 // constant also stamps project.config.json/.sigma-identity.json, which
 // didn't change shape — see chain.ts's own note on that coupling).
+// F14 (2.0.0) removed the `human` field and the code that wrote it; the
+// version stays 1.2.0 and a chain that still carries the field reads and
+// round-trips unchanged.
 exports.SCHEMA_VERSION = '1.2.0';
 exports.GLOBAL_SIGMA_DIR = path_1.default.join(os_1.default.homedir(), '.sigma');
 exports.GLOBAL_TEMPLATES_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'templates');
@@ -28,23 +31,12 @@ exports.GLOBAL_RULES_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'rules'
 exports.GLOBAL_GOVERNANCE_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'governance');
 exports.GLOBAL_BRIDGE_DIR = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'bridge');
 exports.GLOBAL_CONFIG_FILE = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'sigma.config.json');
-// PLAN-IMPL-NOTION-REMOTE-GOVERNANCE-INTEGRATION-V2 D-01 — Notion tokens are
-// per-machine secrets, never project-local. Keyed by project_id inside this
-// file so one machine can hold credentials for multiple Sigma projects.
-// Never referenced from any path under a project root, and never written to
-// anything git can see.
-exports.GLOBAL_NOTION_CREDENTIALS_FILE = path_1.default.join(exports.GLOBAL_SIGMA_DIR, 'notion.credentials.json');
 exports.PROJECT_SIGMA_DIR = 'Sigma';
 // Root-level (sibling to Sigma/), not inside it — so identity survives even if Sigma/ itself is corrupted.
 exports.PROJECT_IDENTITY_FILE = '.sigma-identity.json';
 // The DEV write area at the project root, and the marker file inside it.
 exports.DEV_WORKSPACE_DIR = 'dev';
 exports.DEV_WORKSPACE_MARKER_FILE = '.sigma-workspace.json';
-// D-03 — written only after a confirmed-successful Notion push that purges
-// Sigma/ locally. Root-level, same reasoning as PROJECT_IDENTITY_FILE: must
-// survive the purge it documents. Deliberately NOT an anchor for the shared
-// findProjectRoot() — see notionService.ts's own resolver.
-exports.PROJECT_REMOTE_STATE_FILE = '.sigma-remote-state.json';
 // Bridge stub filenames — AI tool instruction files written at project root.
 exports.BRIDGE_STUBS = ['CLAUDE.md', 'GEMINI.md', 'AGENTS.md', 'DEEPSEEK.md', 'REASONIX.md'];
 // PLAN-EVAL-01 Fase 5 — the manifest findProjectRoot() anchors on. Written by
@@ -63,13 +55,13 @@ exports.PROJECT_CONFIG_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'pr
 // PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816 §2.1/§3.1 — design/build
 // renamed and split: design -> charter (DIR-INTENT), build -> contract
 // (FMN-PLAN) + roadmap (ROADMAP) + evidence (DEV-EXEC). close/rules/logs/
-// memory/role-memory/reference unchanged (§3.2 — out of scope). human/notes
-// are new (Sigma Humanize Operation's *-HUMAN docs and free-form notes).
+// memory/role-memory/reference unchanged (§3.2 — out of scope). notes is new
+// (free-form notes).
 // New projects only (§2.2) — a chain's stored entry.file always wins over
 // any folder-name-derived fallback (see findProjectRoot()'s callers in
 // intent.ts/plan.ts/exec.ts/roadmap.ts), so existing projects created under
 // the old names are unaffected without migration.
-exports.SUBFOLDERS = ['charter', 'contract', 'roadmap', 'evidence', 'close', 'human', 'notes', 'rules', 'logs', 'memory', 'role-memory', 'reference'];
+exports.SUBFOLDERS = ['charter', 'contract', 'roadmap', 'evidence', 'close', 'notes', 'rules', 'logs', 'memory', 'role-memory', 'reference'];
 /**
  * Where each governance artifact may live on disk, and how its filename is
  * shaped. New folder name first, pre-rename name second.

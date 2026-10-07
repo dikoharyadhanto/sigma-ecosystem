@@ -548,7 +548,7 @@ describe('sigma_read_artifact (§9.1)', () => {
 
 describe('policy projection (§12, matrix §6)', () => {
   it('treats an operation absent from the allowlist as forbidden, not as unrestricted', () => {
-    // The eight `notion` subcommands are in the CLI and in no registry entry.
+    // An operation id that is in no registry entry (here a removed one).
     expect(availabilityFor('notion_push', null).availability).toBe('forbidden');
     expect(OPERATION_TIERS['notion_push']).toBeUndefined();
   });
@@ -582,7 +582,7 @@ describe('policy projection (§12, matrix §6)', () => {
     expect(out.active).toBe(true);
     expect(out.advisory).toBe(true);
     const ops = out.operations as Payload[];
-    expect(ops.length).toBe(61);
+    expect(ops.length).toBe(58);
     // Every registry operation is classified — no silent gaps.
     expect(ops.filter((o) => o.tier === null && o.availability !== 'forbidden')).toHaveLength(0);
     // Nothing in Batch 1 is exposed as an executable write.

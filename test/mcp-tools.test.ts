@@ -451,9 +451,6 @@ describe('sigma-mcp read-only guard', () => {
       'createRoadmapDraft',
       'renderActiveRoadmap',
       'updateReferenceList',
-      'humanizeIntent',
-      'humanizeExec',
-      'humanizeClose',
       'archiveMessage',
       'recordEvidence',
     ];

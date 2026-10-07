@@ -6,10 +6,8 @@ import { findProjectRoot, toPosix } from '../utils/fs';
 import { scanForSigmaTerminology, loadTerminologyList } from '../engine/terminologyScanner';
 import { PROJECT_SIGMA_DIR } from '../config';
 
-// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.10 — standalone, top-level (not
-// nested under `notion`/`humanize`): use case is broader than either
-// pipeline — checking source code or any document before it's shared or
-// published externally, independent of Notion entirely. Read-only, never
+// Standalone, top-level command: checks source code or any document for
+// Sigma terminology before it's shared outside Sigma. Read-only, never
 // touches gate/lock/chain state.
 const SIGMA_ARTIFACT_PATTERNS = [/^DIR-INTENT-/, /^FMN-PLAN-/, /^DEV-EXEC-/, /^ROADMAP-/, /^DIR-CLOSE-/];
 

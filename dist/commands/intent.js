@@ -13,7 +13,6 @@ const docCheck_1 = require("../utils/docCheck");
 const intentHistory_1 = require("../utils/intentHistory");
 const intentDraftService_1 = require("../services/intentDraftService");
 const intentRatifyService_1 = require("../services/intentRatifyService");
-const intentHumanizeService_1 = require("../services/intentHumanizeService");
 const intentAmendmentService_1 = require("../services/intentAmendmentService");
 const intentScoreService_1 = require("../services/intentScoreService");
 const intentSupersedeService_1 = require("../services/intentSupersedeService");
@@ -127,37 +126,6 @@ function intentCommand() {
         }
         catch (e) {
             console.error(e.message);
-            process.exit(1);
-        }
-    });
-    // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.1/§4 Fase 3 — scaffolds the human
-    // projection + its (never-published) Fidelity Ledger from a RATIFIED
-    // intent. Mirrors `intent new`'s scaffold shape, but writes no DRAFT
-    // governance state — chain.intent.human is a bookkeeping record, not a
-    // gate transition, and `intent ratify` itself is never gated on this (§3.4
-    // / CR-01: the gate belongs at `plan new`, not here).
-    cmd.command('humanize')
-        .description('Generate a human-readable projection of a RATIFIED DIR-INTENT for Notion (Sigma Humanize Operation)')
-        .option('--v <version>', 'Chain version to humanize instead of the active one', chain_1.normalizeVersionArg)
-        .option('--force', 'Overwrite an already-generated human projection for this version')
-        .action((opts) => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const { humanRelPath, ledgerRelPath } = (0, intentHumanizeService_1.humanizeIntent)({ projectRoot, version: opts.v, force: opts.force });
-            console.log(`Created: ${humanRelPath}`);
-            console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
-            console.log('');
-            console.log('Reading /humanize writing rules (setup/targets/claude_code/humanize.md)...');
-            console.log(`Drafting ${humanRelPath} using /humanize style rules.`);
-            console.log('Fill in both files, then run: sigma notion push');
-        }
-        catch (e) {
-            if (e instanceof intentHumanizeService_1.IntentHumanizeError) {
-                console.error(e.message);
-            }
-            else {
-                console.error(e.message);
-            }
             process.exit(1);
         }
     });

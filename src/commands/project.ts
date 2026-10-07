@@ -35,7 +35,6 @@ import {
 } from '../engine/chain';
 import { createDefaultProjectConfig, writeProjectConfig } from '../engine/projectConfig';
 import { promptLanguageWizard } from '../engine/languageWizard';
-import { isNotionApiDetectable } from '../engine/notionService';
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, fileExists, findProjectRoot } from '../utils/fs';
 import { ensureOperationsLog } from '../utils/operationLog';
@@ -224,7 +223,6 @@ async function runStart(opts: {
   confirm?: boolean;
   reinit?: boolean;
   overwriteBridge?: boolean;
-  humanizeGate?: boolean;
   initGit?: boolean;
 }): Promise<void> {
   if (!fileExists(GLOBAL_SIGMA_DIR)) {
@@ -253,27 +251,9 @@ async function runStart(opts: {
   let projectName: string;
   let projectConfig = createDefaultProjectConfig(opts.lang?.trim() || 'English');
 
-  // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.1 — mandatory answer, both paths,
-  // but only a real question when Notion is actually usable right now. At
-  // `project start` time .sigma-identity.json doesn't exist yet, so the only
-  // checkable signal is NOTION_TOKEN in the environment — see
-  // isNotionApiDetectable()'s own comment for why.
-  const humanizeGateApiDetectable = await isNotionApiDetectable();
-
   if (opts.id && opts.name) {
     projectId = validateProjectId(opts.id);
     projectName = validateProjectName(opts.name);
-
-    const humanizeGateEnabled = !humanizeGateApiDetectable
-      ? false
-      : opts.humanizeGate !== false; // default ON when detectable and no explicit --no-humanize-gate
-    projectConfig.notion_humanize_gate = { enabled: humanizeGateEnabled };
-    if (!humanizeGateApiDetectable) {
-      console.log(
-        '  Notion humanize gate: OFF (no working Notion token detected — set NOTION_TOKEN and run ' +
-        '`sigma notion enable --director-confirm` later to turn it on).'
-      );
-    }
   } else {
     const answers = await inquirer.prompt([
       {
@@ -301,26 +281,6 @@ async function runStart(opts: {
 
     console.log('');
     projectConfig = await promptLanguageWizard(projectConfig);
-
-    if (humanizeGateApiDetectable) {
-      const gateAnswer = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'humanizeGate',
-          message:
-            'Enable the Notion humanize gate? (requires a human-readable version of locked artifacts ' +
-            'to be pushed to Notion before certain lock steps — see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION)',
-          default: true,
-        },
-      ]);
-      projectConfig.notion_humanize_gate = { enabled: Boolean(gateAnswer.humanizeGate) };
-    } else {
-      projectConfig.notion_humanize_gate = { enabled: false };
-      console.log(
-        '  Notion humanize gate: OFF (no working Notion token detected — set NOTION_TOKEN and run ' +
-        '`sigma notion enable --director-confirm` later to turn it on).'
-      );
-    }
   }
 
   info(`Initializing Sigma project: ${projectName} (${projectId})...`);
@@ -393,7 +353,6 @@ async function runStart(opts: {
   // Write project.config.json with language preferences
   writeProjectConfig(projectRoot, projectConfig);
   console.log(`  Config: Sigma/project.config.json written (Sigma docs language: ${projectConfig.document_language})`);
-  console.log(`  Notion humanize gate: ${projectConfig.notion_humanize_gate?.enabled ? 'ON' : 'OFF'}`);
 
   // Create messages folder tree
   const messagesDir = path.join(projectRoot, MESSAGES_DIR);
@@ -698,9 +657,7 @@ export function projectCommand(): Command {
     .option('--init-git', 'Initialize a local Git repository when none exists (no remote, identity, branch policy, or commit)')
     .option('--reinit', 'Re-initialize an existing Sigma project')
     .option('--overwrite-bridge', 'Overwrite existing bridge files (CLAUDE.md, GEMINI.md, AGENTS.md, DEEPSEEK.md, REASONIX.md)')
-    .option('--humanize-gate', 'Enable the Notion humanize gate (non-interactive mode; default ON when a working Notion token is detected)')
-    .option('--no-humanize-gate', 'Disable the Notion humanize gate (non-interactive mode)')
-    .action((opts: { id?: string; name?: string; lang?: string; confirm?: boolean; reinit?: boolean; overwriteBridge?: boolean; humanizeGate?: boolean; initGit?: boolean }) => {
+    .action((opts: { id?: string; name?: string; lang?: string; confirm?: boolean; reinit?: boolean; overwriteBridge?: boolean; initGit?: boolean }) => {
       runStart(opts).catch(err => {
         console.error(err instanceof Error ? err.message : String(err));
         process.exit(1);

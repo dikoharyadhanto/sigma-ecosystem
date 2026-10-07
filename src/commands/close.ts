@@ -14,7 +14,6 @@ import {
   printSigmaDocReport,
   validateSigmaDocFile,
 } from '../utils/docCheck';
-import { humanizeClose, CloseHumanizeError } from '../services/closeHumanizeService';
 import { createCloseDraftUseCase } from '../services/closeNewService';
 import { lockCloseUseCase } from '../services/closeLockService';
 
@@ -116,36 +115,6 @@ export function closeCommand(): Command {
         console.log(`DIR-CLOSE ${result.version} LOCKED. Lifecycle → CLOSED. Project is complete.`);
       } catch (e) {
         console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
-  // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.1/§4 Fase 3. Requires DIR-CLOSE
-  // LOCKED — never scaffold a human projection from a closure decision that
-  // could still change. `close lock` itself is never gated on this (§3.4 /
-  // CR-01): there is no "next" governance command after CLOSE to gate, so
-  // unlike intent/exec this one has no enforcement point at all yet — see
-  // plan §6 poin 1c (open: who runs this, and whether it needs a gate).
-  cmd.command('humanize')
-    .description('Generate a human-readable projection of a LOCKED DIR-CLOSE for Notion (Sigma Humanize Operation)')
-    .option('--force', 'Overwrite an already-generated human projection for this version')
-    .action((opts: { force?: boolean }) => {
-      try {
-        const projectRoot = findProjectRoot();
-        const { humanRelPath, ledgerRelPath } = humanizeClose({ projectRoot, force: opts.force });
-
-        console.log(`Created: ${humanRelPath}`);
-        console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
-        console.log('');
-        console.log('Reading /humanize writing rules (setup/targets/claude_code/humanize.md)...');
-        console.log(`Drafting ${humanRelPath} using /humanize style rules.`);
-        console.log('Fill in both files, then run: sigma notion push');
-      } catch (e) {
-        if (e instanceof CloseHumanizeError) {
-          console.error(e.message);
-        } else {
-          console.error((e as Error).message);
-        }
         process.exit(1);
       }
     });

@@ -10,7 +10,6 @@ const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const docCheck_1 = require("../utils/docCheck");
 const execDraftService_1 = require("../services/execDraftService");
-const execHumanizeService_1 = require("../services/execHumanizeService");
 const execLockService_1 = require("../services/execLockService");
 function execDocPath(projectRoot, chain, version) {
     const entry = version
@@ -80,38 +79,6 @@ function execCommand() {
         }
         catch (e) {
             console.error(e.message);
-            process.exit(1);
-        }
-    });
-    // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.1/§4 Fase 3 — one PLAN-EXEC-HUMAN
-    // document per plan+exec version pair, keyed on the exec side (exec
-    // always mirrors its plan's version — nextExecVersion() guarantees it).
-    // Requires the exec to be LOCKED, same reasoning as `intent humanize`
-    // requiring RATIFIED: never scaffold a human projection whose source can
-    // still change out from under it. `exec lock` itself is never gated on
-    // this (§3.4 / CR-01 — the gate belongs at the next `plan new`/`close new`).
-    cmd.command('humanize')
-        .description('Generate a human-readable projection of a LOCKED plan+exec pair for Notion (Sigma Humanize Operation)')
-        .option('--v <version>', 'EXEC version to humanize instead of the active one', chain_1.normalizeVersionArg)
-        .option('--force', 'Overwrite an already-generated human projection for this version')
-        .action((opts) => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const { version, planVersionRef, humanRelPath, ledgerRelPath } = (0, execHumanizeService_1.humanizeExec)({ projectRoot, version: opts.v, force: opts.force });
-            console.log(`Created: ${humanRelPath} (sources: FMN-PLAN ${planVersionRef} + DEV-EXEC ${version})`);
-            console.log(`Created: ${ledgerRelPath} (internal — never published, never pushed to Notion)`);
-            console.log('');
-            console.log('Reading /humanize writing rules (setup/targets/claude_code/humanize.md)...');
-            console.log(`Drafting ${humanRelPath} using /humanize style rules.`);
-            console.log('Fill in both files, then run: sigma notion push');
-        }
-        catch (e) {
-            if (e instanceof execHumanizeService_1.ExecHumanizeError) {
-                console.error(e.message);
-            }
-            else {
-                console.error(e.message);
-            }
             process.exit(1);
         }
     });

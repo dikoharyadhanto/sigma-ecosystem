@@ -119,9 +119,10 @@ describe('Folder rename — new projects use the new folder names by default', (
     const result = runCli('project start --id RENAMETEST --name "Rename Test" --confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    for (const folder of ['charter', 'contract', 'roadmap', 'evidence', 'close', 'human', 'notes']) {
+    for (const folder of ['charter', 'contract', 'roadmap', 'evidence', 'close', 'notes']) {
       expect(fs.existsSync(path.join(env.sigmaDir, folder)), `Sigma/${folder}/ should exist`).toBe(true);
     }
+    expect(fs.existsSync(path.join(env.sigmaDir, 'human'))).toBe(false);
     expect(fs.existsSync(path.join(env.sigmaDir, 'design'))).toBe(false);
     expect(fs.existsSync(path.join(env.sigmaDir, 'build'))).toBe(false);
   });

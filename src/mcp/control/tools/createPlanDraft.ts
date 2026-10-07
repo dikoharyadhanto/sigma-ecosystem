@@ -21,8 +21,8 @@ export function registerCreatePlanDraftTool(server: McpServer): void {
       description:
         'Creates a new FMN-PLAN DRAFT under the active chain — the MCP control-plane equivalent of ' +
         '`sigma plan new` (non-pending path only; pending-queue staging is not exposed here). FMN role ' +
-        'only. Requires Gate 1 (a RATIFIED DIR-INTENT) and an eligible ROADMAP (exists, not SUPERSEDED); ' +
-        'also enforced if the project has notion_humanize_gate enabled. Requires idempotency_key (retried ' +
+        'only. Requires Gate 1 (a RATIFIED DIR-INTENT) and an eligible ROADMAP (exists, not SUPERSEDED). ' +
+        'Requires idempotency_key (retried ' +
         'calls with the same key and the same arguments return the original result; same key with ' +
         'different arguments is rejected) and expected_state_revision read from a prior sigma_get_state ' +
         'call on this binding.',

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-10-07T09:06:34.589Z",
   "description": "Sigma Operation Registry \u2014 all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 61,
+  "total_operations": 58,
   "domains": [
     "close",
     "config",
@@ -2052,131 +2052,12 @@
       "error_messages": {}
     },
     {
-      "operation_id": "intent_humanize",
-      "domain": "intent",
-      "action": "humanize",
-      "level": "semantic",
-      "role": "any",
-      "description": "Scaffold a human-readable projection of a RATIFIED DIR-INTENT (Sigma/human/DIR-INTENT-HUMAN-<v>.md) plus its companion Source Fidelity Ledger (never published). Requires intent.state == RATIFIED; refuses to overwrite an existing projection without --force. Does not gate or is gated by intent ratify itself \u2014 see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816 \u00a73.4 (CR-01).",
-      "inputs": [
-        {
-          "type": "flag",
-          "description": "--v <version> (optional, defaults to active chain)"
-        },
-        {
-          "type": "flag",
-          "description": "--force (optional, required to overwrite an existing projection)"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "file",
-          "description": "Sigma/human/DIR-INTENT-HUMAN-<v>.md"
-        },
-        {
-          "type": "file",
-          "description": "Sigma/human/DIR-INTENT-HUMAN-<v>.fidelity.md (internal, never published)"
-        },
-        {
-          "type": "state",
-          "description": "chain.intent.human = { version, generated_at }"
-        }
-      ],
-      "constraints": [
-        "Source DIR-INTENT must be RATIFIED, not DRAFT.",
-        "Refuses to overwrite an existing human projection unless --force is passed."
-      ],
-      "gating": {
-        "pre_condition": "chain.intent.state == 'RATIFIED'",
-        "post_condition": "chain.intent.human.generated_at is set; does not open or close any gate"
-      },
-      "error_messages": {}
-    },
-    {
-      "operation_id": "exec_humanize",
-      "domain": "exec",
-      "action": "humanize",
-      "level": "semantic",
-      "role": "any",
-      "description": "Scaffold a human-readable projection of a LOCKED plan+exec version pair (Sigma/human/PLAN-EXEC-HUMAN-<execVersion>.md) plus its companion Source Fidelity Ledger. Requires both the exec and its referenced FMN-PLAN to be LOCKED; recorded against the exec side (chain.exec.versions[].human), never the plan side. Does not gate or is gated by exec lock itself \u2014 see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816 \u00a73.4 (CR-01).",
-      "inputs": [
-        {
-          "type": "flag",
-          "description": "--v <version> (optional, defaults to active exec)"
-        },
-        {
-          "type": "flag",
-          "description": "--force (optional, required to overwrite an existing projection)"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "file",
-          "description": "Sigma/human/PLAN-EXEC-HUMAN-<execVersion>.md"
-        },
-        {
-          "type": "file",
-          "description": "Sigma/human/PLAN-EXEC-HUMAN-<execVersion>.fidelity.md (internal, never published)"
-        },
-        {
-          "type": "state",
-          "description": "chain.exec.versions[].human = { version, generated_at }"
-        }
-      ],
-      "constraints": [
-        "Both the target exec and its referenced plan must be LOCKED.",
-        "Refuses to overwrite an existing human projection unless --force is passed."
-      ],
-      "gating": {
-        "pre_condition": "exec entry state == 'LOCKED' and its plan_version_ref entry state == 'LOCKED'",
-        "post_condition": "exec entry .human.generated_at is set; does not open or close any gate"
-      },
-      "error_messages": {}
-    },
-    {
-      "operation_id": "close_humanize",
-      "domain": "close",
-      "action": "humanize",
-      "level": "semantic",
-      "role": "any",
-      "description": "Scaffold a human-readable projection of a LOCKED DIR-CLOSE (Sigma/human/DIR-CLOSE-HUMAN-<v>.md) plus its companion Source Fidelity Ledger. Requires close.state == LOCKED. No downstream Sigma command currently checks this artifact's push status \u2014 open item, see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816 \u00a76 poin 1c.",
-      "inputs": [
-        {
-          "type": "flag",
-          "description": "--force (optional, required to overwrite an existing projection)"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "file",
-          "description": "Sigma/human/DIR-CLOSE-HUMAN-<v>.md"
-        },
-        {
-          "type": "file",
-          "description": "Sigma/human/DIR-CLOSE-HUMAN-<v>.fidelity.md (internal, never published)"
-        },
-        {
-          "type": "state",
-          "description": "chain.close.human = { version, generated_at }"
-        }
-      ],
-      "constraints": [
-        "Source DIR-CLOSE must be LOCKED, not DRAFT.",
-        "Refuses to overwrite an existing human projection unless --force is passed."
-      ],
-      "gating": {
-        "pre_condition": "chain.close.state == 'LOCKED'",
-        "post_condition": "chain.close.human.generated_at is set; does not open or close any gate"
-      },
-      "error_messages": {}
-    },
-    {
       "operation_id": "scan",
       "domain": "scan",
       "action": "scan",
       "level": "read_only",
       "role": "any",
-      "description": "Scan an arbitrary file for Sigma terminology before it is shared or published externally. Top-level command, independent of the Notion/Humanize pipeline. Skips DIR-INTENT/FMN-PLAN/DEV-EXEC/ROADMAP/DIR-CLOSE source artifacts by filename pattern (expected to contain this vocabulary by design). Terminal output is a count only; full findings (line numbers, matched terms) are written to Sigma/logs/<timestamp>_terminology-scan.log \u2014 see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816 \u00a72.10.",
+      "description": "Scan an arbitrary file for Sigma terminology before it is shared externally. Top-level command, independent of any other pipeline. Skips DIR-INTENT/FMN-PLAN/DEV-EXEC/ROADMAP/DIR-CLOSE source artifacts by filename pattern (expected to contain this vocabulary by design). Terminal output is a count only; full findings (line numbers, matched terms) are written to Sigma/logs/<timestamp>_terminology-scan.log.",
       "inputs": [
         {
           "type": "flag",

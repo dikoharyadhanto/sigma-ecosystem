@@ -1,10 +1,4 @@
 export type LifecycleState = 'DESIGN' | 'BUILD' | 'CLOSE' | 'CLOSED';
-export interface HumanArtifactState {
-    version: string;
-    generated_at: string;
-    pushed_to_notion_at?: string;
-    notion_page_url?: string;
-}
 export interface EvidenceRecord {
     description: string;
     /** Project-root-relative path — the one path in the MCP surface not
@@ -27,7 +21,6 @@ export interface ArtifactVersion {
     plan_version_ref?: string;
     title?: string;
     focus?: string;
-    human?: HumanArtifactState;
     evidence?: EvidenceRecord[];
 }
 export interface ArtifactTracker {
@@ -112,7 +105,6 @@ export interface SingleIntentState {
     effective_amendment?: string | null;
     certified_doc_sha256?: string;
     certified_at?: string;
-    human?: HumanArtifactState;
 }
 export interface SingleRoadmapState {
     version: string;
@@ -131,7 +123,6 @@ export interface SingleCloseState {
     updated_at: string;
     locked_at?: string;
     supersede_reason?: string;
-    human?: HumanArtifactState;
 }
 export interface ChainState {
     schema_version: string;

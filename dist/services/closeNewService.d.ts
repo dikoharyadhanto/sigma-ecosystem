@@ -7,7 +7,7 @@ export declare class CloseNewError extends Error {
 /** Re-runs every close_new precondition against a live chain, without
  *  writing anything — used by both prepare (freeze the ticket only if this
  *  would currently succeed) and by CLI's own preflight message. */
-export declare function assertCloseNewEligible(projectRoot: string, chain: ChainState): void;
+export declare function assertCloseNewEligible(chain: ChainState): void;
 export interface CreateCloseDraftResult {
     chainVersion: string;
     version: string;

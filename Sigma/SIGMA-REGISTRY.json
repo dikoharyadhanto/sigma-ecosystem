@@ -283,10 +283,9 @@
       "owner": "Director",
       "lifecycle": "stable \u2014 updated when artifact structure changes; templates are embedded by Phase 3 CLI",
       "mandatory_when": [
-        "artifact_creation",
-        "humanize_scaffold"
+        "artifact_creation"
       ],
-      "description": "Canonical Markdown templates for all Sigma artifacts, MSG, MEMO, and the Reference List, plus the human-projection templates the Sigma Humanize Operation scaffolds from RATIFIED/LOCKED sources. Twelve files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, ROADMAP-TEMPLATE.md, MSG-TEMPLATE.md, MEMO-TEMPLATE.md, REFERENCE-LIST-TEMPLATE.md, DIR-INTENT-HUMAN-TEMPLATE.md, PLAN-EXEC-HUMAN-TEMPLATE.md, DIR-CLOSE-HUMAN-TEMPLATE.md, HUMAN-FIDELITY-LEDGER-TEMPLATE.md. CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma roadmap new, sigma send, sigma memo write, sigma intent/exec/close humanize, and the one-time sigma project start / sigma reference update scaffolding of reference-list.md.",
+      "description": "Canonical Markdown templates for all Sigma artifacts, MSG, MEMO, and the Reference List. Eight files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, ROADMAP-TEMPLATE.md, MSG-TEMPLATE.md, MEMO-TEMPLATE.md, REFERENCE-LIST-TEMPLATE.md. CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma roadmap new, sigma send, sigma memo write, and the one-time sigma project start / sigma reference update scaffolding of reference-list.md.",
       "tolerate_missing": true,
       "missing_behavior": "Warn on artifact creation commands; CLI may fall back to inline templates if folder is missing."
     },
@@ -327,12 +326,11 @@
       "owner": "Director",
       "lifecycle": "stable \u2014 bundled and synced like the role rule files; edited at the sigma-ecosystem source, never per-project. Project-specific additions go in Sigma/sigma_terminology.custom.json instead (not registered here \u2014 project-local, never synced).",
       "mandatory_when": [
-        "humanize_push",
         "terminology_scan"
       ],
-      "description": "Bundled list of Sigma vocabulary (DIR-INTENT, FMN-PLAN, RATIFIED, Gate 1-3, role names, the word \"Sigma\" itself, etc.) that must never appear in a published human artifact. Read by scanForSigmaTerminology() / loadTerminologyList(), consumed by both the blocking pre-push gate (sigma notion push) and the standalone sigma scan --file command \u2014 see PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816 \u00a72.6/\u00a72.7/\u00a72.10.",
+      "description": "Bundled list of Sigma vocabulary (DIR-INTENT, FMN-PLAN, RATIFIED, Gate 1-3, role names, the word \"Sigma\" itself, etc.) that should not appear in a document shared outside Sigma. Read by scanForSigmaTerminology() / loadTerminologyList(), consumed by the standalone sigma scan --file command.",
       "tolerate_missing": true,
-      "missing_behavior": "Terminology scan runs against an empty list (or only the project-local custom file) \u2014 no findings are possible, which silently weakens the gate rather than failing loudly. Treat a missing default file as a setup defect."
+      "missing_behavior": "Terminology scan runs against an empty list (or only the project-local custom file) \u2014 no findings are possible. Treat a missing default file as a setup defect."
     }
   ]
 }

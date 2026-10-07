@@ -21,13 +21,6 @@ const DEFAULTS = {
     document_language: 'English',
     interaction_language: 'English',
     output_document_language: 'English',
-    notion: {
-        enabled: false,
-        clean_local: false,
-    },
-    notion_humanize_gate: {
-        enabled: false,
-    },
     mailbox: { ...exports.DEFAULT_MAILBOX },
 };
 function readProjectConfig(projectRoot) {
@@ -53,13 +46,6 @@ function createDefaultProjectConfig(lang = 'English') {
         document_language: lang,
         interaction_language: lang,
         output_document_language: lang,
-        notion: {
-            enabled: false,
-            clean_local: false,
-        },
-        notion_humanize_gate: {
-            enabled: false,
-        },
         mailbox: { ...exports.DEFAULT_MAILBOX },
     };
 }

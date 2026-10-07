@@ -14,8 +14,8 @@
 //   - `level: read_only` does not imply admissible. `scan` is read_only and
 //     takes an arbitrary file path, which would be sigma_read_file in disguise.
 //   - the registry has no ARC/FMN/DEV/AUD dimension at all, only any/director.
-//   - eight `notion` subcommands exist in the CLI and in no registry entry, so
-//     an unknown operation_id must mean FORBIDDEN, never "not restricted".
+//   - a CLI subcommand may exist with no registry entry, so an unknown
+//     operation_id must mean FORBIDDEN, never "not restricted".
 //
 // Hence: anything absent from this table is forbidden (matrix §6.1).
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -40,12 +40,11 @@ exports.OPERATION_TIERS = Object.freeze({
     roadmap_check: 'Q', inbox: 'Q', inbox_check: 'Q', memo_list: 'Q',
     config_show: 'Q', report_logs: 'Q', git_evidence: 'Q', dev_status: 'Q',
     scan: 'NA', // read_only by level, inadmissible by shape — matrix §3.5
-    // ── W1 (16) ───────────────────────────────────────────────────────────────
+    // ── W1 (13) ───────────────────────────────────────────────────────────────
     intent_new: 'W1', plan_new: 'W1', exec_new: 'W1', plan_update: 'W1',
     send: 'W1', memo_write: 'W1', memo_read: 'W1', inbox_read: 'W1',
     inbox_archive: 'W1', roadmap_new: 'W1', roadmap_render: 'W1',
-    reference_update: 'W1', config_set_language: 'W1', intent_humanize: 'W1',
-    exec_humanize: 'W1', close_humanize: 'W1',
+    reference_update: 'W1', config_set_language: 'W1',
     // ── W2 (11) ───────────────────────────────────────────────────────────────
     intent_ratify: 'W2', intent_amendment: 'W2', intent_score: 'W2',
     intent_supersede: 'W2', intent_activate: 'W2', plan_lock: 'W2',
@@ -58,13 +57,13 @@ exports.OPERATION_TIERS = Object.freeze({
 });
 /** Owner role per matrix §3. Derived, NOT ratified — advisory only. */
 exports.OPERATION_OWNER = Object.freeze({
-    intent_new: 'ARC', intent_status: 'ARC', intent_check: 'ARC', intent_humanize: 'ARC',
+    intent_new: 'ARC', intent_status: 'ARC', intent_check: 'ARC',
     plan_new: 'FMN', plan_status: 'FMN', plan_list: 'FMN', plan_check: 'FMN',
     plan_update: 'FMN', roadmap_new: 'FMN', roadmap_list: 'FMN',
     roadmap_check: 'FMN', roadmap_render: 'FMN', plan_promote: 'FMN',
     exec_new: 'DEV', exec_status: 'DEV', exec_list: 'DEV', exec_check: 'DEV',
-    exec_humanize: 'DEV', git_evidence: 'DEV', dev_status: 'DEV',
-    close_status: 'AUD', close_check: 'AUD', close_humanize: 'AUD', report_logs: 'AUD',
+    git_evidence: 'DEV', dev_status: 'DEV',
+    close_status: 'AUD', close_check: 'AUD', report_logs: 'AUD',
 });
 /**
  * Operations whose MCP primitive exists today. Everything else is deferred.
@@ -100,8 +99,8 @@ function gateBlocks(operationId, g) {
 }
 function availabilityFor(operationId, gates) {
     const tier = exports.OPERATION_TIERS[operationId];
-    // Unknown operation → forbidden. This is the notion-subcommand case: absent
-    // from the registry must not read as "unrestricted".
+    // Unknown operation → forbidden: absent from the registry must not read as
+    // "unrestricted".
     if (tier === undefined || tier === 'NA' || tier === 'W3') {
         return { availability: 'forbidden', gate_evaluated: false };
     }

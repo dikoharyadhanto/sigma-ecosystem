@@ -44,7 +44,7 @@ function registerPrepareCloseNewTool(server) {
             transactionFiles: (root) => [(0, controlStore_1.ticketPath)(root, operationTicketId)],
         }, (root) => {
             const { data: chain } = (0, chain_1.readActiveChain)(root);
-            (0, closeNewService_1.assertCloseNewEligible)(root, chain);
+            (0, closeNewService_1.assertCloseNewEligible)(chain);
             const { revision } = (0, contract_1.computeStateRevision)(root);
             if (!revision) {
                 throw new errors_1.McpQueryError(contract_1.ERROR_CODES.INTERNAL_ERROR, 'Could not compute a state_revision for this project.');

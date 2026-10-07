@@ -60,7 +60,7 @@ export function setupTestEnv(): TestEnv {
 
   // Project Sigma/ structure
   const sigmaDir = path.join(projectDir, 'Sigma');
-  for (const sub of ['charter', 'contract', 'roadmap', 'evidence', 'close', 'human', 'notes', 'rules', 'logs', 'memory']) {
+  for (const sub of ['charter', 'contract', 'roadmap', 'evidence', 'close', 'notes', 'rules', 'logs', 'memory']) {
     fs.mkdirSync(path.join(sigmaDir, sub), { recursive: true });
   }
 

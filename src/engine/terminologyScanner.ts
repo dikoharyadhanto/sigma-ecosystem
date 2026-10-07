@@ -2,10 +2,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import { PROJECT_SIGMA_DIR } from '../config';
 
-// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.6/§2.7/§2.10 — shared by the
-// blocking pre-push gate (terminology must never leak into a published
-// human artifact) and the standalone `sigma scan` command (informational,
-// any file). One matcher, two entry points, one data source.
+// Terminology matcher for the standalone `sigma scan` command
+// (informational, any file).
 
 export interface TerminologyMatch {
   term: string;
@@ -59,25 +57,4 @@ export function loadTerminologyList(projectRoot: string): string[] {
   };
 
   return [...new Set([...readTerms(defaultPath), ...readTerms(customPath)])];
-}
-
-// §2.7 tahap 0 — strips every blockquote line (markdown "> ...") before any
-// scan runs. Safe because every *-HUMAN template (§7) reserves "> " for
-// template-facing instructions exclusively and never uses it for published
-// content — a leftover instruction line is always scaffolding, never real
-// body text, in a document generated from these templates. Must run before
-// scanForSigmaTerminology(): the instructions themselves are full of Sigma
-// vocabulary by design (§2.6), so scanning before stripping would fail
-// every freshly generated document on its own template text.
-export function stripTemplateInstructions(content: string): { cleaned: string; strippedLines: number } {
-  const lines = content.split('\n');
-  let stripped = 0;
-  const kept = lines.filter(line => {
-    if (/^\s*>/.test(line)) {
-      stripped += 1;
-      return false;
-    }
-    return true;
-  });
-  return { cleaned: kept.join('\n'), strippedLines: stripped };
 }

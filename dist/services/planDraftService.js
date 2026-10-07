@@ -27,7 +27,6 @@ const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const roadmap_1 = require("../utils/roadmap");
-const projectConfig_1 = require("../engine/projectConfig");
 const controlStore_1 = require("../engine/controlStore");
 class PlanDraftError extends Error {
     constructor(code, message) {
@@ -72,28 +71,6 @@ function assertGatesOpen(projectRoot, chain) {
     }
     if (!getRoadmapPathIfEligible(projectRoot, chain)) {
         throw new PlanDraftError('GATE_BLOCKED', 'Gate 1.5 blocked: A ROADMAP must exist for this chain before FMN-PLAN can be created. Run: sigma roadmap new');
-    }
-    // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.4/§4 Fase 6 (CR-01) — project-config
-    // driven, optional. Enforced here (not at intent ratify/exec lock) so it
-    // applies identically to both callers of this service, exactly as it does
-    // for the CLI command being replaced.
-    const humanizeGate = (0, projectConfig_1.readProjectConfig)(projectRoot).notion_humanize_gate;
-    if (humanizeGate?.enabled) {
-        const blockers = [];
-        if (!chain.intent.human?.pushed_to_notion_at) {
-            blockers.push(`DIR-INTENT ${chain.intent.version} has no human projection pushed to Notion yet. ` +
-                'Run: sigma intent humanize (then) sigma notion push');
-        }
-        const latestLockedExec = chain.exec.versions
-            .filter(v => v.state === 'LOCKED')
-            .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
-        if (latestLockedExec && !latestLockedExec.human?.pushed_to_notion_at) {
-            blockers.push(`DEV-EXEC ${latestLockedExec.version} has no human projection pushed to Notion yet. ` +
-                `Run: sigma exec humanize --v ${latestLockedExec.version} (then) sigma notion push`);
-        }
-        if (blockers.length > 0) {
-            throw new PlanDraftError('GATE_BLOCKED', 'HUMANIZE GATE BLOCKED (notion_humanize_gate.enabled): ' + blockers.join(' | '));
-        }
     }
     return chain.intent.version;
 }

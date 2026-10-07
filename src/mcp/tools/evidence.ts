@@ -87,7 +87,6 @@ export function computeGetEvidence(
     plan_version_ref: picked.plan_version_ref ?? null,
     title: picked.title ?? null,
     focus: picked.focus ?? null,
-    human: picked.human ?? null,
     present,
     path: relPath,
     bytes,
@@ -102,7 +101,7 @@ export function registerGetEvidenceTool(server: McpServer): void {
     {
       title: 'Get Sigma Evidence Status',
       description:
-        'Return status/reference metadata for one plan or exec artifact version of the active chain: state, timestamps, supersede/version refs, humanize status, and — if a file is registered for that version — its canonical relative path, byte size and sha256. Does NOT return document content (use sigma_read_artifact for that) and does not read any log file. Read-only. Returns { active, active_chain, evidence_type, version, state, created_at, updated_at, locked_at, superseded_by, supersede_reason, intent_version_ref, plan_version_ref, title, focus, human, present, path, bytes, sha256, source }.',
+        'Return status/reference metadata for one plan or exec artifact version of the active chain: state, timestamps, supersede/version refs, and — if a file is registered for that version — its canonical relative path, byte size and sha256. Does NOT return document content (use sigma_read_artifact for that) and does not read any log file. Read-only. Returns { active, active_chain, evidence_type, version, state, created_at, updated_at, locked_at, superseded_by, supersede_reason, intent_version_ref, plan_version_ref, title, focus, present, path, bytes, sha256, source }.',
       inputSchema: {
         type: z
           .enum(['plan', 'exec'])

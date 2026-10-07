@@ -500,7 +500,6 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
-      'sigma_close_humanize',
       'sigma_commit_close_lock',
       'sigma_commit_close_new',
       'sigma_commit_exec_lock',
@@ -515,9 +514,7 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
       'sigma_create_intent_draft',
       'sigma_create_plan_draft',
       'sigma_create_roadmap_draft',
-      'sigma_exec_humanize',
       'sigma_inbox_archive',
-      'sigma_intent_humanize',
       'sigma_prepare_close_lock',
       'sigma_prepare_close_new',
       'sigma_prepare_exec_lock',

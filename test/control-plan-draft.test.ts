@@ -189,7 +189,7 @@ describe('sigma_create_plan_draft — role and gate boundary', () => {
     env.cleanup();
   });
 
-  it('respects notion_humanize_gate when enabled — blocks until the RATIFIED intent has a human projection pushed', () => {
+  it('ignores a legacy notion_humanize_gate.enabled key — F14 removed the gate, so plan creation is not blocked', () => {
     const env = setupTestEnv();
     bootstrapReadyProject(env);
     fs.writeJsonSync(path.join(env.projectDir, 'Sigma', 'project.config.json'), {
@@ -200,8 +200,8 @@ describe('sigma_create_plan_draft — role and gate boundary', () => {
       notion_humanize_gate: { enabled: true },
     });
 
-    expect(() => callCreate(env.projectDir)).toThrow(/HUMANIZE GATE BLOCKED/);
-    expect(readChain(env.projectDir, 'v1').plan.versions).toEqual([]);
+    expect(() => callCreate(env.projectDir)).not.toThrow();
+    expect(readChain(env.projectDir, 'v1').plan.versions).toHaveLength(1);
     env.cleanup();
   });
 });

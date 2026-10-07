@@ -1,7 +1,7 @@
 # F14 - Penghapusan proyeksi HUMAN dan integrasi Notion
 
 Tanggal: 7 Oktober 2026
-Status: RENCANA DISETUJUI, BELUM DIEKSEKUSI. Seluruh butir H-1 sampai H-9 dijawab Director (7 Oktober 2026). Keputusan Director: eksekusi dilakukan di sesi baru, bukan di sesi perencanaan ini. Belum ada kode, rules, template, registry, skill, atau konfigurasi yang diubah. Catatan serah terima ada di bagian 11.
+Status: DIEKSEKUSI (7 Oktober 2026), belum di-commit. W0 sampai W8 selesai: build tunggal, 44 berkas `dist/` basi dihapus, `npm test` 67 file / 907 test hijau, `refresh-registries:dry` Removed 0 dengan 58 operasi terdaftar. Rincian dan hal di luar teks rencana ada di bagian 12.
 Dasar: instruksi Director 7 Oktober 2026 (hapus penerapan dokumen human; hapus penerapan Notion; rekomendasikan nasib `sigma humanize`; rencana lebih dulu), keputusan D-13 pada dokumen 28 September, F13 butir O-7 (Notion ditinggalkan), dan [F00](F00_indeks-dan-register.md).
 Label: **TERKUNCI** (keputusan Director), **TERVERIFIKASI** (diperiksa pada berkas), **REKOMENDASI** (asisten, belum keputusan).
 
@@ -175,3 +175,20 @@ Hal yang berlaku:
 - Build dilaporkan ke Director sebelum dijalankan (sigma-mcp terpasang lewat symlink global; `dist/` dilacak Git). Commit hanya atas instruksi Director, dalam tiga kelompok (bagian 10).
 - Pelajaran dari F13: `tsc` tidak menghapus keluaran dari sumber yang dihapus; `npm test` dijalankan sesudah build, bukan sebelumnya, karena test CLI memakai `dist/`.
 - Penutup F14: perbarui F00 (D-13 ditutup, baris F14 selesai) dan lampiran keterlacakan bila ada rules yang berubah.
+
+## 12. Catatan eksekusi
+
+Hasil: 991 test sebelum, 907 sesudah. Selisih: tujuh file dihapus (93 test terdaftar, bukan 84 karena `it.each` menghitung per kasus), 3 test `stripTemplateInstructions` dan 1 test `config show` dihapus, 13 test regresi ditambahkan (`test/f14-removal.test.ts`).
+
+Keputusan di luar teks rencana (diterima Director, 7 Oktober 2026):
+1. `assertCloseNewEligible(chain)` kehilangan parameter `projectRoot`.
+2. `sigma_get_evidence` tidak lagi mengembalikan bidang `human`.
+3. Empat berkas skill `sigma-test` tidak lagi memeriksa `Sigma/human/`.
+4. Protocol baris `Sigma/notes/` menjadi "Free-form notes".
+5. README: tool control server 32 menjadi 29.
+6. CHANGELOG: entri "Removed" masuk ke `[Unreleased]` karena belum ada heading 2.0.0.
+
+Temuan di luar F14, tidak diubah:
+- `dist/engine/progress.js` basi (sumbernya sudah tidak ada sebelum F14).
+- `refresh-registries:dry` melaporkan 7 operasi belum terdaftar (`config_set_mailbox_outdate_keep`, `config_set_memo_limit`, `control_show`, `control_approve`, `control_reject`, `inbox_clear`, `intent_lock`). Tidak terkait F14.
+- F01 daftar periksa masih memuat empat baris template HUMAN yang berkasnya sudah dihapus.

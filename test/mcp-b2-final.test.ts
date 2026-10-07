@@ -101,12 +101,12 @@ describe('sigma_check_mailbox_integrity', () => {
 });
 
 describe('sigma_get_config', () => {
-  it('returns language/gate/mailbox settings with no credential fields', () => {
+  it('returns language/mailbox settings with no credential fields', () => {
     const env = project();
     const out = computeGetConfig(env.projectDir) as Payload;
     expect(out.active).toBe(true);
     expect(out).toHaveProperty('interaction_language');
-    expect(out).toHaveProperty('notion_humanize_gate_enabled');
+    expect(out).not.toHaveProperty('notion_humanize_gate_enabled');
     expect(JSON.stringify(out).toLowerCase()).not.toMatch(/token|secret|api_key|credential/);
   });
 });

@@ -7,9 +7,9 @@
 // DIR-CLOSE artifact that does not exist yet — there is nothing to freeze a
 // pre-existing sha256 against. The MCP control tool's operation ticket
 // therefore carries `target: null` and relies on `expected_state_revision`
-// alone for drift detection (every precondition here — Gate 3, Gate 3.5,
-// humanize gate — is itself a function of chain.json's own bytes, which
-// state_revision already hashes).
+// alone for drift detection (every precondition here — Gate 3, Gate 3.5 —
+// is itself a function of chain.json's own bytes, which state_revision
+// already hashes).
 
 import path from 'path';
 import {
@@ -26,7 +26,6 @@ import {
 } from '../engine/chain';
 import { toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
-import { readProjectConfig } from '../engine/projectConfig';
 import { validateSigmaDocFile, SigmaDocCheckReport } from '../utils/docCheck';
 
 export class CloseNewError extends Error {
@@ -43,7 +42,7 @@ function closeDraftRelPath(chain: ChainState): string {
 /** Re-runs every close_new precondition against a live chain, without
  *  writing anything — used by both prepare (freeze the ticket only if this
  *  would currently succeed) and by CLI's own preflight message. */
-export function assertCloseNewEligible(projectRoot: string, chain: ChainState): void {
+export function assertCloseNewEligible(chain: ChainState): void {
   if (!hasCleanGate3Chain(chain)) {
     const blockers = describeGate3Blockers(chain);
     const lines = ['GATE 3 BLOCKED: the chain still has open work.', ...blockers.map(r => `  ${r}`)];
@@ -69,21 +68,6 @@ export function assertCloseNewEligible(projectRoot: string, chain: ChainState): 
       `DIR-CLOSE already exists for this chain (${chain.close.version}, ${chain.close.state}). Resolve or lock the existing DIR-CLOSE first.`
     );
   }
-
-  const humanizeGate = readProjectConfig(projectRoot).notion_humanize_gate;
-  if (humanizeGate?.enabled) {
-    const latestLockedExec = chain.exec.versions
-      .filter(v => v.state === 'LOCKED')
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
-    if (latestLockedExec && !latestLockedExec.human?.pushed_to_notion_at) {
-      throw new CloseNewError(
-        'GATE_BLOCKED',
-        `HUMANIZE GATE BLOCKED (notion_humanize_gate.enabled): DEV-EXEC ${latestLockedExec.version} ` +
-        'has no human projection pushed to Notion yet.\n' +
-        `  Run: sigma exec humanize --v ${latestLockedExec.version}   (then)   sigma notion push`
-      );
-    }
-  }
 }
 
 export interface CreateCloseDraftResult {
@@ -108,7 +92,7 @@ export function closeNewTransactionFiles(projectRoot: string): string[] {
 export function createCloseDraftUseCase(projectRoot: string): CreateCloseDraftResult {
   const { chainVersion, data: chain } = readActiveChain(projectRoot);
   assertChainCanMutate(chain);
-  assertCloseNewEligible(projectRoot, chain);
+  assertCloseNewEligible(chain);
 
   const version = chain.chain_version;
   const relPath = closeDraftRelPath(chain);

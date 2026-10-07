@@ -8,9 +8,9 @@
 // DIR-CLOSE artifact that does not exist yet — there is nothing to freeze a
 // pre-existing sha256 against. The MCP control tool's operation ticket
 // therefore carries `target: null` and relies on `expected_state_revision`
-// alone for drift detection (every precondition here — Gate 3, Gate 3.5,
-// humanize gate — is itself a function of chain.json's own bytes, which
-// state_revision already hashes).
+// alone for drift detection (every precondition here — Gate 3, Gate 3.5 —
+// is itself a function of chain.json's own bytes, which state_revision
+// already hashes).
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -23,7 +23,6 @@ const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
-const projectConfig_1 = require("../engine/projectConfig");
 const docCheck_1 = require("../utils/docCheck");
 class CloseNewError extends Error {
     constructor(code, message) {
@@ -39,7 +38,7 @@ function closeDraftRelPath(chain) {
 /** Re-runs every close_new precondition against a live chain, without
  *  writing anything — used by both prepare (freeze the ticket only if this
  *  would currently succeed) and by CLI's own preflight message. */
-function assertCloseNewEligible(projectRoot, chain) {
+function assertCloseNewEligible(chain) {
     if (!(0, chain_1.hasCleanGate3Chain)(chain)) {
         const blockers = (0, chain_1.describeGate3Blockers)(chain);
         const lines = ['GATE 3 BLOCKED: the chain still has open work.', ...blockers.map(r => `  ${r}`)];
@@ -59,17 +58,6 @@ function assertCloseNewEligible(projectRoot, chain) {
     if (chain.close !== null && chain.close.state !== 'SUPERSEDED') {
         throw new CloseNewError('INVALID_OPERATION', `DIR-CLOSE already exists for this chain (${chain.close.version}, ${chain.close.state}). Resolve or lock the existing DIR-CLOSE first.`);
     }
-    const humanizeGate = (0, projectConfig_1.readProjectConfig)(projectRoot).notion_humanize_gate;
-    if (humanizeGate?.enabled) {
-        const latestLockedExec = chain.exec.versions
-            .filter(v => v.state === 'LOCKED')
-            .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
-        if (latestLockedExec && !latestLockedExec.human?.pushed_to_notion_at) {
-            throw new CloseNewError('GATE_BLOCKED', `HUMANIZE GATE BLOCKED (notion_humanize_gate.enabled): DEV-EXEC ${latestLockedExec.version} ` +
-                'has no human projection pushed to Notion yet.\n' +
-                `  Run: sigma exec humanize --v ${latestLockedExec.version}   (then)   sigma notion push`);
-        }
-    }
 }
 function closeNewTransactionFiles(projectRoot) {
     const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
@@ -83,7 +71,7 @@ function closeNewTransactionFiles(projectRoot) {
 function createCloseDraftUseCase(projectRoot) {
     const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
     (0, chain_1.assertChainCanMutate)(chain);
-    assertCloseNewEligible(projectRoot, chain);
+    assertCloseNewEligible(chain);
     const version = chain.chain_version;
     const relPath = closeDraftRelPath(chain);
     const absPath = path_1.default.join(projectRoot, relPath);

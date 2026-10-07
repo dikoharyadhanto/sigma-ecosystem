@@ -29,7 +29,6 @@ import {
 import { toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { renderRoadmapFile } from '../utils/roadmap';
-import { readProjectConfig } from '../engine/projectConfig';
 import { controlTestFailpoint } from '../engine/controlStore';
 
 export class PlanDraftError extends Error {
@@ -92,34 +91,6 @@ function assertGatesOpen(projectRoot: string, chain: ChainState): string {
       'Gate 1.5 blocked: A ROADMAP must exist for this chain before FMN-PLAN can be created. Run: sigma roadmap new'
     );
   }
-
-  // PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §3.4/§4 Fase 6 (CR-01) — project-config
-  // driven, optional. Enforced here (not at intent ratify/exec lock) so it
-  // applies identically to both callers of this service, exactly as it does
-  // for the CLI command being replaced.
-  const humanizeGate = readProjectConfig(projectRoot).notion_humanize_gate;
-  if (humanizeGate?.enabled) {
-    const blockers: string[] = [];
-    if (!chain.intent.human?.pushed_to_notion_at) {
-      blockers.push(
-        `DIR-INTENT ${chain.intent.version} has no human projection pushed to Notion yet. ` +
-        'Run: sigma intent humanize (then) sigma notion push'
-      );
-    }
-    const latestLockedExec = chain.exec.versions
-      .filter(v => v.state === 'LOCKED')
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
-    if (latestLockedExec && !latestLockedExec.human?.pushed_to_notion_at) {
-      blockers.push(
-        `DEV-EXEC ${latestLockedExec.version} has no human projection pushed to Notion yet. ` +
-        `Run: sigma exec humanize --v ${latestLockedExec.version} (then) sigma notion push`
-      );
-    }
-    if (blockers.length > 0) {
-      throw new PlanDraftError('GATE_BLOCKED', 'HUMANIZE GATE BLOCKED (notion_humanize_gate.enabled): ' + blockers.join(' | '));
-    }
-  }
-
   return chain.intent.version;
 }
 

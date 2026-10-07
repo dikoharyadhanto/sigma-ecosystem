@@ -3,12 +3,11 @@ import fs from 'fs-extra';
 import path from 'path';
 import {
   scanForSigmaTerminology,
-  stripTemplateInstructions,
   loadTerminologyList,
 } from '../src/engine/terminologyScanner';
 import { setupTestEnv, runCli, stubProjectRootAnchor, stubProjectIdentity, TestEnv } from './helpers';
 
-// PLAN-IMPL-SIGMA-HUMANIZE-OPERATION §2.6/§2.7/§2.10, Fase 5/5a/5b.
+// Terminology matcher, term-list loading, and the `sigma scan` command.
 
 describe('scanForSigmaTerminology()', () => {
   it('finds terms with line number and line text', () => {
@@ -39,51 +38,6 @@ describe('scanForSigmaTerminology()', () => {
 
   it('matches multi-word terms like "Gate 2"', () => {
     expect(scanForSigmaTerminology('Blocked on Gate 2 review.', ['Gate 2'])).toHaveLength(1);
-  });
-});
-
-describe('stripTemplateInstructions()', () => {
-  it('removes every blockquote line, keeps everything else', () => {
-    const content = [
-      '# Title',
-      '',
-      '> Source: DIR-INTENT §1. Class: Preserve.',
-      '> Do not include this in the output.',
-      '',
-      'This is real published content.',
-      '',
-      '## Section',
-      '> Another instruction.',
-      'More real content.',
-    ].join('\n');
-
-    const { cleaned, strippedLines } = stripTemplateInstructions(content);
-
-    expect(strippedLines).toBe(3);
-    expect(cleaned).not.toContain('>');
-    expect(cleaned).toContain('This is real published content.');
-    expect(cleaned).toContain('More real content.');
-  });
-
-  it('is a no-op on content with no blockquotes', () => {
-    const content = 'Just plain text.\nAnother line.';
-    const { cleaned, strippedLines } = stripTemplateInstructions(content);
-    expect(strippedLines).toBe(0);
-    expect(cleaned).toBe(content);
-  });
-
-  it('running the terminology scanner after stripping avoids false failures on instruction text', () => {
-    // The core reason stripping must run first (§2.7 tahap 0): instructions
-    // are intentionally full of Sigma vocabulary and would otherwise fail
-    // every freshly generated document on their own template text.
-    const content = [
-      '> Source: FMN-PLAN §3 Work Order. Class: Preserve.',
-      'The team shipped a CSV export button.',
-    ].join('\n');
-
-    const { cleaned } = stripTemplateInstructions(content);
-    expect(scanForSigmaTerminology(cleaned, ['FMN-PLAN'])).toEqual([]);
-    expect(scanForSigmaTerminology(content, ['FMN-PLAN'])).toHaveLength(1);
   });
 });
 

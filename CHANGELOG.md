@@ -10,6 +10,18 @@ All notable changes to this project are documented in this file. The format loos
 - A separate `sigma-control` MCP server with bounded writes, operation tickets, durable local Director approvals, transaction recovery, idempotency, and audit records.
 - Shared CLI/MCP services for draft and governance operations, with regression coverage for role boundaries, concurrent writes, and stale approvals.
 
+### Removed
+
+Breaking: the human-readable projections and the Notion integration were removed.
+
+- The `sigma notion` command and its eight subcommands (`setup`, `enable`, `disable`, `status`, `push`, `pull-state`, `pull`, `progress`), with their code, credential handling, and `.sigma-remote-state.json` marker handling.
+- The `sigma intent humanize`, `sigma exec humanize`, and `sigma close humanize` commands, the three `sigma_intent_humanize`, `sigma_exec_humanize`, and `sigma_close_humanize` MCP control tools, and the `intent_humanize`, `exec_humanize`, and `close_humanize` operation registry entries (61 operations become 58; the control server registers 29 tools instead of 32).
+- The Notion humanize gate: `plan new` and `close new` are no longer blocked by `notion_humanize_gate`, the `--humanize-gate` and `--no-humanize-gate` options of `sigma project start` (scripts that pass them now fail with "unknown option"), the Notion Humanize Gate line of `sigma config show`, and the `notion_humanize_gate_enabled` field of `sigma_get_config`.
+- The `DIR-INTENT-HUMAN`, `PLAN-EXEC-HUMAN`, `DIR-CLOSE-HUMAN`, and `HUMAN-FIDELITY-LEDGER` templates, the Fidelity Ledger coverage check, and the `human` field of `sigma_get_evidence` results. New projects no longer get a `Sigma/human/` folder.
+- The `notion_humanize_gate`, `Fidelity Ledger`, and `humanize` entries of the bundled terminology list.
+
+Existing data is left in place and ignored: `notion` and `notion_humanize_gate` keys in `project.config.json`, `human` fields in chain files (both are preserved when the file is rewritten), `Sigma/human/` files, and the Notion credentials file in `~/.sigma`. Data already pushed to Notion is not touched. The `/humanize` skill and `sigma scan` are kept.
+
 ### Fixed
 
 - Shared current/legacy artifact layout resolution between CLI reconstruction and MCP reads.

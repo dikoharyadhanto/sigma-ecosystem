@@ -79,7 +79,6 @@ Check that the following paths exist relative to the project root:
 - `Sigma/roadmap/`
 - `Sigma/evidence/`
 - `Sigma/close/`
-- `Sigma/human/`
 - `Sigma/notes/`
 - `Sigma/rules/`
 - `Sigma/logs/`
@@ -124,7 +123,6 @@ Platform: Claude Code
 | Project | `Sigma/roadmap/` | PASS/WARN/N/A | |
 | Project | `Sigma/evidence/` | PASS/WARN/N/A | |
 | Project | `Sigma/close/` | PASS/WARN/N/A | |
-| Project | `Sigma/human/` | PASS/WARN/N/A | |
 | Project | `Sigma/notes/` | PASS/WARN/N/A | |
 | Project | `Sigma/rules/` | PASS/WARN/N/A | |
 | Project | `Sigma/logs/` | PASS/WARN/N/A | |

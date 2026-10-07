@@ -27,8 +27,6 @@ Scope is broader than Sigma governance documents: a Discussion note, an email, a
 
 This skill never applies directly to `DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, `ROADMAP`, or `DIR-CLOSE` files — the artifact itself, not a document derived from it. These files must stay detailed and formally structured because the AI and the Sigma CLI read them directly: structural markers, checklists, and full technical detail are load-bearing, not incidental. This applies even to `DIR-CLOSE`, whose prose already reads close to human-friendly — the file still carries structural markers and lock state the CLI validates, so it is never edited in place either. Rewriting one of these files with this skill would corrupt the structure Sigma depends on.
 
-This skill produces separate documents derived from those artifacts — `DIR-INTENT-HUMAN`, `PLAN-EXEC-HUMAN`, `DIR-CLOSE-HUMAN`, and notes under `Sigma/notes/` — never the source artifact in place.
-
 ## Activation
 
 ```text
@@ -170,9 +168,3 @@ This applies regardless of what the source document is — a Sigma artifact, a D
 | `chain_version`, `progress-v<N>.json`, or any other internal state-machine term | any of these | omit entirely |
 
 The list above is not exhaustive — treat any word or code that only makes sense inside the Sigma governance system as forbidden, whether or not it's listed here.
-
-## Relationship to Sigma Humanize Operation
-
-`sigma intent humanize`, `sigma exec humanize`, and `sigma close humanize` are a separate, Sigma-specific pipeline with their own structural rules: which sections to include and source-fidelity invariants. Full detail lives in `PLAN-IMPL-SIGMA-HUMANIZE-OPERATION-20260816.md`. That pipeline applies the writing rules in this skill on top of its own content and structure rules. It does not redefine them, and this skill is not limited to documents destined for Notion.
-
-Every document the Sigma Humanize Operation writes for a Notion push is written using this skill — it is not optional for that pipeline. On top of this skill's Rule 8, that document additionally goes through a mandatory automatic scan for Sigma terminology immediately before the push. A single detected term fails the push outright; the document does not reach Notion until it is clean. This scan applies only to documents destined for Notion through that pipeline — it is a stricter, mechanically enforced layer on top of this skill's general rules, not a replacement for them.
