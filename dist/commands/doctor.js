@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.doctorCommand = doctorCommand;
 const path_1 = __importDefault(require("path"));
+const mailboxMigration_1 = require("../engine/mailboxMigration");
 const commander_1 = require("commander");
 const chain_1 = require("../engine/chain");
 const reconstruct_1 = require("../engine/reconstruct");
@@ -39,7 +40,14 @@ function checkDevWorkspace(projectRoot) {
     }
 }
 function collectDiagnostics(projectRoot) {
-    return [checkMemoTemplate(projectRoot), checkDevWorkspace(projectRoot)].filter((w) => w !== null);
+    const warnings = [checkMemoTemplate(projectRoot), checkDevWorkspace(projectRoot)].filter((w) => w !== null);
+    try {
+        warnings.push(...(0, mailboxMigration_1.mailboxMigrationDiagnosis)(projectRoot).warnings);
+    }
+    catch (err) {
+        warnings.push(`Mailbox diagnosis failed: ${err.message}`);
+    }
+    return warnings;
 }
 // PLAN-EVAL-01 Fase 4 / PLAN-EVAL-05 — every mode below now targets
 // Sigma/progress-v<N>.json via chain.ts. `--reconstruct` (3 modes) and
@@ -113,6 +121,8 @@ function runAllVersionsDoctor() {
     console.log('\n=== Sigma Doctor — All Versions ===\n');
     if (versions.length === 0) {
         console.log('No chain exists yet. Nothing to reconcile. Run: sigma intent new');
+        for (const warning of collectDiagnostics(projectRoot))
+            console.log(`[WARN] ${warning}`);
         console.log('');
         return;
     }
@@ -142,6 +152,8 @@ function runAllVersionsDoctor() {
         console.log('');
     }
     (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — self-heal net
+    for (const warning of collectDiagnostics(projectRoot))
+        console.log(`[WARN] ${warning}`);
     const workspaceWarning = checkDevWorkspace(projectRoot);
     if (workspaceWarning) {
         console.log('--- Diagnostics ---');
@@ -256,6 +268,8 @@ function runReconstruct(opts) {
     else {
         (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — self-heal net
     }
+    for (const warning of collectDiagnostics(projectRoot))
+        console.log(`[WARN] ${warning}`);
     console.log('');
 }
 // ── --repair-workspace ───────────────────────────────────────────────────────
@@ -290,9 +304,19 @@ function doctorCommand() {
         .option('--all-versions', 'Apply to every chain found on disk instead of just the active one')
         .option('--reconstruct', 'Rebuild chain file(s) from artifact files on disk (use when a progress-v<N>.json is missing or corrupted)')
         .option('--v <version>', 'With --reconstruct, target one specific chain instead of the active one (e.g. v2)', chain_1.normalizeVersionArg)
+        .option('--migrate-mailbox', 'Move legacy messages/memos to LEGACY and reset legacy UNREAD to READ')
+        .option('--dry-run', 'With --migrate-mailbox: preview without writing')
         .option('--repair-workspace', 'Recreate a missing DEV workspace folder or marker from the project identity (does not reconcile chains)')
-        .action((opts) => {
+        .action(async (opts) => {
         try {
+            if (opts.migrateMailbox) {
+                if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v || opts.repairWorkspace)
+                    throw new Error('--migrate-mailbox cannot be combined with chain/workspace doctor options.');
+                console.log(JSON.stringify(await (0, mailboxMigration_1.migrateMailbox)((0, fs_1.findProjectRoot)(), !!opts.dryRun), null, 2));
+                return;
+            }
+            if (opts.dryRun)
+                throw new Error('--dry-run requires --migrate-mailbox.');
             if (opts.repairWorkspace) {
                 if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v) {
                     throw new Error('--repair-workspace cannot be combined with other doctor options.');
@@ -318,7 +342,7 @@ function doctorCommand() {
         }
         catch (e) {
             console.error(e.message);
-            process.exit(1);
+            process.exitCode = 1;
         }
     });
     return cmd;

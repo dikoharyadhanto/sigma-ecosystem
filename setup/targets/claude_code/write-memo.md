@@ -60,7 +60,7 @@ The Director may give the activation phrase in whichever language the current se
 ## Steps
 
 1. **Determine the active role.** ARC, FMN, DEV, or AUD — whichever role is active in the current session. DIRECTOR never writes or receives memos.
-2. **Determine `--ref`.** One of `INTENT-vN`, `PLAN-vN`, `EXEC-vN` (whichever artifact this memo's content actually concerns — not necessarily the chain's current phase), or `GENERAL` if the memo is not tied to a specific governed artifact (e.g. pre-INTENT Professional Mode exploration, or a purely operational note). If genuinely ambiguous, ask the Director once rather than guessing.
+2. **Determine `--ref`.** One of `INTENT-vN`, `ROADMAP-vN`, `PLAN-vN.minor`, `EXEC-vN.minor`, `CLOSE-vN` (whichever artifact this memo's content actually concerns — not necessarily the chain's current phase), or `GENERAL` if the memo is not tied to a specific governed artifact (e.g. pre-INTENT Professional Mode exploration, or a purely operational note). If genuinely ambiguous, ask the Director once rather than guessing.
 3. **Compose `--topic`.** One sentence, concrete enough that it is useful on its own in a list of memos (`sigma memo list`). This becomes the memo's subject if `--subject` is not given separately.
 4. **Write the four narrative sections**, following `Sigma/templates/MEMO-TEMPLATE.md`. Keep every section brief — see "Keeping Memos Brief" above if something needs more than a couple of sentences:
    - **Context** — 2-3 sentences on the direction of this session's discussion and why it stopped here. Not a summary of artifact content. May be `—` if there is nothing beyond what the artifacts already say.
@@ -76,7 +76,7 @@ The Director may give the activation phrase in whichever language the current se
 
 ## If The Quota Is Full
 
-`sigma memo write` fails with the current role's unread memo list when the per-role quota (default 5) is reached. Do not attempt to force it. Surface the blocked list to the Director and ask whether to read (and act on) the oldest unread memos first, or whether one of them is now safe to leave unread a while longer.
+`sigma memo write` fails with the current role's unread memo list when the per-INTENT, per-role quota (default 5; GENERAL separate) is reached. Do not attempt to force it. Surface the blocked list to the Director and ask whether to read (and act on) the oldest unread memos first, or whether one of them is now safe to leave unread a while longer.
 
 ## Forbidden Operations
 
@@ -90,3 +90,7 @@ The free-form `Sigma/notes/` file this skill may create per "Keeping Memos Brief
 ## No Invented Content
 
 Every pointer under "Reorientation — Read" and every instruction under "Next Actions" must be grounded in the actual current session — an artifact that exists, a message id that exists, a path genuinely tried. Do not invent a reference to make the memo look more complete.
+
+## Mailbox per INTENT
+
+Mailbox context: choose a registered INTENT/ROADMAP/PLAN/EXEC/CLOSE reference owned by the active INTENT, or GENERAL. Legacy PLAN/EXEC numbers resolve through chain membership, not their major prefix. Memo files are generated under Sigma/memo/{ROLE}/{CONTEXT}/. The UNREAD quota is per INTENT and role (default 5); GENERAL has a separate per-role quota. Unknown versions are stored in GENERAL with a warning and never reclassified automatically. If migration is required, report the doctor guidance; do not migrate or reset statuses on your own initiative.

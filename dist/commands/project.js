@@ -291,8 +291,13 @@ async function runStart(opts) {
         fs_extra_1.default.ensureDirSync(path_1.default.join(messagesDir, sub));
     }
     const indexPath = path_1.default.join(projectRoot, config_1.MESSAGES_INDEX_FILE);
-    fs_extra_1.default.writeJsonSync(indexPath, { messages: [] }, { spaces: 2 });
-    console.log('  Mailbox: Sigma/messages/ initialized.');
+    fs_extra_1.default.writeJsonSync(indexPath, { mailbox_format: 2, messages: [] }, { spaces: 2 });
+    for (const role of config_1.MESSAGING_ROLES)
+        for (const context of ['GENERAL', 'LEGACY']) {
+            fs_extra_1.default.ensureDirSync(path_1.default.join(messagesDir, role, context));
+            fs_extra_1.default.ensureDirSync(path_1.default.join(projectRoot, 'Sigma', 'memo', role, context));
+        }
+    console.log('  Mailbox: Sigma/messages/ and Sigma/memo/ initialized.');
     if ((0, fs_1.fileExists)(BUNDLE_ROLE_MEMORY_DIR)) {
         fs_extra_1.default.copySync(BUNDLE_ROLE_MEMORY_DIR, path_1.default.join(sigmaDir, 'role-memory'), { overwrite: true });
         console.log('  Role memory: Sigma/role-memory/ copied from bundle.');

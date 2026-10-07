@@ -1,7 +1,11 @@
 import fs from 'fs-extra';
 import path from 'path';
+import crypto from 'crypto';
+import { assertMailboxLease } from './mailboxLock';
+import { atomicReplaceFileSync } from '../utils/fs';
+import { MailboxScope, matchesMailboxScope, validateMailboxContext, assertMailboxPath, mailboxDiskFiles, validateEntryMembership } from './mailboxContext';
+import { VALID_ROLES, VALID_MESSAGE_TYPES } from '../config';
 import {
-  MESSAGES_DIR,
   MESSAGES_INDEX_FILE,
   SigmaRole,
   MessageType,
@@ -26,9 +30,13 @@ export interface MessageEntry {
   reply_to?: string;
   related_artifact?: string;
   action?: ActionRequired;
+  intent_version?: string | null;
+  context?: string;
+  migration?: { original_file: string; original_status: string; migrated_at: string };
 }
 
 export interface MessageIndex {
+  mailbox_format?: 2;
   messages: MessageEntry[];
 }
 
@@ -43,7 +51,7 @@ function corruptionError(detail: string): Error {
   );
 }
 
-function validateIndexData(data: unknown): MessageIndex {
+export function validateMailboxIndexData(data: unknown): MessageIndex {
   if (typeof data !== 'object' || data === null) {
     throw corruptionError('root value is not an object');
   }
@@ -74,6 +82,7 @@ function validateIndexData(data: unknown): MessageIndex {
     }
   }
 
+  if (d.mailbox_format !== undefined && d.mailbox_format !== 2) throw corruptionError('unsupported mailbox_format');
   const ids = new Set<string>();
   const files = new Set<string>();
 
@@ -88,7 +97,7 @@ function validateIndexData(data: unknown): MessageIndex {
         throw corruptionError(`entry at index ${i} has missing or invalid field "${field}"`);
       }
     }
-    if (!Array.isArray(entry.attachments)) {
+    if (!Array.isArray(entry.attachments) || entry.attachments.some(a => typeof a !== 'string')) {
       throw corruptionError(`entry at index ${i} has invalid "attachments" field (must be an array)`);
     }
     if (!VALID_STATUSES.includes(entry.status as string)) {
@@ -104,13 +113,14 @@ function validateIndexData(data: unknown): MessageIndex {
       throw corruptionError(`duplicate file path "${file}" at index ${i}`);
     }
     files.add(file);
+    validateMailboxContext(entry as unknown as MessageEntry, d.mailbox_format as number | undefined);
   }
 
   return data as MessageIndex;
 }
 
 export function readIndex(projectRoot: string): MessageIndex {
-  const indexPath = path.join(projectRoot, MESSAGES_INDEX_FILE);
+  const indexPath = assertMailboxPath(projectRoot, MESSAGES_INDEX_FILE.replace(/\\/g, '/'));
   if (!fs.existsSync(indexPath)) return { messages: [] };
   let raw: unknown;
   try {
@@ -122,12 +132,18 @@ export function readIndex(projectRoot: string): MessageIndex {
       `Do not delete the file — message history may be recoverable from files in Sigma/messages/.`
     );
   }
-  return validateIndexData(raw);
+  return validateMailboxIndexData(raw);
 }
 
 export function writeIndex(projectRoot: string, index: MessageIndex): void {
   const indexPath = path.join(projectRoot, MESSAGES_INDEX_FILE);
-  fs.writeJsonSync(indexPath, index, { spaces: 2 });
+  validateMailboxIndexData(index);
+  assertMailboxPath(projectRoot, MESSAGES_INDEX_FILE.replace(/\\/g, '/'));
+  assertMailboxLease(projectRoot);
+  fs.ensureDirSync(path.dirname(indexPath));
+  const tmp = `${indexPath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  fs.writeJsonSync(tmp, index, { spaces: 2 });
+  atomicReplaceFileSync(tmp, indexPath);
 }
 
 export function generateTimestamp(): string {
@@ -184,6 +200,8 @@ export function buildMessageMarkdown(entry: MessageEntry, body: string): string 
 | Status         | ${entry.status} |
 | Created At     | ${entry.created_at} |
 ${replyToRow}| Related Artifact | ${relatedArtifact} |
+| Mailbox Context | ${entry.context ?? 'LEGACY'} |
+| Owning INTENT | ${entry.intent_version ?? '—'} |
 | Attachments    | ${attachmentCell} |
 
 ---
@@ -205,10 +223,10 @@ ${body}
 export function getUnreadForRole(
   index: MessageIndex,
   role: SigmaRole,
-  opts: { excludeMemo?: boolean } = {}
+  opts: { excludeMemo?: boolean; scope?: MailboxScope } = {}
 ): MessageEntry[] {
   return index.messages.filter(m =>
-    m.to === role && m.status === 'UNREAD' && (!opts.excludeMemo || m.type !== 'MEMO')
+    m.to === role && m.status === 'UNREAD' && (!opts.excludeMemo || m.type !== 'MEMO') && matchesMailboxScope(m, opts.scope)
   );
 }
 
@@ -220,9 +238,9 @@ export type InboxView = 'unread' | 'all' | 'outdated';
 
 // MEMO is self-to-self and has its own listing (`sigma memo list`) — never
 // shown in the cross-role `sigma inbox` view, in any tier.
-export function selectInboxMessages(index: MessageIndex, role: SigmaRole, view: InboxView): MessageEntry[] {
+export function selectInboxMessages(index: MessageIndex, role: SigmaRole, view: InboxView, scope?: MailboxScope): MessageEntry[] {
   return index.messages.filter(m => {
-    if (m.to !== role) return false;
+    if (m.to !== role || !matchesMailboxScope(m, scope)) return false;
     if (m.type === 'MEMO') return false;
     if (view === 'unread') return m.status === 'UNREAD';
     if (view === 'outdated') return m.status === 'OUTDATED';
@@ -230,20 +248,20 @@ export function selectInboxMessages(index: MessageIndex, role: SigmaRole, view: 
   });
 }
 
-export function getUnreadMemosForRole(index: MessageIndex, role: SigmaRole): MessageEntry[] {
-  return index.messages.filter(m => m.to === role && m.type === 'MEMO' && m.status === 'UNREAD');
+export function getUnreadMemosForRole(index: MessageIndex, role: SigmaRole, scope?: MailboxScope): MessageEntry[] {
+  return index.messages.filter(m => m.to === role && m.type === 'MEMO' && m.status === 'UNREAD' && matchesMailboxScope(m, scope));
 }
 
-export function countUnreadMemos(index: MessageIndex, role: SigmaRole): number {
-  return getUnreadMemosForRole(index, role).length;
+export function countUnreadMemos(index: MessageIndex, role: SigmaRole, scope?: MailboxScope): number {
+  return getUnreadMemosForRole(index, role, scope).length;
 }
 
 // READ messages addressed to `role`, oldest-first, beyond the `keep` most
 // recent by created_at — the ones `sigma inbox clear` and the `inbox read`
 // auto-sweep flip to OUTDATED. keep <= 0 selects every READ message.
-export function selectSurplusRead(index: MessageIndex, role: SigmaRole, keep: number): MessageEntry[] {
+export function selectSurplusRead(index: MessageIndex, role: SigmaRole, keep: number, scope?: MailboxScope, memo?: boolean): MessageEntry[] {
   const read = index.messages
-    .filter(m => m.to === role && m.status === 'READ')
+    .filter(m => m.to === role && m.status === 'READ' && matchesMailboxScope(m, scope) && (memo === undefined || (m.type === 'MEMO') === memo))
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
   if (keep <= 0) return read;
   if (read.length <= keep) return [];
@@ -261,6 +279,37 @@ export function updateMessageStatus(
   return entry;
 }
 
-export function resolveInboxDir(projectRoot: string, role: SigmaRole): string {
-  return path.join(projectRoot, MESSAGES_DIR, role);
+export function resolveInboxDir(projectRoot: string, role: SigmaRole, context = 'GENERAL', memo = false): string {
+  return assertMailboxPath(projectRoot, `Sigma/${memo ? 'memo' : 'messages'}/${role}/${context}`);
+}
+
+export function checkMailboxIntegrity(root: string) {
+  const index = readIndex(root);
+  const missingFiles: Array<{ id: string; file: string }> = [];
+  const missingAttachments: Array<{ id: string; path: string }> = [];
+  const invalidFields: Array<{ id: string; field: string; value: string }> = [];
+  let passes = 0;
+  const membershipCache = new Map();
+  for (const entry of index.messages) {
+    try { assertMailboxPath(root, entry.file, true); passes++; }
+    catch { missingFiles.push({ id: entry.id, file: entry.file }); }
+    for (const att of entry.attachments) {
+      try { assertMailboxPath(root, att, true); passes++; }
+      catch { missingAttachments.push({ id: entry.id, path: att }); }
+    }
+    for (const field of ['from', 'to'] as const) if (!(VALID_ROLES as readonly string[]).includes(entry[field])) invalidFields.push({ id: entry.id, field, value: entry[field] });
+    if (!(VALID_MESSAGE_TYPES as readonly string[]).includes(entry.type)) invalidFields.push({ id: entry.id, field: 'type', value: entry.type });
+    try { validateMailboxContext(entry, index.mailbox_format); if (index.mailbox_format === 2) validateEntryMembership(root, entry, membershipCache); }
+    catch (err) { invalidFields.push({ id: entry.id, field: 'context', value: (err as Error).message }); }
+  }
+  const indexed = new Set(index.messages.map(m => m.file));
+  const orphanFiles = mailboxDiskFiles(root).filter(file => {
+    if (indexed.has(file)) { passes++; return false; }
+    return true;
+  });
+  const failures = missingFiles.length + missingAttachments.length + invalidFields.length;
+  return {
+    ok: failures === 0, passes, warnings: orphanFiles.length, failures,
+    findings: { missing_files: missingFiles, orphan_files: orphanFiles, missing_attachments: missingAttachments, duplicate_ids: [] as string[], invalid_fields: invalidFields },
+  };
 }

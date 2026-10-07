@@ -13,12 +13,14 @@ exports.registerDoctorTool = registerDoctorTool;
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
+const mailboxMigration_1 = require("../../engine/mailboxMigration");
 // Pure core (PLAN-IMPL-01 §4-A).
 function computeDoctor(root) {
     if (!root)
         return (0, shared_1.noProject)();
+    const mailbox = (0, mailboxMigration_1.mailboxMigrationDiagnosis)(root);
     if ((0, chain_1.listChainVersions)(root).length === 0)
-        return (0, shared_1.noProject)();
+        return { active: true, findings: { repaired: [], invalidMarked: [], invalidCleared: [] }, mailbox, applied: false, source: shared_1.SOURCE_ENGINE };
     // readActiveChain returns a fresh in-memory projection; mutating it here does
     // not touch disk because we never writeChain.
     const { data } = (0, chain_1.readActiveChain)(root);
@@ -27,6 +29,7 @@ function computeDoctor(root) {
     return {
         active: true,
         findings,
+        mailbox,
         applied: false,
         source: shared_1.SOURCE_ENGINE,
     };
@@ -35,7 +38,7 @@ const zod_1 = require("zod");
 function registerDoctorTool(server) {
     server.registerTool('sigma_doctor', {
         title: 'Sigma Doctor (diagnosis only)',
-        description: 'Run Sigma runtime reconciliation as a READ-ONLY diagnosis and report what it would repair or flag, without writing to disk. Read-only. Accepts optional project_root parameter. Returns { active, findings, applied: false, source }.',
+        description: 'Diagnose Sigma runtime and mailbox migration/integrity without writing, including projects before their first INTENT. Mailbox migration/reset requires CLI doctor --migrate-mailbox. Accepts optional project_root. Returns { active, findings, mailbox, applied: false, source }.',
         inputSchema: {
             project_root: zod_1.z
                 .string()

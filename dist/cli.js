@@ -82,5 +82,8 @@ process.on('exit', (code) => {
         (0, operationLog_1.appendOperationLogEntry)(pendingOperation, code);
     }
 });
-program.parse(process.argv);
+program.parseAsync(process.argv).catch((err) => {
+    console.error(err.message);
+    process.exitCode = 1;
+});
 //# sourceMappingURL=cli.js.map

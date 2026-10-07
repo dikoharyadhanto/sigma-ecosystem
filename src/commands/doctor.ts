@@ -1,4 +1,5 @@
 import path from 'path';
+import { mailboxMigrationDiagnosis, migrateMailbox } from '../engine/mailboxMigration';
 import { Command } from 'commander';
 import {
   ChainState,
@@ -45,7 +46,10 @@ function checkDevWorkspace(projectRoot: string): string | null {
 }
 
 function collectDiagnostics(projectRoot: string): string[] {
-  return [checkMemoTemplate(projectRoot), checkDevWorkspace(projectRoot)].filter((w): w is string => w !== null);
+  const warnings = [checkMemoTemplate(projectRoot), checkDevWorkspace(projectRoot)].filter((w): w is string => w !== null);
+  try { warnings.push(...mailboxMigrationDiagnosis(projectRoot).warnings); }
+  catch (err) { warnings.push(`Mailbox diagnosis failed: ${(err as Error).message}`); }
+  return warnings;
 }
 
 // PLAN-EVAL-01 Fase 4 / PLAN-EVAL-05 — every mode below now targets
@@ -133,6 +137,7 @@ function runAllVersionsDoctor(): void {
 
   if (versions.length === 0) {
     console.log('No chain exists yet. Nothing to reconcile. Run: sigma intent new');
+    for (const warning of collectDiagnostics(projectRoot)) console.log(`[WARN] ${warning}`);
     console.log('');
     return;
   }
@@ -164,6 +169,7 @@ function runAllVersionsDoctor(): void {
 
   renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — self-heal net
 
+  for (const warning of collectDiagnostics(projectRoot)) console.log(`[WARN] ${warning}`);
   const workspaceWarning = checkDevWorkspace(projectRoot);
   if (workspaceWarning) {
     console.log('--- Diagnostics ---');
@@ -294,6 +300,7 @@ function runReconstruct(opts: { v?: string; allVersions?: boolean }): void {
     renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — self-heal net
   }
 
+  for (const warning of collectDiagnostics(projectRoot)) console.log(`[WARN] ${warning}`);
   console.log('');
 }
 
@@ -331,9 +338,17 @@ export function doctorCommand(): Command {
     .option('--all-versions', 'Apply to every chain found on disk instead of just the active one')
     .option('--reconstruct', 'Rebuild chain file(s) from artifact files on disk (use when a progress-v<N>.json is missing or corrupted)')
     .option('--v <version>', 'With --reconstruct, target one specific chain instead of the active one (e.g. v2)', normalizeVersionArg)
+    .option('--migrate-mailbox', 'Move legacy messages/memos to LEGACY and reset legacy UNREAD to READ')
+    .option('--dry-run', 'With --migrate-mailbox: preview without writing')
     .option('--repair-workspace', 'Recreate a missing DEV workspace folder or marker from the project identity (does not reconcile chains)')
-    .action((opts: { recovery?: boolean; allVersions?: boolean; reconstruct?: boolean; v?: string; repairWorkspace?: boolean }) => {
+    .action(async (opts: { recovery?: boolean; allVersions?: boolean; reconstruct?: boolean; v?: string; repairWorkspace?: boolean; migrateMailbox?: boolean; dryRun?: boolean }) => {
       try {
+        if (opts.migrateMailbox) {
+          if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v || opts.repairWorkspace) throw new Error('--migrate-mailbox cannot be combined with chain/workspace doctor options.');
+          console.log(JSON.stringify(await migrateMailbox(findProjectRoot(), !!opts.dryRun), null, 2));
+          return;
+        }
+        if (opts.dryRun) throw new Error('--dry-run requires --migrate-mailbox.');
         if (opts.repairWorkspace) {
           if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v) {
             throw new Error('--repair-workspace cannot be combined with other doctor options.');
@@ -358,7 +373,7 @@ export function doctorCommand(): Command {
         }
       } catch (e) {
         console.error((e as Error).message);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 

@@ -33,6 +33,7 @@ exports.archiveMessage = archiveMessage;
 const path_1 = __importDefault(require("path"));
 const mailbox_1 = require("../engine/mailbox");
 const config_1 = require("../config");
+const mailboxContext_1 = require("../engine/mailboxContext");
 const controlStore_1 = require("../engine/controlStore");
 class InboxArchiveError extends Error {
     constructor(code, message) {
@@ -48,6 +49,12 @@ function archiveMessageTransactionFiles(projectRoot) {
 function archiveMessage(input) {
     const { projectRoot, messageId, actorRole } = input;
     const index = (0, mailbox_1.readIndex)(projectRoot);
+    try {
+        (0, mailboxContext_1.assertMailboxMutable)(projectRoot, index);
+    }
+    catch (err) {
+        throw new InboxArchiveError('INVALID_OPERATION', err.message);
+    }
     const entry = index.messages.find(m => m.id === messageId);
     if (!entry) {
         throw new InboxArchiveError('INVALID_OPERATION', `Message not found: ${messageId}`);

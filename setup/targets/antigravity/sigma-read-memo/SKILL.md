@@ -74,3 +74,7 @@ Say so plainly — "no unread memos for `<role>`" — and continue. Do not treat
 ## No Invented Content
 
 Report only what the memo's content actually says and what was actually found when following its pointers under "Reorientation — Read". If a pointer resolves to something unexpected (the artifact section no longer says what the memo claims, the referenced message is gone), say so — do not paper over the discrepancy.
+
+## Mailbox per INTENT
+
+Mailbox context: the default list shows UNREAD memos of the active INTENT plus GENERAL UNREAD. Minor artifact versions share their owning INTENT, including legacy offset chains. History requires an explicit selector (--intent vN, --context GENERAL|LEGACY|vN.minor, or --all-intents) and does not activate another INTENT. Do not broaden the history search or read additional memo contents without Director instruction. LEGACY READ may be an administrative migration reset, not evidence of prior recipient understanding. If migration is required, report the doctor guidance; do not migrate on your own initiative.

@@ -90,7 +90,7 @@ export function configCommand(): Command {
 
   set.command('memo-limit <n>')
     .description(
-      'Set the max unread MEMO count per role before `sigma memo write` is blocked (default 5). ' +
+      'Set the max unread MEMO count per INTENT and role (GENERAL separate) before `sigma memo write` is blocked (default 5). ' +
       '0 disables the memo feature (mailbox.memo_unread_limit).'
     )
     .action((n: string) => {

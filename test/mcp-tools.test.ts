@@ -63,7 +63,7 @@ describe('sigma-mcp tools — project present but no chain yet', () => {
   let env: TestEnv;
   afterEach(() => env?.cleanup());
 
-  it('state/gates/artifacts/doctor report active:false with identity context', () => {
+  it('state/gates/artifacts report no chain; doctor can diagnose the mailbox before INTENT', () => {
     env = setupTestEnv();
     projectWithoutChain(env);
 
@@ -73,7 +73,8 @@ describe('sigma-mcp tools — project present but no chain yet', () => {
 
     expect((computeGates(env.projectDir) as Payload).active).toBe(false);
     expect((computeArtifacts(env.projectDir) as Payload).active).toBe(false);
-    expect((computeDoctor(env.projectDir) as Payload).active).toBe(false);
+    expect((computeDoctor(env.projectDir) as Payload).active).toBe(true);
+    expect((computeDoctor(env.projectDir) as Payload).applied).toBe(false);
   });
 
   it('orientation still works pre-intent (phase null, next op = intent new)', () => {
@@ -225,14 +226,15 @@ describe('sigma_get_orientation', () => {
 
     const now = new Date().toISOString();
     fs.outputJsonSync(path.join(env.projectDir, 'Sigma', 'messages', 'index.json'), {
+      mailbox_format: 2,
       messages: [
         {
           id: 'MSG-1', from: 'ARC', to: 'DEV', type: 'NOTE', subject: 'hi',
-          file: 'Sigma/messages/DEV/msg1.md', status: 'UNREAD', created_at: now, attachments: [],
+          file: 'Sigma/messages/DEV/GENERAL/msg1.md', intent_version: null, context: 'GENERAL', status: 'UNREAD', created_at: now, attachments: [],
         },
         {
           id: 'MSG-2', from: 'DEV', to: 'DEV', type: 'MEMO', subject: 'self note',
-          file: 'Sigma/messages/DEV/memo1.md', status: 'UNREAD', created_at: now, attachments: [],
+          file: 'Sigma/memo/DEV/GENERAL/memo1.md', intent_version: null, context: 'GENERAL', status: 'UNREAD', created_at: now, attachments: [],
         },
       ],
     });

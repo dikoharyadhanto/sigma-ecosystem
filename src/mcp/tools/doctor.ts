@@ -16,11 +16,13 @@ import {
 } from '../../engine/chain';
 import { noProject, SOURCE_ENGINE } from '../shared';
 import { respond } from '../contract';
+import { mailboxMigrationDiagnosis } from '../../engine/mailboxMigration';
 
 // Pure core (PLAN-IMPL-01 §4-A).
 export function computeDoctor(root: string | null): unknown {
   if (!root) return noProject();
-  if (listChainVersions(root).length === 0) return noProject();
+  const mailbox = mailboxMigrationDiagnosis(root);
+  if (listChainVersions(root).length === 0) return { active: true, findings: { repaired: [], invalidMarked: [], invalidCleared: [] }, mailbox, applied: false, source: SOURCE_ENGINE };
 
   // readActiveChain returns a fresh in-memory projection; mutating it here does
   // not touch disk because we never writeChain.
@@ -31,6 +33,7 @@ export function computeDoctor(root: string | null): unknown {
   return {
     active: true,
     findings,
+    mailbox,
     applied: false,
     source: SOURCE_ENGINE,
   };
@@ -44,7 +47,7 @@ export function registerDoctorTool(server: McpServer): void {
     {
       title: 'Sigma Doctor (diagnosis only)',
       description:
-        'Run Sigma runtime reconciliation as a READ-ONLY diagnosis and report what it would repair or flag, without writing to disk. Read-only. Accepts optional project_root parameter. Returns { active, findings, applied: false, source }.',
+        'Diagnose Sigma runtime and mailbox migration/integrity without writing, including projects before their first INTENT. Mailbox migration/reset requires CLI doctor --migrate-mailbox. Accepts optional project_root. Returns { active, findings, mailbox, applied: false, source }.',
       inputSchema: {
         project_root: z
           .string()

@@ -1,7 +1,7 @@
 # F02 - Penomoran chain dan warning bootstrap
 
 Tanggal: 7 Oktober 2026
-Status: Implementasi dan validasi selesai 7 Oktober 2026 setelah persetujuan O-1 sampai O-3 dan eksekusi; 68 berkas / 934 tes lulus, kode keluar npm/Vitest 0. Belum di-commit.
+Status: Implementasi dan validasi selesai 7 Oktober 2026 setelah persetujuan O-1 sampai O-3 dan eksekusi; 68 berkas / 934 tes lulus, kode keluar npm/Vitest 0. Di-commit Director dalam `0c3e3b1`; push dilaporkan Director pada 7 Oktober 2026, dan main sejajar dengan origin/main menurut referensi lokal.
 Basis verifikasi awal: branch `main`, HEAD `5d8ff01`. Tahap penyusunan dilakukan read-only; implementasi, build, dan pengujian dimulai setelah persetujuan eksplisit Director. Hasil akhir dicatat di bagian 10.
 Sifat dokumen: rencana kerja pengembangan master Sigma, bukan artefak PLAN proyek terdaftar dan bukan otorisasi implementasi.
 
@@ -200,7 +200,7 @@ Constructor tetap memiliki default legacy untuk kompatibilitas pemanggil lama/fi
 - `test/chain-numbering.test.ts`: **25 tes lulus**, mencakup kedua skema, minor berlubang, benturan file, metadata, chain DRAFT lama, active-only bootstrap, pemulihan state/marker hilang, konflik dua pemilik, dan artefak tanpa INTENT.
 - Tes transport MCP pembuatan PLAN dan prepare/commit promosi diperluas untuk kedua skema, termasuk kesesuaian marker dan versi preview/commit. Pengujian concurrency, stale-state, rollback, dan process-death recovery yang sudah ada dijalankan melalui suite penuh.
 - Tes relevan setelah koreksi lulus. Suite penuh akhir: **68 berkas / 934 tes lulus**, tanpa tes gagal, kode keluar npm/Vitest **0**. Kode keluar diperiksa eksplisit melalui `$LASTEXITCODE`; PowerShell sebelumnya menggolongkan warning CJS Vite pada stderr sebagai `NativeCommandError`, meskipun ringkasan Vitest bersih. Pemeriksaan akhir mengonfirmasi proses pengujian berhasil.
-- `git diff --check` bersih. Source baru, output `dist/`, tes, dokumen F02, dan indeks F00 belum di-commit.
+- `git diff --check` bersih. Source baru, output `dist/`, tes, dokumen F02, dan indeks F00 pada akhir eksekusi belum di-commit; kemudian masuk commit Director `0c3e3b1` (diverifikasi saat F03 dimulai).
 
 Fixture yang semula memakai PLAN tanpa minor, EXEC yang tidak sama dengan PLAN, atau angka aligned tanpa skema diperbaiki sebagai data uji. Tidak ada renumber pada proyek nyata. Constitution, Protocol, `SCHEMA_VERSION`, template, rules/memory/skill, registry, dan distribusi global/proyek tidak disunting atau disinkronkan. Build mengubah runtime global melalui symlink yang sudah ada; proses server yang telah memuat modul lama perlu sesi baru untuk memuat hasil build.
 

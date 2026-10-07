@@ -23,6 +23,9 @@ import {
   MessageEntry,
 } from '../engine/mailbox';
 import { findProjectRoot, toPosix } from '../utils/fs';
+import { assertMailboxMutable, resolveMailboxReference, entryContext, assertMailboxPath } from '../engine/mailboxContext';
+import { withMailboxLock } from '../engine/mailboxMigration';
+import { assertMailboxLease } from '../engine/mailboxLock';
 
 function validateRole(value: string, flag: string): MessagingRole {
   const upper = value.toUpperCase() as MessagingRole;
@@ -91,30 +94,34 @@ function runSend(opts: {
   const msgType: MessageType = opts.type ? validateType(opts.type) : 'NOTE';
   const subject = opts.subject?.trim() || '(no subject)';
   const action: ActionRequired = opts.action ? validateAction(opts.action) : 'FYI';
-  const relatedArtifact = opts.relatedArtifact?.trim() || 'N/A';
+  let relatedArtifact = opts.relatedArtifact?.trim() || 'N/A';
 
   const projectRoot = findProjectRoot();
 
-  // Gate: sender must have an empty unread queue before sending new messages.
+  // Resolve identity and validate reply before any file or attachment write.
   const existingIndex = readIndex(projectRoot);
-  const unread = getUnreadForRole(existingIndex, fromRole, { excludeMemo: true });
+  assertMailboxMutable(projectRoot, existingIndex);
+  const parent = opts.replyTo ? existingIndex.messages.find(m => m.id === opts.replyTo) : undefined;
+  if (opts.replyTo && !parent) throw new Error(`Reply parent not found: ${opts.replyTo}`);
+  if (parent && parent.type === 'MEMO') throw new Error('Cannot reply to a self-addressed MEMO.');
+  if (parent && !opts.relatedArtifact) relatedArtifact = parent.related_artifact ?? 'GENERAL';
+  const context = parent && !opts.relatedArtifact ? entryContext(parent) : resolveMailboxReference(projectRoot, relatedArtifact);
+  if (parent && context.intent_version && resolveMailboxReference(projectRoot, `INTENT-${context.intent_version}`).intent_version !== context.intent_version) throw new Error('Reply INTENT identity mismatch.');
+  if (parent) {
+    const parentContext = entryContext(parent);
+    if (parentContext.context === 'LEGACY' || parentContext.intent_version !== context.intent_version || (parentContext.context === 'GENERAL') !== (context.context === 'GENERAL')) throw new Error('Reply context mismatch; activate the parent INTENT or send a new message with an ID pointer.');
+  }
+  if ('warning' in context && context.warning) console.warn(context.warning);
+  const unread = getUnreadForRole(existingIndex, fromRole, { excludeMemo: true, scope: { intent: context.intent_version, includeGeneral: true } });
   if (unread.length > 0) {
     const ids = unread.map(m => `  - ${m.id}  [${m.from} → ${m.to}] ${m.type}: ${m.subject}`).join('\n');
     throw new Error(
       `SEND BLOCKED — ${fromRole} has ${unread.length} unread message${unread.length > 1 ? 's' : ''} in their own inbox.\n` +
       `${ids}\n\n` +
-      `Policy: a sender must read all their own unread messages before sending new ones.\n` +
+      `Policy: a sender must read their own unread messages in the target INTENT and GENERAL before sending.\n` +
       `This prevents AI roles from sending while ignoring their own unread mailbox entries.\n` +
       `Run: sigma inbox read <id>   (or: sigma inbox --role ${fromRole.toLowerCase()} to list them)`
     );
-  }
-
-  // Soft-check reply_to if provided
-  if (opts.replyTo) {
-    const referenced = existingIndex.messages.find(m => m.id === opts.replyTo);
-    if (!referenced) {
-      console.warn(`Warning: --reply-to "${opts.replyTo}" not found in index. Sending anyway (message may have been archived or index repaired).`);
-    }
   }
 
   const ts = generateTimestamp();
@@ -122,25 +129,31 @@ function runSend(opts: {
   const msgId = generateMessageId(fromRole, toRole, ts, suffix);
   const filename = generateFilename(msgType, fromRole, toRole, ts, suffix);
 
+  // Preflight the recipient directory and identity before copying attachments.
+  const inboxDir = resolveInboxDir(projectRoot, toRole, context.context);
+  const relFilePath = toPosix(path.join('Sigma', 'messages', toRole, context.context, filename));
+  const absFilePath = path.join(inboxDir, filename);
+  if (existingIndex.messages.some(m => m.id === msgId) || fs.existsSync(absFilePath)) throw new Error('Message identity/destination collision; no overwrite.');
+
   // Handle attachment
   const attachmentPaths: string[] = [];
   if (opts.attach) {
     const srcPath = path.resolve(opts.attach);
-    if (!fs.existsSync(srcPath)) {
+    if (!fs.existsSync(srcPath) || !fs.statSync(srcPath).isFile()) {
       throw new Error(`Attachment file not found: ${opts.attach}`);
     }
-    const attachDir = path.join(projectRoot, MESSAGES_ATTACHMENTS_DIR);
+    const attachDir = assertMailboxPath(projectRoot, toPosix(MESSAGES_ATTACHMENTS_DIR));
+    assertMailboxLease(projectRoot);
     fs.ensureDirSync(attachDir);
     const attachFilename = `${msgId}-${path.basename(srcPath)}`;
     const destPath = path.join(attachDir, attachFilename);
-    fs.copySync(srcPath, destPath);
+    fs.copySync(srcPath, destPath, { overwrite: false, errorOnExist: true });
     attachmentPaths.push(toPosix(path.join(MESSAGES_ATTACHMENTS_DIR, attachFilename)));
   }
 
   // Build index entry
-  const inboxDir = resolveInboxDir(projectRoot, toRole);
+  assertMailboxLease(projectRoot);
   fs.ensureDirSync(inboxDir);
-  const relFilePath = toPosix(path.join('Sigma', 'messages', toRole, filename));
 
   const entry: MessageEntry = {
     id: msgId,
@@ -154,18 +167,20 @@ function runSend(opts: {
     attachments: attachmentPaths,
     action,
     related_artifact: relatedArtifact,
+    intent_version: context.intent_version,
+    context: context.context,
     ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
   };
 
   // Write message markdown
-  const absFilePath = path.join(inboxDir, filename);
   const markdown = buildMessageMarkdown(entry, body);
-  fs.writeFileSync(absFilePath, markdown, 'utf8');
+  assertMailboxLease(projectRoot);
+  try { fs.writeFileSync(absFilePath, markdown, { encoding: 'utf8', flag: 'wx' }); }
+  catch (err) { for (const a of attachmentPaths) fs.removeSync(path.join(projectRoot, a)); throw err; }
 
   // Update index
-  const index = readIndex(projectRoot);
-  index.messages.push(entry);
-  writeIndex(projectRoot, index);
+  existingIndex.messages.push(entry);
+  try { writeIndex(projectRoot, existingIndex); } catch (err) { fs.removeSync(absFilePath); for (const a of attachmentPaths) fs.removeSync(path.join(projectRoot, a)); throw err; }
 
   console.log('\nMessage sent.');
   console.log(`  ID       : ${msgId}`);
@@ -174,6 +189,7 @@ function runSend(opts: {
   console.log(`  Subject  : ${subject}`);
   console.log(`  Action   : ${action}`);
   console.log(`  Artifact : ${relatedArtifact}`);
+  console.log(`  Context  : ${context.context} | INTENT ${context.intent_version ?? 'GENERAL'}`);
   console.log(`  File     : ${relFilePath}`);
   if (opts.replyTo) {
     console.log(`  Reply-To : ${opts.replyTo}`);
@@ -188,9 +204,9 @@ export function sendCommand(): Command {
   const cmd = new Command('send');
   cmd.description(
     'Send a message from one role to another.\n' +
-    '  Each message requires an action (--action) and artifact reference (--related-artifact).\n' +
+    '  Context follows --related-artifact, a reply parent, or GENERAL fallback.\n' +
     '  Message files are CLI-generated — never create or rename them manually.\n' +
-    '  Policy: sender must have no unread messages in their own inbox before sending.\n' +
+    '  Policy: read sender UNREAD in the target INTENT and GENERAL before sending.\n' +
     '  Clear unread with: sigma inbox read <id>\n' +
     '  Valid messaging roles: arc, fmn, dev, aud (director communicates directly)'
   );
@@ -203,16 +219,16 @@ export function sendCommand(): Command {
     .option('--message <body>', 'Message body (single-line; use --message-file for multi-line content)')
     .option('--message-file <path>', 'Path to a file whose contents become the message body (preserves newlines)')
     .option('--attach <file>', 'File to attach (copied into Sigma/messages/attachments/)')
-    .option('--reply-to <id>', 'Message ID this message is responding to (soft-check; does not block if not found)')
+    .option('--reply-to <id>', 'Existing parent message ID; its INTENT must match the active context')
     .option('--action <action>', `Action required from recipient (${VALID_ACTIONS.map(a => a.toLowerCase()).join('|')})`, 'fyi')
-    .option('--related-artifact <artifact>', 'Artifact this message relates to (e.g. FMN-PLAN-v2, DEV-EXEC-v1, N/A)', 'N/A')
-    .action((opts: {
+    .option('--related-artifact <artifact>', 'Artifact reference or GENERAL (reply defaults to parent context)')
+    .action(async (opts: {
       from: string; to: string; type?: string; subject?: string;
       message?: string; messageFile?: string; attach?: string; replyTo?: string;
       action?: string; relatedArtifact?: string;
     }) => {
       try {
-        runSend(opts);
+        await withMailboxLock(findProjectRoot(), () => runSend(opts));
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

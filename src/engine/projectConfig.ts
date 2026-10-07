@@ -10,7 +10,7 @@ import { PROJECT_CONFIG_FILE, SCHEMA_VERSION } from '../config';
 // index, still reachable via `sigma inbox read <id>` and `sigma inbox
 // --role <r> --outdated`.
 // PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF §3/§9 poin 1 (Director 2026-09-12).
-// Max unread MEMO entries per role before `sigma memo write` is blocked.
+// Max unread MEMO entries per owning INTENT and role. GENERAL is separate.
 // 0 disables the memo feature entirely (mirrors auto_outdate_read_keep's
 // 0-disables convention).
 export interface MailboxConfig {
@@ -77,7 +77,7 @@ export function resolveAutoOutdateKeep(config: ProjectConfig): number {
   return Math.floor(raw);
 }
 
-// Resolves the per-role MEMO unread quota, tolerating a missing or malformed
+// Resolves the per-INTENT/per-role (and separate GENERAL) MEMO quota, tolerating
 // `mailbox` block (including project.config.json written before this field
 // existed). An explicit 0 is honored (disables `sigma memo write` entirely);
 // anything non-numeric or negative falls back to the default.

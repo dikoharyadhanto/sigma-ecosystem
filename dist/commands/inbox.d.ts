@@ -1,3 +1,3 @@
-import { Command } from 'commander';
-export declare function inboxCommand(): Command;
+import { buildInboxCommand } from './mailboxShared';
+export declare const inboxCommand: typeof buildInboxCommand;
 //# sourceMappingURL=inbox.d.ts.map

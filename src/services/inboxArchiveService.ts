@@ -26,6 +26,7 @@
 import path from 'path';
 import { readIndex, writeIndex, updateMessageStatus } from '../engine/mailbox';
 import { MESSAGES_INDEX_FILE } from '../config';
+import { assertMailboxMutable } from '../engine/mailboxContext';
 import { controlTestFailpoint } from '../engine/controlStore';
 
 export class InboxArchiveError extends Error {
@@ -55,6 +56,8 @@ export function archiveMessageTransactionFiles(projectRoot: string): string[] {
 export function archiveMessage(input: ArchiveMessageInput): ArchiveMessageResult {
   const { projectRoot, messageId, actorRole } = input;
   const index = readIndex(projectRoot);
+  try { assertMailboxMutable(projectRoot, index); }
+  catch (err) { throw new InboxArchiveError('INVALID_OPERATION', (err as Error).message); }
   const entry = index.messages.find(m => m.id === messageId);
   if (!entry) {
     throw new InboxArchiveError('INVALID_OPERATION', `Message not found: ${messageId}`);

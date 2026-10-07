@@ -15,8 +15,7 @@ exports.registerOrientationTool = registerOrientationTool;
 const zod_1 = require("zod");
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../../engine/chain");
-const mailbox_1 = require("../../engine/mailbox");
-const config_1 = require("../../config");
+const mailboxView_1 = require("../../session/mailboxView");
 const bootstrapView_1 = require("../../session/bootstrapView");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -25,51 +24,12 @@ const GATE_LABELS = {
     gate_2_open: 'Gate 2 (Plan Locked)',
     gate_3_satisfied: 'Gate 3 (Build Evidence)',
 };
-// PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF-20260902 — mirrors the CLI's own
-// split: cross-role inbox_unread excludes MEMO (same as the sigma send gate
-// and sigma session bootstrap's "Role Inbox"), memo_unread is the separate
-// self-addressed count (same as sigma session bootstrap's "Unread Memos").
-function collectInboxUnread(projectRoot, role) {
-    const unread = {};
-    try {
-        const index = (0, mailbox_1.readIndex)(projectRoot);
-        const roles = role ? [role] : config_1.MESSAGING_ROLES;
-        for (const r of roles) {
-            if (!config_1.MESSAGING_ROLES.includes(r))
-                continue;
-            const count = (0, mailbox_1.getUnreadForRole)(index, r, { excludeMemo: true }).length;
-            if (count > 0)
-                unread[r] = count;
-        }
-    }
-    catch {
-        // index.json absent/unreadable — treat as no unread, same as the CLI.
-    }
-    return unread;
-}
-function collectMemoUnread(projectRoot, role) {
-    const unread = {};
-    try {
-        const index = (0, mailbox_1.readIndex)(projectRoot);
-        const roles = role ? [role] : config_1.MESSAGING_ROLES;
-        for (const r of roles) {
-            if (!config_1.MESSAGING_ROLES.includes(r))
-                continue;
-            const count = (0, mailbox_1.countUnreadMemos)(index, r);
-            if (count > 0)
-                unread[r] = count;
-        }
-    }
-    catch {
-        // index.json absent/unreadable — treat as no unread, same as the CLI.
-    }
-    return unread;
-}
 // Pure core (PLAN-IMPL-01 §4-A).
 function computeOrientation(root, role) {
     if (!root)
         return (0, shared_1.noProject)();
     const view = (0, bootstrapView_1.buildBootstrapView)(root);
+    const mailbox = (0, mailboxView_1.buildMailboxView)(root, role);
     const { chain, chainVersion, gates, nextOps } = view;
     // Blockers = gates currently BLOCKED (a locked prerequisite is missing).
     const blockers = [];
@@ -91,8 +51,11 @@ function computeOrientation(root, role) {
         next_valid_operations: nextOps,
         stale_intent_warnings: chain ? (0, chain_1.getInvalidWarningLines)(chain) : [],
         blockers,
-        inbox_unread: collectInboxUnread(root, role),
-        memo_unread: collectMemoUnread(root, role),
+        inbox_unread: mailbox.inbox_unread,
+        memo_unread: mailbox.memo_unread,
+        mailbox_context: mailbox.scope,
+        mailbox_status: mailbox.mailbox_status,
+        mailbox_warnings: mailbox.mailbox_warnings,
         // Amendment mechanism (Discussion 2026-08-11_0115 §5.3) — true when the
         // DIR-INTENT file's bytes no longer match the last certified hash (edited
         // outside `sigma intent ratify`/`sigma intent amendment`).
@@ -104,7 +67,7 @@ function computeOrientation(root, role) {
 function registerOrientationTool(server) {
     server.registerTool('sigma_get_orientation', {
         title: 'Get Sigma Orientation',
-        description: 'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, numbering scheme and compatibility warnings, gate summary, next operations, runtime warnings, blockers, unread counts, and INTENT certification. Read-only. Optional role scopes counts; project_root selects the project. Returns { active, phase, active_chain, numbering, compatibility_warnings, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, memo_unread, intent_doc_uncertified, intent_doc_uncertified_since, source }.',
+        description: 'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, numbering scheme and compatibility warnings, gate summary, next operations, runtime warnings, blockers, unread counts for the active INTENT plus GENERAL UNREAD, mailbox diagnosis, and INTENT certification. Read-only. Optional role scopes counts; project_root selects the project. Returns { active, phase, active_chain, numbering, compatibility_warnings, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, memo_unread, mailbox_context, mailbox_status, mailbox_warnings, intent_doc_uncertified, intent_doc_uncertified_since, source }.',
         inputSchema: {
             role: zod_1.z
                 .enum(['ARC', 'FMN', 'DEV', 'AUD'])

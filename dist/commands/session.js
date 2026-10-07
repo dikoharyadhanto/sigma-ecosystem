@@ -9,6 +9,7 @@ const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const registry_1 = require("../engine/registry");
 const mailbox_1 = require("../engine/mailbox");
+const mailboxView_1 = require("../session/mailboxView");
 const config_1 = require("../config");
 const projectConfig_1 = require("../engine/projectConfig");
 const bootstrapView_1 = require("../session/bootstrapView");
@@ -229,11 +230,14 @@ function runBootstrap(opts) {
     }
     // ── Role Mailbox ───────────────────────────────────────────────────────────
     try {
-        const index = (0, mailbox_1.readIndex)(projectRoot);
+        const mailbox = (0, mailboxView_1.buildMailboxView)(projectRoot);
+        for (const warning of mailbox.mailbox_warnings)
+            console.log(`[WARN] ${warning}`);
+        const index = mailbox.index ?? { messages: [] };
         if (opts.role) {
             const role = opts.role.toUpperCase();
             if (config_1.MESSAGING_ROLES.includes(role)) {
-                const allUnread = (0, mailbox_1.getUnreadForRole)(index, role, { excludeMemo: true });
+                const allUnread = (0, mailbox_1.getUnreadForRole)(index, role, { excludeMemo: true, scope: mailbox.scope });
                 const total = allUnread.length;
                 const shown = allUnread.slice(-3).reverse();
                 if (total > 0) {
@@ -253,7 +257,7 @@ function runBootstrap(opts) {
                     });
                     console.log(`\n  Run: sigma inbox --role ${role.toLowerCase()}`);
                 }
-                const unreadMemos = (0, mailbox_1.countUnreadMemos)(index, role);
+                const unreadMemos = (0, mailbox_1.countUnreadMemos)(index, role, mailbox.scope);
                 if (unreadMemos > 0) {
                     console.log(`\n${role}: ${unreadMemos} unread memo${unreadMemos > 1 ? 's' : ''} — sigma memo list --role ${role.toLowerCase()}`);
                 }
@@ -263,7 +267,7 @@ function runBootstrap(opts) {
             // Group unread by messaging roles — show up to 3 per role that has messages
             const byRole = {};
             for (const role of config_1.MESSAGING_ROLES) {
-                const allUnread = (0, mailbox_1.getUnreadForRole)(index, role, { excludeMemo: true });
+                const allUnread = (0, mailbox_1.getUnreadForRole)(index, role, { excludeMemo: true, scope: mailbox.scope });
                 if (allUnread.length > 0) {
                     byRole[role] = { total: allUnread.length, shown: allUnread.slice(-3).reverse() };
                 }
@@ -282,7 +286,7 @@ function runBootstrap(opts) {
                 console.log('\n  Run: sigma inbox --role <role>    sigma inbox read <id>');
             }
             const memoLines = config_1.MESSAGING_ROLES
-                .map(role => ({ role, count: (0, mailbox_1.countUnreadMemos)(index, role) }))
+                .map(role => ({ role, count: (0, mailbox_1.countUnreadMemos)(index, role, mailbox.scope) }))
                 .filter(r => r.count > 0);
             if (memoLines.length > 0) {
                 console.log('\n--- Role Mailbox — Unread Memos ---');

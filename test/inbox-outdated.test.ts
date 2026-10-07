@@ -90,12 +90,12 @@ describe('sigma inbox — OUTDATED tier', () => {
     for (let i = 1; i <= 6; i++) ids.push(sendToDev(env, `m${i}`));
     for (const id of ids) runCli(`inbox read ${id}`, env.projectDir, env.homeDir);
 
-    const dry = runCli('inbox clear --role dev --keep 2 --dry-run', env.projectDir, env.homeDir);
+    const dry = runCli('inbox clear --context GENERAL --role dev --keep 2 --dry-run', env.projectDir, env.homeDir);
     expect(dry.exitCode).toBe(0);
     expect(dry.stdout).toMatch(/Dry run/);
     for (const id of ids) expect(statusOf(env, id)).toBe('READ'); // unchanged
 
-    const real = runCli('inbox clear --role dev --keep 2', env.projectDir, env.homeDir);
+    const real = runCli('inbox clear --context GENERAL --role dev --keep 2', env.projectDir, env.homeDir);
     expect(real.exitCode).toBe(0);
     expect(statusOf(env, ids[0])).toBe('OUTDATED');
     expect(statusOf(env, ids[3])).toBe('OUTDATED');
@@ -103,13 +103,13 @@ describe('sigma inbox — OUTDATED tier', () => {
     expect(statusOf(env, ids[5])).toBe('READ');
   });
 
-  it('sigma inbox clear --all-roles requires --director-confirm', () => {
+  it('sigma inbox clear --context GENERAL --all-roles requires --director-confirm', () => {
     setup();
-    const blocked = runCli('inbox clear --all-roles', env.projectDir, env.homeDir);
+    const blocked = runCli('inbox clear --context GENERAL --all-roles', env.projectDir, env.homeDir);
     expect(blocked.exitCode).toBe(1);
     expect(blocked.stderr).toMatch(/--director-confirm/);
 
-    const ok = runCli('inbox clear --all-roles --director-confirm', env.projectDir, env.homeDir);
+    const ok = runCli('inbox clear --context GENERAL --all-roles --director-confirm', env.projectDir, env.homeDir);
     expect(ok.exitCode).toBe(0);
   });
 

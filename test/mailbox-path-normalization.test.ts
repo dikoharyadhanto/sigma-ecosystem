@@ -47,6 +47,8 @@ describe('mailbox — Windows backslash path normalization on read', () => {
       file: 'Sigma\\messages\\DEV\\20260720-043455837-KC06-NOTE-FMN-to-DEV.md',
     }]);
 
+    // Legacy mutations require migration; migration itself must resolve Windows paths.
+    expect(runCli('doctor --migrate-mailbox', env.projectDir, env.homeDir).exitCode).toBe(0);
     const result = runCli('inbox read MSG-20260720-043455-KC06-FMN-DEV', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
@@ -79,7 +81,7 @@ describe('mailbox — Windows backslash path normalization on read', () => {
     const raw = 'Sigma\\messages\\DEV\\20260720-043455837-KC06-NOTE-FMN-to-DEV.md';
     writeIndex(env, [{ ...baseEntry, id: 'MSG-20260720-043455-KC06-FMN-DEV', file: raw }]);
 
-    runCli('inbox read MSG-20260720-043455-KC06-FMN-DEV', env.projectDir, env.homeDir);
+    runCli('inbox check', env.projectDir, env.homeDir);
 
     const onDisk = fs.readJsonSync(path.join(env.projectDir, 'Sigma', 'messages', 'index.json'));
     expect(onDisk.messages[0].file).toBe(raw);

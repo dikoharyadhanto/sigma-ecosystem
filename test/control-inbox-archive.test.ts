@@ -57,12 +57,14 @@ function bootstrapProject(env: TestEnv, id = 'TEST'): void {
 function seedMessage(env: TestEnv, entry: Partial<MessageEntry> & { id: string; from: string; to: string }): void {
   const indexPath = path.join(env.projectDir, MESSAGES_INDEX_FILE);
   fs.ensureDirSync(path.dirname(indexPath));
-  const index = fs.existsSync(indexPath) ? fs.readJsonSync(indexPath) : { messages: [] };
+  const index = fs.existsSync(indexPath) ? fs.readJsonSync(indexPath) : { mailbox_format: 2, messages: [] };
   const now = new Date().toISOString();
   index.messages.push({
     type: 'NOTE',
     subject: 'Test message',
-    file: `Sigma/messages/${entry.to}/${entry.id}.md`,
+    file: `Sigma/messages/${entry.to}/GENERAL/${entry.id}.md`,
+    intent_version: null,
+    context: 'GENERAL',
     status: 'UNREAD',
     created_at: now,
     attachments: [],
@@ -137,8 +139,8 @@ describe('sigma_inbox_archive — direct service contract', () => {
   it('the message .md file itself is never touched — only index.json', () => {
     const env = setupTestEnv();
     bootstrapProject(env);
-    seedMessage(env, { id: 'MSG-1', from: 'ARC', to: 'FMN', file: 'Sigma/messages/FMN/MSG-1.md' });
-    const msgFilePath = path.join(env.projectDir, 'Sigma', 'messages', 'FMN', 'MSG-1.md');
+    seedMessage(env, { id: 'MSG-1', from: 'ARC', to: 'FMN', file: 'Sigma/messages/FMN/GENERAL/MSG-1.md' });
+    const msgFilePath = path.join(env.projectDir, 'Sigma', 'messages', 'FMN', 'GENERAL', 'MSG-1.md');
     fs.ensureDirSync(path.dirname(msgFilePath));
     fs.writeFileSync(msgFilePath, '# original content');
     archiveMessage({ projectRoot: env.projectDir, actorRole: 'FMN', messageId: 'MSG-1' });

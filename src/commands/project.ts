@@ -16,6 +16,7 @@ import {
   BRIDGE_STUBS,
   SUBFOLDERS,
   MESSAGES_DIR,
+  MESSAGING_ROLES,
   MESSAGES_INDEX_FILE,
   MESSAGE_SUBFOLDERS,
   REFERENCE_LIST_FILE,
@@ -361,8 +362,12 @@ async function runStart(opts: {
     fs.ensureDirSync(path.join(messagesDir, sub));
   }
   const indexPath = path.join(projectRoot, MESSAGES_INDEX_FILE);
-  fs.writeJsonSync(indexPath, { messages: [] }, { spaces: 2 });
-  console.log('  Mailbox: Sigma/messages/ initialized.');
+  fs.writeJsonSync(indexPath, { mailbox_format: 2, messages: [] }, { spaces: 2 });
+  for (const role of MESSAGING_ROLES) for (const context of ['GENERAL', 'LEGACY']) {
+    fs.ensureDirSync(path.join(messagesDir, role, context));
+    fs.ensureDirSync(path.join(projectRoot, 'Sigma', 'memo', role, context));
+  }
+  console.log('  Mailbox: Sigma/messages/ and Sigma/memo/ initialized.');
 
   if (fileExists(BUNDLE_ROLE_MEMORY_DIR)) {
     fs.copySync(BUNDLE_ROLE_MEMORY_DIR, path.join(sigmaDir, 'role-memory'), { overwrite: true });

@@ -17,8 +17,8 @@ Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigm
 |---|---|---|---|---|
 | F00 | Indeks, glosarium, dependensi, register keputusan terbuka, disiplin build | - | Berjalan | file ini |
 | F01 | Peta konsistensi aturan (master, proyek, skill, memory, versi aturan) | 1 | **DITAHAN** - menunggu feedback review Director per dokumen | rencana belum dibuat; bahan review: [F01-lampiran_daftar-periksa-dokumen.md](F01-lampiran_daftar-periksa-dokumen.md) |
-| F02 | Penomoran chain dan warning bootstrap | 5 | Diterapkan 7 Oktober setelah O-1 sampai O-3 dan eksekusi disetujui; build lulus, 68 berkas / 934 tes lulus, exit 0; belum di-commit | [F02_penomoran-chain-dan-warning-bootstrap.md](F02_penomoran-chain-dan-warning-bootstrap.md) |
-| F03 | Mailbox per intent | 4 | Belum dimulai | - |
+| F02 | Penomoran chain dan warning bootstrap | 5 | Diterapkan 7 Oktober setelah O-1 sampai O-3 dan eksekusi disetujui; build lulus, 68 berkas / 934 tes lulus, exit 0; di-commit Director dalam 0c3e3b1; push dilaporkan Director | [F02_penomoran-chain-dan-warning-bootstrap.md](F02_penomoran-chain-dan-warning-bootstrap.md) |
+| F03 | Mailbox per intent | 4 | Diterapkan 7 Oktober setelah O-1 sampai O-7 disetujui; build lulus, 69 berkas / 966 tes lulus exit 0; tambahan diagnosis doctor diuji 6 berkas / 68 tes lulus; belum di-commit | [F03_mailbox-per-intent.md](F03_mailbox-per-intent.md) |
 | F04 | Lifecycle APPROVED/LOCKED, doctor, pengikatan revisi | 2, 9 | Belum dimulai (kemungkinan dipecah F04a/F04b) | - |
 | F05 | Amandemen INTENT melalui Git, penghapusan tier | 8 | Belum dimulai | - |
 | F06 | sigma notes | 3 | Belum dimulai (track terpisah, rilis 1.1.0) | - |
@@ -83,10 +83,10 @@ Disalin dari dokumen diskusi sebagai titik awal. Setiap butir dibahas di rencana
 | ID | Fokus | Butir terbuka |
 |---|---|---|
 | T-01 | F02 | **TERKUNCI (Director, 7 Oktober 2026):** field `versioning_scheme` pada JSON chain + marker identitas pada INTENT/PLAN/EXEC baru; fallback legacy dilaporkan; batas kehilangan seluruh metadata diterima sesuai F02 O-1 |
-| T-02 | F03 | Apakah GENERAL ikut send gate dan kuota memo; aturan balasan dengan konteks tidak sesuai |
-| T-03 | F03 | Retensi, auto-outdate, dan akses riwayat lintas konteks |
-| T-04 | F03 | Friksi antar-minor dalam intent yang sama (kasus FYI v4.4 terhadap audit v4.5) |
-| T-05 | F03 | Perlakuan migrasi doctor yang idempoten dan pembaruan index/referensi path |
+| T-02 | F03 | **TERKUNCI (Director, 7 Oktober):** GENERAL non-MEMO ikut gate semua konteks; memo GENERAL kuota tersendiri; reply mewarisi konteks parent, parent tidak dikenal/lintas intent aktif ditolak (F03 O-1/O-2) |
+| T-03 | F03 | **TERKUNCI:** retensi READ per role + intent + jenis, GENERAL/LEGACY terpisah; riwayat melalui selector eksplisit, --all hanya status; clear message/memo terpisah (F03 O-3) |
+| T-04 | F03 | Ditangani sebagai kasus uji F03: keputusan Director pada diskusi sudah menetapkan semua action/minor intent yang sama ikut gate. Tidak diajukan pengecualian baru |
+| T-05 | F03 | **TERKUNCI:** doctor --migrate-mailbox dengan --dry-run; transaksi satu proyek, preflight sebelum move, provenance reset dan recovery idempoten; konflik/orphan/source hilang menolak (F03 O-6/O-7) |
 | T-06 | F04 | Perlakuan PLAN LOCKED tanpa EXEC pasangan, atau pasangan ambigu, pada migrasi doctor |
 | T-07 | F04 | Spesifikasi lengkap APPROVED: gate, validator, orientasi, makna "persetujuan EXEC langsung mengunci pasangan" |
 | T-08 | F04 | Jalur operasional chain v1 dan penghapusan plan lock/exec lock (tombstone) |
@@ -114,6 +114,14 @@ Tambahan dari penyusunan F02, ditutup melalui persetujuan eksplisit Director ata
 |---|---|---|
 | T-26 | F02 | **TERKUNCI:** rekonstruksi tidak menulis chain terdampak konflik; chain independen boleh dipulihkan pada `--all-versions`; kegagalan target dilaporkan dengan exit nonzero dan history yang terdampak dipertahankan (O-2) |
 | T-27 | F02 | **TERKUNCI:** alokasi minor terbesar + 1 pada kedua skema, mencakup SUPERSEDED; benturan file ditolak tanpa overwrite. Nomor yang seluruh buktinya terhapus tidak dapat dipulihkan dari state saja (O-3) |
+
+
+Tambahan dari penyusunan F03, seluruh rekomendasi dan eksekusi disetujui Director pada 7 Oktober 2026:
+
+| ID | Fokus | Butir terbuka |
+|---|---|---|
+| T-28 | F03 | **TERKUNCI:** referensi belum terhubung masuk GENERAL dengan warning, lintas intent diketahui/ambigu tetap ditolak, tanpa reclassify otomatis (F03 O-4) |
+| T-29 | F03 | **TERKUNCI:** index tunggal message/memo, mailbox_format: 2 dan metadata intent/context terpisah dari SCHEMA_VERSION (F03 O-5) |
 
 ## 6. Disiplin kerja dan build (tentatif)
 

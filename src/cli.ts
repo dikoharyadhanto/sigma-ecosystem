@@ -90,4 +90,7 @@ process.on('exit', (code) => {
   }
 });
 
-program.parse(process.argv);
+program.parseAsync(process.argv).catch((err: Error) => {
+  console.error(err.message);
+  process.exitCode = 1;
+});

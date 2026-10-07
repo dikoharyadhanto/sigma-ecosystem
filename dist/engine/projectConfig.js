@@ -59,7 +59,7 @@ function resolveAutoOutdateKeep(config) {
     }
     return Math.floor(raw);
 }
-// Resolves the per-role MEMO unread quota, tolerating a missing or malformed
+// Resolves the per-INTENT/per-role (and separate GENERAL) MEMO quota, tolerating
 // `mailbox` block (including project.config.json written before this field
 // existed). An explicit 0 is honored (disables `sigma memo write` entirely);
 // anything non-numeric or negative falls back to the default.
