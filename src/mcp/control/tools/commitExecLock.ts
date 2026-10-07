@@ -24,12 +24,8 @@ export function registerCommitExecLockTool(server: McpServer): void {
   server.registerTool(
     'sigma_commit_exec_lock',
     {
-      title: 'Commit an approved exec lock',
-      description:
-        'Locks the DRAFT DEV-EXEC frozen by operation_ticket_id, re-evaluating Gate 3 — the MCP control-plane ' +
-        'equivalent of `sigma exec lock`. Requires a Director approval record for that exact ticket, recorded ' +
-        'via the trusted local CLI (`sigma control approve <ticket_id>`). The approval is consumed on a ' +
-        'successful commit and cannot be reused. DEV role only.',
+      title: 'Removed: use commit exec approve',
+      description: 'Retired tombstone. Use sigma_commit_exec_approve with a new approval ticket. Pending lock tickets cannot be consumed; completed legacy commit replay is historical only.',
       inputSchema: {
         operation_ticket_id: z.string().min(1),
         approval_id: z.string().min(1),
@@ -66,6 +62,7 @@ export function registerCommitExecLockTool(server: McpServer): void {
             approvalPath(root, args.approval_id),
           ],
           checkPreconditions: (root) => {
+            if (root) throw new McpQueryError(ERROR_CODES.INVALID_OPERATION, 'TOMBSTONE: use sigma_commit_exec_approve with a new approval ticket.');
             const binding = getBinding();
 
             const ticket = readTicket(root, args.operation_ticket_id);

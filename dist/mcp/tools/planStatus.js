@@ -1,22 +1,11 @@
 "use strict";
-// Stage B2 — sigma_plan_status. Query-plane equivalent of `sigma plan
-// status` — categorizes chain.plan.versions[] into DRAFT/LOCKED (computing
-// the same plan<->exec pairing `plan status` derives at runtime via
-// .find()), plus pending plans and Gate 2. Mirrors the CLI's categorization
-// logic exactly, not a generic list — see sigma_check_document's header for
-// why STATUS/LIST stay per-type instead of one generic tool.
-//
-// Deviates from the CLI's readPendingTitle() fallback on purpose: that
-// helper falls back to the pending plan's ABSOLUTE host path as a "title"
-// when the file is missing a "# " heading or unreadable — safe in a
-// terminal, not safe to return through MCP. This tool falls back to null
-// instead of ever putting a host path in a title field.
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computePlanStatus = computePlanStatus;
 exports.registerPlanStatusTool = registerPlanStatusTool;
+const lifecycleView_1 = require("../../engine/lifecycleView");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../../engine/chain");
@@ -47,6 +36,8 @@ function computePlanStatus(root) {
     const supersededCount = chain.plan.versions.filter((v) => v.state === 'SUPERSEDED').length;
     return {
         active: true,
+        lifecycle: (0, lifecycleView_1.lifecycleView)(root, chain),
+        approved: chain.plan.versions.filter(p => p.state === 'APPROVED'),
         active_chain: chainVersion,
         drafts: drafts.map((d) => ({ version: d.version, title: d.title ?? null, created_at: d.created_at })),
         locked: locked.map((p) => {
@@ -69,7 +60,7 @@ function computePlanStatus(root) {
             created_at: p.created_at,
         })),
         superseded_count: supersededCount,
-        gate_2_open: chain.gates.gate_2_open,
+        gate_2_open: (0, lifecycleView_1.effectiveLifecycleGates)(root, chain).gate_2_open,
         source: shared_1.SOURCE_ENGINE,
     };
 }

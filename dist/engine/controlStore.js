@@ -53,6 +53,9 @@ exports.writeApproval = writeApproval;
 exports.readApproval = readApproval;
 exports.markApprovalConsumed = markApprovalConsumed;
 exports.acquireProjectLock = acquireProjectLock;
+exports.assertNoTransactionSymlink = assertNoTransactionSymlink;
+exports.journaledWrite = journaledWrite;
+exports.journaledWriteIfActive = journaledWriteIfActive;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
@@ -303,7 +306,7 @@ function transactionRelativePath(root, absolutePath) {
     }
     return relative;
 }
-function snapshotFiles(root, absolutePaths) {
+function snapshotFiles(root, absolutePaths, guardedWrites = false) {
     const unique = new Map();
     for (const absolutePath of absolutePaths) {
         const relative = transactionRelativePath(root, absolutePath);
@@ -311,18 +314,34 @@ function snapshotFiles(root, absolutePaths) {
     }
     return [...unique.values()].sort().map((relative) => {
         const absolute = path_1.default.join(root, relative);
+        assertNoTransactionSymlink(root, absolute);
         const existed = fs_extra_1.default.existsSync(absolute);
         if (existed && !fs_extra_1.default.statSync(absolute).isFile()) {
             throw new Error(`Control transaction target is not a regular file: ${absolute}`);
         }
+        const before = existed ? fs_extra_1.default.readFileSync(absolute) : null;
         return {
-            path: relative,
-            existed,
-            content_base64: existed ? fs_extra_1.default.readFileSync(absolute).toString('base64') : null,
+            path: relative, existed, guarded_writes: guardedWrites,
+            content_base64: before?.toString('base64') ?? null,
+            before_sha256: before ? crypto_1.default.createHash('sha256').update(before).digest('hex') : null,
         };
     });
 }
 function restoreSnapshots(root, snapshots) {
+    // Preflight the whole rollback before restoring any file. Never overwrite an editor change.
+    for (const snapshot of snapshots) {
+        const absolute = path_1.default.join(root, transactionRelativePath(root, path_1.default.join(root, snapshot.path)));
+        assertNoTransactionSymlink(root, absolute);
+        if (snapshot.expected_after_sha256 === undefined && !snapshot.guarded_writes)
+            continue; // previous direct-write transactions
+        const current = fs_extra_1.default.existsSync(absolute) ? fs_extra_1.default.readFileSync(absolute) : null;
+        const before = snapshot.content_base64 === null ? null : Buffer.from(snapshot.content_base64, "base64");
+        if (snapshot.before_sha256 !== undefined && (before === null ? null : crypto_1.default.createHash("sha256").update(before).digest("hex")) !== snapshot.before_sha256)
+            throw new Error("Corrupt transaction before-image: " + snapshot.path);
+        const currentHash = current === null ? null : crypto_1.default.createHash("sha256").update(current).digest("hex");
+        if (!(current === null && before === null || current !== null && before !== null && current.equals(before)) && currentHash !== snapshot.expected_after_sha256)
+            throw new Error("Transaction recovery conflict: " + snapshot.path + "; manual recovery required.");
+    }
     for (const snapshot of snapshots) {
         const absolute = path_1.default.join(root, transactionRelativePath(root, path_1.default.join(root, snapshot.path)));
         if (!snapshot.existed) {
@@ -364,12 +383,13 @@ function beginControlTransaction(args) {
         terminal_at: null,
         revision_before: args.revisionBefore,
         revision_after: null,
-        files: snapshotFiles(args.root, args.files),
+        files: snapshotFiles(args.root, args.files, args.guardedWrites),
         result: null,
         error: null,
         audit_entry: args.auditEntry,
     };
     writeControlTransaction(args.root, journal);
+    activeTransactions.set(path_1.default.resolve(args.root), journal);
     return journal;
 }
 function markControlTransactionCommitPending(root, journal, result, revisionAfter, auditEntry) {
@@ -403,6 +423,7 @@ function terminalIdempotencyRecord(journal, status) {
     };
 }
 function finalizeControlTransaction(root, journal) {
+    activeTransactions.delete(path_1.default.resolve(root));
     if (journal.status === 'rollback_pending') {
         restoreSnapshots(root, journal.files);
         controlTestFailpoint('after_rollback_restore');
@@ -415,6 +436,15 @@ function finalizeControlTransaction(root, journal) {
         return;
     }
     if (journal.status === 'commit_pending') {
+        for (const snapshot of journal.files) {
+            if (snapshot.expected_after_sha256 === undefined)
+                continue;
+            const absolute = path_1.default.join(root, transactionRelativePath(root, path_1.default.join(root, snapshot.path)));
+            assertNoTransactionSymlink(root, absolute);
+            const hash = fs_extra_1.default.existsSync(absolute) ? crypto_1.default.createHash("sha256").update(fs_extra_1.default.readFileSync(absolute)).digest("hex") : null;
+            if (hash !== snapshot.expected_after_sha256)
+                throw new Error("Committed transaction file changed: " + snapshot.path + "; manual recovery required.");
+        }
         writeIdempotencyRecord(root, terminalIdempotencyRecord(journal, 'completed'));
         controlTestFailpoint('after_commit_idempotency');
         appendAuditEntry(root, journal.audit_entry);
@@ -467,7 +497,8 @@ function writeTicket(root, ticket) {
         throw new Error(`Internal error: refusing to write a malformed ticket id "${ticket.operation_ticket_id}".`);
     }
     const filePath = ticketPath(root, ticket.operation_ticket_id);
-    writeJsonAtomic(filePath, ticket);
+    if (!journaledWriteIfActive(root, filePath, JSON.stringify(ticket, null, 2) + "\n"))
+        writeJsonAtomic(filePath, ticket);
 }
 /**
  * A caller-supplied id that does not match generateId()'s exact shape can
@@ -505,7 +536,8 @@ function writeApproval(root, approval) {
         throw new Error(`Internal error: refusing to write a malformed approval id "${approval.approval_id}".`);
     }
     const filePath = approvalPath(root, approval.approval_id);
-    writeJsonAtomic(filePath, approval);
+    if (!journaledWriteIfActive(root, filePath, JSON.stringify(approval, null, 2) + "\n"))
+        writeJsonAtomic(filePath, approval);
 }
 function readApproval(root, approvalId) {
     if (!isValidStoreId(approvalId))
@@ -597,5 +629,48 @@ async function acquireProjectLock(root) {
             await releaseLease();
         },
     };
+}
+// F04 write-ahead hashes bind recovery to files actually written by this transaction.
+const activeTransactions = new Map();
+function assertNoTransactionSymlink(root, absolute) {
+    const relative = transactionRelativePath(root, absolute);
+    let current = path_1.default.resolve(root);
+    if (fs_extra_1.default.lstatSync(current).isSymbolicLink())
+        throw new Error('Symlink project root refused.');
+    for (const part of relative.split(path_1.default.sep)) {
+        current = path_1.default.join(current, part);
+        if (fs_extra_1.default.existsSync(current) && fs_extra_1.default.lstatSync(current).isSymbolicLink())
+            throw new Error('Transaction symlink refused: ' + current);
+    }
+}
+function journaledWrite(root, absolute, content, exclusive = false) {
+    assertNoTransactionSymlink(root, absolute);
+    const journal = activeTransactions.get(path_1.default.resolve(root));
+    if (!journal)
+        throw new Error('Journaled governance write requires an active transaction.');
+    const relative = transactionRelativePath(root, absolute);
+    const snapshot = journal.files.find(s => s.path === relative);
+    if (!snapshot)
+        throw new Error('File not enlisted in transaction: ' + relative);
+    if (exclusive && fs_extra_1.default.existsSync(absolute))
+        throw new Error('Append-only file already exists: ' + relative);
+    if (snapshot.guarded_writes) {
+        const current = fs_extra_1.default.existsSync(absolute) ? crypto_1.default.createHash('sha256').update(fs_extra_1.default.readFileSync(absolute)).digest('hex') : null;
+        const expected = snapshot.expected_after_sha256 === undefined ? snapshot.before_sha256 : snapshot.expected_after_sha256;
+        if (current !== expected)
+            throw new Error('External edit before governance write: ' + relative + '; manual recovery required.');
+    }
+    snapshot.expected_after_sha256 = crypto_1.default.createHash('sha256').update(content).digest('hex');
+    writeControlTransaction(root, journal);
+    fs_extra_1.default.ensureDirSync(path_1.default.dirname(absolute));
+    const temporary = absolute + '.write-' + crypto_1.default.randomUUID();
+    fs_extra_1.default.writeFileSync(temporary, content);
+    (0, fs_1.atomicReplaceFileSync)(temporary, absolute);
+}
+function journaledWriteIfActive(root, absolute, content) {
+    if (!activeTransactions.has(path_1.default.resolve(root)))
+        return false;
+    journaledWrite(root, absolute, content);
+    return true;
 }
 //# sourceMappingURL=controlStore.js.map

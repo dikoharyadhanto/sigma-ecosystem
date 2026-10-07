@@ -1,5 +1,7 @@
+import { lifecycleView } from '../engine/lifecycleView';
 import path from 'path';
 import { mailboxMigrationDiagnosis, migrateMailbox } from '../engine/mailboxMigration';
+import { migrateLifecycle } from '../engine/lifecycleMigration';
 import { Command } from 'commander';
 import {
   ChainState,
@@ -75,6 +77,7 @@ function runDefaultDoctor(): void {
   const { chainVersion, data: chain } = readActiveChain(projectRoot);
   const overrides = readOverrides(projectRoot);
   const report = runDoctorReconciliation(chain, overrides);
+  console.log(JSON.stringify(lifecycleView(projectRoot,chain),null,2));
   writeChain(projectRoot, chainVersion, chain);
   renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — self-heal net
 
@@ -338,11 +341,18 @@ export function doctorCommand(): Command {
     .option('--all-versions', 'Apply to every chain found on disk instead of just the active one')
     .option('--reconstruct', 'Rebuild chain file(s) from artifact files on disk (use when a progress-v<N>.json is missing or corrupted)')
     .option('--v <version>', 'With --reconstruct, target one specific chain instead of the active one (e.g. v2)', normalizeVersionArg)
+    .option('--migrate-lifecycle', 'Opt-in one-chain lifecycle conversion; no automatic baseline certification')
+    .option('--director-confirm', 'Explicit Director authorization for lifecycle migration')
     .option('--migrate-mailbox', 'Move legacy messages/memos to LEGACY and reset legacy UNREAD to READ')
     .option('--dry-run', 'With --migrate-mailbox: preview without writing')
     .option('--repair-workspace', 'Recreate a missing DEV workspace folder or marker from the project identity (does not reconcile chains)')
-    .action(async (opts: { recovery?: boolean; allVersions?: boolean; reconstruct?: boolean; v?: string; repairWorkspace?: boolean; migrateMailbox?: boolean; dryRun?: boolean }) => {
+    .action(async (opts: { recovery?: boolean; allVersions?: boolean; reconstruct?: boolean; v?: string; repairWorkspace?: boolean; migrateMailbox?: boolean; migrateLifecycle?: boolean; directorConfirm?: boolean; dryRun?: boolean }) => {
       try {
+        if (opts.migrateLifecycle) {
+          if(opts.recovery||opts.allVersions||opts.reconstruct||opts.migrateMailbox||opts.repairWorkspace)throw new Error('--migrate-lifecycle cannot be combined with other doctor mutation modes.');
+          console.log(JSON.stringify(await migrateLifecycle(findProjectRoot(),opts.v,!!opts.dryRun,!!opts.directorConfirm),null,2));return;
+        }
+        if(opts.directorConfirm)throw new Error('--director-confirm requires --migrate-lifecycle.');
         if (opts.migrateMailbox) {
           if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v || opts.repairWorkspace) throw new Error('--migrate-mailbox cannot be combined with chain/workspace doctor options.');
           console.log(JSON.stringify(await migrateMailbox(findProjectRoot(), !!opts.dryRun), null, 2));

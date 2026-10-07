@@ -1,15 +1,8 @@
 "use strict";
-// PLAN-IMPL-01 §3.4 — sigma_doctor
-//
-// Read-only WITH RESPECT TO DISK. runDoctorReconciliation mutates the chain
-// object in memory (auto-repair of known corruption patterns) but only
-// persists if the caller invokes writeChain. This tool deliberately never
-// calls writeChain: it reports what reconciliation WOULD change as a
-// diagnosis, flagged applied: false. A disk-writing doctor is a mutation and
-// belongs to a later (Layer 3) increment, not here.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeDoctor = computeDoctor;
 exports.registerDoctorTool = registerDoctorTool;
+const lifecycleView_1 = require("../../engine/lifecycleView");
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -28,6 +21,7 @@ function computeDoctor(root) {
     const findings = (0, chain_1.runDoctorReconciliation)(data, overrides);
     return {
         active: true,
+        lifecycle: (0, lifecycleView_1.lifecycleView)(root, data),
         findings,
         mailbox,
         applied: false,

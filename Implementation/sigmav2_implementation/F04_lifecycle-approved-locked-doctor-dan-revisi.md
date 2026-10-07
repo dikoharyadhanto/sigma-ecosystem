@@ -1,20 +1,20 @@
 # F04 - Lifecycle APPROVED/LOCKED, doctor, dan pengikatan revisi
 
 Tanggal: 7 Oktober 2026
-Status: DRAFT rencana; penyusunan disetujui Director, keputusan O-1 sampai O-14 dan eksekusi belum disetujui.
+Status: F04a/F04b diterapkan dan diverifikasi 7–8 Oktober 2026 sesuai persetujuan O-1 sampai O-14; suite lengkap 71 berkas / 1.036 tes lulus, exit 0; belum commit/push.
 Baseline: main, HEAD `9f1bea6` (F03); working tree bersih dan main sama dengan origin/main saat pemeriksaan awal.
-Sifat dokumen: catatan pengembangan master Sigma, bukan artefak governance proyek terdaftar. Otorisasi sesi ini: "disetujui memulai penyusunan rencana f04". Tidak ada source, build, state proyek, atau aset terpasang yang diubah pada tahap ini.
+Sifat dokumen: catatan pengembangan master Sigma, bukan artefak governance proyek terdaftar. Otorisasi penyusunan: "disetujui memulai penyusunan rencana f04". Persetujuan akhir Director: "semua rekomendasi keputusan f04 diterima semua, eksekusi dilakukan di sesi baru tidak di sesi ini". Sesi persetujuan hanya mencatat keputusan dan handoff; tidak mengimplementasikan F04 atau menjalankan build, uji, migrasi, dan sinkronisasi.
 
 ## 1. Tujuan dan batas fokus
 
 PLAN disetujui sebagai kontrak kerja yang masih dapat direvisi secara terkendali. Persetujuan EXEC menandai pekerjaan tuntas dan mengunci PLAN serta EXEC pasangannya bersama. Runtime harus memeriksa acuan revisi dan bukti perubahan kontrak sebelum menerima persetujuan itu.
 
-**REKOMENDASI:** satu rencana, dua tahap implementasi:
+**DISETUJUI (O-1):** satu rencana, dua tahap implementasi:
 - **F04a:** penanda lifecycle, transisi APPROVED/LOCKED, command approve/tombstone, gate, kompatibilitas, dan migrasi doctor.
 - **F04b:** revisi dan hash acuan, checkpoint perubahan, bukti pemberitahuan/persetujuan, pemeriksaan persetujuan pasangan, serta paritas CLI/MCP.
 - F04a bukan titik rilis mandiri. F04 baru selesai setelah F04b dan pengujian integrasi lulus; model baru tanpa pemeriksaan revisi belum memenuhi D-10.
 
-Cakupan yang diajukan: engine chain/reconstruct; layanan PLAN/EXEC dan integrasi minimal sertifikasi INTENT; CLI; control store dan tool persetujuan MCP; mailbox hanya untuk pesan kontrak; validator; proyeksi status/orientasi/ROADMAP; template PLAN/EXEC dan aturan/memory/skill master FMN/DEV yang langsung terdampak. Perubahan registry terbatas diajukan terpisah pada O-13.
+Cakupan yang disetujui untuk sesi implementasi baru: engine chain/reconstruct; layanan PLAN/EXEC dan integrasi minimal sertifikasi INTENT; CLI; control store dan tool persetujuan MCP; mailbox hanya untuk pesan kontrak; validator; proyeksi status/orientasi/ROADMAP; template PLAN/EXEC dan aturan/memory/skill master FMN/DEV yang langsung terdampak. Perubahan registry terbatas disetujui pada O-13; refresh luas dan sinkronisasi tetap di luar F04.
 
 Di luar fokus: alur amandemen berbasis Git, tag, dan pemindahan Amendment History (F05); rename artefak (F10); notes; perubahan versi paket atau SCHEMA_VERSION; Constitution; Protocol; sinkronisasi ke ~/.sigma, skill terpasang, atau proyek (F09); migrasi proyek nyata; commit/push. Protocol hanya dicatat sebagai tindak lanjut. Tidak menambah kembali tool MCP mailbox yang telah ditarik Director.
 
@@ -37,7 +37,7 @@ Sumber diperiksa pada baseline:
 10. Persetujuan PLAN dan otorisasi mulai coding dapat diberikan sekaligus; persetujuan PLAN saja tidak otomatis berarti otorisasi mulai coding.
 11. Chain lama tidak dinomori ulang. Pasangan PLAN LOCKED + EXEC LOCKED tetap LOCKED; PLAN LOCKED + EXEC DRAFT menjadi PLAN APPROVED + EXEC DRAFT ketika migrasi lifecycle diterapkan melalui doctor.
 
-**Konflik/rincian sumber yang belum tertutup:** keputusan 28 September menyebut lifecycle v1 tetap berjalan dan migrasi opsional per chain. Diskusi kemudian menetapkan konversi otomatis pasangan yang pasti pada doctor, tetapi belum menentukan apakah doctor biasa harus memicu perpindahan model untuk seluruh chain. Rencana ini tidak mengartikan kata "otomatis" sebagai izin migrasi paksa: pemicu menjadi O-3, hasil konversi pasti di atas tidak dibuka ulang. PLAN tanpa EXEC, pasangan ambigu, dan bukti baseline lama menjadi O-4/O-9.
+**Penyelesaian rincian sumber (O-3/O-4/O-9 disetujui):** migrasi lifecycle tetap eksplisit per chain melalui `--migrate-lifecycle`; konversi pasangan pasti berjalan otomatis di dalam migrasi tersebut. Doctor biasa dan MCP tidak memindahkan model. PLAN LOCKED tanpa EXEC menjadi APPROVED dengan baseline review wajib; pasangan ambigu menolak seluruh chain sebelum deduplikasi. Baseline tidak disertifikasi otomatis oleh doctor.
 
 ## 3. Peta dampak kode yang terverifikasi
 
@@ -70,9 +70,9 @@ Nomor baris berikut adalah pada HEAD 9f1bea6; verifikasi ulang saat implementasi
 
 **TERVERIFIKASI:** penomoran dan lifecycle belum dipisahkan di state saat ini. Chain intent_aligned yang dibuat setelah F02 tetap menjalankan kode lock lama. Karena itu lifecycle tidak boleh ditebak dari versioning_scheme, major version, atau schema dokumen.
 
-## 4. Spesifikasi perilaku yang direkomendasikan
+## 4. Spesifikasi perilaku yang disetujui
 
-Seluruh rincian implementasi di bagian ini adalah **REKOMENDASI**, bukan keputusan terkunci baru.
+Seluruh rekomendasi di bagian ini diterima Director melalui persetujuan O-1 sampai O-14 pada 7 Oktober 2026. Implementasi mengikuti batas cakupan, otorisasi, dan kompatibilitas yang tercatat; pekerjaan dimulai di sesi baru.
 
 ### 4.1 Model lifecycle dan command
 
@@ -171,34 +171,34 @@ Reconstruct:
 - Reader tracker lama tanpa field masih fallback legacy sesuai O-2; disaster recovery tanpa tracker memerlukan perlakuan unknown yang berbeda.
 - Tinjau juga heuristic legacy yang menganggap file EXEC berarti LOCKED: rekomendasi hentikan klaim selesai tanpa bukti tepercaya pada kedua model, dengan perubahan kompatibilitas dinyatakan pada O-11.
 
-## 6. Keputusan terbuka dan rekomendasi
+## 6. Keputusan Director atas rekomendasi
 
-Seluruh jawaban Director masih **BELUM DIJAWAB**. Menyetujui penyusunan tidak mengotorisasi pilihan ini atau implementasinya.
+Seluruh rekomendasi O-1 sampai O-14 **DISETUJUI** Director pada 7 Oktober 2026. Persetujuan mencakup cakupan registry terbatas O-13 dan titik build/uji O-14 untuk sesi implementasi baru. Director secara eksplisit menetapkan eksekusi di sesi baru; persetujuan ini tidak memulai implementasi dalam sesi sekarang.
 
 | ID | Pertanyaan / pilihan | Rekomendasi dan alasan | Jawaban Director |
 |---|---|---|---|
-| O-1 | F04a dirilis sendiri, atau dua tahap satu hasil final? | Dua tahap satu hasil; lifecycle tanpa guard revisi belum memenuhi keputusan terkunci | Belum |
-| O-2 | Bedakan lifecycle dari numbering melalui field sendiri, atau turunkan dari skema penomoran? Bagaimana approve pada legacy? | lifecycle_model terpisah; unmarked tracker = legacy_lock; chain baru = paired_approval. approve menjalankan semantik model lama dengan output eksplisit agar chain lama tetap operasional setelah tombstone | Belum |
-| O-3 | Doctor biasa otomatis berpindah model, atau migrasi eksplisit per chain? | --migrate-lifecycle dengan dry-run/--v dan --director-confirm; konversi pasangan pasti otomatis dalam migrasi. Doctor biasa/MCP diagnosis saja, tanpa migrasi masal | Belum |
-| O-4 | PLAN LOCKED tanpa EXEC: pertahankan lock, konversi APPROVED, atau tolak? Pasangan ambigu: sebagian migrasi atau seluruh chain ditolak? | Konversi tanpa EXEC menjadi APPROVED dengan baseline review wajib; ambiguitas menolak seluruh chain sebelum deduplikasi agar bukti tidak hilang | Belum |
-| O-5 | Acuan cukup rev integer, atau rev+hash dan snapshot? Apakah AUD Notes mengubah kontrak? | Rev+hash, snapshot PLAN append-only, ledger tervalidasi; hash kontrak mengecualikan AUD Notes dengan validasi append-only. Ticket mengikat file penuh. Tidak membuat backup INTENT | Belum |
-| O-6 | Revisi kanonik disertifikasi setelah edit, atau staging+prepare/check/commit? | Staging dan explicit commit sesuai checkpoint. Pelonggaran/perubahan di luar checkpoint harus mendapat approval kandidat sebelum kontrak kanonik berubah; edit langsung menjadi UNCERTIFIED_EDIT | Belum |
-| O-7 | Notice cukup teks/ID message, atau metadata revisi+hash dan receipt durable? Otomatis terkirim oleh revise atau sigma send eksplisit? | sigma send eksplisit, typed CONTRACT_CHANGE/REQUEST dan metadata tervalidasi; receipt durable. Pending notice memblokir approval. Tidak bypass send gate dan tidak membuka tool mailbox MCP | Belum |
-| O-8 | EXEC otomatis mengikuti revisi PLAN, atau DEV mengakui acuan eksplisit? | exec acknowledge-plan; hash/ref/server checks dan notice valid wajib, status READ saja tidak mengakui revisi. Tidak memberi otorisasi coding | Belum |
-| O-9 | Baseline lama diisi doctor otomatis, atau reviewed import/unknown blocker? Seberapa jauh INTENT F04 vs F05? | Reviewed import PLAN rev 1 dengan provenance; INTENT yang punya current certified hash dapat menjadi baseline current, tanpa nomor sejarah buatan. INTENT tanpa sertifikasi tetap unknown/blocker sampai jalur Director/F05. F04 menambah hook revisi ratify/amendment, bukan workflow Git | Belum |
-| O-10 | CLI approve cukup pemanggilan command seperti lock lama, atau preview+--director-confirm? Persetujuan awal dicatat teks atau durable approval? | Preview+confirm CLI; MCP tetap prepare/trusted local approval/commit. Otorisasi pelonggaran/outside-checkpoint mengikat kandidat melalui control ticket+approval dan receipt konsumsi durable; jangan menerima teks chat sebagai approval MCP. Persetujuan ordinary dikumpulkan saat approve EXEC | Belum |
-| O-11 | INVALID/override boleh melewati guard revisi? Reconstruct boleh menyimpulkan selesai dari file EXEC? | Tidak bypass guard; reconstruct konservatif pada kedua model, pertahankan bukti valid dan jangan menyimpulkan LOCKED dari file saja. Menutup klaim selesai palsu meski mengubah heuristic legacy | Belum |
-| O-12 | Rename MCP lock menjadi approve dengan alias, atau tombstone dan tiket baru? | Tool approve canonical, empat tool lock lama tombstone, tiket lama pending ditolak tanpa dikonsumsi. Legacy memakai tool approve dengan effects legacy; replay sukses lama tetap historical | Belum |
-| O-13 | Cakupan teks master dan registry: F04 langsung atau seluruhnya F09? | F04 menyelaraskan template PLAN/EXEC, FMN/DEV rules+memory+8 skill, policy dan entry registry hanya operasi terkait approve/revise/ack/kontrak. Pembaruan terbatas registry memerlukan persetujuan eksplisit butir ini; refresh luas/sync tetap F09. AUD/ARC lintas dokumen dicatat F01/F05/F09, Protocol terakhir | Belum |
-| O-14 | Verdict READY_FOR_LOCK diganti bagaimana tanpa merusak dokumen schema 3 lama? Build/uji boleh dilakukan pada implementasi? | Template baru READY_FOR_APPROVAL; validator menerima lama/baru dengan tepat satu verdict pada dokumen lama, tanpa veto dari pilihan advisory. Istilah Approval readiness untuk PLAN/EXEC, Lock readiness tetap CLOSE. SCHEMA_VERSION/schema dokumen/paket tidak dinaikkan. Izinkan build+uji pada titik bagian 7; migrasi hanya fixture | Belum |
+| O-1 | F04a dirilis sendiri, atau dua tahap satu hasil final? | Dua tahap satu hasil; lifecycle tanpa guard revisi belum memenuhi keputusan terkunci | Disetujui sesuai rekomendasi |
+| O-2 | Bedakan lifecycle dari numbering melalui field sendiri, atau turunkan dari skema penomoran? Bagaimana approve pada legacy? | lifecycle_model terpisah; unmarked tracker = legacy_lock; chain baru = paired_approval. approve menjalankan semantik model lama dengan output eksplisit agar chain lama tetap operasional setelah tombstone | Disetujui sesuai rekomendasi |
+| O-3 | Doctor biasa otomatis berpindah model, atau migrasi eksplisit per chain? | --migrate-lifecycle dengan dry-run/--v dan --director-confirm; konversi pasangan pasti otomatis dalam migrasi. Doctor biasa/MCP diagnosis saja, tanpa migrasi masal | Disetujui sesuai rekomendasi |
+| O-4 | PLAN LOCKED tanpa EXEC: pertahankan lock, konversi APPROVED, atau tolak? Pasangan ambigu: sebagian migrasi atau seluruh chain ditolak? | Konversi tanpa EXEC menjadi APPROVED dengan baseline review wajib; ambiguitas menolak seluruh chain sebelum deduplikasi agar bukti tidak hilang | Disetujui sesuai rekomendasi |
+| O-5 | Acuan cukup rev integer, atau rev+hash dan snapshot? Apakah AUD Notes mengubah kontrak? | Rev+hash, snapshot PLAN append-only, ledger tervalidasi; hash kontrak mengecualikan AUD Notes dengan validasi append-only. Ticket mengikat file penuh. Tidak membuat backup INTENT | Disetujui sesuai rekomendasi |
+| O-6 | Revisi kanonik disertifikasi setelah edit, atau staging+prepare/check/commit? | Staging dan explicit commit sesuai checkpoint. Pelonggaran/perubahan di luar checkpoint harus mendapat approval kandidat sebelum kontrak kanonik berubah; edit langsung menjadi UNCERTIFIED_EDIT | Disetujui sesuai rekomendasi |
+| O-7 | Notice cukup teks/ID message, atau metadata revisi+hash dan receipt durable? Otomatis terkirim oleh revise atau sigma send eksplisit? | sigma send eksplisit, typed CONTRACT_CHANGE/REQUEST dan metadata tervalidasi; receipt durable. Pending notice memblokir approval. Tidak bypass send gate dan tidak membuka tool mailbox MCP | Disetujui sesuai rekomendasi |
+| O-8 | EXEC otomatis mengikuti revisi PLAN, atau DEV mengakui acuan eksplisit? | exec acknowledge-plan; hash/ref/server checks dan notice valid wajib, status READ saja tidak mengakui revisi. Tidak memberi otorisasi coding | Disetujui sesuai rekomendasi |
+| O-9 | Baseline lama diisi doctor otomatis, atau reviewed import/unknown blocker? Seberapa jauh INTENT F04 vs F05? | Reviewed import PLAN rev 1 dengan provenance; INTENT yang punya current certified hash dapat menjadi baseline current, tanpa nomor sejarah buatan. INTENT tanpa sertifikasi tetap unknown/blocker sampai jalur Director/F05. F04 menambah hook revisi ratify/amendment, bukan workflow Git | Disetujui sesuai rekomendasi |
+| O-10 | CLI approve cukup pemanggilan command seperti lock lama, atau preview+--director-confirm? Persetujuan awal dicatat teks atau durable approval? | Preview+confirm CLI; MCP tetap prepare/trusted local approval/commit. Otorisasi pelonggaran/outside-checkpoint mengikat kandidat melalui control ticket+approval dan receipt konsumsi durable; jangan menerima teks chat sebagai approval MCP. Persetujuan ordinary dikumpulkan saat approve EXEC | Disetujui sesuai rekomendasi |
+| O-11 | INVALID/override boleh melewati guard revisi? Reconstruct boleh menyimpulkan selesai dari file EXEC? | Tidak bypass guard; reconstruct konservatif pada kedua model, pertahankan bukti valid dan jangan menyimpulkan LOCKED dari file saja. Menutup klaim selesai palsu meski mengubah heuristic legacy | Disetujui sesuai rekomendasi |
+| O-12 | Rename MCP lock menjadi approve dengan alias, atau tombstone dan tiket baru? | Tool approve canonical, empat tool lock lama tombstone, tiket lama pending ditolak tanpa dikonsumsi. Legacy memakai tool approve dengan effects legacy; replay sukses lama tetap historical | Disetujui sesuai rekomendasi |
+| O-13 | Cakupan teks master dan registry: F04 langsung atau seluruhnya F09? | F04 menyelaraskan template PLAN/EXEC, FMN/DEV rules+memory+8 skill, policy dan entry registry hanya operasi terkait approve/revise/ack/kontrak. Pembaruan terbatas registry memerlukan persetujuan eksplisit butir ini; refresh luas/sync tetap F09. AUD/ARC lintas dokumen dicatat F01/F05/F09, Protocol terakhir | Disetujui sesuai rekomendasi |
+| O-14 | Verdict READY_FOR_LOCK diganti bagaimana tanpa merusak dokumen schema 3 lama? Build/uji boleh dilakukan pada implementasi? | Template baru READY_FOR_APPROVAL; validator menerima lama/baru dengan tepat satu verdict pada dokumen lama, tanpa veto dari pilihan advisory. Istilah Approval readiness untuk PLAN/EXEC, Lock readiness tetap CLOSE. SCHEMA_VERSION/schema dokumen/paket tidak dinaikkan. Izinkan build+uji pada titik bagian 7; migrasi hanya fixture | Disetujui sesuai rekomendasi |
 
-F04 tidak dapat selesai bila O-9 memilih menunda seluruh baseline INTENT ke F05 tetapi sekaligus mengharuskan semua chain lama langsung eligible: dua tuntutan itu bertentangan. Rekomendasi menerima keadaan blocked/unknown secara jujur untuk chain tanpa bukti, sambil mendukung kelanjutan legacy yang belum dimigrasikan.
+Konsekuensi O-9 yang disetujui: chain tanpa bukti sertifikasi tetap blocked/unknown pada model baru; kelanjutan legacy yang belum dimigrasikan tetap didukung. Migrasi tidak menjamin seluruh chain lama langsung eligible dan tidak mengarang baseline historis.
 
 ## 7. Strategi uji dan kriteria selesai
 
 Tahap rencana tidak menjalankan Sigma CLI, build, atau test. Baseline pengujian sebelumnya: 69 berkas/966 tes lulus pada F03; tambahan terakhir doctor 6 berkas/68 tes lulus. Itu bukan hasil pengujian F04.
 
-### Kontrak pengujian yang diajukan
+### Kontrak pengujian yang disetujui
 
 | ID | Skenario | Hasil wajib |
 |---|---|---|
@@ -223,7 +223,7 @@ Tahap rencana tidak menjalankan Sigma CLI, build, atau test. Baseline pengujian 
 ### Urutan validasi pada implementasi
 
 1. Setelah source siap: TypeScript --noEmit.
-2. Build sebelum tes CLI karena test memakai dist/. Build mengubah dist/ terlacak dan runtime sigma-mcp global via symlink; titik ini harus ikut persetujuan implementasi O-14.
+2. Build sebelum tes CLI karena test memakai dist/. Build mengubah dist/ terlacak dan runtime sigma-mcp global via symlink; titik ini disetujui O-14 untuk sesi implementasi baru.
 3. Tes bermakna pada engine/gates, multidraft, doc-check schema lama/baru, doctor/reconstruct/override, control W2, mailbox/revision receipts dan amendment.
 4. Tambahkan kasus F04 yang belum tercakup; jangan mengganti fixture legacy seluruhnya dengan model baru sehingga kompatibilitas tidak lagi diuji.
 5. Setelah targeted lulus, npm test penuh. Build/tes diulang hanya bila source berubah atau ada kegagalan/ketidakpastian.
@@ -241,24 +241,79 @@ Kriteria selesai: keputusan O-1–O-14 tertutup; implementasi memenuhi D-05–D-
 - **Hash bukan penilaian semantik:** hash mendeteksi edit, tidak membuktikan klasifikasi pelonggaran atau kebenaran checkpoint/identitas manusia. Rules dan review Director tetap berwenang.
 - **Pemulihan saat edit eksternal:** lock proyek mengoordinasikan CLI/MCP, bukan editor. Bandingkan dependensi sesaat sebelum commit; mismatch menolak. Jangan menulis ulang dokumen yang berubah saat recovery.
 - **Ledger+receipt lintas file:** gunakan transaksi bersama yang sudah ada, tidak menambah lock terpisah. Bukti tak boleh bergantung hanya pada status mailbox atau teks bebas.
-- **Batas LOCKED:** kontrak/result pasangan selesai tidak diedit. Append AUD Notes adalah pengecualian terbatas yang harus disetujui O-5; metadata display title/focus tidak memberi izin mengubah kontrak.
+- **Batas LOCKED:** kontrak/result pasangan selesai tidak diedit. Append AUD Notes adalah pengecualian terbatas yang disetujui O-5; metadata display title/focus tidak memberi izin mengubah kontrak.
 
 Tindak lanjut Protocol (dicatat, tidak diterapkan): definisi APPROVED/LOCKED dan Gate 2/3; revisi/acuan; dua checkpoint dan otorisasi pelonggaran; receipt notice/pengakuan; D-16; kompatibilitas legacy/migrasi; tombstone approve. Ikut daftar E04, dikerjakan terakhir.
 
-## 9. Urutan implementasi setelah persetujuan
+## 9. Urutan implementasi di sesi baru
 
-Urutan ini **usulan**, belum perintah eksekusi.
+Urutan ini **disetujui untuk sesi baru**. Sesi persetujuan berhenti pada pencatatan keputusan; implementasi F04 belum dimulai.
 
-1. Tutup O-1–O-14 dan finalkan kontrak hash, field, command, receipt, serta otorisasi cakupan. Periksa ulang HEAD bila repo berubah.
+1. Baca persetujuan O-1–O-14 dan handoff terbaru; periksa ulang HEAD/worktree serta peta dampak kode. Finalkan rincian teknis hash, field, command, dan receipt sesuai rekomendasi yang sudah disetujui, tanpa membuka ulang keputusan atau memperluas cakupan.
 2. F04a: model resolver/validator + evaluator gate per model; transisi approve/pair lock; layanan shared; draft/promote/supersede dan cardinality.
 3. F04a: migrasi opt-in dan reconstruct konservatif, provenance, dry-run/preflight/transaction. Jangan menjalankan proyek nyata.
 4. F04b: baseline/revision/hash/snapshot/ledger dan integrasi minimal INTENT; revise staging/check/commit; otorisasi kandidat.
 5. F04b: typed messages/receipt melalui sigma send dan ack EXEC; final approval evaluator serta kartu delta.
 6. CLI/MCP adapters+tools/tombstones/tickets/dependency hashes; satu lock/journal dan recovery, kemudian status/check/orientasi/ROADMAP.
-7. Teks master yang disetujui O-13, kompatibilitas verdict O-14, policy/registry terbatas jika diotorisasi. Pertahankan kewenangan AUD/FMN advisory dan aturan isolasi sesi.
+7. Teks master yang disetujui O-13, kompatibilitas verdict O-14, policy/registry terbatas yang sudah diotorisasi. Pertahankan kewenangan AUD/FMN advisory dan aturan isolasi sesi.
 8. TypeScript/build/targeted/full suite sesuai bagian 7; perbaiki kegagalan dan ulang checks yang terdampak.
 9. Laporan hasil aktual, keterbatasan, daftar paritas F01/F05/F09/Protocol, serta status F00. Commit/push menunggu instruksi terpisah.
 
-## 10. Hasil tahap penyusunan
+## 10. Hasil tahap penyusunan (historis, sebelum eksekusi)
 
-Diselesaikan pada sesi ini: pembacaan keputusan sumber, pemetaan kode read-only, dokumen rencana ini, serta pembaruan register F00 dan status commit/push F03. Tidak ada source/test/build/registry/state proyek atau aset terpasang yang diubah. Keputusan teknis dan eksekusi tetap menunggu Director.
+Hasil tahap penyusunan: pembacaan keputusan sumber, pemetaan kode read-only, dokumen rencana ini, serta pembaruan register F00 dan status commit/push F03. Tidak ada implementasi F04, build/uji F04, migrasi, atau sinkronisasi yang dilakukan.
+
+Pembaruan persetujuan 7 Oktober 2026: seluruh rekomendasi O-1 sampai O-14 diterima Director. Keputusan teknis ditutup; implementasi, build, dan pengujian sesuai rencana dilanjutkan di sesi baru. Koreksi doktrin F03 yang dikerjakan sebelum persetujuan ini adalah pekerjaan terpisah, sudah tercatat pada commit `e822ebd`; F04 harus mempertahankan kewajiban referensi pesan/memo tersebut.
+
+## 11. Hasil eksekusi F04 — 7–8 Oktober 2026
+
+Eksekusi diotorisasi melalui instruksi Director "lakukan eksekusi f04", mengikuti persetujuan O-1 sampai O-14. Baseline eksekusi: branch main, HEAD e822ebd; perubahan persetujuan pada F00/F04/handoff yang sudah ada dipertahankan. F04a dan F04b diimplementasikan sebagai satu hasil.
+
+### Perilaku dan bukti yang diterapkan
+
+- Chain baru memakai paired_approval; field lifecycle terpisah dari numbering. Chain lama tanpa field memakai legacy_lock dengan warning. Unknown recovery provenance dan nilai asing menolak mutasi persetujuan.
+- PLAN approve mencatat APPROVED, baseline rev 1, hash kontrak, snapshot, ledger, acuan INTENT dan receipt persetujuan. EXEC approve memverifikasi sumber, seluruh notice/otorisasi/delta dan pengakuan revisi terbaru, lalu mengunci pasangan bernomor sama dalam satu penulisan tracker. Timestamp persetujuan PLAN tetap terpisah dari timestamp lock pasangan.
+- Legacy approve mempertahankan transisi lock terpisah. CLI plan lock/exec lock dan empat tool MCP lock lama menjadi tombstone; tiket lama pending tidak dikonsumsi. Replay yang sudah selesai ditandai historical dan operation_retired.
+- Revisi melalui staging prepare/check/commit. Kandidat memuat baris Contract Changes yang sesuai deklarasi; outside-checkpoint/pelonggaran membutuhkan tiket kandidat dan trusted local CLI approval sebelum commit. Receipt konsumsi disalin ke ledger agar bukti bertahan setelah transaksi. Ordinary revisions disertakan pada kartu persetujuan EXEC.
+- Hash kontrak menormalkan CRLF/LF dan mengecualikan blok AUD Notes yang dikenali. Append audit diperiksa terhadap snapshot dan PLAN kanonik terkini; kandidat tidak boleh membuang advice yang ditambahkan sesudah snapshot. Hash penuh semua dokumen sumber tetap membekukan tiket approval, termasuk AUD Notes. Metadata F02 kandidat/sumber harus cocok dengan chain.
+- CONTRACT_CHANGE dan CONTRACT_CHANGE_REQUEST memakai sigma send; sender/recipient, owning INTENT, PLAN dan revision_id diperiksa. Notice mengikat file aktual dan digest payload. Seluruh revisi yang belum diberitahukan dapat disampaikan satu per satu; tidak perlu membuang revisi lama bila sudah ada revisi berikutnya. Send tetap mengikuti gate/migrasi/retensi F03.
+- EXEC acknowledgement eksplisit melalui CLI/MCP; READ/OUTDATED/archive tidak mengakui acuan. Approval, create EXEC dan acknowledgement tidak memberi izin coding.
+- Sertifikasi INTENT menaikkan revision dan menandai PLAN APPROVED untuk review; pasangan LOCKED tidak didemote. Gate/status/readiness menampilkan state, sumber, revisi dan blocker aktual. ROADMAP ikut transaksi approve/revise/migrate dan memperlihatkan status serta revision/historical legacy.
+- Migrasi lifecycle CLI opt-in per chain, dengan dry-run dan director-confirm; preflight menolak ambiguitas sebelum deduplikasi. Doctor tidak memberi approval/baseline baru. Reconstruct tanpa tracker tepercaya memakai provenance unknown dan tidak menyimpulkan pasangan LOCKED dari berkas; tracker sah dan sertifikasi yang ada dipertahankan saat set artefak berubah.
+- CLI approve/revise/migrate, notice send dan MCP approve/ack memakai lease proyek yang sama. Journal mengikat before-image/path dan intended after-image untuk penulisan F04. Crash sebelum marker commit memulihkan keseluruhan transaksi; sesudah marker menyelesaikan commit/idempotency. Konflik edit eksternal menolak overwrite dan memerlukan pemulihan manual.
+
+### Paritas master dan scope
+
+Template PLAN/EXEC, rules serta memory FMN/DEV, dan delapan target skill diselaraskan. Verdict EXEC lama READY_FOR_LOCK dan baru READY_FOR_APPROVAL tetap diterima dengan tepat satu pilihan; verdict advisory bukan otorisasi. Session Isolation, Writing Style Rules dan doktrin referensi pesan/memo F03 dipertahankan.
+
+Registry berubah terbatas pada 14 entry terkait lifecycle/proyeksi/kontrak, termasuk enam operasi baru; total 64. Policy mencatat approve W2, acknowledgement W1, dan otorisasi Director bersyarat pada revision commit. Empat tool approve dan satu acknowledge-plan ditambahkan; tidak menambah tool mailbox MCP. Refresh registry luas tidak dijalankan.
+
+### Hasil validasi aktual
+
+TypeScript --noEmit dan build (tsc) lulus, exit 0. Tes khusus F04: 2 berkas / 70 tes lulus; regresi terakhir yang diperbaiki: 3 berkas / 109 tes lulus. Suite lengkap pada build final: 71 berkas / 1.036 tes lulus, tanpa kegagalan atau suite error, exit 0. git diff --check dan pemeriksaan batas scope akhir lulus.
+
+### Keterlacakan kontrak uji
+
+| Kontrak | Bukti uji utama |
+|---|---|
+| U-01/U-02 | Kedua numbering dengan legacy/new lifecycle; source identity; initial/pair approval CLI/MCP |
+| U-03/U-04 | Target multidraft dan pointer tampilan, pekerjaan paralel, Gate 3/cardinality/supersede, bukti kontrak selesai |
+| U-05 | Tombstone CLI/MCP, tiket lama pending tanpa konsumsi, replay sukses historis |
+| U-06 | Edit sumber, CRLF/LF, marker/audit append/edit/delete, pelestarian advice pada staging, stale tiket penuh |
+| U-07 | Ordinary pre/post, outside-checkpoint/pelonggaran, klasifikasi wajib dan baris deklarasi, approval kandidat/receipt |
+| U-08/U-09 | Typed notice role/revision/reuse, UNREAD GENERAL dan mailbox legacy; regresi konteks/gate F03 |
+| U-10/U-11 | READ/OUTDATED/archive/quota, tamper ledger/snapshot/notice, explicit ack dan dependency stale tanpa konsumsi |
+| U-12/U-13 | Invalidasi source APPROVED tanpa demote LOCKED; dry-run/import/preflight/repeat dan pasangan legacy |
+| U-14/U-15 | Reconstruct missing/corrupt/valid + altered set/F02; INVALID dan override tidak mengganti proof |
+| U-16 | CLI check/status/preview/approve, MCP approve/ack/status/doctor, ROADMAP dan verdict lama/baru |
+| U-17 | Crash PLAN/EXEC/ROADMAP/notice/index/receipt/ticket/approval/commit marker, competing writer dan expired fixture lease, konflik edit eksternal |
+
+Bukti khusus terdapat pada test/f04-lifecycle.test.ts dan test/f04-control-recovery.test.ts, dilengkapi suite legacy, multidraft, numbering, reconstruct, mailbox, document validator dan control. Fixture legacy dipertahankan eksplisit; konstruktor chain baru tidak dipakai untuk mengklaim kompatibilitas legacy.
+
+### Batas hasil dan tindak lanjut
+
+1. Hash mendeteksi perubahan; checkpoint dan klasifikasi pelonggaran tetap deklarasi manusia yang diperiksa Director, bukan penilaian semantik atau autentikasi identitas manusia otomatis.
+2. Historical legacy tanpa snapshot tetap history dengan keterbatasan bukti. Imported baseline mengesahkan isi current yang direview, bukan isi historis ketika lock lama. Current INTENT tanpa sertifikasi/hash yang cocok tetap blocked; sejarah Git dan baseline lengkap mengikuti F05.
+3. State tracker adalah metadata tersimpan; proyeksi effective_gates memeriksa bukti di disk tanpa menyertifikasi edit. Target approval memeriksa ulang seluruh proof di dalam lease. Editor tidak mengikuti lease; konflik recovery dilaporkan untuk pemulihan manual.
+4. Constitution, Protocol, SCHEMA_VERSION dan versi paket tidak berubah. Distribusi skill/global/proyek serta compatibility warning lintas host tetap F09/F12. Salinan ARC/AUD dan Protocol yang masih memakai workflow lock perlu ditutup pada fokus terkait; Protocol terakhir.
+5. Build menghasilkan dist/ terlacak dan memengaruhi runtime global yang menunjuknya melalui symlink sesuai O-14. Tidak ada sync global/proyek, migrasi proyek nyata, commit atau push pada eksekusi ini.

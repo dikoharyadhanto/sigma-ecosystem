@@ -23,12 +23,8 @@ const shared_1 = require("../../shared");
 const shared_2 = require("../shared");
 function registerPreparePlanLockTool(server) {
     server.registerTool('sigma_prepare_plan_lock', {
-        title: 'Prepare a plan lock operation ticket',
-        description: 'Freezes the active chain\'s DRAFT FMN-PLAN (version, document hash, state_revision) into an operation ' +
-            'ticket. `version` is required when more than one DRAFT FMN-PLAN is open, optional otherwise. Does not ' +
-            'lock anything. The ticket grants no authority by itself: a Director must record an approval via the ' +
-            'trusted local CLI (`sigma control approve <ticket_id>`) before sigma_commit_plan_lock can use it. ' +
-            'Tickets expire after 30 minutes. FMN role only.',
+        title: 'Removed: use prepare plan approve',
+        description: 'Retired tombstone. Use sigma_prepare_plan_approve with a new approval ticket. Pending lock tickets cannot be consumed; completed legacy commit replay is historical only.',
         inputSchema: {
             version: zod_1.z.string().min(1).optional(),
             idempotency_key: zod_1.z.string().min(1),
@@ -47,7 +43,7 @@ function registerPreparePlanLockTool(server) {
             idempotencyKey: args.idempotency_key,
             argumentsForHash: {},
             allowedRoles: ['FMN'],
-            checkPreconditions: () => { },
+            checkPreconditions: () => { throw new errors_1.McpQueryError(contract_1.ERROR_CODES.INVALID_OPERATION, 'TOMBSTONE: use sigma_prepare_plan_approve. Existing lock tickets are not approval tickets.'); },
             transactionFiles: (root) => [(0, controlStore_1.ticketPath)(root, operationTicketId)],
         }, (root) => {
             const { data: chain } = (0, chain_1.readActiveChain)(root);

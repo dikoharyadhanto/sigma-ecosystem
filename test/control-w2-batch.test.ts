@@ -288,13 +288,13 @@ describe('sigma_prepare_intent_score / sigma_commit_intent_score', () => {
   });
 });
 
-describe('sigma_prepare_plan_lock / sigma_commit_plan_lock', () => {
+describe('sigma_prepare_plan_approve / sigma_commit_plan_approve', () => {
   it('prepare requires FMN role', async () => {
     const env = setupTestEnv();
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithLockedPlan('v1', 'v1.1'));
     const s = await session(env, 'DEV');
-    const res = await s.call('sigma_prepare_plan_lock', { idempotency_key: 'p1' });
+    const res = await s.call('sigma_prepare_plan_approve', { idempotency_key: 'p1' });
     expect(res.isError).toBe(true);
     expect((res.payload.error as Payload).code).toBe('ROLE_NOT_AUTHORIZED');
     await s.close();
@@ -306,7 +306,7 @@ describe('sigma_prepare_plan_lock / sigma_commit_plan_lock', () => {
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithLockedPlan('v1', 'v1.1')); // already LOCKED, not DRAFT
     const s = await session(env, 'FMN');
-    const res = await s.call('sigma_prepare_plan_lock', { idempotency_key: 'p1' });
+    const res = await s.call('sigma_prepare_plan_approve', { idempotency_key: 'p1' });
     expect(res.isError).toBe(true);
     expect((res.payload.error as Payload).code).toBe('INVALID_OPERATION');
     await s.close();
@@ -331,12 +331,12 @@ describe('sigma_prepare_plan_lock / sigma_commit_plan_lock', () => {
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md'), validPlanDoc('v1.1'));
 
     const s = await session(env, 'FMN');
-    const prep = await s.call('sigma_prepare_plan_lock', { idempotency_key: 'p1' });
+    const prep = await s.call('sigma_prepare_plan_approve', { idempotency_key: 'p1' });
     expect(prep.isError, JSON.stringify(prep.payload)).not.toBe(true);
     expect((prep.payload.target as Payload).version).toBe('v1.1');
 
     const approval = directorDecide(env.projectDir, prep.payload.operation_ticket_id as string, 'approve');
-    const commit = await s.call('sigma_commit_plan_lock', {
+    const commit = await s.call('sigma_commit_plan_approve', {
       operation_ticket_id: prep.payload.operation_ticket_id,
       approval_id: approval.approval_id,
       idempotency_key: 'c1',
@@ -350,14 +350,14 @@ describe('sigma_prepare_plan_lock / sigma_commit_plan_lock', () => {
   });
 });
 
-describe('sigma_prepare_exec_lock / sigma_commit_exec_lock', () => {
+describe('sigma_prepare_exec_approve / sigma_commit_exec_approve', () => {
   it('prepare requires DEV role', async () => {
     const env = setupTestEnv();
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftExec('v1'));
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md'), validExecDoc('v0.1', 'v1'));
     const s = await session(env, 'FMN');
-    const res = await s.call('sigma_prepare_exec_lock', { idempotency_key: 'p1' });
+    const res = await s.call('sigma_prepare_exec_approve', { idempotency_key: 'p1' });
     expect(res.isError).toBe(true);
     expect((res.payload.error as Payload).code).toBe('ROLE_NOT_AUTHORIZED');
     await s.close();
@@ -371,12 +371,12 @@ describe('sigma_prepare_exec_lock / sigma_commit_exec_lock', () => {
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md'), validExecDoc('v0.1', 'v1', 'READY_FOR_LOCK'));
 
     const s = await session(env, 'DEV');
-    const prep = await s.call('sigma_prepare_exec_lock', { idempotency_key: 'p1' });
+    const prep = await s.call('sigma_prepare_exec_approve', { idempotency_key: 'p1' });
     expect(prep.isError, JSON.stringify(prep.payload)).not.toBe(true);
     expect((prep.payload.target as Payload).version).toBe('v0.1');
 
     const approval = directorDecide(env.projectDir, prep.payload.operation_ticket_id as string, 'approve');
-    const commit = await s.call('sigma_commit_exec_lock', {
+    const commit = await s.call('sigma_commit_exec_approve', {
       operation_ticket_id: prep.payload.operation_ticket_id,
       approval_id: approval.approval_id,
       idempotency_key: 'c1',
@@ -396,14 +396,14 @@ describe('sigma_prepare_exec_lock / sigma_commit_exec_lock', () => {
     fs.writeFileSync(execPath, validExecDoc('v0.1', 'v1', 'READY_FOR_LOCK'));
 
     const s = await session(env, 'DEV');
-    const prep = await s.call('sigma_prepare_exec_lock', { idempotency_key: 'p1' });
+    const prep = await s.call('sigma_prepare_exec_approve', { idempotency_key: 'p1' });
     expect(prep.isError, JSON.stringify(prep.payload)).not.toBe(true);
     const approval = directorDecide(env.projectDir, prep.payload.operation_ticket_id as string, 'approve');
 
     // Content drifts after prepare, before commit.
     fs.appendFileSync(execPath, '\n<!-- edited after prepare -->\n');
 
-    const commit = await s.call('sigma_commit_exec_lock', {
+    const commit = await s.call('sigma_commit_exec_approve', {
       operation_ticket_id: prep.payload.operation_ticket_id,
       approval_id: approval.approval_id,
       idempotency_key: 'c1',

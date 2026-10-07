@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
+import { journaledWriteIfActive } from './controlStore';
 import { assertMailboxLease } from './mailboxLock';
 import { atomicReplaceFileSync } from '../utils/fs';
 import { MailboxScope, matchesMailboxScope, validateMailboxContext, assertMailboxPath, mailboxDiskFiles, validateEntryMembership } from './mailboxContext';
@@ -32,6 +33,7 @@ export interface MessageEntry {
   action?: ActionRequired;
   intent_version?: string | null;
   context?: string;
+  contract_change?: { plan: string; revision: number; revision_id: string; contract_sha256: string };
   migration?: { original_file: string; original_status: string; migrated_at: string };
 }
 
@@ -141,6 +143,7 @@ export function writeIndex(projectRoot: string, index: MessageIndex): void {
   assertMailboxPath(projectRoot, MESSAGES_INDEX_FILE.replace(/\\/g, '/'));
   assertMailboxLease(projectRoot);
   fs.ensureDirSync(path.dirname(indexPath));
+  if (journaledWriteIfActive(projectRoot, indexPath, JSON.stringify(index, null, 2) + "\n")) return;
   const tmp = `${indexPath}.${process.pid}.${crypto.randomUUID()}.tmp`;
   fs.writeJsonSync(tmp, index, { spaces: 2 });
   atomicReplaceFileSync(tmp, indexPath);
@@ -203,6 +206,7 @@ ${replyToRow}| Related Artifact | ${relatedArtifact} |
 | Mailbox Context | ${entry.context ?? 'LEGACY'} |
 | Owning INTENT | ${entry.intent_version ?? '—'} |
 | Attachments    | ${attachmentCell} |
+${entry.contract_change ? "| Revision ID | " + entry.contract_change.revision_id + " |\n| Contract SHA256 | " + entry.contract_change.contract_sha256 + " |" : ""}
 
 ---
 

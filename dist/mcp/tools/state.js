@@ -1,11 +1,8 @@
 "use strict";
-// PLAN-IMPL-01 §3.1 — sigma_get_state
-//
-// Read-only. Wraps the same engine functions the CLI uses (readActiveChain,
-// getGateStatus, hasInvalidRuntime). No writer function is imported here.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeState = computeState;
 exports.registerStateTool = registerStateTool;
+const lifecycleView_1 = require("../../engine/lifecycleView");
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -24,6 +21,7 @@ function computeState(root) {
     const { chainVersion, data } = (0, chain_1.readActiveChain)(root);
     return {
         active: true,
+        lifecycle: (0, lifecycleView_1.lifecycleView)(root, data),
         phase: data.lifecycle_state,
         active_chain: chainVersion,
         project_id: identity.project_id,

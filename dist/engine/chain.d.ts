@@ -1,3 +1,4 @@
+import { LifecycleModel } from './lifecycle';
 import { VersioningScheme } from './numbering';
 export type LifecycleState = 'DESIGN' | 'BUILD' | 'CLOSE' | 'CLOSED';
 export interface EvidenceRecord {
@@ -15,6 +16,29 @@ export interface ArtifactVersion {
     file?: string;
     created_at: string;
     updated_at: string;
+    approved_at?: string;
+    revision?: number;
+    contract_sha256?: string;
+    intent_revision_ref?: number;
+    intent_doc_sha256_ref?: string;
+    plan_revision_ref?: number;
+    plan_contract_sha256_ref?: string;
+    acknowledged_at?: string;
+    needs_intent_review?: boolean;
+    pending_notice?: boolean;
+    revision_ledger?: string;
+    revision_ledger_sha256?: string;
+    approval_receipt?: {
+        channel: string;
+        approved_at: string;
+        ticket_id?: string;
+        approval_id?: string;
+    };
+    legacy_provenance?: {
+        locked_at?: string;
+        state: string;
+    };
+    historical_legacy?: boolean;
     locked_at?: string;
     superseded_by?: string;
     supersede_reason?: string;
@@ -105,6 +129,8 @@ export interface SingleIntentState {
     amendments?: AmendmentEntry[];
     effective_amendment?: string | null;
     certified_doc_sha256?: string;
+    revision?: number;
+    revision_provenance?: string;
     certified_at?: string;
 }
 export interface SingleRoadmapState {
@@ -128,6 +154,7 @@ export interface SingleCloseState {
 export interface ChainState {
     schema_version: string;
     versioning_scheme?: VersioningScheme;
+    lifecycle_model?: LifecycleModel;
     chain_version: string;
     created_at: string;
     updated_at: string;
@@ -169,7 +196,7 @@ export declare function readActiveChain(projectRoot: string): {
     data: ChainState;
 };
 export declare function readProjectIdentity(projectRoot: string): ProjectIdentity;
-export declare function createInitialChain(chainVersion: string, intentFilePath: string, title?: string, focus?: string, versioningScheme?: VersioningScheme): ChainState;
+export declare function createInitialChain(chainVersion: string, intentFilePath: string, title?: string, focus?: string, versioningScheme?: VersioningScheme, lifecycleModel?: LifecycleModel): ChainState;
 export declare function hasRatifiedIntent(chain: ChainState): boolean;
 export declare function hasCleanGate2Chain(chain: ChainState): boolean;
 export declare function hasCleanGate3Chain(chain: ChainState): boolean;

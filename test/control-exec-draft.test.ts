@@ -203,7 +203,7 @@ describe('sigma_create_exec_draft — target-PLAN selection (real business logic
       callCreate(env.projectDir, 'v1.2');
     } catch (e) {
       expect((e as ExecDraftError).code).toBe('INVALID_OPERATION');
-      expect((e as ExecDraftError).message).toMatch(/is not a LOCKED plan/);
+      expect((e as ExecDraftError).message).toMatch(/is not an eligible LOCKED plan/);
     }
     expect(readChain(env.projectDir, 'v1').exec.versions).toEqual([]);
     env.cleanup();
@@ -224,7 +224,7 @@ describe('sigma_create_exec_draft — target-PLAN selection (real business logic
     stubProjectIdentity(env);
     writeChainFixture(env, 'v1', chainWithOnePlanAlreadyExecuted());
 
-    expect(() => callCreate(env.projectDir)).toThrow(/All locked plans already have an exec/);
+    expect(() => callCreate(env.projectDir)).toThrow(/All LOCKED plans already have an exec/);
     env.cleanup();
   });
 

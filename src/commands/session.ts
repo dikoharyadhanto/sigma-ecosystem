@@ -1,3 +1,4 @@
+import { lifecycleView } from '../engine/lifecycleView';
 import { Command } from 'commander';
 import path from 'path';
 import {
@@ -189,6 +190,7 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
       console.log(`  [WARNING] Doc state: UNCERTIFIED_EDIT (edited after ${since}) — see: sigma intent check`);
     }
     console.log(artifactLine('Plan Doc',           'FMN-PLAN',   fmtVersion(chain.plan.active_version),          chain.plan.active_state));
+    console.log(JSON.stringify(lifecycleView(projectRoot,chain),null,2));
     const openPlanDrafts = chain.plan.versions.filter(v => v.state === 'DRAFT');
     if (openPlanDrafts.length > 1) {
       console.log(`  [NOTE] ${openPlanDrafts.length} DRAFT FMN-PLANs are open: ${openPlanDrafts.map(v => v.version).join(', ')} — run: sigma plan status`);

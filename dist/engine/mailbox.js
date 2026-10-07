@@ -24,6 +24,7 @@ exports.checkMailboxIntegrity = checkMailboxIntegrity;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
+const controlStore_1 = require("./controlStore");
 const mailboxLock_1 = require("./mailboxLock");
 const fs_1 = require("../utils/fs");
 const mailboxContext_1 = require("./mailboxContext");
@@ -119,6 +120,8 @@ function writeIndex(projectRoot, index) {
     (0, mailboxContext_1.assertMailboxPath)(projectRoot, config_2.MESSAGES_INDEX_FILE.replace(/\\/g, '/'));
     (0, mailboxLock_1.assertMailboxLease)(projectRoot);
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(indexPath));
+    if ((0, controlStore_1.journaledWriteIfActive)(projectRoot, indexPath, JSON.stringify(index, null, 2) + "\n"))
+        return;
     const tmp = `${indexPath}.${process.pid}.${crypto_1.default.randomUUID()}.tmp`;
     fs_extra_1.default.writeJsonSync(tmp, index, { spaces: 2 });
     (0, fs_1.atomicReplaceFileSync)(tmp, indexPath);
@@ -175,6 +178,7 @@ ${replyToRow}| Related Artifact | ${relatedArtifact} |
 | Mailbox Context | ${entry.context ?? 'LEGACY'} |
 | Owning INTENT | ${entry.intent_version ?? '—'} |
 | Attachments    | ${attachmentCell} |
+${entry.contract_change ? "| Revision ID | " + entry.contract_change.revision_id + " |\n| Contract SHA256 | " + entry.contract_change.contract_sha256 + " |" : ""}
 
 ---
 

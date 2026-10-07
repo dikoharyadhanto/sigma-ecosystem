@@ -4,6 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendCommand = sendCommand;
+const chain_1 = require("../engine/chain");
+const revisions_1 = require("../engine/revisions");
+const governanceTransaction_1 = require("../engine/governanceTransaction");
+const controlStore_1 = require("../engine/controlStore");
 const commander_1 = require("commander");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
@@ -94,6 +98,34 @@ function runSend(opts) {
             `This prevents AI roles from sending while ignoring their own unread mailbox entries.\n` +
             `Run: sigma inbox read <id>   (or: sigma inbox --role ${fromRole.toLowerCase()} to list them)`);
     }
+    const typed = msgType === 'CONTRACT_CHANGE' || msgType === 'CONTRACT_CHANGE_REQUEST';
+    let contractChange;
+    if (typed) {
+        const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
+        const match = /^(?:FMN-)?PLAN-(v\d+\.[1-9]\d*)$/.exec(relatedArtifact);
+        if (!match || context.intent_version !== chain.intent.version || context.context !== match[1])
+            throw new Error('Contract messages require an explicit registered PLAN in the active INTENT; GENERAL/LEGACY forbidden.');
+        const plan = chain.plan.versions.find(p => p.version === match[1]);
+        if (!plan || plan.state !== 'APPROVED')
+            throw new Error('Contract messages require an APPROVED PLAN.');
+        if (msgType === 'CONTRACT_CHANGE_REQUEST') {
+            if (fromRole !== 'DEV' || toRole !== 'FMN')
+                throw new Error('CONTRACT_CHANGE_REQUEST requires DEV -> FMN and a justified message body.');
+            if (opts.revisionId)
+                throw new Error('--revision-id is only for CONTRACT_CHANGE.');
+        }
+        else {
+            if (fromRole !== 'FMN' || toRole !== 'DEV')
+                throw new Error('CONTRACT_CHANGE requires FMN -> DEV.');
+            const ledger = (0, revisions_1.assertPlanCertified)(projectRoot, chain, match[1]);
+            const revision = ledger.records.find(r => r.revision_id === opts.revisionId);
+            if (!opts.revisionId || !revision || revision.revision <= 1 || revision.notice)
+                throw new Error('CONTRACT_CHANGE requires an unnotified registered --revision-id; old notices cannot be reused.');
+            contractChange = { plan: match[1], revision: revision.revision, revision_id: revision.revision_id, contract_sha256: revision.contract_sha256 };
+        }
+    }
+    else if (opts.revisionId)
+        throw new Error('--revision-id requires CONTRACT_CHANGE.');
     const ts = (0, mailbox_1.generateTimestamp)();
     const suffix = (0, mailbox_1.generateRandomSuffix)();
     const msgId = (0, mailbox_1.generateMessageId)(fromRole, toRole, ts, suffix);
@@ -104,62 +136,82 @@ function runSend(opts) {
     const absFilePath = path_1.default.join(inboxDir, filename);
     if (existingIndex.messages.some(m => m.id === msgId) || fs_extra_1.default.existsSync(absFilePath))
         throw new Error('Message identity/destination collision; no overwrite.');
-    // Handle attachment
-    const attachmentPaths = [];
-    if (opts.attach) {
-        const srcPath = path_1.default.resolve(opts.attach);
-        if (!fs_extra_1.default.existsSync(srcPath) || !fs_extra_1.default.statSync(srcPath).isFile()) {
-            throw new Error(`Attachment file not found: ${opts.attach}`);
+    const persist = () => {
+        // Handle attachment
+        const attachmentPaths = [];
+        if (opts.attach) {
+            const srcPath = path_1.default.resolve(opts.attach);
+            if (!fs_extra_1.default.existsSync(srcPath) || !fs_extra_1.default.statSync(srcPath).isFile()) {
+                throw new Error(`Attachment file not found: ${opts.attach}`);
+            }
+            const attachDir = (0, mailboxContext_1.assertMailboxPath)(projectRoot, (0, fs_1.toPosix)(config_1.MESSAGES_ATTACHMENTS_DIR));
+            (0, mailboxLock_1.assertMailboxLease)(projectRoot);
+            fs_extra_1.default.ensureDirSync(attachDir);
+            const attachFilename = `${msgId}-${path_1.default.basename(srcPath)}`;
+            const destPath = path_1.default.join(attachDir, attachFilename);
+            if (typed)
+                (0, controlStore_1.journaledWrite)(projectRoot, destPath, fs_extra_1.default.readFileSync(srcPath), true);
+            else
+                fs_extra_1.default.copySync(srcPath, destPath, { overwrite: false, errorOnExist: true });
+            attachmentPaths.push((0, fs_1.toPosix)(path_1.default.join(config_1.MESSAGES_ATTACHMENTS_DIR, attachFilename)));
         }
-        const attachDir = (0, mailboxContext_1.assertMailboxPath)(projectRoot, (0, fs_1.toPosix)(config_1.MESSAGES_ATTACHMENTS_DIR));
+        // Build index entry
         (0, mailboxLock_1.assertMailboxLease)(projectRoot);
-        fs_extra_1.default.ensureDirSync(attachDir);
-        const attachFilename = `${msgId}-${path_1.default.basename(srcPath)}`;
-        const destPath = path_1.default.join(attachDir, attachFilename);
-        fs_extra_1.default.copySync(srcPath, destPath, { overwrite: false, errorOnExist: true });
-        attachmentPaths.push((0, fs_1.toPosix)(path_1.default.join(config_1.MESSAGES_ATTACHMENTS_DIR, attachFilename)));
-    }
-    // Build index entry
-    (0, mailboxLock_1.assertMailboxLease)(projectRoot);
-    fs_extra_1.default.ensureDirSync(inboxDir);
-    const entry = {
-        id: msgId,
-        from: fromRole,
-        to: toRole,
-        type: msgType,
-        subject,
-        file: relFilePath,
-        status: 'UNREAD',
-        created_at: ts,
-        attachments: attachmentPaths,
-        action,
-        related_artifact: relatedArtifact,
-        intent_version: context.intent_version,
-        context: context.context,
-        ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
+        fs_extra_1.default.ensureDirSync(inboxDir);
+        const entry = {
+            id: msgId,
+            from: fromRole,
+            to: toRole,
+            type: msgType,
+            subject,
+            file: relFilePath,
+            status: 'UNREAD',
+            created_at: ts,
+            attachments: attachmentPaths,
+            action,
+            related_artifact: relatedArtifact,
+            intent_version: context.intent_version,
+            context: context.context,
+            ...(contractChange ? { contract_change: contractChange } : {}),
+            ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
+        };
+        // Write message markdown
+        const markdown = (0, mailbox_1.buildMessageMarkdown)(entry, body);
+        (0, mailboxLock_1.assertMailboxLease)(projectRoot);
+        try {
+            if (typed)
+                (0, controlStore_1.journaledWrite)(projectRoot, absFilePath, markdown, true);
+            else
+                fs_extra_1.default.writeFileSync(absFilePath, markdown, { encoding: 'utf8', flag: 'wx' });
+        }
+        catch (err) {
+            if (!typed)
+                for (const a of attachmentPaths)
+                    fs_extra_1.default.removeSync(path_1.default.join(projectRoot, a));
+            throw err;
+        }
+        // Update index
+        existingIndex.messages.push(entry);
+        try {
+            (0, mailbox_1.writeIndex)(projectRoot, existingIndex);
+        }
+        catch (err) {
+            if (!typed) {
+                fs_extra_1.default.removeSync(absFilePath);
+                for (const a of attachmentPaths)
+                    fs_extra_1.default.removeSync(path_1.default.join(projectRoot, a));
+            }
+            throw err;
+        }
+        if (contractChange) {
+            (0, controlStore_1.controlTestFailpoint)('contract_notice_after_index');
+            (0, revisions_1.recordNotice)(projectRoot, contractChange.plan, contractChange.revision, { message_id: msgId, from: 'FMN', to: 'DEV', intent: context.intent_version, plan: contractChange.plan, revision: contractChange.revision, contract_sha256: contractChange.contract_sha256, created_at: ts, file: relFilePath, file_sha256: (0, revisions_1.sha256)(markdown), payload_sha256: (0, revisions_1.sha256)(body) });
+            (0, controlStore_1.controlTestFailpoint)('contract_notice_after_receipt');
+        }
+        return attachmentPaths;
     };
-    // Write message markdown
-    const markdown = (0, mailbox_1.buildMessageMarkdown)(entry, body);
-    (0, mailboxLock_1.assertMailboxLease)(projectRoot);
-    try {
-        fs_extra_1.default.writeFileSync(absFilePath, markdown, { encoding: 'utf8', flag: 'wx' });
-    }
-    catch (err) {
-        for (const a of attachmentPaths)
-            fs_extra_1.default.removeSync(path_1.default.join(projectRoot, a));
-        throw err;
-    }
-    // Update index
-    existingIndex.messages.push(entry);
-    try {
-        (0, mailbox_1.writeIndex)(projectRoot, existingIndex);
-    }
-    catch (err) {
-        fs_extra_1.default.removeSync(absFilePath);
-        for (const a of attachmentPaths)
-            fs_extra_1.default.removeSync(path_1.default.join(projectRoot, a));
-        throw err;
-    }
+    const typedFiles = typed ? [absFilePath, path_1.default.join(projectRoot, 'Sigma/messages/index.json'), ...(contractChange ? [(0, chain_1.chainFilePath)(projectRoot, context.intent_version), (0, revisions_1.boundedPath)(projectRoot, (0, revisions_1.revisionPaths)(contractChange.plan).ledger)] : []), ...(opts.attach ? [path_1.default.join(projectRoot, config_1.MESSAGES_ATTACHMENTS_DIR, msgId + '-' + path_1.default.basename(path_1.default.resolve(opts.attach)))] : [])] : [];
+    const attachmentPaths = typed ? (0, governanceTransaction_1.governanceMutationUnderLease)(projectRoot, 'contract_send', typedFiles, persist, () => (0, mailboxLock_1.assertMailboxLease)(projectRoot)) : persist();
     console.log('\nMessage sent.');
     console.log(`  ID       : ${msgId}`);
     console.log(`  From     : ${fromRole} → ${toRole}`);
@@ -195,6 +247,7 @@ function sendCommand() {
         .option('--attach <file>', 'File to attach (copied into Sigma/messages/attachments/)')
         .option('--reply-to <id>', 'Existing parent message ID; its INTENT must match the active context')
         .option('--action <action>', `Action required from recipient (${config_1.VALID_ACTIONS.map(a => a.toLowerCase()).join('|')})`, 'fyi')
+        .option('--revision-id <id>', 'Exact PLAN revision identity for CONTRACT_CHANGE (vN.x:rev-N)')
         .option('--related-artifact <artifact>', 'Artifact reference or GENERAL (reply defaults to parent context)')
         .action(async (opts) => {
         try {

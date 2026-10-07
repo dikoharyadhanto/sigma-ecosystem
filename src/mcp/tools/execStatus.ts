@@ -1,3 +1,4 @@
+import { lifecycleView } from '../../engine/lifecycleView';
 // Stage B2 — sigma_exec_status. Query-plane equivalent of `sigma exec
 // status` — categorizes chain.exec.versions[] into DRAFT/LOCKED with their
 // plan_version_ref, plus Gate 3. Simpler than plan_status: exec has no
@@ -23,6 +24,7 @@ export function computeExecStatus(root: string | null): unknown {
 
   return {
     active: true,
+    lifecycle: lifecycleView(root,chain),
     active_chain: chainVersion,
     drafts: drafts.map((d) => ({ version: d.version, plan_version_ref: d.plan_version_ref ?? null, created_at: d.created_at })),
     locked: locked.map((e) => ({ version: e.version, plan_version_ref: e.plan_version_ref ?? null })),

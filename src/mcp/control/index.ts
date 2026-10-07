@@ -37,6 +37,8 @@ import { registerPrepareIntentAmendmentTool } from './tools/prepareIntentAmendme
 import { registerCommitIntentAmendmentTool } from './tools/commitIntentAmendment';
 import { registerPrepareIntentScoreTool } from './tools/prepareIntentScore';
 import { registerCommitIntentScoreTool } from './tools/commitIntentScore';
+import { registerAcknowledgePlanTool } from './tools/acknowledgePlan';
+import { registerArtifactApprovalTools } from './tools/approveArtifact';
 import { registerPreparePlanLockTool } from './tools/preparePlanLock';
 import { registerCommitPlanLockTool } from './tools/commitPlanLock';
 import { registerPrepareExecLockTool } from './tools/prepareExecLock';
@@ -91,6 +93,9 @@ export function buildControlServer(): McpServer {
   registerCommitIntentAmendmentTool(server);
   registerPrepareIntentScoreTool(server);
   registerCommitIntentScoreTool(server);
+  registerArtifactApprovalTools(server, 'plan');
+  registerArtifactApprovalTools(server, 'exec');
+  registerAcknowledgePlanTool(server);
   registerPreparePlanLockTool(server);
   registerCommitPlanLockTool(server);
   registerPrepareExecLockTool(server);

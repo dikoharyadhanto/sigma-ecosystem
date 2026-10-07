@@ -49,7 +49,7 @@ describe('Windows backslash file paths — read-time normalization', () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).not.toMatch(/ENOENT|not found/i);
-    expect(result.stdout).toMatch(/Lock readiness: Eligible/);
+    expect(result.stdout).toMatch(/Approval readiness: Eligible/);
   });
 
   it('doctor persists backslash entry.file fields to disk as forward slashes, reporting the migration', () => {

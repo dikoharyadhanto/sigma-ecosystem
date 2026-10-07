@@ -30,6 +30,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
 const chain_1 = require("../engine/chain");
+const lifecycleView_1 = require("../engine/lifecycleView");
 const shared_1 = require("./shared");
 exports.OPERATION_TIERS = Object.freeze({
     // ── Q (25) ────────────────────────────────────────────────────────────────
@@ -47,8 +48,9 @@ exports.OPERATION_TIERS = Object.freeze({
     reference_update: 'W1', config_set_language: 'W1',
     // ── W2 (11) ───────────────────────────────────────────────────────────────
     intent_ratify: 'W2', intent_amendment: 'W2', intent_score: 'W2',
-    intent_supersede: 'W2', intent_activate: 'W2', plan_lock: 'W2',
-    plan_supersede: 'W2', plan_promote: 'W2', exec_lock: 'W2',
+    intent_supersede: 'W2', intent_activate: 'W2',
+    plan_supersede: 'W2', plan_promote: 'W2', plan_lock: 'NA', exec_lock: 'NA',
+    plan_approve: 'W2', exec_approve: 'W2', plan_revise_prepare: 'W1', plan_revise_check: 'W1', plan_revise_commit: 'W1', exec_acknowledge_plan: 'W1',
     close_new: 'W2', close_lock: 'W2',
     // ── W3 (9) ────────────────────────────────────────────────────────────────
     project_start: 'W3', project_sync: 'W3', project_register: 'W3',
@@ -59,6 +61,7 @@ exports.OPERATION_TIERS = Object.freeze({
 exports.OPERATION_OWNER = Object.freeze({
     intent_new: 'ARC', intent_status: 'ARC', intent_check: 'ARC',
     plan_new: 'FMN', plan_status: 'FMN', plan_list: 'FMN', plan_check: 'FMN',
+    plan_approve: 'FMN', plan_revise_prepare: 'FMN', plan_revise_check: 'FMN', plan_revise_commit: 'FMN', exec_approve: 'DEV', exec_acknowledge_plan: 'DEV',
     plan_update: 'FMN', roadmap_new: 'FMN', roadmap_list: 'FMN',
     roadmap_check: 'FMN', roadmap_render: 'FMN', plan_promote: 'FMN',
     exec_new: 'DEV', exec_status: 'DEV', exec_list: 'DEV', exec_check: 'DEV',
@@ -75,7 +78,7 @@ exports.OPERATION_OWNER = Object.freeze({
  * (`sigma send`, `sigma inbox read`, write-memo/read-memo) — there is no MCP
  * primitive for it, so both operations report `deferred`.
  */
-const IMPLEMENTED = new Set(['project_status', 'session_bootstrap', 'memory', 'doctor']);
+const IMPLEMENTED = new Set(['project_status', 'session_bootstrap', 'memory', 'doctor', 'plan_approve', 'exec_approve', 'exec_acknowledge_plan']);
 function mcpStatusFor(operationId) {
     const tier = exports.OPERATION_TIERS[operationId];
     if (tier === undefined || tier === 'NA' || tier === 'W3')
@@ -126,7 +129,7 @@ function gateFacts(root) {
         if ((0, chain_1.listChainVersions)(root).length === 0)
             return null;
         const { data } = (0, chain_1.readActiveChain)(root);
-        const g = (0, chain_1.getGateStatus)(data);
+        const g = (0, chain_1.getGateStatus)({ ...data, gates: (0, lifecycleView_1.effectiveLifecycleGates)(root, data) });
         return {
             gate_1_open: g.gate_1_open,
             gate_2_open: g.gate_2_open,
@@ -167,6 +170,7 @@ function computeEffectivePolicy(root, roleFilter) {
             owner_role: exports.OPERATION_OWNER[op.operation_id] ?? null,
             registry_role: op.role ?? null,
             registry_level: op.level ?? null,
+            ...(op.operation_id === 'plan_revise_commit' ? { conditional_director_approval: 'Required for loosening or director checkpoint; ordinary pre/post-build changes are reviewed with EXEC.' } : {}),
             mcp_status: mcpStatusFor(op.operation_id),
         };
     })

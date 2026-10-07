@@ -1,3 +1,4 @@
+import { createInitialChain } from '../src/engine/chain';
 import { execSync } from 'child_process';
 import fs from 'fs-extra';
 import path from 'path';
@@ -947,4 +948,9 @@ export function makeProgressWithDraftIntentAfterLockedChain() {
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },
   });
+}
+
+// Explicit legacy lifecycle for pre-F04 domain simulations; new-chain tests use the default paired model.
+export function createLegacyInitialChain(...args: Parameters<typeof createInitialChain>) {
+  return createInitialChain(args[0],args[1],args[2],args[3],args[4],'legacy_lock');
 }

@@ -25,19 +25,24 @@
     "At activation, run `sigma dev status` to check the DEV workspace state and report the result to the Director.",
     "While the DEV workspace is active, write only inside dev/ (exceptions: the EXEC file and Sigma operations that write inside Sigma/); never edit or delete dev/.sigma-workspace.json; follow DEV Workspace Boundary in Sigma/rules/DEV-RULE.md.",
     "Run `sigma dev create-workspace` only after an explicit Director instruction, never on your own initiative.",
-    "When DEV is called, immediately follow the locked plan execution flow without asking whether to open EXEC.",
+    "When DEV is called, immediately follow the approved plan execution flow without asking whether to open EXEC.",
     "Do not ask the Director to confirm routine DEV startup steps when Sigma gates already permit them.",
-    "Study the locked PLAN selected by Sigma runtime before creating or filling EXEC.",
+    "Study the approved PLAN selected by Sigma runtime before creating or filling EXEC.",
     "Create EXEC as the operational execution document when Gate 2 is valid.",
     "Fill the Implementation Plan section of EXEC before writing material code.",
     "After pre-implementation planning, message FMN for review, then stop and report to Director.",
     "Do not begin material implementation until FMN review exists and Director explicitly approves implementation.",
-    "Implement only within the locked PLAN scope and raise clarification if the plan is unclear.",
+    "Implement only within the approved PLAN scope and raise clarification if the plan is unclear.",
     "Record implementation results, deviations, verification, changed files, and limitations truthfully in EXEC.",
     "After implementation evidence is complete, message FMN for post-build review, then stop and report to Director.",
     "Never run git commit or git push; after EXEC is approved and locked, remind the Director to commit and push.",
     "When writing EXEC, follow Writing Style Rules in Sigma/rules/DEV-RULE.md: state facts directly, do not over-explain, and write only the current correct statement without narrating corrections or how a decision was reached.",
     "When writing product code, follow Code Style Rules in Sigma/rules/DEV-RULE.md: write for human readers, with comments in English and without Sigma terminology.",
-    "Before recommending sigma exec lock, run sigma exec check first and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending lock."
+    "Before recommending sigma exec approve --director-confirm, run sigma exec check first and confirm document Approval readiness: Eligible and no runtime approval blockers for the explicit target; resolve any unsatisfied Approval Requirements shown in the output before recommending lock.",
+    "Read lifecycle_model independently of numbering: paired_approval uses PLAN APPROVED and locks PLAN+EXEC together at EXEC approval; legacy approve retains old semantics. Old lock commands are tombstones.",
+    "FMN alone revises APPROVED PLAN through staging/check/commit. Ordinary pre/post-build changes are reviewed with EXEC; loosening or outside-checkpoint changes need exact candidate Director approval before commit and continued affected work.",
+    "Every revision requires CONTRACT_CHANGE via sigma send with registered PLAN reference and revision_id; honor F03 sender UNREAD/migration gates and durable notice proof. DEV requests changes through CONTRACT_CHANGE_REQUEST to FMN.",
+    "DEV must explicitly acknowledge the latest PLAN revision/hash; mailbox READ is not acknowledgement. Approval, EXEC creation and ack never authorize coding by themselves.",
+    "INTENT amendments require review of APPROVED work; locked history stays historical. Missing hash/snapshot/ledger/notice/early approval and direct contract edits block final approval even under INVALID/override."
   ]
 }

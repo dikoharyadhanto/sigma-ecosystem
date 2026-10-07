@@ -1,11 +1,4 @@
 "use strict";
-// Stage F (W2 batch, continued) — the use-case shared by `sigma close lock`
-// (CLI) and sigma_commit_close_lock's mutate step (MCP control tool).
-// Transport-agnostic: no Commander, no console.log, no interactive prompt —
-// mirrors intentRatifyService.ts's split. The CLI's interactive
-// `promptApprove()`/`--yes` gate has no MCP equivalent: the Director
-// approval record IS the explicit confirmation for this transition, same as
-// every other W2 tool in this batch.
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -14,6 +7,15 @@ exports.CloseLockError = void 0;
 exports.closeDocPath = closeDocPath;
 exports.closeLockTransactionFiles = closeLockTransactionFiles;
 exports.lockCloseUseCase = lockCloseUseCase;
+const lifecycleView_1 = require("../engine/lifecycleView");
+const lifecycle_1 = require("../engine/lifecycle");
+// Stage F (W2 batch, continued) — the use-case shared by `sigma close lock`
+// (CLI) and sigma_commit_close_lock's mutate step (MCP control tool).
+// Transport-agnostic: no Commander, no console.log, no interactive prompt —
+// mirrors intentRatifyService.ts's split. The CLI's interactive
+// `promptApprove()`/`--yes` gate has no MCP equivalent: the Director
+// approval record IS the explicit confirmation for this transition, same as
+// every other W2 tool in this batch.
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const docCheck_1 = require("../utils/docCheck");
@@ -43,6 +45,8 @@ function closeLockTransactionFiles(projectRoot) {
 function lockCloseUseCase(projectRoot) {
     const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
     (0, chain_1.assertChainCanMutate)(chain);
+    if ((0, lifecycle_1.resolveLifecycleModel)(chain) === 'paired_approval' && !(0, lifecycleView_1.effectiveLifecycleGates)(projectRoot, chain).gate_3_satisfied)
+        throw new CloseLockError('GATE_BLOCKED', 'GATE 3 BLOCKED: open work or invalid completed contract evidence.');
     if (!chain.close || chain.close.state !== 'DRAFT') {
         throw new CloseLockError('INVALID_OPERATION', 'Active DIR-CLOSE is not in DRAFT state. Cannot lock.');
     }

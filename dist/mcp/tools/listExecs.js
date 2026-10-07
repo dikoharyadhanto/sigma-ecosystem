@@ -1,10 +1,8 @@
 "use strict";
-// Stage B2 — sigma_list_execs. Query-plane equivalent of `sigma exec list`
-// — every chain.exec.versions[] entry regardless of state (unlike
-// sigma_exec_status, which hides SUPERSEDED). No pending concept for exec.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeListExecs = computeListExecs;
 exports.registerListExecsTool = registerListExecsTool;
+const lifecycleView_1 = require("../../engine/lifecycleView");
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -15,6 +13,7 @@ function computeListExecs(root) {
         return { versions: [], source: shared_1.SOURCE_ENGINE };
     const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(root);
     return {
+        lifecycle: (0, lifecycleView_1.lifecycleView)(root, chain),
         active_chain: chainVersion,
         versions: chain.exec.versions.map((v) => ({
             version: v.version,

@@ -2,6 +2,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
 import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, OVERRIDES_FILE, SCHEMA_VERSION, ARTIFACT_LAYOUT } from '../config';
+import { journaledWriteIfActive } from './controlStore';
+import { LifecycleModel, resolveLifecycleModel, approvedPlanCurrent, assertKnownLifecycle } from './lifecycle';
 import { atomicReplaceFileSync } from '../utils/fs';
 import { VersioningScheme, resolveVersioningScheme, planMajorForChain, readChainMetadata } from './numbering';
 
@@ -45,6 +47,21 @@ export interface ArtifactVersion {
   file?: string;
   created_at: string;
   updated_at: string;
+  approved_at?: string;
+  revision?: number;
+  contract_sha256?: string;
+  intent_revision_ref?: number;
+  intent_doc_sha256_ref?: string;
+  plan_revision_ref?: number;
+  plan_contract_sha256_ref?: string;
+  acknowledged_at?: string;
+  needs_intent_review?: boolean;
+  pending_notice?: boolean;
+  revision_ledger?: string;
+  revision_ledger_sha256?: string;
+  approval_receipt?: { channel: string; approved_at: string; ticket_id?: string; approval_id?: string };
+  legacy_provenance?: { locked_at?: string; state: string };
+  historical_legacy?: boolean;
   locked_at?: string;
   superseded_by?: string;
   supersede_reason?: string;
@@ -224,6 +241,8 @@ export interface SingleIntentState {
   amendments?: AmendmentEntry[];       // append-only; source for Section 14 render
   effective_amendment?: string | null; // last AMD-NNN this doc was certified against; null = certified at ratification, no amendment yet
   certified_doc_sha256?: string;       // SHA-256 of the DIR-INTENT file at last ratify/amendment
+  revision?: number;
+  revision_provenance?: string;
   certified_at?: string;               // ISO — when certified_doc_sha256 was last stamped
 }
 
@@ -253,6 +272,7 @@ export interface SingleCloseState {
 export interface ChainState {
   schema_version: string;
   versioning_scheme?: VersioningScheme;
+  lifecycle_model?: LifecycleModel;
   chain_version: string; // "v1" — matches intent.version and the file suffix
   created_at: string;
   updated_at: string;
@@ -505,6 +525,7 @@ export function readChain(projectRoot: string, chainVersion: string): ChainState
     }
   }
   const chain = raw as ChainState;
+  resolveLifecycleModel(chain);
   normalizeIntentStateOnRead(chain);
   normalizeFilePathsOnRead(chain);
   const scheme = resolveVersioningScheme(chain);
@@ -534,6 +555,7 @@ export function writeChain(projectRoot: string, chainVersion: string, data: Chai
   const tmpPath = `${filePath}.tmp`;
   data.updated_at = new Date().toISOString();
   delete data._migratedOnRead; // in-memory only — never persisted
+  if (journaledWriteIfActive(projectRoot, filePath, JSON.stringify(data, null, 2) + "\n")) return;
   fs.writeJsonSync(tmpPath, data, { spaces: 2 });
   atomicReplaceFileSync(tmpPath, filePath); // see src/utils/fs.ts — §21.9
 }
@@ -569,11 +591,13 @@ export function createInitialChain(
   title?: string,
   focus?: string,
   versioningScheme: VersioningScheme = 'legacy_offset',
+  lifecycleModel: LifecycleModel = 'paired_approval',
 ): ChainState {
   const now = new Date().toISOString();
   return {
     schema_version: SCHEMA_VERSION,
     versioning_scheme: versioningScheme,
+    lifecycle_model: lifecycleModel,
     chain_version: chainVersion,
     created_at: now,
     updated_at: now,
@@ -659,7 +683,7 @@ function validateSingleState(
 }
 
 const PLAN_EXEC_TRACKER_STATES: Record<'plan' | 'exec', string[]> = {
-  plan: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
+  plan: ['DRAFT', 'APPROVED', 'LOCKED', 'SUPERSEDED'],
   exec: ['DRAFT', 'LOCKED', 'SUPERSEDED'],
 };
 
@@ -683,6 +707,7 @@ function validateTracker(chain: ChainState, domain: 'plan' | 'exec'): void {
     if (seen.has(v.version)) throw semanticError(chain.chain_version, `${field}.versions`, `duplicate version "${v.version}"`);
     seen.add(v.version);
 
+    if (v.state === 'APPROVED' && resolveLifecycleModel(chain) !== 'paired_approval') throw semanticError(chain.chain_version, field, 'APPROVED requires paired_approval');
     if (!PLAN_EXEC_TRACKER_STATES[domain].includes(v.state)) {
       throw semanticError(chain.chain_version, `${field}.${v.version}.state`, `invalid state "${v.state}"`);
     }
@@ -718,7 +743,7 @@ export function hasRatifiedIntent(chain: ChainState): boolean {
 }
 
 function hasActiveLockedPlan(chain: ChainState): boolean {
-  return chain.plan.versions.some(v => v.state === 'LOCKED');
+  return chain.plan.versions.some(v => approvedPlanCurrent(chain, v));
 }
 
 // PLAN-EVAL-01 §3.2 — plan.intent_version_ref is always the chain's own
@@ -727,7 +752,7 @@ function hasActiveLockedPlan(chain: ChainState): boolean {
 // vary.
 export function hasCleanGate2Chain(chain: ChainState): boolean {
   return chain.intent.state === 'RATIFIED' && chain.plan.versions.some(
-    v => v.state === 'LOCKED' && v.intent_version_ref === chain.intent.version
+    v => approvedPlanCurrent(chain, v)
   );
 }
 
@@ -743,8 +768,10 @@ export function hasCleanGate2Chain(chain: ChainState): boolean {
 export function hasCleanGate3Chain(chain: ChainState): boolean {
   if (chain.intent.state !== 'RATIFIED') return false;
 
-  if (chain.plan.versions.some(v => v.state === 'DRAFT')) return false;
+  if (resolveLifecycleModel(chain) === 'unknown') return false;
+  if (chain.plan.versions.some(v => v.state === 'DRAFT' || v.state === 'APPROVED')) return false;
   if (chain.exec.versions.some(v => v.state === 'DRAFT')) return false;
+  if (chain.exec.versions.some(e=>e.state==='LOCKED' && (!e.plan_version_ref || e.version!==e.plan_version_ref || chain.plan.versions.filter(p=>p.version===e.plan_version_ref&&p.state==='LOCKED').length!==1))) return false;
 
   const activePlans = chain.plan.versions.filter(v => v.state === 'LOCKED');
   if (activePlans.length === 0) return false;
@@ -754,7 +781,7 @@ export function hasCleanGate3Chain(chain: ChainState): boolean {
     const pairs = chain.exec.versions.filter(
       e => e.state === 'LOCKED' && e.plan_version_ref === plan.version
     );
-    return pairs.length === 1;
+    return pairs.length === 1 && pairs[0].version === plan.version;
   });
 }
 
@@ -770,6 +797,7 @@ export function describeGate3Blockers(chain: ChainState): string[] {
     reasons.push(`DIR-INTENT ${chain.intent.version} is not RATIFIED`);
   }
   for (const p of chain.plan.versions) {
+    if (p.state === 'APPROVED') reasons.push('APPROVED FMN-PLAN: ' + p.version + ' (pair not completed)');
     if (p.state === 'DRAFT') reasons.push(`DRAFT FMN-PLAN: ${p.version}`);
   }
   for (const e of chain.exec.versions) {
@@ -787,10 +815,15 @@ export function describeGate3Blockers(chain: ChainState): string[] {
       reasons.push(`FMN-PLAN ${p.version} has more than one LOCKED DEV-EXEC (${pairs.map(e => e.version).join(', ')}) — should be structurally impossible, run: sigma doctor`);
     }
   }
+  for (const e of chain.exec.versions.filter(e=>e.state==='LOCKED')) {
+    if(e.version!==e.plan_version_ref)reasons.push(`DEV-EXEC ${e.version} does not match PLAN reference ${e.plan_version_ref ?? '(missing)'}`);
+    if(chain.plan.versions.filter(p=>p.version===e.plan_version_ref&&p.state==='LOCKED').length!==1)reasons.push(`DEV-EXEC ${e.version} has no unique LOCKED PLAN`);
+  }
   return reasons;
 }
 
 export function validateChainSemantics(chain: ChainState): void {
+  resolveLifecycleModel(chain);
   validateChainNumbering(chain);
   if (chain.schema_version !== SCHEMA_VERSION && isNewerSchema(chain.schema_version, SCHEMA_VERSION)) {
     throw semanticError(
@@ -827,8 +860,8 @@ export function validateChainSemantics(chain: ChainState): void {
   if (chain.gates.gate_1_open && !hasRatifiedIntent(chain)) {
     throw semanticError(chain.chain_version, 'gates.gate_1_open', 'gate is open without a RATIFIED INTENT');
   }
-  if (chain.gates.gate_2_open && !hasActiveLockedPlan(chain)) {
-    throw semanticError(chain.chain_version, 'gates.gate_2_open', 'gate is open without a LOCKED PLAN');
+  if (chain.gates.gate_2_open && !hasCleanGate2Chain(chain)) {
+    throw semanticError(chain.chain_version, 'gates.gate_2_open', 'gate is open without an eligible PLAN for lifecycle_model');
   }
   if (chain.gates.gate_3_satisfied && !hasCleanGate3Chain(chain)) {
     throw semanticError(chain.chain_version, 'gates.gate_3_satisfied', 'gate is satisfied without a clean INTENT -> PLAN -> EXEC chain');
@@ -893,6 +926,7 @@ export function getInvalidWarningLines(chain: ChainState): string[] {
 export function assertChainCanMutate(chain: ChainState): void {
   // Recovery mode may relax lifecycle gates, never chain identity.
   validateChainNumbering(chain);
+  assertKnownLifecycle(chain);
   if (hasInvalidRuntime(chain)) {
     process.stderr.write(
       `WARNING: Sigma runtime is in INVALID recovery mode for chain ${chain.chain_version}. ` +
@@ -1235,6 +1269,10 @@ export function certifyIntentDoc(chain: ChainState, absDocPath: string): void {
   const content = fs.readFileSync(absDocPath);
   chain.intent.certified_doc_sha256 = crypto.createHash('sha256').update(content).digest('hex');
   chain.intent.certified_at = new Date().toISOString();
+  chain.intent.revision = (chain.intent.revision ?? 0) + 1;
+  chain.intent.revision_provenance = 'certification';
+  for (const plan of chain.plan.versions) if (plan.state === 'APPROVED') plan.needs_intent_review = true;
+  chain.gates.gate_2_open = hasCleanGate2Chain(chain);
 }
 
 // True when the DIR-INTENT file's current bytes no longer match the last
@@ -1429,6 +1467,8 @@ export function registerPlanDraft(
   if (chain.plan.versions.some(v => v.version === version)) throw new Error(`Duplicate PLAN version: ${version}`);
   const now = new Date().toISOString();
   const entry: ArtifactVersion = {
+    intent_revision_ref: chain.intent.revision,
+    intent_doc_sha256_ref: chain.intent.certified_doc_sha256,
     version, state: 'DRAFT', file: filePath,
     created_at: now, updated_at: now,
     intent_version_ref: intentVersionRef,
@@ -1461,6 +1501,7 @@ export function updatePlanMetadata(chain: ChainState, version: string, title?: s
 // resolveTargetVersion() and only calls this once a single unambiguous
 // target is known.
 export function lockPlanVersion(chain: ChainState, version: string): string {
+  if (resolveLifecycleModel(chain) !== 'legacy_lock') throw new Error('Use PLAN approval with revision certification.');
   const target = chain.plan.versions.find(v => v.version === version);
   if (!target) throw new Error(`FMN-PLAN ${version} not found. Run: sigma plan list`);
   if (target.state !== 'DRAFT') {
@@ -1530,6 +1571,8 @@ export function promotePendingPlan(
 
   const now = new Date().toISOString();
   const entry: ArtifactVersion = {
+    intent_revision_ref: chain.intent.revision,
+    intent_doc_sha256_ref: chain.intent.certified_doc_sha256,
     version, state: 'DRAFT', file: newFilePath,
     created_at: pending.created_at,
     updated_at: now,
@@ -1626,6 +1669,7 @@ export function registerExecDraft(chain: ChainState, version: string, filePath: 
 // lockActiveExec(), which always operated on exec.active_version and could
 // not coexist with concurrent DRAFT execs across different plans.
 export function lockExecVersion(chain: ChainState, version: string): void {
+  if (resolveLifecycleModel(chain) !== 'legacy_lock') throw new Error('Use EXEC approval with paired revision checks.');
   const target = chain.exec.versions.find(v => v.version === version);
   if (!target) throw new Error(`DEV-EXEC ${version} not found. Run: sigma exec list`);
   if (target.state !== 'DRAFT') {
@@ -1702,9 +1746,9 @@ export function getNextValidOperations(chain: ChainState): string[] {
   }
   const draftPlans = chain.plan.versions.filter(v => v.state === 'DRAFT');
   if (draftPlans.length === 1) {
-    ops.push(`plan lock    # will lock ${draftPlans[0].version}`);
+    ops.push(`plan approve    # ${draftPlans[0].version} -> ${resolveLifecycleModel(chain)==='paired_approval'?'APPROVED':'LOCKED'}`);
   } else if (draftPlans.length > 1) {
-    ops.push(`plan lock --v <version>    # ${draftPlans.length} DRAFT plans open, run: sigma plan status`);
+    ops.push(`plan approve --v <version>    # ${draftPlans.length} DRAFT plans open, run: sigma plan status`);
   }
 
   if (hasActiveLockedPlan(chain)) {

@@ -1,10 +1,8 @@
 "use strict";
-// PLAN-IMPL-01 §3.2 — sigma_get_gates
-//
-// Read-only. Wraps getGateStatus + getGateStatusLabel + getInvalidMarkers.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeGates = computeGates;
 exports.registerGatesTool = registerGatesTool;
+const lifecycleView_1 = require("../../engine/lifecycleView");
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -16,13 +14,15 @@ function computeGates(root) {
     if ((0, chain_1.listChainVersions)(root).length === 0)
         return (0, shared_1.noProject)();
     const { data } = (0, chain_1.readActiveChain)(root);
-    const gates = (0, chain_1.getGateStatus)(data);
+    const projected = { ...data, gates: (0, lifecycleView_1.effectiveLifecycleGates)(root, data) };
+    const gates = (0, chain_1.getGateStatus)(projected);
     const labels = {};
     for (const key of GATE_KEYS) {
-        labels[key] = (0, chain_1.getGateStatusLabel)(data, key);
+        labels[key] = (0, chain_1.getGateStatusLabel)(projected, key);
     }
     return {
         active: true,
+        lifecycle: (0, lifecycleView_1.lifecycleView)(root, data),
         gate_1_open: gates.gate_1_open,
         gate_2_open: gates.gate_2_open,
         gate_3_satisfied: gates.gate_3_satisfied,

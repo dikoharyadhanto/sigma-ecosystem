@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { hasCleanGate2Chain, hasCleanGate3Chain } from './chain';
 import { PROJECT_SIGMA_DIR, ARTIFACT_LAYOUT } from '../config';
 import { toPosix } from '../utils/fs';
 import { ChainMetadata, VersioningScheme, readChainMetadata, resolveVersioningScheme, planMajorForChain } from './numbering';
@@ -362,6 +363,9 @@ function readExistingChain(projectRoot: string, chainVersion: string): ChainStat
     // silently returns null, discarding real plan/exec title/focus history
     // that PLAN-EVAL-07 exists specifically to preserve.
     const chain = readChain(projectRoot, chainVersion);
+    // Re-evaluate cached gates before validating the stored tracker; no certification is performed.
+    chain.gates.gate_2_open = hasCleanGate2Chain(chain);
+    chain.gates.gate_3_satisfied = hasCleanGate3Chain(chain);
     validateChainSemantics(chain);
     return chain;
   } catch {
@@ -467,7 +471,7 @@ export function buildReconstructedChains(
     const chainVersion = `v${major}`;
     const markers: InvalidMarker[] = [];
     const recovered = recoveredMetadata.get(chainVersion) ?? {};
-    const chain = createInitialChain(chainVersion, intentEntry.file, recovered.title, recovered.focus, scheme);
+    const chain = createInitialChain(chainVersion, intentEntry.file, recovered.title, recovered.focus, scheme, 'unknown');
     chain.created_at = now;
     chain.updated_at = now;
 
@@ -505,6 +509,11 @@ export function buildReconstructedChains(
       ));
     }
 
+    if (existingChain) {
+      chain.lifecycle_model = existingChain.lifecycle_model;
+      chain.intent = existingChain.intent;
+      chain.created_at = existingChain.created_at;
+    }
     if (useExistingWholesale) {
       // PLAN-EVAL-07 — nothing changed on disk since this chain's existing
       // file was last written and it's still valid: reuse its roadmap/plan/
@@ -528,7 +537,7 @@ export function buildReconstructedChains(
       // ── PLAN + EXEC ───────────────────────────────────────────────────────
       if (plans.length === 1 && execs.length <= 1) {
         const plan = plans[0];
-        const planLocked = execs.length === 1;
+        const planLocked = false; // Files alone never prove approval, in either model.
         const planEntry: ArtifactVersion = {
           version: plan.version, file: plan.file, created_at: now, updated_at: now,
           state: planLocked ? 'LOCKED' : 'DRAFT',
@@ -545,7 +554,7 @@ export function buildReconstructedChains(
         if (!planLocked) {
           markers.push(makeMarker(
             'plan', 'gate_2_open',
-            `FMN-PLAN ${plan.version} found on disk but no downstream DEV-EXEC confirms it was ever LOCKED. Re-run \`sigma plan lock\` if it should be, or leave as DRAFT.`,
+            `FMN-PLAN ${plan.version} found on disk without trusted approval evidence. Verify lifecycle provenance with the Director before approval; recovered state remains DRAFT.`,
             { intent_version: chainVersion, plan_version: plan.version, exec_version: null },
             now,
           ));
@@ -556,7 +565,7 @@ export function buildReconstructedChains(
           const exec = execs[0];
           chain.exec.versions.push({
             version: exec.version, file: exec.file, created_at: now, updated_at: now,
-            state: 'LOCKED', locked_at: now, plan_version_ref: plan.version,
+            state: 'DRAFT', plan_version_ref: plan.version,
           });
         }
       } else if (plans.length > 0 || execs.length > 0) {
@@ -581,12 +590,26 @@ export function buildReconstructedChains(
         }
         markers.push(makeMarker(
           'plan', 'gate_2_open',
-          `Multiple FMN-PLAN/DEV-EXEC versions found under major v${planMajor} (${plans.map(p => p.version).join(', ') || 'none'} / ${execs.map(e => e.version).join(', ') || 'none'}). Automatic reconstruct cannot safely pair them — verify manually and use \`sigma plan lock\` / \`sigma exec lock\` / \`sigma plan supersede\` as needed.`,
+          `Multiple FMN-PLAN/DEV-EXEC versions found under major v${planMajor} (${plans.map(p => p.version).join(', ') || 'none'} / ${execs.map(e => e.version).join(', ') || 'none'}). Automatic reconstruct cannot safely pair them — verify manually and use Director lifecycle recovery followed by \`sigma plan approve\` / \`sigma exec approve\` / \`sigma plan supersede\` as needed.`,
           { intent_version: chainVersion, plan_version: null, exec_version: null },
           now,
         ));
       }
 
+      // Preserve valid tracker provenance per entry even when another artifact was added/removed.
+      if (existingChain) {
+        for (const domain of ['plan','exec'] as const) {
+          chain[domain].versions = chain[domain].versions.map(entry => {
+            const previous = existingChain[domain].versions.find(p => p.version === entry.version && normalizeSlashes(p.file ?? '') === normalizeSlashes(entry.file ?? ''));
+            return previous ? { ...previous } : entry;
+          });
+          // Missing files stay registered so their evidence is not silently discarded.
+          for (const previous of existingChain[domain].versions) if (!chain[domain].versions.some(e => e.version === previous.version)) chain[domain].versions.push({ ...previous });
+        }
+        chain.plan.pending = existingChain.plan.pending;
+        if (existingChain.roadmap?.file === roadmapEntry?.file) chain.roadmap = existingChain.roadmap;
+        if (existingChain.close?.file === closeEntry?.file) chain.close = existingChain.close;
+      }
       if (chain.plan.versions.length > 0) {
         const last = sortByMajorMinor(chain.plan.versions).pop()!;
         chain.plan.active_version = last.version;

@@ -14,11 +14,8 @@ const shared_1 = require("../../shared");
 const shared_2 = require("../shared");
 function registerCommitExecLockTool(server) {
     server.registerTool('sigma_commit_exec_lock', {
-        title: 'Commit an approved exec lock',
-        description: 'Locks the DRAFT DEV-EXEC frozen by operation_ticket_id, re-evaluating Gate 3 — the MCP control-plane ' +
-            'equivalent of `sigma exec lock`. Requires a Director approval record for that exact ticket, recorded ' +
-            'via the trusted local CLI (`sigma control approve <ticket_id>`). The approval is consumed on a ' +
-            'successful commit and cannot be reused. DEV role only.',
+        title: 'Removed: use commit exec approve',
+        description: 'Retired tombstone. Use sigma_commit_exec_approve with a new approval ticket. Pending lock tickets cannot be consumed; completed legacy commit replay is historical only.',
         inputSchema: {
             operation_ticket_id: zod_1.z.string().min(1),
             approval_id: zod_1.z.string().min(1),
@@ -52,6 +49,8 @@ function registerCommitExecLockTool(server) {
                 (0, controlStore_1.approvalPath)(root, args.approval_id),
             ],
             checkPreconditions: (root) => {
+                if (root)
+                    throw new errors_1.McpQueryError(contract_1.ERROR_CODES.INVALID_OPERATION, 'TOMBSTONE: use sigma_commit_exec_approve with a new approval ticket.');
                 const binding = (0, shared_1.getBinding)();
                 const ticket = (0, controlStore_1.readTicket)(root, args.operation_ticket_id);
                 if (!ticket || ticket.project_id !== binding.projectId) {

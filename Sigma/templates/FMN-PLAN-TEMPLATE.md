@@ -1,8 +1,8 @@
 <!-- SIGMA:DOC type=FMN_PLAN schema=3 -->
 # FMN-PLAN
 
-> Build contract and test contract for DEV. FMN fills every section before lock.
-> Lock state is managed by Sigma CLI. Do not record it here. After lock, only AUD Notes may be appended.
+> Build contract and test contract for DEV. FMN fills the contract before initial approval; approved-contract changes follow the declared checkpoint and revision workflow.
+> Lifecycle state is managed by Sigma CLI. Do not record it here. On paired_approval chains, PLAN approval creates APPROVED; controlled revisions use staging and explicit certification. EXEC approval locks the pair; legacy_lock approvals retain separate-lock semantics; after pair lock, only append-only AUD Notes are permitted.
 
 ---
 
@@ -122,7 +122,7 @@ DEV must not:
 <!-- SIGMA:FMN_PLAN:SECTION:CONTRACT_CHANGES -->
 ## Contract Changes
 
-> Optional. Records changes made to this contract after lock.
+> Optional. Records certified changes made after PLAN approval. Edit a staging candidate; record checkpoint, delta, reason, requester and loosening classification before committing. Ordinary changes are reviewed with EXEC; loosening or changes outside pre/post-build checkpoints require prior Director approval.
 
 | No | Checkpoint | What Changed | Reason | Requested By | Loosening? | Director Approval |
 |:-- |:---------- |:------------ |:------ |:------------ |:---------- |:----------------- |

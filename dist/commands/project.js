@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateProjectId = validateProjectId;
 exports.validateProjectName = validateProjectName;
 exports.projectCommand = projectCommand;
+const lifecycleView_1 = require("../engine/lifecycleView");
 const commander_1 = require("commander");
 const child_process_1 = require("child_process");
 const fs_extra_1 = __importDefault(require("fs-extra"));
@@ -395,6 +396,7 @@ function runStatus() {
         };
         artifactLine('Intent Doc', 'DIR-INTENT', chain.intent.version, chain.intent.state);
         artifactLine('Plan Doc', 'FMN-PLAN', chain.plan.active_version, chain.plan.active_state);
+        console.log(JSON.stringify((0, lifecycleView_1.lifecycleView)(projectRoot, chain), null, 2));
         const openPlanDrafts = chain.plan.versions.filter(v => v.state === 'DRAFT');
         if (openPlanDrafts.length > 1) {
             console.log(`  [NOTE] ${openPlanDrafts.length} DRAFT FMN-PLANs are open: ${openPlanDrafts.map(v => v.version).join(', ')} — run: sigma plan status`);

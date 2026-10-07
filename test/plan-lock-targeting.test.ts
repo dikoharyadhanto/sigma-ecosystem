@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import {
   setupTestEnv,
+  stubProjectIdentity,
   runCli,
   stubProjectRootAnchor,
   writeChainFixture,
@@ -84,6 +85,7 @@ describe('sigma plan new — gate ordering follows current CLI', () => {
   it('reports Gate 1.5 before any draft-queue concern when no ROADMAP exists', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
 
     const result = runCli('plan new --title "Test Stage" --focus "Test focus"', env.projectDir, env.homeDir);
@@ -96,6 +98,7 @@ describe('sigma plan new — gate ordering follows current CLI', () => {
   it('gate-first error points to the roadmap creation flow (no more "roadmap activate" — command removed, §3.5)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
 
     const result = runCli('plan new --title "Test Stage" --focus "Test focus"', env.projectDir, env.homeDir);
@@ -105,7 +108,7 @@ describe('sigma plan new — gate ordering follows current CLI', () => {
   });
 });
 
-describe('sigma plan lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK §3, FIFO removed)', () => {
+describe('sigma plan approve --director-confirm — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK §3, FIFO removed)', () => {
   let env: TestEnv;
 
   afterEach(() => env?.cleanup());
@@ -113,21 +116,23 @@ describe('sigma plan lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK 
   it('fails with an explicit "nothing to lock" message when zero DRAFT plans exist', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithNoDraftPlan());
 
-    const result = runCli('plan lock', env.projectDir, env.homeDir);
+    const result = runCli('plan approve --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/No DRAFT FMN-PLAN to lock/i);
+    expect(result.stderr).toMatch(/No DRAFT FMN-PLAN to approve/i);
   });
 
   it('locks without --v when exactly one DRAFT plan is open', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md'), validPlanDoc('v1.1'));
 
-    const result = runCli('plan lock', env.projectDir, env.homeDir);
+    const result = runCli('plan approve --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/v1\.1 LOCKED/);
@@ -143,9 +148,10 @@ describe('sigma plan lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK 
   it('rejects without --v when more than one DRAFT plan is open, listing every candidate', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
 
-    const result = runCli('plan lock', env.projectDir, env.homeDir);
+    const result = runCli('plan approve --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/2 DRAFT FMN-PLANs are open/);
@@ -157,10 +163,11 @@ describe('sigma plan lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK 
   it('locks the specified version with --v, leaving the other DRAFT untouched', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.2.md'), validPlanDoc('v1.2'));
 
-    const result = runCli('plan lock --v v1.2', env.projectDir, env.homeDir);
+    const result = runCli('plan approve --director-confirm --v v1.2', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/v1\.2 LOCKED/);
@@ -176,21 +183,23 @@ describe('sigma plan lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK 
   it('fails when --v targets a version that is not DRAFT', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md'), validPlanDoc('v1.1'));
 
-    const result = runCli('plan lock --v v1.1', env.projectDir, env.homeDir);
+    const result = runCli('plan approve --director-confirm --v v1.1', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/lock requires DRAFT/i);
+    expect(result.stderr).toMatch(/approval requires DRAFT/i);
   });
 
   it('fails when --v targets a version that does not exist', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
 
-    const result = runCli('plan lock --v v9.99', env.projectDir, env.homeDir);
+    const result = runCli('plan approve --director-confirm --v v9.99', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/not found/i);
@@ -205,6 +214,7 @@ describe('sigma plan check — ambiguity guard (PLAN-IMPL-MULTIDRAFT-LOCK §8.3)
   it('refuses without --v when more than one DRAFT plan is open', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
 
     const result = runCli('plan check', env.projectDir, env.homeDir);
@@ -217,6 +227,7 @@ describe('sigma plan check — ambiguity guard (PLAN-IMPL-MULTIDRAFT-LOCK §8.3)
   it('succeeds with an explicit --v even when ambiguous', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithMultiplePlanDrafts());
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.2.md'), validPlanDoc('v1.2'));
 
@@ -228,6 +239,7 @@ describe('sigma plan check — ambiguity guard (PLAN-IMPL-MULTIDRAFT-LOCK §8.3)
   it('still falls back to the active pointer when unambiguous (0 or 1 DRAFT)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md'), validPlanDoc('v1.1'));
 
@@ -237,27 +249,29 @@ describe('sigma plan check — ambiguity guard (PLAN-IMPL-MULTIDRAFT-LOCK §8.3)
   });
 });
 
-describe('AUD Advisory Verdict gate on plan lock', () => {
+describe('AUD Advisory Verdict gate on plan approve --director-confirm', () => {
   let env: TestEnv;
 
   afterEach(() => env?.cleanup());
 
-  it('plan lock fails when no verdict checkbox is checked', () => {
+  it('plan approve --director-confirm fails when no verdict checkbox is checked', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
     const planFile = path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md');
     fs.writeFileSync(planFile, validPlanDoc('v1.1').replace('- [x] PASS', ''));
 
-    const result = runCli('plan lock', env.projectDir, env.homeDir);
+    const result = runCli('plan approve --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toMatch(/no verdict checkbox is checked/);
   });
 
-  it('plan lock succeeds when SKIP_FOR_AUDIT is checked with a recorded Director Instruction', () => {
+  it('plan approve --director-confirm succeeds when SKIP_FOR_AUDIT is checked with a recorded Director Instruction', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithSingleDraftPlan());
     const planFile = path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v1.1.md');
     fs.writeFileSync(
@@ -268,7 +282,7 @@ describe('AUD Advisory Verdict gate on plan lock', () => {
       )
     );
 
-    const result = runCli('plan lock', env.projectDir, env.homeDir);
+    const result = runCli('plan approve --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
   });

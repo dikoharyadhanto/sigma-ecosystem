@@ -15,8 +15,8 @@ const shared_1 = require("../shared");
 function registerCreateExecDraftTool(server) {
     server.registerTool('sigma_create_exec_draft', {
         title: 'Create DEV-EXEC draft',
-        description: 'Creates a new DEV-EXEC DRAFT for a LOCKED FMN-PLAN — the MCP control-plane equivalent of `sigma exec ' +
-            'new`. DEV role only. Requires Gate 2 (at least one LOCKED FMN-PLAN). A plan has at most one open ' +
+        description: 'Creates a new DEV-EXEC DRAFT for an eligible APPROVED PLAN (legacy LOCKED PLAN) — the MCP control-plane equivalent of `sigma exec ' +
+            'new`. DEV role only. Requires Gate 2 (at least one eligible PLAN according to lifecycle_model). A plan has at most one open ' +
             '(non-SUPERSEDED) exec at a time: pass plan_version to target a specific LOCKED plan (required when ' +
             'more than one LOCKED plan has no open exec yet, rejected if that plan already has one); omit it to ' +
             'auto-resolve when exactly one such plan exists. The resulting DEV-EXEC version always equals the ' +
@@ -29,7 +29,7 @@ function registerCreateExecDraftTool(server) {
                 .string()
                 .regex(/^v\d+\.\d+$/, 'Expected a plan version like "v1.1".')
                 .optional()
-                .describe('Which LOCKED FMN-PLAN to execute. Optional when exactly one LOCKED plan has no open exec.'),
+                .describe('Which eligible PLAN to execute. Optional when exactly one eligible plan has no open exec.'),
             idempotency_key: zod_1.z.string().min(1),
             expected_state_revision: zod_1.z.string().min(1),
         },

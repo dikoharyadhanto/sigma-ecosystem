@@ -1,3 +1,4 @@
+import { lifecycleView } from '../../engine/lifecycleView';
 // Stage B2 — sigma_list_plans. Query-plane equivalent of `sigma plan list`
 // — every chain.plan.versions[] entry regardless of state (unlike
 // sigma_plan_status, which hides SUPERSEDED), plus the pending (unversioned)
@@ -30,6 +31,7 @@ export function computeListPlans(root: string | null): unknown {
   const { chainVersion, data: chain } = readActiveChain(root);
 
   return {
+    lifecycle: lifecycleView(root,chain),
     active_chain: chainVersion,
     versions: chain.plan.versions.map((v) => ({
       version: v.version,

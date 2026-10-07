@@ -70,6 +70,8 @@ function printTicketSummary(ticket) {
         for (const effect of ticket.effects)
             console.log(`  - ${effect}`);
     }
+    if (ticket.review_package)
+        console.log('Review package:\n' + JSON.stringify(ticket.review_package, null, 2));
     console.log('');
 }
 function assertTicketActionable(ticket) {

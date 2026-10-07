@@ -99,6 +99,7 @@ const QUALITY_BAR_DIMENSIONS = ['Security', 'UX Trust', 'UI / Product Packaging'
 const EXEC_VERDICT_SECTION_ID = 'FMN_POST_BUILD_REVIEW';
 const EXEC_VERDICT_LABELS = new Set([
   'READY_FOR_LOCK',
+  'READY_FOR_APPROVAL',
   'NEEDS_DEV_UPDATE',
   'REVISION_REQUIRED',
   'COMPLETE_WITH_RISK',
@@ -1034,6 +1035,8 @@ export function validateSigmaDocFile(
 }
 
 export function printSigmaDocReport(report: SigmaDocCheckReport, projectRoot?: string): void {
+  const approvalDocument = report.documentType === 'FMN_PLAN' || report.documentType === 'DEV_EXEC';
+  const readiness = approvalDocument ? 'Approval' : 'Lock';
   const displayPath = projectRoot ? path.relative(projectRoot, report.file) || report.file : report.file;
   console.log(report.heading);
   console.log(`File: ${displayPath}`);
@@ -1056,7 +1059,7 @@ export function printSigmaDocReport(report: SigmaDocCheckReport, projectRoot?: s
 
   if (report.requirements.length > 0) {
     console.log('');
-    console.log('Lock Requirements');
+    console.log(readiness + ' Requirements');
     for (const requirement of report.requirements) {
       console.log(`${requirement.satisfied ? '✓' : '✗'} ${requirement.label}`);
     }
@@ -1068,13 +1071,13 @@ export function printSigmaDocReport(report: SigmaDocCheckReport, projectRoot?: s
   if (report.requirements.length > 0) {
     console.log(
       unsatisfied.length === 0
-        ? 'Document is structurally valid and all Lock Requirements are satisfied.'
-        : `Document is ${report.ok ? 'structurally valid but' : 'NOT structurally valid and'} NOT READY FOR LOCK (${unsatisfied.length} requirement(s) unsatisfied).`
+        ? 'Document is structurally valid and all ' + readiness + ' Requirements are satisfied.'
+        : `Document is ${report.ok ? 'structurally valid but' : 'NOT structurally valid and'} NOT READY FOR ${approvalDocument ? 'APPROVAL' : 'LOCK'} (${unsatisfied.length} requirement(s) unsatisfied).`
     );
   }
 
   const lockReady = report.ok && unsatisfied.length === 0;
-  console.log(`Lock readiness: ${lockReady ? (report.warnings.length > 0 ? 'Eligible with warnings' : 'Eligible') : 'Not eligible'}`);
+  console.log(`${readiness} readiness: ${lockReady ? (report.warnings.length > 0 ? 'Eligible with warnings' : 'Eligible') : 'Not eligible'}`);
 }
 
 export function ensureSigmaDocEligible(report: SigmaDocCheckReport, command: string): void {

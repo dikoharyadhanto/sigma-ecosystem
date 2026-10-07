@@ -17,6 +17,8 @@ import {
   Gates,
   ProjectIdentity,
 } from '../engine/chain';
+import { effectiveLifecycleGates } from '../engine/lifecycleView';
+import { lifecycleWarnings } from '../engine/lifecycle';
 import { findProjectRoot } from '../utils/fs';
 import { VersioningScheme, resolveVersioningScheme, planMajorForChain } from '../engine/numbering';
 
@@ -43,8 +45,8 @@ export function buildBootstrapView(projectRoot: string = findProjectRoot()): Boo
     ? readActiveChain(projectRoot)
     : { chainVersion: null, data: null as ChainState | null };
 
-  const gates = chain ? getGateStatus(chain) : null;
-  const nextOps = chain ? getNextValidOperations(chain) : ['intent new'];
+  const gates = chain ? getGateStatus({...chain,gates:effectiveLifecycleGates(projectRoot,chain)}) : null;
+  const nextOps = chain ? getNextValidOperations(chain).filter(op=>gates?.gate_2_open || !op.startsWith('exec new')) : ['intent new'];
 
   const numbering = chain ? {
     scheme: resolveVersioningScheme(chain), intent_version: chain.intent.version,
@@ -53,5 +55,6 @@ export function buildBootstrapView(projectRoot: string = findProjectRoot()): Boo
   const compatibilityWarnings = numbering?.scheme === 'legacy_offset' ? [
     `[KOMPATIBILITAS] INTENT ${numbering.intent_version} memakai penomoran lama: PLAN/EXEC v${numbering.plan_major}.x (major PLAN = major INTENT - 1). Pola ini dipertahankan untuk kompatibilitas chain lama. Gunakan pola tersebut selama bekerja pada chain ini.`,
   ] : [];
+  if(chain)compatibilityWarnings.push(...lifecycleWarnings(chain));
   return { projectRoot, identity, chainVersion, chain, gates, nextOps, numbering, compatibilityWarnings };
 }

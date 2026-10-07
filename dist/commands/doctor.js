@@ -4,8 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.doctorCommand = doctorCommand;
+const lifecycleView_1 = require("../engine/lifecycleView");
 const path_1 = __importDefault(require("path"));
 const mailboxMigration_1 = require("../engine/mailboxMigration");
+const lifecycleMigration_1 = require("../engine/lifecycleMigration");
 const commander_1 = require("commander");
 const chain_1 = require("../engine/chain");
 const reconstruct_1 = require("../engine/reconstruct");
@@ -69,6 +71,7 @@ function runDefaultDoctor() {
     const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
     const overrides = (0, chain_1.readOverrides)(projectRoot);
     const report = (0, chain_1.runDoctorReconciliation)(chain, overrides);
+    console.log(JSON.stringify((0, lifecycleView_1.lifecycleView)(projectRoot, chain), null, 2));
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
     (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — self-heal net
     console.log('\n=== Sigma Doctor ===\n');
@@ -304,11 +307,21 @@ function doctorCommand() {
         .option('--all-versions', 'Apply to every chain found on disk instead of just the active one')
         .option('--reconstruct', 'Rebuild chain file(s) from artifact files on disk (use when a progress-v<N>.json is missing or corrupted)')
         .option('--v <version>', 'With --reconstruct, target one specific chain instead of the active one (e.g. v2)', chain_1.normalizeVersionArg)
+        .option('--migrate-lifecycle', 'Opt-in one-chain lifecycle conversion; no automatic baseline certification')
+        .option('--director-confirm', 'Explicit Director authorization for lifecycle migration')
         .option('--migrate-mailbox', 'Move legacy messages/memos to LEGACY and reset legacy UNREAD to READ')
         .option('--dry-run', 'With --migrate-mailbox: preview without writing')
         .option('--repair-workspace', 'Recreate a missing DEV workspace folder or marker from the project identity (does not reconcile chains)')
         .action(async (opts) => {
         try {
+            if (opts.migrateLifecycle) {
+                if (opts.recovery || opts.allVersions || opts.reconstruct || opts.migrateMailbox || opts.repairWorkspace)
+                    throw new Error('--migrate-lifecycle cannot be combined with other doctor mutation modes.');
+                console.log(JSON.stringify(await (0, lifecycleMigration_1.migrateLifecycle)((0, fs_1.findProjectRoot)(), opts.v, !!opts.dryRun, !!opts.directorConfirm), null, 2));
+                return;
+            }
+            if (opts.directorConfirm)
+                throw new Error('--director-confirm requires --migrate-lifecycle.');
             if (opts.migrateMailbox) {
                 if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v || opts.repairWorkspace)
                     throw new Error('--migrate-mailbox cannot be combined with chain/workspace doctor options.');

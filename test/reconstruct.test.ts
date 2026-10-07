@@ -32,7 +32,7 @@ describe('sigma doctor --reconstruct', () => {
 
   afterEach(() => env?.cleanup());
 
-  it('rebuilds a clean single-cycle chain as fully LOCKED with no INVALID markers (--v)', () => {
+  it('rebuilds a blind single-cycle chain conservatively without approval evidence (--v)', () => {
     env = setupTestEnv();
     writeArtifact(env.sigmaDir, 'design', 'DIR-INTENT-v1.md', 'DIR_INTENT');
     writeArtifact(env.sigmaDir, 'build', 'ROADMAP-v1.md', 'ROADMAP');
@@ -42,16 +42,17 @@ describe('sigma doctor --reconstruct', () => {
     const result = runCli('doctor --reconstruct --v v1', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/No ambiguous state/);
+    expect(result.stdout).toMatch(/Marked INVALID/);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     expect(data.intent).toMatchObject({ version: 'v1', state: 'RATIFIED' });
     expect(data.roadmap).toMatchObject({ version: 'v1', state: 'DRAFT' });
-    expect(data.plan.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED' });
-    expect(data.exec.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED', plan_version_ref: 'v0.1' });
-    expect(data.gates).toEqual({ gate_1_open: true, gate_2_open: true, gate_3_satisfied: true });
+    expect(data.plan.versions[0]).toMatchObject({ version: 'v0.1', state: 'DRAFT' });
+    expect(data.exec.versions[0]).toMatchObject({ version: 'v0.1', state: 'DRAFT', plan_version_ref: 'v0.1' });
+    expect(data.gates).toEqual({ gate_1_open: true, gate_2_open: false, gate_3_satisfied: false });
     expect(data.lifecycle_state).toBe('BUILD');
-    expect(data.runtime_invalid.markers).toHaveLength(0);
+    expect(data.runtime_invalid.markers.length).toBeGreaterThan(0);
+    expect(data.lifecycle_model).toBe('unknown');
   });
 
   it('leaves an unconfirmable lone DIR-INTENT as DRAFT with an INVALID marker instead of guessing LOCKED', () => {
@@ -289,12 +290,12 @@ describe('sigma doctor --reconstruct — PLAN-EVAL-07 metadata preservation', ()
     const result = runCli('doctor --reconstruct --v v1', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/No ambiguous state/);
+    expect(result.stdout).toMatch(/Marked INVALID/);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     expect(data.intent).toMatchObject({ version: 'v1', state: 'RATIFIED' });
-    expect(data.plan.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED' });
-    expect(data.exec.versions[0]).toMatchObject({ version: 'v0.1', state: 'LOCKED' });
+    expect(data.plan.versions[0]).toMatchObject({ version: 'v0.1', state: 'DRAFT' });
+    expect(data.exec.versions[0]).toMatchObject({ version: 'v0.1', state: 'DRAFT' });
   });
 });
 

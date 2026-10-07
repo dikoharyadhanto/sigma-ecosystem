@@ -1,8 +1,8 @@
 <!-- SIGMA:DOC type=DEV_EXEC schema=3 -->
 # DEV-EXEC
 
-> Implementation plan, build result, and verification evidence for the locked PLAN.
-> Lock state is managed by Sigma CLI. Do not record it here.
+> Implementation plan, build result, and verification evidence for an APPROVED PLAN (LOCKED on legacy chains).
+> Approval and lock state are managed by Sigma CLI. Do not record them here. EXEC approval locks the same-number PLAN/EXEC pair on paired_approval chains.
 > Ownership: DEV fills Implementation Plan and Technical Research before the build, and Build Result and Verification and Deviations, Issues, and Limitations after it. FMN fills FMN Pre-Build Review and FMN Post-Build Review; DEV does not write in them. DEV transcribes Director Observation Report & Minor Requests from the Director's chat report. DEV or FMN fills Director Summary, last.
 
 ---
@@ -31,9 +31,13 @@
 
 ### Source Alignment
 
+> Runtime stores the acknowledged PLAN revision/hash in JSON. After a contract change, DEV reads the current PLAN and notice, then explicitly runs `sigma exec acknowledge-plan --v <EXEC> --revision <N>`. This does not authorize coding.
+
 | Link | References |
 |:---- |:---------- |
 | PLAN version | PLAN-v{X} |
+
+> Runtime stores the acknowledged PLAN revision and contract hash. After reading the current PLAN and its CONTRACT_CHANGE notice, DEV must run exec acknowledge-plan explicitly; filling this table or reading a message does not acknowledge the revision or authorize coding.
 | Acceptance criteria targeted | [AC-xxx, ...] |
 | Constraints respected | [...] / none |
 | Known implementation boundary | [...] |
@@ -247,7 +251,7 @@ If none, replace the table with: No material deviation, issue, or limitation.
 
 > Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
 
-- [ ] READY_FOR_LOCK
+- [ ] READY_FOR_APPROVAL
 - [ ] NEEDS_DEV_UPDATE
 - [ ] REVISION_REQUIRED
 - [ ] COMPLETE_WITH_RISK

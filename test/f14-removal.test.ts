@@ -145,12 +145,12 @@ describe('F14 — project start', () => {
 });
 
 describe('F14 — registries', () => {
-  it('the operation registry has 58 entries and none for notion or humanize', () => {
+  it('the operation registry has 64 entries and none for notion or humanize', () => {
     const registry = fs.readJsonSync(path.resolve(__dirname, '..', 'Sigma', 'SIGMA-OPERATION-REGISTRY.json'));
     const ids: string[] = registry.operations.map((o: { operation_id: string }) => o.operation_id);
 
-    expect(registry.total_operations).toBe(58);
-    expect(ids).toHaveLength(58);
+    expect(registry.total_operations).toBe(64);
+    expect(ids).toHaveLength(64);
     expect(ids.filter((id) => /notion|humanize/.test(id))).toEqual([]);
   });
 

@@ -1,3 +1,7 @@
+import { readActiveChain, chainFilePath } from '../engine/chain';
+import { assertPlanCertified, revisionPaths, boundedPath, sha256, recordNotice } from '../engine/revisions';
+import { governanceMutationUnderLease } from '../engine/governanceTransaction';
+import { journaledWrite, controlTestFailpoint } from '../engine/controlStore';
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
@@ -69,6 +73,7 @@ function runSend(opts: {
   replyTo?: string;
   action?: string;
   relatedArtifact?: string;
+  revisionId?: string;
 }): void {
   if (!opts.from) throw new Error('--from is required. Use: sigma send --from <role> --to <role> --message "..."');
   if (!opts.to) throw new Error('--to is required. Use: sigma send --from <role> --to <role> --message "..."');
@@ -124,6 +129,23 @@ function runSend(opts: {
     );
   }
 
+  const typed = msgType === 'CONTRACT_CHANGE' || msgType === 'CONTRACT_CHANGE_REQUEST';
+  let contractChange: MessageEntry['contract_change'];
+  if (typed) {
+    const {data: chain} = readActiveChain(projectRoot);
+    const match = /^(?:FMN-)?PLAN-(v\d+\.[1-9]\d*)$/.exec(relatedArtifact);
+    if (!match || context.intent_version !== chain.intent.version || context.context !== match[1]) throw new Error('Contract messages require an explicit registered PLAN in the active INTENT; GENERAL/LEGACY forbidden.');
+    const plan=chain.plan.versions.find(p=>p.version===match[1]);
+    if(!plan || plan.state!=='APPROVED')throw new Error('Contract messages require an APPROVED PLAN.');
+    if(msgType==='CONTRACT_CHANGE_REQUEST') {if(fromRole!=='DEV'||toRole!=='FMN')throw new Error('CONTRACT_CHANGE_REQUEST requires DEV -> FMN and a justified message body.');if(opts.revisionId)throw new Error('--revision-id is only for CONTRACT_CHANGE.');}
+    else {
+      if(fromRole!=='FMN'||toRole!=='DEV')throw new Error('CONTRACT_CHANGE requires FMN -> DEV.');
+      const ledger=assertPlanCertified(projectRoot,chain,match[1]);const revision=ledger.records.find(r=>r.revision_id===opts.revisionId);
+      if(!opts.revisionId || !revision || revision.revision<=1 || revision.notice)throw new Error('CONTRACT_CHANGE requires an unnotified registered --revision-id; old notices cannot be reused.');
+      contractChange={plan:match[1],revision:revision.revision,revision_id:revision.revision_id,contract_sha256:revision.contract_sha256};
+    }
+  } else if(opts.revisionId) throw new Error('--revision-id requires CONTRACT_CHANGE.');
+
   const ts = generateTimestamp();
   const suffix = generateRandomSuffix();
   const msgId = generateMessageId(fromRole, toRole, ts, suffix);
@@ -135,6 +157,7 @@ function runSend(opts: {
   const absFilePath = path.join(inboxDir, filename);
   if (existingIndex.messages.some(m => m.id === msgId) || fs.existsSync(absFilePath)) throw new Error('Message identity/destination collision; no overwrite.');
 
+  const persist=()=>{
   // Handle attachment
   const attachmentPaths: string[] = [];
   if (opts.attach) {
@@ -147,7 +170,7 @@ function runSend(opts: {
     fs.ensureDirSync(attachDir);
     const attachFilename = `${msgId}-${path.basename(srcPath)}`;
     const destPath = path.join(attachDir, attachFilename);
-    fs.copySync(srcPath, destPath, { overwrite: false, errorOnExist: true });
+    if(typed)journaledWrite(projectRoot,destPath,fs.readFileSync(srcPath),true);else fs.copySync(srcPath, destPath, { overwrite: false, errorOnExist: true });
     attachmentPaths.push(toPosix(path.join(MESSAGES_ATTACHMENTS_DIR, attachFilename)));
   }
 
@@ -169,18 +192,29 @@ function runSend(opts: {
     related_artifact: relatedArtifact,
     intent_version: context.intent_version,
     context: context.context,
+    ...(contractChange ? {contract_change:contractChange} : {}),
     ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
   };
 
   // Write message markdown
   const markdown = buildMessageMarkdown(entry, body);
   assertMailboxLease(projectRoot);
-  try { fs.writeFileSync(absFilePath, markdown, { encoding: 'utf8', flag: 'wx' }); }
-  catch (err) { for (const a of attachmentPaths) fs.removeSync(path.join(projectRoot, a)); throw err; }
+  try { if(typed)journaledWrite(projectRoot,absFilePath,markdown,true);else fs.writeFileSync(absFilePath, markdown, { encoding: 'utf8', flag: 'wx' }); }
+  catch (err) { if(!typed)for (const a of attachmentPaths) fs.removeSync(path.join(projectRoot, a)); throw err; }
 
   // Update index
   existingIndex.messages.push(entry);
-  try { writeIndex(projectRoot, existingIndex); } catch (err) { fs.removeSync(absFilePath); for (const a of attachmentPaths) fs.removeSync(path.join(projectRoot, a)); throw err; }
+  try { writeIndex(projectRoot, existingIndex); } catch (err) { if(!typed){fs.removeSync(absFilePath); for (const a of attachmentPaths) fs.removeSync(path.join(projectRoot, a));} throw err; }
+
+  if(contractChange) {
+    controlTestFailpoint('contract_notice_after_index');
+    recordNotice(projectRoot,contractChange.plan,contractChange.revision,{message_id:msgId,from:'FMN',to:'DEV',intent:context.intent_version!,plan:contractChange.plan,revision:contractChange.revision,contract_sha256:contractChange.contract_sha256,created_at:ts,file:relFilePath,file_sha256:sha256(markdown),payload_sha256:sha256(body)});
+    controlTestFailpoint('contract_notice_after_receipt');
+  }
+  return attachmentPaths;
+  };
+  const typedFiles = typed ? [absFilePath,path.join(projectRoot,'Sigma/messages/index.json'),...(contractChange?[chainFilePath(projectRoot,context.intent_version!),boundedPath(projectRoot,revisionPaths(contractChange.plan).ledger)]:[]),...(opts.attach?[path.join(projectRoot,MESSAGES_ATTACHMENTS_DIR,msgId+'-'+path.basename(path.resolve(opts.attach)))]:[])] : [];
+  const attachmentPaths = typed ? governanceMutationUnderLease(projectRoot,'contract_send',typedFiles,persist,()=>assertMailboxLease(projectRoot)) : persist();
 
   console.log('\nMessage sent.');
   console.log(`  ID       : ${msgId}`);
@@ -221,11 +255,12 @@ export function sendCommand(): Command {
     .option('--attach <file>', 'File to attach (copied into Sigma/messages/attachments/)')
     .option('--reply-to <id>', 'Existing parent message ID; its INTENT must match the active context')
     .option('--action <action>', `Action required from recipient (${VALID_ACTIONS.map(a => a.toLowerCase()).join('|')})`, 'fyi')
+    .option('--revision-id <id>', 'Exact PLAN revision identity for CONTRACT_CHANGE (vN.x:rev-N)')
     .option('--related-artifact <artifact>', 'Artifact reference or GENERAL (reply defaults to parent context)')
     .action(async (opts: {
       from: string; to: string; type?: string; subject?: string;
       message?: string; messageFile?: string; attach?: string; replyTo?: string;
-      action?: string; relatedArtifact?: string;
+      action?: string; relatedArtifact?: string; revisionId?: string;
     }) => {
       try {
         await withMailboxLock(findProjectRoot(), () => runSend(opts));

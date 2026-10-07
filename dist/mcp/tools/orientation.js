@@ -1,17 +1,11 @@
 "use strict";
-// PLAN-IMPL-01 §3.5 — sigma_get_orientation
-//
-// Read-only. Reuses buildBootstrapView (the console-free assembly extracted in
-// Stage 1) so the CLI `session bootstrap` and this tool never drift. Passes
-// through the raw next_valid_operations list; it does NOT classify each
-// operation's authority level — that is deferred to the Layer 2 guidance
-// increment.
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeOrientation = computeOrientation;
 exports.registerOrientationTool = registerOrientationTool;
+const lifecycleView_1 = require("../../engine/lifecycleView");
 const zod_1 = require("zod");
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../../engine/chain");
@@ -45,12 +39,13 @@ function computeOrientation(root, role) {
         active: true,
         phase: chain ? chain.lifecycle_state : null,
         active_chain: chainVersion,
+        lifecycle: chain ? (0, lifecycleView_1.lifecycleView)(root, chain) : null,
         numbering: view.numbering,
         compatibility_warnings: view.compatibilityWarnings,
         gate_summary: gates,
         next_valid_operations: nextOps,
         stale_intent_warnings: chain ? (0, chain_1.getInvalidWarningLines)(chain) : [],
-        blockers,
+        blockers: [...blockers, ...(chain ? (0, lifecycleView_1.lifecycleView)(root, chain).approval_blockers : [])],
         inbox_unread: mailbox.inbox_unread,
         memo_unread: mailbox.memo_unread,
         mailbox_context: mailbox.scope,

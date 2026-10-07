@@ -1,3 +1,4 @@
+import { lifecycleView, effectiveLifecycleGates } from '../../engine/lifecycleView';
 // Stage B2 — sigma_plan_status. Query-plane equivalent of `sigma plan
 // status` — categorizes chain.plan.versions[] into DRAFT/LOCKED (computing
 // the same plan<->exec pairing `plan status` derives at runtime via
@@ -44,6 +45,8 @@ export function computePlanStatus(root: string | null): unknown {
 
   return {
     active: true,
+    lifecycle: lifecycleView(root,chain),
+    approved: chain.plan.versions.filter(p=>p.state==='APPROVED'),
     active_chain: chainVersion,
     drafts: drafts.map((d) => ({ version: d.version, title: d.title ?? null, created_at: d.created_at })),
     locked: locked.map((p) => {
@@ -68,7 +71,7 @@ export function computePlanStatus(root: string | null): unknown {
       created_at: p.created_at,
     })),
     superseded_count: supersededCount,
-    gate_2_open: chain.gates.gate_2_open,
+    gate_2_open: effectiveLifecycleGates(root,chain).gate_2_open,
     source: SOURCE_ENGINE,
   };
 }

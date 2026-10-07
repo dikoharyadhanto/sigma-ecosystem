@@ -563,7 +563,10 @@ describe('policy projection (§12, matrix §6)', () => {
       expect(availabilityFor(op, null).availability).toBe('forbidden');
     }
     expect(availabilityFor('intent_ratify', null).availability).toBe('director_required');
-    expect(availabilityFor('plan_lock', null).availability).toBe('director_required');
+    expect(availabilityFor('plan_lock', null).availability).toBe('forbidden');
+    expect(availabilityFor('exec_lock', null).availability).toBe('forbidden');
+    expect(availabilityFor('plan_approve', null).availability).toBe('director_required');
+    expect(availabilityFor('exec_approve', null).availability).toBe('director_required');
   });
 
   it('reports a gate-blocked operation as gate_blocked rather than role_action', () => {
@@ -582,11 +585,14 @@ describe('policy projection (§12, matrix §6)', () => {
     expect(out.active).toBe(true);
     expect(out.advisory).toBe(true);
     const ops = out.operations as Payload[];
-    expect(ops.length).toBe(58);
+    expect(ops.length).toBe(64);
     // Every registry operation is classified — no silent gaps.
     expect(ops.filter((o) => o.tier === null && o.availability !== 'forbidden')).toHaveLength(0);
-    // Nothing in Batch 1 is exposed as an executable write.
-    expect(ops.filter((o) => o.mcp_status === 'implemented').every((o) => o.availability === 'observe')).toBe(true);
+    // Canonical F04 approval/ack tools are executable under their declared authority.
+    expect(ops.find(o=>o.operation_id==='plan_approve')).toMatchObject({tier:'W2',mcp_status:'implemented',availability:'director_required'});
+    expect(ops.find(o=>o.operation_id==='exec_approve')).toMatchObject({tier:'W2',mcp_status:'implemented',availability:'director_required'});
+    expect(ops.find(o=>o.operation_id==='exec_acknowledge_plan')).toMatchObject({tier:'W1',mcp_status:'implemented',availability:'role_action'});
+    expect(ops.filter(o=>o.tier==='Q').every(o=>o.availability==='observe')).toBe(true);
   });
 });
 

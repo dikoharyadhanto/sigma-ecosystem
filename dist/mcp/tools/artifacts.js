@@ -1,15 +1,16 @@
 "use strict";
-// PLAN-IMPL-01 §3.3 — sigma_list_artifacts
-//
-// Read-only. Projects the ChainState artifact trackers. Deliberately returns
-// counts, not the full versions[] arrays (those can be large; the full history
-// is a future sigma_read_artifact concern).
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeArtifacts = computeArtifacts;
 exports.registerArtifactsTool = registerArtifactsTool;
+const lifecycleView_1 = require("../../engine/lifecycleView");
+// PLAN-IMPL-01 §3.3 — sigma_list_artifacts
+//
+// Read-only. Projects the ChainState artifact trackers. Deliberately returns
+// counts, not the full versions[] arrays (those can be large; the full history
+// is a future sigma_read_artifact concern).
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
@@ -24,6 +25,7 @@ function computeArtifacts(root) {
     const uncertified = !!(data.intent.file && (0, chain_1.isIntentDocUncertified)(data, path_1.default.join(root, data.intent.file)));
     return {
         active: true,
+        lifecycle: (0, lifecycleView_1.lifecycleView)(root, data),
         active_chain: chainVersion,
         intent: {
             version: data.intent.version,
@@ -46,6 +48,7 @@ function computeArtifacts(root) {
             // active_version is a display pointer only; an AI role must not infer
             // "the" current plan from it once concurrent DRAFTs are possible.
             // Structured so a consumer can detect ambiguity without parsing text.
+            approved: data.plan.versions.filter(p => p.state === 'APPROVED').map(p => p.version),
             open_drafts: data.plan.versions.filter(v => v.state === 'DRAFT').map(v => v.version),
         },
         exec: {

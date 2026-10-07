@@ -170,7 +170,7 @@ async function respondControlWrite(opts, mutate) {
                 }
                 if (existing.status === 'completed') {
                     const revision = (0, contract_1.computeStateRevision)(root).revision;
-                    return { result: existing.result, replayed: true, revisionBefore: revision, revisionAfter: revision };
+                    return { result: /^(plan|exec)_lock_/.test(opts.operationId) ? { ...existing.result, historical: true, operation_retired: true } : existing.result, replayed: true, revisionBefore: revision, revisionAfter: revision };
                 }
                 if (existing.status === 'pending') {
                     // recoverControlTransactions() ran immediately above. A pending
@@ -197,6 +197,7 @@ async function respondControlWrite(opts, mutate) {
                 argumentsHash,
                 revisionBefore: revisionBeforeLocked,
                 files: opts.transactionFiles(root),
+                guardedWrites: opts.guardedWrites,
                 auditEntry: pendingAudit,
             });
             (0, controlStore_1.controlTestFailpoint)('after_journal_prepared');

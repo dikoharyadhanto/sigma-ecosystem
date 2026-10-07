@@ -1,32 +1,11 @@
 "use strict";
-// Stage B2 — sigma_check_document. Query-plane equivalent of `sigma intent
-// check`, `sigma roadmap check`, `sigma plan check`, `sigma exec check`,
-// `sigma close check` — five CLI commands that are all one pipeline
-// (validateSigmaDocFile -> SigmaDocCheckReport -> printSigmaDocReport),
-// differing only in how the target file's path is resolved. One typed tool
-// with `type: z.enum([...])`, not five near-identical tools — the CHECK
-// group is the one B2 group uniform enough to warrant this (contrast
-// STATUS/LIST, which stay as separate tools because their shapes genuinely
-// differ per type).
-//
-// SigmaDocCheckReport.file is an absolute host path (docCheck.ts always
-// returns it that way; the CLI converts it to relative only at print time,
-// in printSigmaDocReport). Never forward that raw — redactPath() (same
-// primitive sigma_get_memory uses) converts it to a project-relative path on
-// a verified binding, exactly like the CLI's own path.relative() call, and
-// preserves legacy unbound-client behaviour otherwise.
-//
-// plan/exec share the same ambiguity rule `sigma plan check`/`sigma exec
-// check` already enforce (PLAN-IMPL-MULTIDRAFT-LOCK §8.3): without an
-// explicit version, more than one open DRAFT is refused rather than
-// silently picking one — resolveTargetVersion() is the same chain.ts
-// function the CLI commands call for this.
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeCheckDocument = computeCheckDocument;
 exports.registerCheckDocumentTool = registerCheckDocumentTool;
+const lifecycleView_1 = require("../../engine/lifecycleView");
 const zod_1 = require("zod");
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
@@ -50,8 +29,11 @@ function resolveSingleObject(chain, type, version) {
 function resolveArrayEntry(chain, type, version) {
     const versions = type === 'plan' ? chain.plan.versions : chain.exec.versions;
     const activeVersion = type === 'plan' ? chain.plan.active_version : chain.exec.active_version;
+    let implicitVersion = activeVersion;
     if (!version) {
-        const resolution = (0, chain_1.resolveTargetVersion)(versions, undefined);
+        const resolution = (0, chain_1.resolveTargetVersion)(type === 'plan' ? versions.filter(p => p.state === 'DRAFT' || p.state === 'APPROVED').map(p => ({ ...p, state: 'DRAFT' })) : versions, undefined);
+        if (resolution.kind === 'resolved')
+            implicitVersion = resolution.version;
         if (resolution.kind === 'ambiguous') {
             throw new errors_1.McpQueryError(contract_1.ERROR_CODES.INVALID_OPERATION, `${resolution.candidates.length} DRAFT ${type === 'plan' ? 'FMN-PLANs' : 'DEV-EXECs'} are open: ` +
                 `${resolution.candidates.join(', ')}. Specify version to check one.`);
@@ -59,7 +41,7 @@ function resolveArrayEntry(chain, type, version) {
     }
     const entry = version
         ? versions.find((v) => v.version === version)
-        : versions.find((v) => v.version === activeVersion);
+        : versions.find((v) => v.version === implicitVersion);
     if (!entry) {
         throw new errors_1.McpQueryError(contract_1.ERROR_CODES.INVALID_OPERATION, version ? `${type} version ${version} not found.` : `No active ${type} version found.`);
     }
@@ -81,6 +63,7 @@ function computeCheckDocument(root, type, version) {
     const report = (0, docCheck_1.validateSigmaDocFile)(absPath, type);
     const binding = (0, shared_1.getBinding)();
     return {
+        lifecycle: (0, lifecycleView_1.lifecycleView)(root, chain),
         active_chain: chainVersion,
         type,
         version: resolved.version,

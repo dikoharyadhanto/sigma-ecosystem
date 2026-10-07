@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sessionCommand = sessionCommand;
+const lifecycleView_1 = require("../engine/lifecycleView");
 const commander_1 = require("commander");
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
@@ -167,6 +168,7 @@ function runBootstrap(opts) {
             console.log(`  [WARNING] Doc state: UNCERTIFIED_EDIT (edited after ${since}) — see: sigma intent check`);
         }
         console.log(artifactLine('Plan Doc', 'FMN-PLAN', fmtVersion(chain.plan.active_version), chain.plan.active_state));
+        console.log(JSON.stringify((0, lifecycleView_1.lifecycleView)(projectRoot, chain), null, 2));
         const openPlanDrafts = chain.plan.versions.filter(v => v.state === 'DRAFT');
         if (openPlanDrafts.length > 1) {
             console.log(`  [NOTE] ${openPlanDrafts.length} DRAFT FMN-PLANs are open: ${openPlanDrafts.map(v => v.version).join(', ')} — run: sigma plan status`);

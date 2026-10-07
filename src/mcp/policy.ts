@@ -22,6 +22,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { OPERATION_REGISTRY_FILE } from '../config';
 import { readActiveChain, listChainVersions, getGateStatus } from '../engine/chain';
+import { effectiveLifecycleGates } from '../engine/lifecycleView';
 import { SOURCE_ENGINE } from './shared';
 
 export type Tier = 'Q' | 'W1' | 'W2' | 'W3' | 'NA';
@@ -55,8 +56,9 @@ export const OPERATION_TIERS: Readonly<Record<string, Tier>> = Object.freeze({
 
   // ── W2 (11) ───────────────────────────────────────────────────────────────
   intent_ratify: 'W2', intent_amendment: 'W2', intent_score: 'W2',
-  intent_supersede: 'W2', intent_activate: 'W2', plan_lock: 'W2',
-  plan_supersede: 'W2', plan_promote: 'W2', exec_lock: 'W2',
+  intent_supersede: 'W2', intent_activate: 'W2',
+  plan_supersede: 'W2', plan_promote: 'W2', plan_lock: 'NA', exec_lock: 'NA',
+  plan_approve: 'W2', exec_approve: 'W2', plan_revise_prepare: 'W1', plan_revise_check: 'W1', plan_revise_commit: 'W1', exec_acknowledge_plan: 'W1',
   close_new: 'W2', close_lock: 'W2',
 
   // ── W3 (9) ────────────────────────────────────────────────────────────────
@@ -69,6 +71,7 @@ export const OPERATION_TIERS: Readonly<Record<string, Tier>> = Object.freeze({
 export const OPERATION_OWNER: Readonly<Record<string, string>> = Object.freeze({
   intent_new: 'ARC', intent_status: 'ARC', intent_check: 'ARC',
   plan_new: 'FMN', plan_status: 'FMN', plan_list: 'FMN', plan_check: 'FMN',
+  plan_approve: 'FMN', plan_revise_prepare: 'FMN', plan_revise_check: 'FMN', plan_revise_commit: 'FMN', exec_approve: 'DEV', exec_acknowledge_plan: 'DEV',
   plan_update: 'FMN', roadmap_new: 'FMN', roadmap_list: 'FMN',
   roadmap_check: 'FMN', roadmap_render: 'FMN', plan_promote: 'FMN',
   exec_new: 'DEV', exec_status: 'DEV', exec_list: 'DEV', exec_check: 'DEV',
@@ -86,7 +89,7 @@ export const OPERATION_OWNER: Readonly<Record<string, string>> = Object.freeze({
  * (`sigma send`, `sigma inbox read`, write-memo/read-memo) — there is no MCP
  * primitive for it, so both operations report `deferred`.
  */
-const IMPLEMENTED = new Set(['project_status', 'session_bootstrap', 'memory', 'doctor']);
+const IMPLEMENTED = new Set(['project_status', 'session_bootstrap', 'memory', 'doctor', 'plan_approve', 'exec_approve', 'exec_acknowledge_plan']);
 
 export function mcpStatusFor(operationId: string): McpStatus {
   const tier = OPERATION_TIERS[operationId];
@@ -162,7 +165,7 @@ function gateFacts(root: string): GateFacts | null {
   try {
     if (listChainVersions(root).length === 0) return null;
     const { data } = readActiveChain(root);
-    const g = getGateStatus(data);
+    const g = getGateStatus({...data,gates:effectiveLifecycleGates(root,data)});
     return {
       gate_1_open: g.gate_1_open,
       gate_2_open: g.gate_2_open,
@@ -206,6 +209,7 @@ export function computeEffectivePolicy(root: string | null, roleFilter?: string)
         owner_role: OPERATION_OWNER[op.operation_id] ?? null,
         registry_role: op.role ?? null,
         registry_level: op.level ?? null,
+        ...(op.operation_id==='plan_revise_commit'?{conditional_director_approval:'Required for loosening or director checkpoint; ordinary pre/post-build changes are reviewed with EXEC.'}:{}),
         mcp_status: mcpStatusFor(op.operation_id),
       };
     })

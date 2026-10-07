@@ -1,3 +1,5 @@
+import { effectiveLifecycleGates } from '../engine/lifecycleView';
+import { resolveLifecycleModel } from '../engine/lifecycle';
 // Stage F (W2 batch, continued) — the use-case shared by `sigma close lock`
 // (CLI) and sigma_commit_close_lock's mutate step (MCP control tool).
 // Transport-agnostic: no Commander, no console.log, no interactive prompt —
@@ -51,6 +53,7 @@ export function closeLockTransactionFiles(projectRoot: string): string[] {
 export function lockCloseUseCase(projectRoot: string): LockCloseResult {
   const { chainVersion, data: chain } = readActiveChain(projectRoot);
   assertChainCanMutate(chain);
+  if (resolveLifecycleModel(chain)==='paired_approval' && !effectiveLifecycleGates(projectRoot,chain).gate_3_satisfied)throw new CloseLockError('GATE_BLOCKED','GATE 3 BLOCKED: open work or invalid completed contract evidence.');
 
   if (!chain.close || chain.close.state !== 'DRAFT') {
     throw new CloseLockError('INVALID_OPERATION', 'Active DIR-CLOSE is not in DRAFT state. Cannot lock.');

@@ -1,16 +1,11 @@
 "use strict";
-// Stage B2 — sigma_list_plans. Query-plane equivalent of `sigma plan list`
-// — every chain.plan.versions[] entry regardless of state (unlike
-// sigma_plan_status, which hides SUPERSEDED), plus the pending (unversioned)
-// queue. Unlike sigma_plan_status's readPendingTitle() fallback path, the
-// title here is never a host absolute path — see planStatus.ts for the same
-// concern already resolved once.
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeListPlans = computeListPlans;
 exports.registerListPlansTool = registerListPlansTool;
+const lifecycleView_1 = require("../../engine/lifecycleView");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../../engine/chain");
@@ -35,6 +30,7 @@ function computeListPlans(root) {
         return { versions: [], pending: [], source: shared_1.SOURCE_ENGINE };
     const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(root);
     return {
+        lifecycle: (0, lifecycleView_1.lifecycleView)(root, chain),
         active_chain: chainVersion,
         versions: chain.plan.versions.map((v) => ({
             version: v.version,

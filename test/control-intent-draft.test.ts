@@ -500,7 +500,12 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      'sigma_acknowledge_plan',
       'sigma_commit_close_lock',
+      'sigma_commit_exec_approve',
+      'sigma_commit_plan_approve',
+      'sigma_prepare_exec_approve',
+      'sigma_prepare_plan_approve',
       'sigma_commit_close_new',
       'sigma_commit_exec_lock',
       'sigma_commit_intent_amendment',
@@ -529,7 +534,7 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
       'sigma_render_roadmap',
       'sigma_update_artifact_draft',
       'sigma_update_reference',
-    ]);
+    ].sort());
     // Stage F's supersede/close-lock pairs are genuinely high-blast-radius
     // (cascading, hard-to-reverse status changes) and are annotated
     // destructiveHint: true accordingly — every other tool remains false.

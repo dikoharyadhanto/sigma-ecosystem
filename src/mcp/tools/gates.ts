@@ -1,3 +1,4 @@
+import { lifecycleView, effectiveLifecycleGates } from '../../engine/lifecycleView';
 // PLAN-IMPL-01 §3.2 — sigma_get_gates
 //
 // Read-only. Wraps getGateStatus + getGateStatusLabel + getInvalidMarkers.
@@ -22,14 +23,16 @@ export function computeGates(root: string | null): unknown {
   if (listChainVersions(root).length === 0) return noProject();
 
   const { data } = readActiveChain(root);
-  const gates = getGateStatus(data);
+  const projected={...data,gates:effectiveLifecycleGates(root,data)};
+  const gates = getGateStatus(projected);
   const labels: Record<string, string> = {};
   for (const key of GATE_KEYS) {
-    labels[key] = getGateStatusLabel(data, key);
+    labels[key] = getGateStatusLabel(projected, key);
   }
 
   return {
     active: true,
+    lifecycle: lifecycleView(root,data),
     gate_1_open: gates.gate_1_open,
     gate_2_open: gates.gate_2_open,
     gate_3_satisfied: gates.gate_3_satisfied,

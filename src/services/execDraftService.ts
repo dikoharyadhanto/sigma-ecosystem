@@ -23,6 +23,8 @@ import {
   assertChainCanMutate,
   chainFilePath,
 } from '../engine/chain';
+import { eligiblePlanState, resolveLifecycleModel } from '../engine/lifecycle';
+import { assertPlanCertified, assertAllNotices } from '../engine/revisions';
 import { toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { controlTestFailpoint } from '../engine/controlStore';
@@ -58,7 +60,7 @@ export interface CreateExecDraftResult {
 // (to compute the target file path before the lock/journal begins) and
 // createExecDraft() itself, so the two can never resolve differently.
 function resolveTargetPlan(chain: ChainState, requestedPlanVersion?: string): string {
-  const lockedPlans = chain.plan.versions.filter(v => v.state === 'LOCKED');
+  const lockedPlans = chain.plan.versions.filter(v => v.state === eligiblePlanState(chain));
   const plansWithOpenExec = new Set(
     chain.exec.versions
       .filter(v => v.state !== 'SUPERSEDED')
@@ -73,7 +75,7 @@ function resolveTargetPlan(chain: ChainState, requestedPlanVersion?: string): st
       const available = lockedPlans.map(p => p.version).join(', ') || '(none)';
       throw new ExecDraftError(
         'INVALID_OPERATION',
-        `FMN-PLAN ${requestedPlanVersion} is not a LOCKED plan.\nLOCKED plans: ${available}`
+        `FMN-PLAN ${requestedPlanVersion} is not an eligible ${eligiblePlanState(chain)} plan.\n${eligiblePlanState(chain)} plans: ${available}`
       );
     }
     const openExecForPlan = chain.exec.versions.find(
@@ -96,7 +98,7 @@ function resolveTargetPlan(chain: ChainState, requestedPlanVersion?: string): st
   if (unexecutedPlans.length === 0) {
     throw new ExecDraftError(
       'INVALID_OPERATION',
-      'All locked plans already have an exec.\nRun: sigma plan new   to create a new plan'
+      `All ${eligiblePlanState(chain)} plans already have an exec.\nRun: sigma plan new   to create a new plan`
     );
   }
   if (unexecutedPlans.length === 1) {
@@ -105,14 +107,14 @@ function resolveTargetPlan(chain: ChainState, requestedPlanVersion?: string): st
   const versions = unexecutedPlans.map(p => p.version).join(', ');
   throw new ExecDraftError(
     'INVALID_OPERATION',
-    `${unexecutedPlans.length} unexecuted locked plans found: ${versions}\n` +
+    `${unexecutedPlans.length} unexecuted ${eligiblePlanState(chain).toLowerCase()} plans found: ${versions}\n` +
     `Specify which to execute: sigma exec new --plan ${unexecutedPlans[0].version}`
   );
 }
 
 function assertGate2Open(chain: ChainState): void {
   if (!getOperationalGate(chain, 'gate_2_open')) {
-    throw new ExecDraftError('GATE_BLOCKED', 'GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
+    throw new ExecDraftError('GATE_BLOCKED', `GATE 2 BLOCKED: No eligible ${eligiblePlanState(chain)} FMN-PLAN. Run: sigma plan approve`);
   }
 }
 
@@ -135,6 +137,7 @@ export function createExecDraft(input: CreateExecDraftInput): CreateExecDraftRes
   assertGate2Open(chain);
   const planVersionRef = resolveTargetPlan(chain, planVersion);
 
+  if (resolveLifecycleModel(chain) === 'paired_approval') assertAllNotices(projectRoot,assertPlanCertified(projectRoot,chain,planVersionRef));
   const version = nextExecVersion(chain, planVersionRef);
   const relPath = toPosix(path.join('Sigma', 'evidence', `DEV-EXEC-${version}.md`));
   const absPath = path.join(projectRoot, relPath);
@@ -155,6 +158,12 @@ export function createExecDraft(input: CreateExecDraftInput): CreateExecDraftRes
   controlTestFailpoint('exec_create_after_artifact');
 
   registerExecDraft(chain, version, relPath, planVersionRef);
+  if (resolveLifecycleModel(chain) === 'paired_approval') {
+    const plan = chain.plan.versions.find(p => p.version === planVersionRef)!;
+    const exec = chain.exec.versions.find(e => e.version === version)!;
+    exec.plan_revision_ref = plan.revision; exec.plan_contract_sha256_ref = plan.contract_sha256;
+    // Explicit acknowledgement remains a separate operation.
+  }
   writeChain(projectRoot, chainVersion, chain);
   controlTestFailpoint('exec_create_after_chain');
 

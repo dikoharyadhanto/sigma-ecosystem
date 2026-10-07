@@ -1,8 +1,9 @@
+import { createLegacyInitialChain as createInitialChain } from './helpers';
 import { afterEach, describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import {
-  createInitialChain, nextPlanVersion, registerPlanDraft, promotePendingPlan,
+  nextPlanVersion, registerPlanDraft, promotePendingPlan,
   readChain, writeChain, runDoctorReconciliation, validateChainSemantics,
 } from '../src/engine/chain';
 import {
@@ -150,9 +151,9 @@ describe('bootstrap and reconstruction', () => {
     computeDoctor(env.projectDir);
     expect(fs.readFileSync(chainPath(env, 'v1'), 'utf8')).toBe(before);
     writeChainFixture(env, 'v2', chain('v2'));
-    expect(buildBootstrapView(env.projectDir).compatibilityWarnings).toEqual([]);
+    expect(buildBootstrapView(env.projectDir).compatibilityWarnings).toEqual([expect.stringContaining('Legacy lifecycle')]);
     fs.writeJsonSync(env.activateStatusPath, { active_chain: 'v1' });
-    expect(buildBootstrapView(env.projectDir).compatibilityWarnings).toHaveLength(1);
+    expect(buildBootstrapView(env.projectDir).compatibilityWarnings).toHaveLength(2);
   });
   it('state revision changes when the numbering field changes', () => {
     const env = environment(); writeChainFixture(env, 'v3', chain());

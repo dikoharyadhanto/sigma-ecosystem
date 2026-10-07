@@ -15,6 +15,12 @@ export interface MessageEntry {
     action?: ActionRequired;
     intent_version?: string | null;
     context?: string;
+    contract_change?: {
+        plan: string;
+        revision: number;
+        revision_id: string;
+        contract_sha256: string;
+    };
     migration?: {
         original_file: string;
         original_status: string;

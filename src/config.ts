@@ -106,7 +106,7 @@ export type MessagingRole = typeof MESSAGING_ROLES[number];
 // MEMO (PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF) — self-to-self operational
 // brief. from === to, excluded from sigma send's unread gate and from
 // sigma inbox listings; has its own command group (`sigma memo`).
-export const VALID_MESSAGE_TYPES = ['NOTE', 'CHECK', 'RESPONSE', 'HANDOFF', 'QUESTION', 'RISK', 'MEMO'] as const;
+export const VALID_MESSAGE_TYPES = ['NOTE', 'CHECK', 'RESPONSE', 'HANDOFF', 'QUESTION', 'RISK', 'MEMO', 'CONTRACT_CHANGE', 'CONTRACT_CHANGE_REQUEST'] as const;
 export type MessageType = typeof VALID_MESSAGE_TYPES[number];
 
 export const VALID_ACTIONS = ['FYI', 'RESPOND', 'REVIEW', 'UNBLOCK', 'OTHER'] as const;

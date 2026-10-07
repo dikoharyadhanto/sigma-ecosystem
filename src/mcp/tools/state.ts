@@ -1,3 +1,4 @@
+import { lifecycleView } from '../../engine/lifecycleView';
 // PLAN-IMPL-01 §3.1 — sigma_get_state
 //
 // Read-only. Wraps the same engine functions the CLI uses (readActiveChain,
@@ -31,6 +32,7 @@ export function computeState(root: string | null): unknown {
   const { chainVersion, data } = readActiveChain(root);
   return {
     active: true,
+    lifecycle: lifecycleView(root,data),
     phase: data.lifecycle_state,
     active_chain: chainVersion,
     project_id: identity.project_id,

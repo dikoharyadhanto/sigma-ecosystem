@@ -1,3 +1,4 @@
+import { lifecycleView, effectiveLifecycleGates } from '../engine/lifecycleView';
 import { Command } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
@@ -19,7 +20,7 @@ import {
   validateSigmaDocFile,
 } from '../utils/docCheck';
 import { createPlanDraft, PlanDraftError } from '../services/planDraftService';
-import { lockPlanDraftUseCase, resolvePlanLockTarget } from '../services/planLockService';
+import { registerApprovalCommands } from './approval';
 import { supersedePlanUseCase } from '../services/planSupersedeService';
 import { promotePlanUseCase } from '../services/planPromoteService';
 
@@ -49,19 +50,17 @@ function assertRequiredStageMetadata(title: string | undefined, focus: string | 
 function planDocPath(projectRoot: string, chain: ChainState, version?: string): string {
   const entry = version
     ? chain.plan.versions.find(v => v.version === version)
-    : chain.plan.versions.find(v => v.version === chain.plan.active_version);
+    : chain.plan.versions.filter(v => v.state === 'DRAFT' || v.state === 'APPROVED').length === 1
+      ? chain.plan.versions.find(v => v.state === 'DRAFT' || v.state === 'APPROVED')
+      : chain.plan.versions.find(v => v.version === chain.plan.active_version);
   if (!entry) throw new Error(version ? `FMN-PLAN ${version} not found.` : 'No active FMN-PLAN found. Run: sigma plan new');
   return path.join(projectRoot, entry.file ?? path.join('Sigma', 'contract', `FMN-PLAN-${entry.version}.md`));
 }
 
-// PLAN-IMPL-MULTIDRAFT-LOCK §8.3 (Director directive 2026-08-12) — no
-// command may act on an implicit target when ambiguity exists. `check`
-// still defaults to the active pointer when unambiguous (0 or 1 open
-// DRAFT), but must refuse and list candidates once more than one DRAFT is
-// open, exactly like `lock`.
+// Check selects the sole DRAFT/APPROVED contract; multiple open contracts require --v.
 function assertPlanCheckUnambiguous(chain: ChainState, explicit: string | undefined): void {
   if (explicit) return;
-  const resolution = resolveTargetVersion(chain.plan.versions, undefined);
+  const resolution = resolveTargetVersion(chain.plan.versions.filter(p=>p.state==='DRAFT'||p.state==='APPROVED').map(p=>({...p,state:'DRAFT'})), undefined);
   if (resolution.kind === 'ambiguous') {
     throw new Error(
       `${resolution.candidates.length} DRAFT FMN-PLANs are open: ${resolution.candidates.join(', ')}\n` +
@@ -127,31 +126,10 @@ export function planCommand(): Command {
       }
     });
 
-  cmd.command('lock')
-    .description('Lock a DRAFT FMN-PLAN (opens Gate 2). Requires --v when more than one DRAFT is open.')
-    .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)', normalizeVersionArg)
-    .action((opts: { v?: string }) => {
-      try {
-        const projectRoot = findProjectRoot();
-        // Printed unconditionally when a resolvable target exists, pass or
-        // fail on what follows — same precedent as `intent ratify`.
-        // lockPlanDraftUseCase() re-validates internally rather than
-        // trusting this report object, so there is no staleness risk from
-        // computing it twice.
-        const { data: chain } = readActiveChain(projectRoot);
-        const previewVersion = resolvePlanLockTarget(chain, opts.v);
-        printSigmaDocReport(validateSigmaDocFile(planDocPath(projectRoot, chain, previewVersion), 'plan'), projectRoot);
-
-        const result = lockPlanDraftUseCase(projectRoot, opts.v);
-        console.log(`FMN-PLAN ${result.version} LOCKED. Gate 2 open. Next: sigma exec new`);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
+  registerApprovalCommands(cmd, 'plan');
 
   cmd.command('supersede')
-    .description('Supersede an FMN-PLAN version, DRAFT or LOCKED (auto-supersedes any linked non-final DEV-EXEC)')
+    .description('Supersede an FMN-PLAN version, DRAFT, APPROVED or LOCKED (auto-supersedes any linked non-final DEV-EXEC)')
     .requiredOption('--v <version>', 'Version to supersede (e.g. v1.2)', normalizeVersionArg)
     .requiredOption('--reason <reason>', 'Reason for superseding')
     .action((opts: { v: string; reason: string }) => {
@@ -192,7 +170,7 @@ export function planCommand(): Command {
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
         console.log(`ROADMAP updated: Stage Overview regenerated with Stage ${result.version.replace(/^v/, '')}`);
-        console.log(`Run: sigma plan lock --v ${result.version}   to lock it when ready`);
+        console.log(`Run: sigma plan approve --v ${result.version} --director-confirm   after Director review`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
@@ -201,7 +179,7 @@ export function planCommand(): Command {
 
   cmd.command('check')
     .description('Validate an FMN-PLAN structure and markers')
-    .option('--v <version>', 'Check a specific FMN-PLAN version. Required when more than one DRAFT is open.', normalizeVersionArg)
+    .option('--v <version>', 'Check a specific FMN-PLAN version. Required when more than one DRAFT/APPROVED contract is open.', normalizeVersionArg)
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
@@ -210,6 +188,7 @@ export function planCommand(): Command {
         const absPath = planDocPath(projectRoot, chain, opts.v);
         const report = validateSigmaDocFile(absPath, 'plan');
         printSigmaDocReport(report, projectRoot);
+        console.log(JSON.stringify(lifecycleView(projectRoot,chain),null,2));
         if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
@@ -218,12 +197,13 @@ export function planCommand(): Command {
     });
 
   cmd.command('status')
-    .description('Show FMN-PLAN chain state: open DRAFTs, LOCKED plans with exec pairing, pending plans, Gate 2')
+    .description('Show FMN-PLAN chain state: open DRAFTs, APPROVED and LOCKED plans with exec pairing, pending plans, Gate 2')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
         const { data: chain } = readActiveChain(projectRoot);
         console.log('\n=== FMN-PLAN Status ===\n');
+        console.log(JSON.stringify(lifecycleView(projectRoot,chain),null,2));
 
         const drafts = chain.plan.versions
           .filter(v => v.state === 'DRAFT')
@@ -273,7 +253,7 @@ export function planCommand(): Command {
           console.log(`Run: sigma plan promote --id ${chain.plan.pending[0].id}   to promote a pending plan`);
         }
 
-        console.log(`\nGate 2: ${chain.gates.gate_2_open ? 'OPEN' : 'BLOCKED'}`);
+        console.log(`\nGate 2: ${effectiveLifecycleGates(projectRoot,chain).gate_2_open ? 'OPEN' : 'BLOCKED'}`);
         if (supersededCount > 0) {
           console.log(`(${supersededCount} SUPERSEDED plan(s) not shown above — run: sigma plan list)`);
         }

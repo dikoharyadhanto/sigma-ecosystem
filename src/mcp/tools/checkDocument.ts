@@ -1,3 +1,4 @@
+import { lifecycleView } from '../../engine/lifecycleView';
 // Stage B2 — sigma_check_document. Query-plane equivalent of `sigma intent
 // check`, `sigma roadmap check`, `sigma plan check`, `sigma exec check`,
 // `sigma close check` — five CLI commands that are all one pipeline
@@ -64,8 +65,10 @@ function resolveArrayEntry(
   const versions: ArtifactVersion[] = type === 'plan' ? chain.plan.versions : chain.exec.versions;
   const activeVersion = type === 'plan' ? chain.plan.active_version : chain.exec.active_version;
 
+  let implicitVersion=activeVersion;
   if (!version) {
-    const resolution = resolveTargetVersion(versions, undefined);
+    const resolution = resolveTargetVersion(type==='plan'?versions.filter(p=>p.state==='DRAFT'||p.state==='APPROVED').map(p=>({...p,state:'DRAFT'})):versions, undefined);
+    if(resolution.kind==='resolved')implicitVersion=resolution.version;
     if (resolution.kind === 'ambiguous') {
       throw new McpQueryError(
         ERROR_CODES.INVALID_OPERATION,
@@ -77,7 +80,7 @@ function resolveArrayEntry(
 
   const entry = version
     ? versions.find((v) => v.version === version)
-    : versions.find((v) => v.version === activeVersion);
+    : versions.find((v) => v.version === implicitVersion);
   if (!entry) {
     throw new McpQueryError(
       ERROR_CODES.INVALID_OPERATION,
@@ -105,6 +108,7 @@ export function computeCheckDocument(root: string | null, type: CheckDocumentTyp
   const binding = getBinding();
 
   return {
+    lifecycle: lifecycleView(root,chain),
     active_chain: chainVersion,
     type,
     version: resolved.version,

@@ -36,7 +36,8 @@ export function generateStageOverview(chain: ChainState): string {
     const stage = plan.version.replace(/^v/, '');
     const title = plan.title ?? 'TBD';
     const focus = plan.focus ?? 'TBD';
-    const reason = plan.state === 'SUPERSEDED' ? (plan.supersede_reason ?? '—') : '—';
+    const reason = plan.state === 'SUPERSEDED' ? (plan.supersede_reason ?? '—') : chain.lifecycle_model==='paired_approval'
+      ? [plan.revision ? 'rev '+plan.revision : '', plan.historical_legacy ? 'historical legacy' : ''].filter(Boolean).join('; ') || '—' : '—';
     return `| ${stage} | ${title} | ${focus} | ${plan.state} | ${reason} |`;
   });
 

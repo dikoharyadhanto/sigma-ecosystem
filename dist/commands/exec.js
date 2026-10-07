@@ -4,13 +4,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.execCommand = execCommand;
+const lifecycleView_1 = require("../engine/lifecycleView");
 const commander_1 = require("commander");
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const docCheck_1 = require("../utils/docCheck");
 const execDraftService_1 = require("../services/execDraftService");
-const execLockService_1 = require("../services/execLockService");
+const approval_1 = require("./approval");
 function execDocPath(projectRoot, chain, version) {
     const entry = version
         ? chain.exec.versions.find(v => v.version === version)
@@ -35,8 +36,8 @@ function execCommand() {
     const cmd = new commander_1.Command('exec');
     cmd.description('Manage DEV-EXEC artifact');
     cmd.command('new')
-        .description('Create a new DEV-EXEC draft (requires a LOCKED FMN-PLAN with no open exec)')
-        .option('--plan <version>', 'Explicitly specify which locked plan to execute (required when multiple unexecuted locked plans exist)', chain_1.normalizeVersionArg)
+        .description('Create a new DEV-EXEC draft (requires an eligible APPROVED PLAN, or legacy LOCKED PLAN, with no open exec)')
+        .option('--plan <version>', 'Explicit eligible PLAN target (required when multiple unexecuted contracts exist)', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -46,6 +47,7 @@ function execCommand() {
             console.log('Running automatic validation...\n');
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'exec');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            console.log(JSON.stringify((0, lifecycleView_1.lifecycleView)(projectRoot, (0, chain_1.readActiveChain)(projectRoot).data), null, 2));
             if (!report.ok)
                 process.exit(1);
         }
@@ -59,29 +61,7 @@ function execCommand() {
             process.exit(1);
         }
     });
-    cmd.command('lock')
-        .description('Lock a DRAFT DEV-EXEC (re-evaluates Gate 3). Requires --v when more than one DRAFT is open.')
-        .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)', chain_1.normalizeVersionArg)
-        .action((opts) => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            // Printed unconditionally when a resolvable target exists, pass or
-            // fail on what follows — same precedent as `intent ratify`.
-            // lockExecDraftUseCase() re-validates internally rather than
-            // trusting this report object, so there is no staleness risk from
-            // computing it twice.
-            const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            const previewVersion = (0, execLockService_1.resolveExecLockTarget)(chain, opts.v);
-            (0, docCheck_1.printSigmaDocReport)((0, docCheck_1.validateSigmaDocFile)(execDocPath(projectRoot, chain, previewVersion), 'exec'), projectRoot);
-            const result = (0, execLockService_1.lockExecDraftUseCase)(projectRoot, opts.v);
-            const gate3 = result.gate3Satisfied ? 'SATISFIED' : 'not satisfied — open work remains';
-            console.log(`DEV-EXEC ${result.version} LOCKED. Gate 3: ${gate3}`);
-        }
-        catch (e) {
-            console.error(e.message);
-            process.exit(1);
-        }
-    });
+    (0, approval_1.registerApprovalCommands)(cmd, 'exec');
     cmd.command('check')
         .description('Validate a DEV-EXEC structure and markers')
         .option('--v <version>', 'Check a specific DEV-EXEC version. Required when more than one DRAFT is open.', chain_1.normalizeVersionArg)
@@ -93,6 +73,7 @@ function execCommand() {
             const absPath = execDocPath(projectRoot, chain, opts.v);
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'exec');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
+            console.log(JSON.stringify((0, lifecycleView_1.lifecycleView)(projectRoot, chain), null, 2));
             if (!report.ok)
                 process.exit(1);
         }
@@ -108,6 +89,7 @@ function execCommand() {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
             console.log('\n=== DEV-EXEC Status ===\n');
+            console.log(JSON.stringify((0, lifecycleView_1.lifecycleView)(projectRoot, chain), null, 2));
             const drafts = chain.exec.versions
                 .filter(v => v.state === 'DRAFT')
                 .sort((a, b) => a.created_at.localeCompare(b.created_at));

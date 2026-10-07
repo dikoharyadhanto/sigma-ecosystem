@@ -1,3 +1,4 @@
+import { lifecycleView } from '../engine/lifecycleView';
 import { Command } from 'commander';
 import path from 'path';
 import {
@@ -12,7 +13,7 @@ import {
   validateSigmaDocFile,
 } from '../utils/docCheck';
 import { createExecDraft, ExecDraftError } from '../services/execDraftService';
-import { lockExecDraftUseCase, resolveExecLockTarget } from '../services/execLockService';
+import { registerApprovalCommands } from './approval';
 
 function execDocPath(projectRoot: string, chain: ChainState, version?: string): string {
   const entry = version
@@ -41,8 +42,8 @@ export function execCommand(): Command {
   cmd.description('Manage DEV-EXEC artifact');
 
   cmd.command('new')
-    .description('Create a new DEV-EXEC draft (requires a LOCKED FMN-PLAN with no open exec)')
-    .option('--plan <version>', 'Explicitly specify which locked plan to execute (required when multiple unexecuted locked plans exist)', normalizeVersionArg)
+    .description('Create a new DEV-EXEC draft (requires an eligible APPROVED PLAN, or legacy LOCKED PLAN, with no open exec)')
+    .option('--plan <version>', 'Explicit eligible PLAN target (required when multiple unexecuted contracts exist)', normalizeVersionArg)
     .action((opts: { plan?: string }) => {
       try {
         const projectRoot = findProjectRoot();
@@ -53,6 +54,7 @@ export function execCommand(): Command {
         console.log('Running automatic validation...\n');
         const report = validateSigmaDocFile(absPath, 'exec');
         printSigmaDocReport(report, projectRoot);
+        console.log(JSON.stringify(lifecycleView(projectRoot,readActiveChain(projectRoot).data),null,2));
         if (!report.ok) process.exit(1);
       } catch (e) {
         if (e instanceof ExecDraftError) {
@@ -64,29 +66,7 @@ export function execCommand(): Command {
       }
     });
 
-  cmd.command('lock')
-    .description('Lock a DRAFT DEV-EXEC (re-evaluates Gate 3). Requires --v when more than one DRAFT is open.')
-    .option('--v <version>', 'DRAFT version to lock (required when more than one DRAFT is open)', normalizeVersionArg)
-    .action((opts: { v?: string }) => {
-      try {
-        const projectRoot = findProjectRoot();
-        // Printed unconditionally when a resolvable target exists, pass or
-        // fail on what follows — same precedent as `intent ratify`.
-        // lockExecDraftUseCase() re-validates internally rather than
-        // trusting this report object, so there is no staleness risk from
-        // computing it twice.
-        const { data: chain } = readActiveChain(projectRoot);
-        const previewVersion = resolveExecLockTarget(chain, opts.v);
-        printSigmaDocReport(validateSigmaDocFile(execDocPath(projectRoot, chain, previewVersion), 'exec'), projectRoot);
-
-        const result = lockExecDraftUseCase(projectRoot, opts.v);
-        const gate3 = result.gate3Satisfied ? 'SATISFIED' : 'not satisfied — open work remains';
-        console.log(`DEV-EXEC ${result.version} LOCKED. Gate 3: ${gate3}`);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
+  registerApprovalCommands(cmd, 'exec');
 
   cmd.command('check')
     .description('Validate a DEV-EXEC structure and markers')
@@ -99,6 +79,7 @@ export function execCommand(): Command {
         const absPath = execDocPath(projectRoot, chain, opts.v);
         const report = validateSigmaDocFile(absPath, 'exec');
         printSigmaDocReport(report, projectRoot);
+        console.log(JSON.stringify(lifecycleView(projectRoot,chain),null,2));
         if (!report.ok) process.exit(1);
       } catch (e) {
         console.error((e as Error).message);
@@ -113,6 +94,7 @@ export function execCommand(): Command {
         const projectRoot = findProjectRoot();
         const { data: chain } = readActiveChain(projectRoot);
         console.log('\n=== DEV-EXEC Status ===\n');
+        console.log(JSON.stringify(lifecycleView(projectRoot,chain),null,2));
 
         const drafts = chain.exec.versions
           .filter(v => v.state === 'DRAFT')

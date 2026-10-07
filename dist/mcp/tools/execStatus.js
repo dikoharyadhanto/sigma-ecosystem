@@ -1,11 +1,8 @@
 "use strict";
-// Stage B2 — sigma_exec_status. Query-plane equivalent of `sigma exec
-// status` — categorizes chain.exec.versions[] into DRAFT/LOCKED with their
-// plan_version_ref, plus Gate 3. Simpler than plan_status: exec has no
-// pending concept.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeExecStatus = computeExecStatus;
 exports.registerExecStatusTool = registerExecStatusTool;
+const lifecycleView_1 = require("../../engine/lifecycleView");
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
@@ -22,6 +19,7 @@ function computeExecStatus(root) {
     const supersededCount = chain.exec.versions.filter((v) => v.state === 'SUPERSEDED').length;
     return {
         active: true,
+        lifecycle: (0, lifecycleView_1.lifecycleView)(root, chain),
         active_chain: chainVersion,
         drafts: drafts.map((d) => ({ version: d.version, plan_version_ref: d.plan_version_ref ?? null, created_at: d.created_at })),
         locked: locked.map((e) => ({ version: e.version, plan_version_ref: e.plan_version_ref ?? null })),

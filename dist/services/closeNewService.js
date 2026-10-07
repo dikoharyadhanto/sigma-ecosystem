@@ -20,6 +20,7 @@ exports.assertCloseNewEligible = assertCloseNewEligible;
 exports.closeNewTransactionFiles = closeNewTransactionFiles;
 exports.createCloseDraftUseCase = createCloseDraftUseCase;
 const path_1 = __importDefault(require("path"));
+const lifecycleView_1 = require("../engine/lifecycleView");
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
@@ -38,16 +39,16 @@ function closeDraftRelPath(chain) {
 /** Re-runs every close_new precondition against a live chain, without
  *  writing anything — used by both prepare (freeze the ticket only if this
  *  would currently succeed) and by CLI's own preflight message. */
-function assertCloseNewEligible(chain) {
-    if (!(0, chain_1.hasCleanGate3Chain)(chain)) {
+function assertCloseNewEligible(chain, projectRoot) {
+    if (!(0, chain_1.hasCleanGate3Chain)(chain) || projectRoot && !(0, lifecycleView_1.effectiveLifecycleGates)(projectRoot, chain).gate_3_satisfied) {
         const blockers = (0, chain_1.describeGate3Blockers)(chain);
         const lines = ['GATE 3 BLOCKED: the chain still has open work.', ...blockers.map(r => `  ${r}`)];
-        lines.push('Every locked plan needs exactly one locked exec, and nothing may be left in DRAFT.');
+        lines.push('Every locked plan needs exactly one locked exec with valid contract evidence, and nothing may be left in DRAFT/APPROVED.');
         if (blockers.some(r => r.startsWith('DRAFT FMN-PLAN'))) {
             lines.push('Abandon what is no longer wanted: sigma plan supersede --v <version> --reason "..."');
         }
         if (blockers.some(r => r.includes('has no LOCKED DEV-EXEC'))) {
-            lines.push('Run: sigma exec new / sigma exec lock to finish an unpaired plan.');
+            lines.push('Run: sigma exec new / sigma exec approve --director-confirm to finish an unpaired plan.');
         }
         throw new CloseNewError('GATE_BLOCKED', lines.join('\n'));
     }
@@ -71,7 +72,7 @@ function closeNewTransactionFiles(projectRoot) {
 function createCloseDraftUseCase(projectRoot) {
     const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
     (0, chain_1.assertChainCanMutate)(chain);
-    assertCloseNewEligible(chain);
+    assertCloseNewEligible(chain, projectRoot);
     const version = chain.chain_version;
     const relPath = closeDraftRelPath(chain);
     const absPath = path_1.default.join(projectRoot, relPath);

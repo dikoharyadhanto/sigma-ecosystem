@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import {
   setupTestEnv,
+  stubProjectIdentity,
   runCli,
   stubProjectRootAnchor,
   writeChainFixture,
@@ -42,7 +43,7 @@ function makeChainWithOneOpenExecOnePlanFree() {
   });
 }
 
-// Both PLAN A and PLAN B have an open DRAFT exec — used for exec lock/check
+// Both PLAN A and PLAN B have an open DRAFT exec — used for exec approve --director-confirm/check
 // ambiguity coverage.
 function makeChainWithTwoOpenExecs() {
   const now = new Date().toISOString();
@@ -100,6 +101,7 @@ describe('sigma exec new — per-PLAN guard (PLAN-IMPL-MULTIDRAFT-LOCK §4, repl
   it('allows creating an exec for PLAN B while PLAN A already has an open DRAFT exec (discussion §1.5 core scenario)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithOneOpenExecOnePlanFree());
 
     const result = runCli('exec new --plan v1.2', env.projectDir, env.homeDir);
@@ -117,6 +119,7 @@ describe('sigma exec new — per-PLAN guard (PLAN-IMPL-MULTIDRAFT-LOCK §4, repl
   it('refuses a second exec for a plan that already has one open, pointing at the existing draft', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithOneOpenExecOnePlanFree());
 
     const result = runCli('exec new --plan v1.1', env.projectDir, env.homeDir);
@@ -130,6 +133,7 @@ describe('sigma exec new — per-PLAN guard (PLAN-IMPL-MULTIDRAFT-LOCK §4, repl
   it('auto-resolves to the sole unexecuted plan, not listing the one that already has an open exec', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithOneOpenExecOnePlanFree());
 
     const result = runCli('exec new', env.projectDir, env.homeDir);
@@ -141,6 +145,7 @@ describe('sigma exec new — per-PLAN guard (PLAN-IMPL-MULTIDRAFT-LOCK §4, repl
   it('lists only unexecuted plans as ambiguity candidates, excluding the plan with an open exec', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithThreePlansOneOpenExec());
 
     const result = runCli('exec new', env.projectDir, env.homeDir);
@@ -153,7 +158,7 @@ describe('sigma exec new — per-PLAN guard (PLAN-IMPL-MULTIDRAFT-LOCK §4, repl
   });
 });
 
-describe('sigma exec lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK §5)', () => {
+describe('sigma exec approve --director-confirm — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK §5)', () => {
   let env: TestEnv;
 
   afterEach(() => env?.cleanup());
@@ -161,9 +166,10 @@ describe('sigma exec lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK 
   it('rejects without --v when more than one DRAFT exec is open, describing each by its plan ref', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithTwoOpenExecs());
 
-    const result = runCli('exec lock', env.projectDir, env.homeDir);
+    const result = runCli('exec approve --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/2 DRAFT DEV-EXECs are open/);
@@ -175,10 +181,11 @@ describe('sigma exec lock — explicit --v targeting (PLAN-IMPL-MULTIDRAFT-LOCK 
   it('locks the specified version with --v, leaving the other DRAFT untouched', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithTwoOpenExecs());
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v1.1.md'), validExecDoc('v1.1', 'v1.1'));
 
-    const result = runCli('exec lock --v v1.1', env.projectDir, env.homeDir);
+    const result = runCli('exec approve --director-confirm --v v1.1', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/DEV-EXEC v1\.1 LOCKED/);
@@ -199,6 +206,7 @@ describe('sigma exec check — ambiguity guard (PLAN-IMPL-MULTIDRAFT-LOCK §8.3)
   it('refuses without --v when more than one DRAFT exec is open', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithTwoOpenExecs());
 
     const result = runCli('exec check', env.projectDir, env.homeDir);
@@ -210,6 +218,7 @@ describe('sigma exec check — ambiguity guard (PLAN-IMPL-MULTIDRAFT-LOCK §8.3)
   it('succeeds with an explicit --v even when ambiguous', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithTwoOpenExecs());
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v1.2.md'), validExecDoc('v1.2', 'v1.2'));
 

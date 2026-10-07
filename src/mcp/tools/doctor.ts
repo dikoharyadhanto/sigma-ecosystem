@@ -1,3 +1,4 @@
+import { lifecycleView } from '../../engine/lifecycleView';
 // PLAN-IMPL-01 §3.4 — sigma_doctor
 //
 // Read-only WITH RESPECT TO DISK. runDoctorReconciliation mutates the chain
@@ -32,6 +33,7 @@ export function computeDoctor(root: string | null): unknown {
 
   return {
     active: true,
+    lifecycle: lifecycleView(root,data),
     findings,
     mailbox,
     applied: false,

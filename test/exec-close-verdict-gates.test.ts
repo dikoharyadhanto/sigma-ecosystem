@@ -8,33 +8,36 @@ import {
   writeChainFixture,
   runCli,
   setupTestEnv,
+  stubProjectIdentity,
   TestEnv,
   validCloseDoc,
   validExecDoc,
 } from './helpers';
 
-describe('FMN Post-Build Advisory Verdict gate (exec lock only, verdict-agnostic — PLAN-EVAL-11 Bagian B)', () => {
+describe('FMN Post-Build Advisory Verdict gate (exec approve --director-confirm only, verdict-agnostic — PLAN-EVAL-11 Bagian B)', () => {
   let env: TestEnv;
 
   afterEach(() => env?.cleanup());
 
-  it('exec lock fails when no verdict checkbox is checked', () => {
+  it('exec approve --director-confirm fails when no verdict checkbox is checked', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftExec());
     const execFile = path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md');
     fs.writeFileSync(execFile, validExecDoc('v0.1', 'v1').replace('- [x] READY_FOR_LOCK', ''));
 
-    const result = runCli('exec lock', env.projectDir, env.homeDir);
+    const result = runCli('exec approve --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toMatch(/no verdict checkbox is checked/);
     expect(result.stdout).toMatch(/✗ FMN Post-Build Advisory Verdict recorded/);
   });
 
-  it('exec lock fails when more than one verdict checkbox is checked', () => {
+  it('exec approve --director-confirm fails when more than one verdict checkbox is checked', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftExec());
     const execFile = path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md');
     fs.writeFileSync(
@@ -42,21 +45,22 @@ describe('FMN Post-Build Advisory Verdict gate (exec lock only, verdict-agnostic
       validExecDoc('v0.1', 'v1').replace('- [x] READY_FOR_LOCK', '- [x] READY_FOR_LOCK\n- [x] NEEDS_DEV_UPDATE')
     );
 
-    const result = runCli('exec lock', env.projectDir, env.homeDir);
+    const result = runCli('exec approve --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toMatch(/more than one verdict checkbox is checked/);
   });
 
-  it('exec lock succeeds regardless of which single verdict is checked — verdict-agnostic (FMN is advisory, not approval authority)', () => {
+  it('exec approve --director-confirm succeeds regardless of which single verdict is checked — verdict-agnostic (FMN is advisory, not approval authority)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftExec());
     const execFile = path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md');
-    // REVISION_REQUIRED — semantically "not ready" — must still not block exec lock.
+    // REVISION_REQUIRED — semantically "not ready" — must still not block exec approve --director-confirm.
     fs.writeFileSync(execFile, validExecDoc('v0.1', 'v1', 'REVISION_REQUIRED'));
 
-    const result = runCli('exec lock', env.projectDir, env.homeDir);
+    const result = runCli('exec approve --director-confirm', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/✓ FMN Post-Build Advisory Verdict recorded/);
@@ -72,6 +76,7 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
   it('close lock fails when verdict is DO_NOT_CLOSE', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(closeFile, validCloseDoc('v1', 'DO_NOT_CLOSE'));
@@ -86,6 +91,7 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
   it('close lock fails when verdict is OTHER (treated as blocking, not an implicit positive verdict)', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(closeFile, validCloseDoc('v1', 'OTHER'));
@@ -99,6 +105,7 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
   it('close lock fails when Final Director Decision Reason is still a placeholder', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(
@@ -118,6 +125,7 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
   it('close lock fails when Closure Sentence is still a placeholder', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(
@@ -137,6 +145,7 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
   it('close lock succeeds when verdict is CLOSE_ACCEPTED and Final Director Decision is filled', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(closeFile, validCloseDoc('v1', 'CLOSE_ACCEPTED'));
@@ -151,6 +160,7 @@ describe('Closure Decision verdict gate (close lock only, verdict-aware — PLAN
   it('close lock succeeds when verdict is CLOSE_ACCEPTED_WITH_LIMITATIONS', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(closeFile, validCloseDoc('v1', 'CLOSE_ACCEPTED_WITH_LIMITATIONS'));
@@ -166,15 +176,16 @@ describe('Lock Validation Equivalence (PLAN-EVAL-11 Bagian A.5)', () => {
 
   afterEach(() => env?.cleanup());
 
-  it('exec check and exec lock report the exact same unsatisfied requirement for the same document', () => {
+  it('exec check and exec approve --director-confirm report the exact same unsatisfied requirement for the same document', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftExec());
     const execFile = path.join(env.projectDir, 'Sigma', 'evidence', 'DEV-EXEC-v0.1.md');
     fs.writeFileSync(execFile, validExecDoc('v0.1', 'v1').replace('- [x] READY_FOR_LOCK', ''));
 
     const checked = runCli('exec check', env.projectDir, env.homeDir);
-    const locked = runCli('exec lock', env.projectDir, env.homeDir);
+    const locked = runCli('exec approve --director-confirm', env.projectDir, env.homeDir);
 
     // check never fails on a lock requirement (only lock does) — but must show the exact
     // same unsatisfied requirement lock will block on, so Director never finds a "new"
@@ -188,6 +199,7 @@ describe('Lock Validation Equivalence (PLAN-EVAL-11 Bagian A.5)', () => {
   it('a document that check reports as fully lock-ready never fails lock for a requirement reason', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
+    stubProjectIdentity(env);
     writeChainFixture(env, 'v1', makeChainWithDraftClose());
     const closeFile = path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md');
     fs.writeFileSync(closeFile, validCloseDoc('v1', 'CLOSE_ACCEPTED'));

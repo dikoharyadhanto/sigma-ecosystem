@@ -1,3 +1,4 @@
+import { lifecycleView } from '../engine/lifecycleView';
 import { Command } from 'commander';
 import { execFileSync } from 'child_process';
 import fs from 'fs-extra';
@@ -464,6 +465,7 @@ function runStatus(): void {
     };
     artifactLine('Intent Doc',         'DIR-INTENT', chain.intent.version,           chain.intent.state);
     artifactLine('Plan Doc',           'FMN-PLAN',   chain.plan.active_version,      chain.plan.active_state);
+    console.log(JSON.stringify(lifecycleView(projectRoot,chain),null,2));
     const openPlanDrafts = chain.plan.versions.filter(v => v.state === 'DRAFT');
     if (openPlanDrafts.length > 1) {
       console.log(`  [NOTE] ${openPlanDrafts.length} DRAFT FMN-PLANs are open: ${openPlanDrafts.map(v => v.version).join(', ')} — run: sigma plan status`);

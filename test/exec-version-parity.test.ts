@@ -1,9 +1,9 @@
+import { createLegacyInitialChain as createInitialChain } from './helpers';
 import { describe, expect, it, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import {
   ChainState,
-  createInitialChain,
   ratifyIntent,
   registerPlanDraft,
   lockPlanVersion,
@@ -11,7 +11,7 @@ import {
   nextExecVersion,
 } from '../src/engine/chain';
 import {
-  setupTestEnv,
+  setupTestEnv, stubProjectIdentity,
   runCli,
   stubProjectRootAnchor,
   writeChainFixture,
@@ -128,7 +128,7 @@ describe('sigma exec new — EXEC version always equals PLAN version (CLI end-to
     expect(versions.find(v => v.plan_version_ref === 'v1.2')?.version).toBe('v1.2');
   });
 
-  it('full abandon-and-retry cycle (supersede → plan new → plan lock → exec new) still produces a matching pair', () => {
+  it('full abandon-and-retry cycle (supersede → plan new → plan approve --director-confirm → exec new) still produces a matching pair', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     const now = new Date().toISOString();
@@ -168,7 +168,8 @@ describe('sigma exec new — EXEC version always equals PLAN version (CLI end-to
       path.join(env.projectDir, 'Sigma', 'contract', `FMN-PLAN-${newPlanVersion}.md`),
       validPlanDoc(newPlanVersion)
     );
-    const planLock = runCli(`plan lock --v ${newPlanVersion}`, env.projectDir, env.homeDir);
+    stubProjectIdentity(env);
+    const planLock = runCli(`plan approve --director-confirm --v ${newPlanVersion}`, env.projectDir, env.homeDir);
     expect(planLock.exitCode).toBe(0);
 
     // Execute it — the resulting EXEC must carry the exact same version.

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-10-07T09:06:34.589Z",
   "description": "Sigma Operation Registry \u2014 all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 58,
+  "total_operations": 64,
   "domains": [
     "close",
     "config",
@@ -83,7 +83,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Read progress-v<N>.json and display current lifecycle phase, active artifact versions and states, gate status (gate_1, gate_2, gate_3), and CLI-valid runtime operations. The stale_intent/STALE_INTENT mechanism referenced in older documentation was removed in PLAN-EVAL-01 \u2014 no such warning exists.",
+      "description": "Read progress-v<N>.json and display current lifecycle phase, active artifact versions and states, gate status (gate_1, gate_2, gate_3), and CLI-valid runtime operations. Includes lifecycle_model, revision/source references and actual approval blockers; reports STALE_INTENT for uncertified or changed open-contract sources.",
       "inputs": [],
       "outputs": [
         {
@@ -227,7 +227,7 @@
       "action": "bootstrap",
       "level": "read_only",
       "role": "any",
-      "description": "Load runtime state for session start: lifecycle phase, active artifact versions and states, pending gates, CLI-valid runtime operations, and optional role-aware activation guidance. Read-only command; reference documents appear only when explicitly requested. The stale_intent/STALE_INTENT mechanism referenced in older documentation was removed in PLAN-EVAL-01 \u2014 no such flag exists.",
+      "description": "Load runtime state for session start: lifecycle phase, active artifact versions and states, pending gates, CLI-valid runtime operations, and optional role-aware activation guidance. Read-only command; reference documents appear only when explicitly requested. Includes lifecycle_model, revision/source references and actual approval blockers; reports STALE_INTENT for uncertified or changed open-contract sources.",
       "inputs": [],
       "outputs": [
         {
@@ -434,7 +434,7 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create a FMN-PLAN DRAFT from the template. Gate 1: gates.gate_1_open == true (DIR-INTENT must be RATIFIED). Records intent_version_ref from the currently locked INTENT version. File named: build/FMN-PLAN-v{next_version}.md.",
+      "description": "Create PLAN DRAFT referencing owning INTENT version plus current certified revision/hash; pending plans acquire a numbered source reference at promote.",
       "inputs": [],
       "outputs": [
         {
@@ -465,9 +465,9 @@
       "operation_id": "plan_lock",
       "domain": "plan",
       "action": "lock",
-      "level": "semantic",
+      "level": "read_only",
       "role": "director",
-      "description": "Lock a DRAFT FMN-PLAN. No more FIFO ordering \u2014 targets a specific version via --v, required whenever more than one DRAFT plan is open (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12). Auto-resolves when exactly one DRAFT exists. Sets gates.gate_2_open and recomputes gates.gate_3_satisfied. No auto-supersede \u2014 supersede is manual only (sigma plan supersede).",
+      "description": "Retired tombstone: exits nonzero without mutation; use plan approve. Historical completed MCP replay remains historical.",
       "inputs": [
         {
           "name": "--v",
@@ -476,36 +476,14 @@
           "description": "DRAFT version to lock. Required when more than one DRAFT FMN-PLAN is open; auto-resolved when exactly one exists."
         }
       ],
-      "outputs": [
-        {
-          "type": "state_change",
-          "description": "target plan.versions[].state = 'LOCKED'; plan.active_version/active_state updated"
-        },
-        {
-          "type": "state_change",
-          "description": "gates.gate_2_open and gates.gate_3_satisfied recomputed"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "state",
-          "condition": "target version must be DRAFT",
-          "error_message": "FMN-PLAN <version> is in state \"<state>\"; lock requires DRAFT."
-        },
-        {
-          "type": "ambiguity",
-          "condition": "more than one DRAFT plan open and --v not provided",
-          "error_message": "N DRAFT FMN-PLANs are open: <versions>. Specify which one to lock: sigma plan lock --v <version>"
-        }
-      ],
+      "outputs": [],
+      "constraints": [],
       "gating": {
-        "pre_condition": "exactly one target resolved (explicit --v or the sole DRAFT); target is DRAFT",
-        "post_condition": "target state == 'LOCKED'; gates.gate_2_open == true; gates.gate_3_satisfied recomputed"
+        "pre_condition": "none",
+        "post_condition": "no mutation"
       },
       "error_messages": {
-        "not_draft": "FMN-PLAN <version> is in state \"<state>\"; lock requires DRAFT.",
-        "ambiguous": "N DRAFT FMN-PLANs are open: <versions>. Specify which one to lock: sigma plan lock --v <version>",
-        "none": "No DRAFT FMN-PLAN to lock. Run: sigma plan new"
+        "retired": "TOMBSTONE: use sigma plan approve --director-confirm"
       }
     },
     {
@@ -616,7 +594,7 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create a DEV-EXEC DRAFT from the template for a LOCKED FMN-PLAN with no open (non-final) exec \u2014 at most one non-final exec per plan (PLAN-IMPL-MULTIDRAFT-LOCK \u00a74, Director-confirmed cardinality invariant, 2026-08-12; replaces the old chain-wide guard that blocked any new exec while any exec anywhere was non-final). --plan required when more than one LOCKED plan has no exec yet; auto-resolved when exactly one exists. EXEC version is always identical to the referenced PLAN version. File named: build/DEV-EXEC-{plan_version}.md.",
+      "description": "Create one same-number EXEC per eligible PLAN: current certified APPROVED in paired_approval, LOCKED in legacy_lock. Snapshot source revision/hash; explicit acknowledgement and coding authorization remain separate.",
       "inputs": [
         {
           "name": "--plan",
@@ -648,7 +626,7 @@
         }
       ],
       "gating": {
-        "pre_condition": "gates.gate_2_open == true; target plan has no open exec",
+        "pre_condition": "eligible target under lifecycle_model; current source/notice evidence for paired_approval",
         "post_condition": "exec.active_state == 'DRAFT'; plan_version_ref recorded; new exec version == plan version"
       },
       "error_messages": {
@@ -660,9 +638,9 @@
       "operation_id": "exec_lock",
       "domain": "exec",
       "action": "lock",
-      "level": "semantic",
+      "level": "read_only",
       "role": "director",
-      "description": "Lock a DRAFT DEV-EXEC. Targets a specific version via --v, required whenever more than one DRAFT exec is open (PLAN-IMPL-MULTIDRAFT-LOCK \u00a75, Director directive 2026-08-12; replaces the old always-operate-on-active_version behavior, which could not coexist with concurrent DRAFT execs). Auto-resolves when exactly one DRAFT exists. Re-evaluates Gate 3 under the new definition: no DRAFT left in either plan or exec, and every LOCKED plan paired with exactly one LOCKED exec. No auto-supersede \u2014 supersede reaches DEV-EXEC only via cascade from `sigma plan supersede`.",
+      "description": "Retired tombstone: exits nonzero without mutation; use exec approve. Historical completed MCP replay remains historical.",
       "inputs": [
         {
           "name": "--v",
@@ -671,36 +649,14 @@
           "description": "DRAFT DEV-EXEC version to lock. Required when more than one DRAFT is open; auto-resolved when exactly one exists."
         }
       ],
-      "outputs": [
-        {
-          "type": "state_change",
-          "description": "target exec.versions[].state = 'LOCKED'; exec.active_version/active_state updated"
-        },
-        {
-          "type": "state_change",
-          "description": "gates.gate_3_satisfied re-evaluated under the new definition (\u00a77.1 of PLAN-IMPL-MULTIDRAFT-LOCK)"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "state",
-          "condition": "target version must be DRAFT",
-          "error_message": "DEV-EXEC <version> is in state \"<state>\"; lock requires DRAFT."
-        },
-        {
-          "type": "ambiguity",
-          "condition": "more than one DRAFT exec open and --v not provided",
-          "error_message": "N DRAFT DEV-EXECs are open: <versions with plan refs>. Specify which one to lock: sigma exec lock --v <version>"
-        }
-      ],
+      "outputs": [],
+      "constraints": [],
       "gating": {
-        "pre_condition": "exactly one target resolved (explicit --v or the sole DRAFT); target is DRAFT",
-        "post_condition": "target state == 'LOCKED'; gates.gate_3_satisfied re-evaluated"
+        "pre_condition": "none",
+        "post_condition": "no mutation"
       },
       "error_messages": {
-        "not_draft": "DEV-EXEC <version> is in state \"<state>\"; lock requires DRAFT.",
-        "ambiguous": "N DRAFT DEV-EXECs are open: <versions with plan refs>. Specify which one to lock: sigma exec lock --v <version>",
-        "none": "No DRAFT DEV-EXEC to lock. Run: sigma exec new"
+        "retired": "TOMBSTONE: use sigma exec approve --director-confirm"
       }
     },
     {
@@ -1418,7 +1374,7 @@
       "action": "send",
       "level": "semantic",
       "role": "any",
-      "description": "Send a message from one role to another. Message files are CLI-generated \u2014 never create or rename them manually. Unread gate: the SENDER must have no unread messages in their own inbox before sending (clear with sigma inbox read <id>).",
+      "description": "Send a message from one role to another. Message files are CLI-generated \u2014 never create or rename them manually. Unread gate: the SENDER must have no unread messages in their own inbox before sending (clear with sigma inbox read <id>). CONTRACT_CHANGE requires FMN -> DEV, active registered PLAN reference, latest unnotified revision_id and durable receipt; CONTRACT_CHANGE_REQUEST requires DEV -> FMN with justification. Both retain F03 mailbox gates.",
       "inputs": [
         {
           "name": "--from",
@@ -1479,6 +1435,12 @@
           "type": "string",
           "required": false,
           "description": "Artifact this message relates to (e.g. FMN-PLAN-v2, DEV-EXEC-v1; default: N/A)"
+        },
+        {
+          "name": "--revision-id",
+          "type": "string",
+          "required": false,
+          "description": "Required exact vN.x:rev-N for CONTRACT_CHANGE"
         }
       ],
       "outputs": [
@@ -1501,7 +1463,7 @@
       ],
       "gating": {
         "pre_condition": "sender inbox has no unread messages",
-        "post_condition": "message is unread in the recipient inbox; progress-v<N>.json untouched"
+        "post_condition": "Message registered; CONTRACT_CHANGE also updates durable receipt/ledger/chain transactionally. Other message types do not mutate chain."
       },
       "error_messages": {}
     },
@@ -1545,7 +1507,7 @@
       "action": "doctor",
       "level": "semantic",
       "role": "any",
-      "description": "Diagnose and reconcile Sigma runtime state. Default (or --recovery) reconciles the active chain file against artifacts on disk; --reconstruct rebuilds a missing/corrupted progress-v<N>.json from artifact files; --all-versions applies to every chain. --repair-workspace recreates a missing DEV workspace folder or marker from the record in .sigma-identity.json, without reconciling chains and without touching the contents of dev/.",
+      "description": "Diagnose and reconcile Sigma runtime state. Default (or --recovery) reconciles the active chain file against artifacts on disk; --reconstruct rebuilds a missing/corrupted progress-v<N>.json from artifact files; --all-versions applies to every chain. --repair-workspace recreates a missing DEV workspace folder or marker from the record in .sigma-identity.json, without reconciling chains and without touching the contents of dev/. Lifecycle migration is opt-in per chain via --migrate-lifecycle [--v] [--dry-run], requires --director-confirm to mutate, rejects ambiguous pairs before repair; no baseline certification.",
       "inputs": [
         {
           "name": "--recovery",
@@ -1576,6 +1538,24 @@
           "type": "flag",
           "required": false,
           "description": "Recreate a missing DEV workspace folder or marker from the project identity (cannot be combined with other doctor options)"
+        },
+        {
+          "name": "--migrate-lifecycle",
+          "type": "flag",
+          "required": false,
+          "description": "Opt-in per-chain lifecycle conversion"
+        },
+        {
+          "name": "--dry-run",
+          "type": "flag",
+          "required": false,
+          "description": "Migration preview without write"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": false,
+          "description": "Explicit Director authorization for lifecycle migration"
         }
       ],
       "outputs": [
@@ -1587,13 +1567,13 @@
       "constraints": [
         {
           "type": "flag",
-          "condition": "--v is only meaningful together with --reconstruct",
-          "error_message": "--v requires --reconstruct"
+          "condition": "--repair-workspace is exclusive",
+          "error_message": "--repair-workspace cannot be combined with other doctor options."
         },
         {
           "type": "flag",
-          "condition": "--repair-workspace is exclusive",
-          "error_message": "--repair-workspace cannot be combined with other doctor options."
+          "condition": "lifecycle migration cannot combine other doctor modes or --all-versions",
+          "error_message": "Exclusive per-chain lifecycle migration required"
         }
       ],
       "gating": {
@@ -2307,6 +2287,170 @@
       "gating": {
         "pre_condition": "inside a Sigma project",
         "post_condition": "none (read-only)"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "plan_approve",
+      "domain": "plan",
+      "action": "approve",
+      "level": "semantic",
+      "role": "director",
+      "description": "Review and approve DRAFT PLAN (or explicit imported baseline). Paired lifecycle certifies rev 1 and enters APPROVED; legacy lifecycle locks separately.",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "Explicit artifact target; required for ambiguity/imported baseline"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": false,
+          "description": "Without this flag, preview only"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Certified approval with immutable snapshots/ledger and ROADMAP projection"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "authority",
+          "condition": "explicit Director approval of frozen review package",
+          "error_message": "Approval blocked or dependencies stale"
+        }
+      ],
+      "gating": {
+        "pre_condition": "eligible exact target under lifecycle_model; trusted source/evidence for paired lifecycle",
+        "post_condition": "APPROVED (paired) or LOCKED (legacy)"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "exec_approve",
+      "domain": "exec",
+      "action": "approve",
+      "level": "semantic",
+      "role": "director",
+      "description": "Approve DRAFT EXEC after current source/hash/notice/ack/authorization validation. Paired lifecycle locks same-number PLAN+EXEC in one transaction; legacy locks EXEC separately.",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "Explicit artifact target; required for ambiguity/imported baseline"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": false,
+          "description": "Without this flag, preview only"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Certified approval with immutable snapshots/ledger and ROADMAP projection"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "authority",
+          "condition": "explicit Director approval of frozen review package",
+          "error_message": "Approval blocked or dependencies stale"
+        }
+      ],
+      "gating": {
+        "pre_condition": "eligible exact target under lifecycle_model; trusted source/evidence for paired lifecycle",
+        "post_condition": "same-number pair LOCKED (paired) or EXEC LOCKED (legacy)"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "plan_revise_prepare",
+      "domain": "plan",
+      "action": "revise prepare",
+      "level": "semantic",
+      "role": "any",
+      "description": "Stage current APPROVED PLAN candidate and checkpoint/loosening declaration.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Revision evidence or explicit source acknowledgement"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "paired_approval and exact current APPROVED PLAN identity/evidence",
+        "post_condition": "candidate/evidence updated without final pair lock"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "plan_revise_check",
+      "domain": "plan",
+      "action": "revise check",
+      "level": "semantic",
+      "role": "any",
+      "description": "Read-only before/after review; --prepare-ticket freezes early Director approval candidate.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Revision evidence or explicit source acknowledgement"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "paired_approval and exact current APPROVED PLAN identity/evidence",
+        "post_condition": "candidate/evidence updated without final pair lock"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "plan_revise_commit",
+      "domain": "plan",
+      "action": "revise commit",
+      "level": "semantic",
+      "role": "any",
+      "description": "Certify staged revision, append snapshot/ledger; early authorization required for loosening/outside checkpoint. Pending notice blocks paired eligibility.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Revision evidence or explicit source acknowledgement"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "paired_approval and exact current APPROVED PLAN identity/evidence",
+        "post_condition": "candidate/evidence updated without final pair lock"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "exec_acknowledge_plan",
+      "domain": "exec",
+      "action": "acknowledge-plan",
+      "level": "semantic",
+      "role": "any",
+      "description": "DEV explicitly acknowledges newest PLAN revision/hash and valid notice; no coding authorization.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Revision evidence or explicit source acknowledgement"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "paired_approval and exact current APPROVED PLAN identity/evidence",
+        "post_condition": "candidate/evidence updated without final pair lock"
       },
       "error_messages": {}
     }

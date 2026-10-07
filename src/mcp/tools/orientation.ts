@@ -1,3 +1,4 @@
+import { lifecycleView } from '../../engine/lifecycleView';
 // PLAN-IMPL-01 §3.5 — sigma_get_orientation
 //
 // Read-only. Reuses buildBootstrapView (the console-free assembly extracted in
@@ -51,12 +52,13 @@ export function computeOrientation(root: string | null, role?: SigmaRole): unkno
     active: true,
     phase: chain ? chain.lifecycle_state : null,
     active_chain: chainVersion,
+    lifecycle: chain ? lifecycleView(root,chain) : null,
     numbering: view.numbering,
     compatibility_warnings: view.compatibilityWarnings,
     gate_summary: gates,
     next_valid_operations: nextOps,
     stale_intent_warnings: chain ? getInvalidWarningLines(chain) : [],
-    blockers,
+    blockers: [...blockers,...(chain?lifecycleView(root,chain).approval_blockers:[])],
     inbox_unread: mailbox.inbox_unread,
     memo_unread: mailbox.memo_unread,
     mailbox_context: mailbox.scope,

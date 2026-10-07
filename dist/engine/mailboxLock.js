@@ -18,6 +18,7 @@ async function withMailboxLock(root, fn) {
     const key = path_1.default.resolve(root);
     try {
         lock.assertOwned();
+        (0, controlStore_1.recoverControlTransactions)(root);
         leases.set(key, lock);
         const result = await fn();
         lock.assertOwned();

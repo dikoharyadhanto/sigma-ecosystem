@@ -132,6 +132,7 @@ export interface ControlWriteOptions {
    *  before mutate() starts so an interrupted multi-file write can be
    *  rolled back deterministically on the next lock acquisition. */
   transactionFiles: (root: string) => string[];
+  guardedWrites?: boolean;
 }
 
 /**
@@ -260,7 +261,7 @@ export async function respondControlWrite(
         }
         if (existing.status === 'completed') {
           const revision = computeStateRevision(root).revision;
-          return { result: existing.result, replayed: true, revisionBefore: revision, revisionAfter: revision };
+          return { result: /^(plan|exec)_lock_/.test(opts.operationId) ? { ...(existing.result as object), historical: true, operation_retired: true } : existing.result, replayed: true, revisionBefore: revision, revisionAfter: revision };
         }
         if (existing.status === 'pending') {
           // recoverControlTransactions() ran immediately above. A pending
@@ -290,6 +291,7 @@ export async function respondControlWrite(
         argumentsHash,
         revisionBefore: revisionBeforeLocked,
         files: opts.transactionFiles(root),
+        guardedWrites: opts.guardedWrites,
         auditEntry: pendingAudit,
       });
       controlTestFailpoint('after_journal_prepared');

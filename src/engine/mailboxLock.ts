@@ -1,5 +1,5 @@
 import path from 'path';
-import { acquireProjectLock, ProjectLockHandle } from './controlStore';
+import { acquireProjectLock, ProjectLockHandle, recoverControlTransactions } from './controlStore';
 
 const leases = new Map<string, ProjectLockHandle>();
 
@@ -13,7 +13,7 @@ export async function withMailboxLock<T>(root: string, fn: () => T | Promise<T>)
   const lock = await acquireProjectLock(root);
   const key = path.resolve(root);
   try {
-    lock.assertOwned(); leases.set(key, lock);
+    lock.assertOwned(); recoverControlTransactions(root); leases.set(key, lock);
     const result = await fn(); lock.assertOwned(); return result;
   } finally { leases.delete(key); await lock.release(); }
 }

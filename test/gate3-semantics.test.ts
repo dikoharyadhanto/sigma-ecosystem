@@ -1,8 +1,8 @@
+import { createLegacyInitialChain as createInitialChain } from './helpers';
 import { describe, expect, it, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import {
   ChainState,
-  createInitialChain,
   ratifyIntent,
   registerPlanDraft,
   lockPlanVersion,
@@ -259,7 +259,7 @@ describe('sigma close new — Gate 3 blocked message names the specific blockers
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/GATE 3 BLOCKED: the chain still has open work/);
     expect(result.stderr).toMatch(/FMN-PLAN v0\.1 is LOCKED but has no LOCKED DEV-EXEC/);
-    expect(result.stderr).toMatch(/sigma exec new \/ sigma exec lock/);
+    expect(result.stderr).toMatch(/sigma exec new \/ sigma exec approve/);
   });
 
   it('lists an open DRAFT plan and suggests supersede', () => {

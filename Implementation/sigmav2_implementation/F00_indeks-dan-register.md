@@ -19,7 +19,7 @@ Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigm
 | F01 | Peta konsistensi aturan (master, proyek, skill, memory, versi aturan) | 1 | **DITAHAN** - menunggu feedback review Director per dokumen | rencana belum dibuat; bahan review: [F01-lampiran_daftar-periksa-dokumen.md](F01-lampiran_daftar-periksa-dokumen.md) |
 | F02 | Penomoran chain dan warning bootstrap | 5 | Diterapkan 7 Oktober setelah O-1 sampai O-3 dan eksekusi disetujui; build lulus, 68 berkas / 934 tes lulus, exit 0; di-commit Director dalam 0c3e3b1; push dilaporkan Director | [F02_penomoran-chain-dan-warning-bootstrap.md](F02_penomoran-chain-dan-warning-bootstrap.md) |
 | F03 | Mailbox per intent | 4 | Diterapkan dan divalidasi 7 Oktober: build lulus, 69 berkas / 966 tes lulus exit 0; tes doctor terakhir 6 berkas / 68 tes lulus; di-commit Director dalam 9f1bea6; push berhasil dilaporkan Director, main sama dengan origin/main saat awal F04 | [F03_mailbox-per-intent.md](F03_mailbox-per-intent.md) |
-| F04 | Lifecycle APPROVED/LOCKED, doctor, pengikatan revisi | 2, 9 | DRAFT rencana disusun setelah izin Director 7 Oktober; dua tahap F04a/F04b dalam satu hasil diusulkan; O-1 sampai O-14 dan eksekusi menunggu keputusan | [F04_lifecycle-approved-locked-doctor-dan-revisi.md](F04_lifecycle-approved-locked-doctor-dan-revisi.md) |
+| F04 | Lifecycle APPROVED/LOCKED, doctor, pengikatan revisi | 2, 9 | F04a/F04b diterapkan dan diverifikasi 7–8 Oktober sesuai persetujuan O-1–O-14; TypeScript/build, 70 tes khusus, dan suite lengkap 71 berkas / 1.036 tes lulus, exit 0; belum commit/push | [F04_lifecycle-approved-locked-doctor-dan-revisi.md](F04_lifecycle-approved-locked-doctor-dan-revisi.md) |
 | F05 | Amandemen INTENT melalui Git, penghapusan tier | 8 | Belum dimulai | - |
 | F06 | sigma notes | 3 | Belum dimulai (track terpisah, rilis 1.1.0) | - |
 | F07 | Pilot keterbacaan dan penyederhanaan dokumen | 6, 7 | Belum dimulai; bergantung pada F01 | - |
@@ -87,10 +87,10 @@ Disalin dari dokumen diskusi sebagai titik awal. Setiap butir dibahas di rencana
 | T-03 | F03 | **TERKUNCI:** retensi READ per role + intent + jenis, GENERAL/LEGACY terpisah; riwayat melalui selector eksplisit, --all hanya status; clear message/memo terpisah (F03 O-3) |
 | T-04 | F03 | Ditangani sebagai kasus uji F03: keputusan Director pada diskusi sudah menetapkan semua action/minor intent yang sama ikut gate. Tidak diajukan pengecualian baru |
 | T-05 | F03 | **TERKUNCI:** doctor --migrate-mailbox dengan --dry-run; transaksi satu proyek, preflight sebelum move, provenance reset dan recovery idempoten; konflik/orphan/source hilang menolak (F03 O-6/O-7) |
-| T-06 | F04 | Perlakuan PLAN LOCKED tanpa EXEC pasangan, atau pasangan ambigu, pada migrasi doctor; rekomendasi dan pilihan F04 O-4/O-9, belum diputuskan |
-| T-07 | F04 | Arah APPROVED/lock pasangan sudah terkunci; spesifikasi gate, validator, orientasi dan kelengkapan guard dirinci F04 O-1/O-5/O-10/O-11/O-14, menunggu keputusan teknis |
-| T-08 | F04 | Jalur operasional chain v1 dan tombstone plan lock/exec lock; penanda model dan perpindahan tool/tiket MCP di F04 O-2/O-12, belum diputuskan |
-| T-09 | F04 | Pemicu migrasi lifecycle per chain dipisahkan dari penomoran; hasil konversi dua pasangan pasti sudah terkunci, opsi doctor eksplisit di F04 O-3 belum diputuskan |
+| T-06 | F04 | **TERKUNCI:** PLAN LOCKED tanpa EXEC dikonversi menjadi APPROVED dengan baseline review wajib; ambiguitas menolak seluruh chain sebelum deduplikasi. Baseline tanpa bukti tetap unknown/blocker (O-4/O-9) |
+| T-07 | F04 | **TERKUNCI:** spesifikasi gate, validator, orientasi dan guard diterima sesuai O-1/O-5/O-10/O-11/O-14; dua tahap satu hasil dengan pemeriksaan revisi lengkap, tanpa bypass INVALID/override. Hasil eksekusi dicatat pada F04 bagian 11 |
+| T-08 | F04 | **TERKUNCI:** lifecycle_model terpisah dari numbering; approve mengikuti model legacy/new dengan output eksplisit; CLI/MCP lock lama menjadi tombstone, tiket lama pending ditolak tanpa konsumsi, replay sukses lama historis (O-2/O-12) |
+| T-09 | F04 | **TERKUNCI:** migrasi lifecycle eksplisit per chain melalui --migrate-lifecycle, dry-run/--v dan --director-confirm; konversi pasangan pasti otomatis di dalam migrasi. Doctor biasa/MCP tidak memigrasikan model; tidak migrasi proyek nyata pada F04 (O-3) |
 | T-10 | F05 | Urutan persetujuan, pencatatan, sertifikasi, commit, tag; penanganan kegagalan parsial |
 | T-11 | F05 | Distribusi tag pada alur push manual Director |
 | T-12 | F06 | Penyimpanan registry, kolom katalog, kebijakan file hilang/rename/benturan nama |
@@ -123,17 +123,17 @@ Tambahan dari penyusunan F03, seluruh rekomendasi dan eksekusi disetujui Directo
 | T-28 | F03 | **TERKUNCI:** referensi belum terhubung masuk GENERAL dengan warning, lintas intent diketahui/ambigu tetap ditolak, tanpa reclassify otomatis (F03 O-4) |
 | T-29 | F03 | **TERKUNCI:** index tunggal message/memo, mailbox_format: 2 dan metadata intent/context terpisah dari SCHEMA_VERSION (F03 O-5) |
 
-Tambahan dari penyusunan F04 (7 Oktober 2026): seluruh butir berikut **TERBUKA**, bukan otorisasi eksekusi. T-25 dirinci pada O-13/O-14; perubahan Protocol tetap terakhir.
+Keputusan F04 (Director, 7 Oktober 2026): seluruh rekomendasi O-1 sampai O-14 **DISETUJUI**, sehingga T-30 sampai T-36 ditutup sesuai rekomendasi. T-25 disetujui melalui O-13/O-14. Implementasi, build, dan uji dilakukan di sesi baru, tidak dalam sesi persetujuan. Perubahan Protocol tetap terakhir.
 
 | ID | Fokus | Butir terbuka |
 |---|---|---|
-| T-30 | F04 | Model lifecycle terpisah dari versioning_scheme dan urutan dua tahap sebagai satu hasil, O-1/O-2 |
-| T-31 | F04 | Rev+hash, snapshot/ledger PLAN, perlakuan append AUD Notes, O-5 |
-| T-32 | F04 | Kandidat revisi pada staging, checkpoint, otorisasi awal pelonggaran/perubahan di luar checkpoint, O-6/O-10 |
-| T-33 | F04 | Typed CONTRACT_CHANGE/REQUEST, receipt durable dan pengakuan acuan oleh DEV tanpa bypass F03, O-7/O-8 |
-| T-34 | F04 | Baseline legacy yang direview vs unknown/blocker; integrasi minimal INTENT dan batas F05, O-9 |
-| T-35 | F04 | Guard tidak dilewati INVALID/override, reconstruct konservatif, transaksi CLI/MCP serta tiket legacy, O-10/O-11/O-12 |
-| T-36 | F04 | Cakupan master FMN/DEV, pembaruan registry terbatas, kompatibilitas verdict, titik build/uji, O-13/O-14 |
+| T-30 | F04 | **TERKUNCI sesuai rekomendasi:** Model lifecycle terpisah dari versioning_scheme dan urutan dua tahap sebagai satu hasil, O-1/O-2 |
+| T-31 | F04 | **TERKUNCI sesuai rekomendasi:** Rev+hash, snapshot/ledger PLAN, perlakuan append AUD Notes, O-5 |
+| T-32 | F04 | **TERKUNCI sesuai rekomendasi:** Kandidat revisi pada staging, checkpoint, otorisasi awal pelonggaran/perubahan di luar checkpoint, O-6/O-10 |
+| T-33 | F04 | **TERKUNCI sesuai rekomendasi:** Typed CONTRACT_CHANGE/REQUEST, receipt durable dan pengakuan acuan oleh DEV tanpa bypass F03, O-7/O-8 |
+| T-34 | F04 | **TERKUNCI sesuai rekomendasi:** Baseline legacy yang direview vs unknown/blocker; integrasi minimal INTENT dan batas F05, O-9 |
+| T-35 | F04 | **TERKUNCI sesuai rekomendasi:** Guard tidak dilewati INVALID/override, reconstruct konservatif, transaksi CLI/MCP serta tiket legacy, O-10/O-11/O-12 |
+| T-36 | F04 | **TERKUNCI sesuai rekomendasi:** Cakupan master FMN/DEV, pembaruan registry terbatas, kompatibilitas verdict, titik build/uji, O-13/O-14 |
 
 ## 6. Disiplin kerja dan build (tentatif)
 

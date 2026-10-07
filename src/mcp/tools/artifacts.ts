@@ -1,3 +1,4 @@
+import { lifecycleView } from '../../engine/lifecycleView';
 // PLAN-IMPL-01 §3.3 — sigma_list_artifacts
 //
 // Read-only. Projects the ChainState artifact trackers. Deliberately returns
@@ -20,6 +21,7 @@ export function computeArtifacts(root: string | null): unknown {
 
   return {
     active: true,
+    lifecycle: lifecycleView(root,data),
     active_chain: chainVersion,
     intent: {
       version: data.intent.version,
@@ -42,6 +44,7 @@ export function computeArtifacts(root: string | null): unknown {
       // active_version is a display pointer only; an AI role must not infer
       // "the" current plan from it once concurrent DRAFTs are possible.
       // Structured so a consumer can detect ambiguity without parsing text.
+      approved: data.plan.versions.filter(p=>p.state==='APPROVED').map(p=>p.version),
       open_drafts: data.plan.versions.filter(v => v.state === 'DRAFT').map(v => v.version),
     },
     exec: {

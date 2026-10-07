@@ -21,6 +21,8 @@ const path_1 = __importDefault(require("path"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const numbering_1 = require("../engine/numbering");
 const chain_1 = require("../engine/chain");
+const lifecycle_1 = require("../engine/lifecycle");
+const revisions_1 = require("../engine/revisions");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const controlStore_1 = require("../engine/controlStore");
@@ -41,7 +43,7 @@ exports.ExecDraftError = ExecDraftError;
 // (to compute the target file path before the lock/journal begins) and
 // createExecDraft() itself, so the two can never resolve differently.
 function resolveTargetPlan(chain, requestedPlanVersion) {
-    const lockedPlans = chain.plan.versions.filter(v => v.state === 'LOCKED');
+    const lockedPlans = chain.plan.versions.filter(v => v.state === (0, lifecycle_1.eligiblePlanState)(chain));
     const plansWithOpenExec = new Set(chain.exec.versions
         .filter(v => v.state !== 'SUPERSEDED')
         .map(v => v.plan_version_ref)
@@ -51,7 +53,7 @@ function resolveTargetPlan(chain, requestedPlanVersion) {
         const target = lockedPlans.find(p => p.version === requestedPlanVersion);
         if (!target) {
             const available = lockedPlans.map(p => p.version).join(', ') || '(none)';
-            throw new ExecDraftError('INVALID_OPERATION', `FMN-PLAN ${requestedPlanVersion} is not a LOCKED plan.\nLOCKED plans: ${available}`);
+            throw new ExecDraftError('INVALID_OPERATION', `FMN-PLAN ${requestedPlanVersion} is not an eligible ${(0, lifecycle_1.eligiblePlanState)(chain)} plan.\n${(0, lifecycle_1.eligiblePlanState)(chain)} plans: ${available}`);
         }
         const openExecForPlan = chain.exec.versions.find(v => v.plan_version_ref === requestedPlanVersion && v.state !== 'SUPERSEDED');
         if (openExecForPlan) {
@@ -65,18 +67,18 @@ function resolveTargetPlan(chain, requestedPlanVersion) {
         return requestedPlanVersion;
     }
     if (unexecutedPlans.length === 0) {
-        throw new ExecDraftError('INVALID_OPERATION', 'All locked plans already have an exec.\nRun: sigma plan new   to create a new plan');
+        throw new ExecDraftError('INVALID_OPERATION', `All ${(0, lifecycle_1.eligiblePlanState)(chain)} plans already have an exec.\nRun: sigma plan new   to create a new plan`);
     }
     if (unexecutedPlans.length === 1) {
         return unexecutedPlans[0].version;
     }
     const versions = unexecutedPlans.map(p => p.version).join(', ');
-    throw new ExecDraftError('INVALID_OPERATION', `${unexecutedPlans.length} unexecuted locked plans found: ${versions}\n` +
+    throw new ExecDraftError('INVALID_OPERATION', `${unexecutedPlans.length} unexecuted ${(0, lifecycle_1.eligiblePlanState)(chain).toLowerCase()} plans found: ${versions}\n` +
         `Specify which to execute: sigma exec new --plan ${unexecutedPlans[0].version}`);
 }
 function assertGate2Open(chain) {
     if (!(0, chain_1.getOperationalGate)(chain, 'gate_2_open')) {
-        throw new ExecDraftError('GATE_BLOCKED', 'GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock');
+        throw new ExecDraftError('GATE_BLOCKED', `GATE 2 BLOCKED: No eligible ${(0, lifecycle_1.eligiblePlanState)(chain)} FMN-PLAN. Run: sigma plan approve`);
     }
 }
 function createExecDraftTransactionFiles(projectRoot, planVersion) {
@@ -95,6 +97,8 @@ function createExecDraft(input) {
     (0, chain_1.assertChainCanMutate)(chain);
     assertGate2Open(chain);
     const planVersionRef = resolveTargetPlan(chain, planVersion);
+    if ((0, lifecycle_1.resolveLifecycleModel)(chain) === 'paired_approval')
+        (0, revisions_1.assertAllNotices)(projectRoot, (0, revisions_1.assertPlanCertified)(projectRoot, chain, planVersionRef));
     const version = (0, chain_1.nextExecVersion)(chain, planVersionRef);
     const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'evidence', `DEV-EXEC-${version}.md`));
     const absPath = path_1.default.join(projectRoot, relPath);
@@ -112,6 +116,13 @@ function createExecDraft(input) {
     (0, numbering_1.writeChainMetadata)(absPath, chain, planVersionRef);
     (0, controlStore_1.controlTestFailpoint)('exec_create_after_artifact');
     (0, chain_1.registerExecDraft)(chain, version, relPath, planVersionRef);
+    if ((0, lifecycle_1.resolveLifecycleModel)(chain) === 'paired_approval') {
+        const plan = chain.plan.versions.find(p => p.version === planVersionRef);
+        const exec = chain.exec.versions.find(e => e.version === version);
+        exec.plan_revision_ref = plan.revision;
+        exec.plan_contract_sha256_ref = plan.contract_sha256;
+        // Explicit acknowledgement remains a separate operation.
+    }
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
     (0, controlStore_1.controlTestFailpoint)('exec_create_after_chain');
     return { chainVersion, version, relPath, planVersionRef };

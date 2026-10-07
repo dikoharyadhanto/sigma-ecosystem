@@ -76,6 +76,9 @@ export interface ControlFileSnapshot {
     path: string;
     existed: boolean;
     content_base64: string | null;
+    expected_after_sha256?: string | null;
+    before_sha256?: string | null;
+    guarded_writes?: boolean;
 }
 export type ControlTransactionStatus = 'prepared' | 'rollback_pending' | 'commit_pending' | 'rolled_back' | 'completed';
 export interface ControlTransactionJournal {
@@ -108,6 +111,7 @@ export declare function beginControlTransaction(args: {
     revisionBefore: string;
     files: string[];
     auditEntry: AuditEntry;
+    guardedWrites?: boolean;
 }): ControlTransactionJournal;
 export declare function markControlTransactionCommitPending(root: string, journal: ControlTransactionJournal, result: unknown, revisionAfter: string, auditEntry: AuditEntry): void;
 export declare function markControlTransactionRollbackPending(root: string, journal: ControlTransactionJournal, error: string, auditEntry: AuditEntry): void;
@@ -132,6 +136,8 @@ export interface OperationTicket {
     issued_at: string;
     expires_at: string;
     consumed_at: string | null;
+    review_package?: unknown;
+    dependencies_sha256?: string;
 }
 export declare function ticketPath(root: string, ticketId: string): string;
 export declare function writeTicket(root: string, ticket: OperationTicket): void;
@@ -173,4 +179,7 @@ export interface ProjectLockHandle {
     release: () => Promise<void>;
 }
 export declare function acquireProjectLock(root: string): Promise<ProjectLockHandle>;
+export declare function assertNoTransactionSymlink(root: string, absolute: string): void;
+export declare function journaledWrite(root: string, absolute: string, content: string | Buffer, exclusive?: boolean): void;
+export declare function journaledWriteIfActive(root: string, absolute: string, content: string | Buffer): boolean;
 //# sourceMappingURL=controlStore.d.ts.map

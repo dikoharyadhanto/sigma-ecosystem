@@ -40,6 +40,7 @@ export interface ControlWriteOptions {
      *  before mutate() starts so an interrupted multi-file write can be
      *  rolled back deterministically on the next lock acquisition. */
     transactionFiles: (root: string) => string[];
+    guardedWrites?: boolean;
 }
 /**
  * The Stage C precondition shape: the caller's expected_state_revision must

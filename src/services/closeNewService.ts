@@ -12,6 +12,7 @@
 // already hashes).
 
 import path from 'path';
+import { effectiveLifecycleGates } from '../engine/lifecycleView';
 import {
   ChainState,
   readActiveChain,
@@ -42,16 +43,16 @@ function closeDraftRelPath(chain: ChainState): string {
 /** Re-runs every close_new precondition against a live chain, without
  *  writing anything — used by both prepare (freeze the ticket only if this
  *  would currently succeed) and by CLI's own preflight message. */
-export function assertCloseNewEligible(chain: ChainState): void {
-  if (!hasCleanGate3Chain(chain)) {
+export function assertCloseNewEligible(chain: ChainState, projectRoot?: string): void {
+  if (!hasCleanGate3Chain(chain) || projectRoot && !effectiveLifecycleGates(projectRoot,chain).gate_3_satisfied) {
     const blockers = describeGate3Blockers(chain);
     const lines = ['GATE 3 BLOCKED: the chain still has open work.', ...blockers.map(r => `  ${r}`)];
-    lines.push('Every locked plan needs exactly one locked exec, and nothing may be left in DRAFT.');
+    lines.push('Every locked plan needs exactly one locked exec with valid contract evidence, and nothing may be left in DRAFT/APPROVED.');
     if (blockers.some(r => r.startsWith('DRAFT FMN-PLAN'))) {
       lines.push('Abandon what is no longer wanted: sigma plan supersede --v <version> --reason "..."');
     }
     if (blockers.some(r => r.includes('has no LOCKED DEV-EXEC'))) {
-      lines.push('Run: sigma exec new / sigma exec lock to finish an unpaired plan.');
+      lines.push('Run: sigma exec new / sigma exec approve --director-confirm to finish an unpaired plan.');
     }
     throw new CloseNewError('GATE_BLOCKED', lines.join('\n'));
   }
@@ -92,7 +93,7 @@ export function closeNewTransactionFiles(projectRoot: string): string[] {
 export function createCloseDraftUseCase(projectRoot: string): CreateCloseDraftResult {
   const { chainVersion, data: chain } = readActiveChain(projectRoot);
   assertChainCanMutate(chain);
-  assertCloseNewEligible(chain);
+  assertCloseNewEligible(chain,projectRoot);
 
   const version = chain.chain_version;
   const relPath = closeDraftRelPath(chain);
