@@ -31,7 +31,7 @@ function buildBootstrapView(projectRoot = (0, fs_1.findProjectRoot)()) {
         plan_major: (0, numbering_1.planMajorForChain)(chain), source: chain.versioning_scheme === undefined ? 'legacy_fallback' : 'chain',
     } : null;
     const compatibilityWarnings = numbering?.scheme === 'legacy_offset' ? [
-        `[KOMPATIBILITAS] INTENT ${numbering.intent_version} memakai penomoran lama: PLAN/EXEC v${numbering.plan_major}.x (major PLAN = major INTENT - 1). Pola ini dipertahankan untuk kompatibilitas chain lama. Gunakan pola tersebut selama bekerja pada chain ini.`,
+        `[COMPATIBILITY] INTENT ${numbering.intent_version} uses the legacy numbering: PLAN/EXEC v${numbering.plan_major}.x (PLAN major = INTENT major - 1). This pattern is kept for compatibility with older chains. Use it for as long as you work on this chain.`,
     ] : [];
     if (chain)
         compatibilityWarnings.push(...(0, lifecycle_1.lifecycleWarnings)(chain));
