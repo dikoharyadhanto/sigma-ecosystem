@@ -15,6 +15,7 @@ export declare function discoverArtifacts(projectRoot: string): DiscoveredArtifa
 export interface ReconstructedChain {
     chainVersion: string;
     data: ChainState;
+    numberingSource: 'state' | 'artifact' | 'legacy_fallback';
 }
 export interface UnresolvedGroup {
     major: number;
@@ -24,6 +25,11 @@ export interface MultiReconstructResult {
     chains: Map<number, ReconstructedChain>;
     unresolved: UnresolvedGroup[];
     skipped: string[];
+    conflicts: {
+        major: number;
+        reason: string;
+        artifacts: string[];
+    }[];
 }
 export declare function buildReconstructedChains(projectRoot: string, found: DiscoveredArtifacts, recoveredMetadata?: Map<string, {
     title?: string;

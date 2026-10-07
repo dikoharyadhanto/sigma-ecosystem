@@ -10,7 +10,7 @@ export { replaceSection, removeSectionIfPresent };
 
 // PLAN-EVAL-01 Fase 3 — every entry in chain.plan.versions already belongs
 // to this chain's own INTENT by construction (registerPlanDraft() validates
-// planMajor === intentMajor - 1 against this chain's own intent at write
+// the chain's numbering scheme against its own intent at write
 // time — there is no cross-chain plan to filter out anymore). The filter
 // against intent_version_ref is kept as a defensive no-op, not because it
 // can vary (PLAN-EVAL-01 §5).

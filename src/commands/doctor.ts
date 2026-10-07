@@ -192,6 +192,8 @@ function resolveReconstructTargets(
   }
   if (opts.v) {
     const major = parseMajorVersion(opts.v);
+    const conflicts = result.conflicts.filter(c => c.major === major);
+    if (conflicts.length) throw new Error(`Chain ${opts.v} identity conflict: ${conflicts.map(c => c.reason).join('; ')}. No chain file written.`);
     if (!result.chains.has(major)) {
       throw new Error(`No DIR-INTENT-${opts.v}.md found on disk — nothing to reconstruct for chain ${opts.v}.`);
     }
@@ -215,6 +217,8 @@ function resolveReconstructTargets(
     throw e;
   }
   const major = parseMajorVersion(activeVersion);
+  const conflicts = result.conflicts.filter(c => c.major === major);
+  if (conflicts.length) throw new Error(`Chain ${activeVersion} identity conflict: ${conflicts.map(c => c.reason).join('; ')}. No chain file written.`);
   if (!result.chains.has(major)) {
     throw new Error(`No DIR-INTENT-${activeVersion}.md found on disk for the active chain (${activeVersion}) — nothing to reconstruct.`);
   }
@@ -259,8 +263,9 @@ function runReconstruct(opts: { v?: string; allVersions?: boolean }): void {
   console.log('\n=== Sigma Doctor — Reconstruct ===');
 
   for (const major of targets) {
-    const { chainVersion, data } = result.chains.get(major)!;
+    const { chainVersion, data, numberingSource } = result.chains.get(major)!;
     writeChain(projectRoot, chainVersion, data);
+    console.log(`Numbering ${chainVersion}: ${data.versioning_scheme} (${numberingSource})`);
     printChainReconstructReport(chainVersion, data);
   }
 
@@ -280,7 +285,14 @@ function runReconstruct(opts: { v?: string; allVersions?: boolean }): void {
     for (const note of result.skipped) console.log(`  - ${note}`);
   }
 
-  renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — self-heal net
+  if (result.conflicts.length) {
+    console.log('\n--- Identity conflicts: affected chains were NOT written ---');
+    for (const conflict of result.conflicts) console.log(`  v${conflict.major}: ${conflict.reason} — ${conflict.artifacts.join(', ')}`);
+    // Preserve history when unresolved/corrupt state cannot safely be projected.
+    if (opts.allVersions) process.exitCode = 1;
+  } else {
+    renderIntentHistoryFile(projectRoot); // PLAN-EVAL-06 — self-heal net
+  }
 
   console.log('');
 }

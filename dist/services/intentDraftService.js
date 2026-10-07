@@ -14,6 +14,8 @@ exports.IntentDraftError = void 0;
 exports.createIntentDraftTransactionFiles = createIntentDraftTransactionFiles;
 exports.createIntentDraft = createIntentDraft;
 const path_1 = __importDefault(require("path"));
+const fs_extra_1 = __importDefault(require("fs-extra"));
+const numbering_1 = require("../engine/numbering");
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
@@ -71,9 +73,12 @@ function createIntentDraft(input) {
     const chainVersion = (0, chain_1.nextChainVersion)(projectRoot);
     const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`));
     const absPath = path_1.default.join(projectRoot, relPath);
+    if (fs_extra_1.default.existsSync(absPath))
+        throw new IntentDraftError('INVALID_OPERATION', `INTENT FILE CONFLICT: ${relPath} already exists.`);
+    const chain = (0, chain_1.createInitialChain)(chainVersion, relPath, title, focus, 'intent_aligned');
     (0, artifacts_1.copyTemplateToArtifact)('DIR-INTENT-TEMPLATE.md', absPath);
+    (0, numbering_1.writeChainMetadata)(absPath, chain);
     (0, controlStore_1.controlTestFailpoint)('create_after_artifact');
-    const chain = (0, chain_1.createInitialChain)(chainVersion, relPath, title, focus);
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain); // chain file first
     (0, controlStore_1.controlTestFailpoint)('create_after_chain');
     (0, chain_1.writeActivateStatus)(projectRoot, chainVersion); // manifest last — PLAN-EVAL-01 §5.9 write order

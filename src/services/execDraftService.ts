@@ -12,6 +12,7 @@
 
 import path from 'path';
 import fs from 'fs-extra';
+import { writeChainMetadata } from '../engine/numbering';
 import {
   ChainState,
   readActiveChain,
@@ -150,6 +151,7 @@ export function createExecDraft(input: CreateExecDraftInput): CreateExecDraftRes
   }
 
   copyTemplateToArtifact('DEV-EXEC-TEMPLATE.md', absPath);
+  writeChainMetadata(absPath, chain, planVersionRef);
   controlTestFailpoint('exec_create_after_artifact');
 
   registerExecDraft(chain, version, relPath, planVersionRef);

@@ -19,6 +19,7 @@ exports.createExecDraftTransactionFiles = createExecDraftTransactionFiles;
 exports.createExecDraft = createExecDraft;
 const path_1 = __importDefault(require("path"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
+const numbering_1 = require("../engine/numbering");
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
@@ -108,6 +109,7 @@ function createExecDraft(input) {
         throw new ExecDraftError('INVALID_OPERATION', `EXEC FILE CONFLICT: ${relPath} already exists. Refusing to overwrite existing DEV-EXEC artifact.`);
     }
     (0, artifacts_1.copyTemplateToArtifact)('DEV-EXEC-TEMPLATE.md', absPath);
+    (0, numbering_1.writeChainMetadata)(absPath, chain, planVersionRef);
     (0, controlStore_1.controlTestFailpoint)('exec_create_after_artifact');
     (0, chain_1.registerExecDraft)(chain, version, relPath, planVersionRef);
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain);

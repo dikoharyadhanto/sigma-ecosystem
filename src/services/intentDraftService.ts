@@ -7,6 +7,8 @@
 // it does not obtain it.
 
 import path from 'path';
+import fs from 'fs-extra';
+import { writeChainMetadata } from '../engine/numbering';
 import {
   ChainState,
   createInitialChain,
@@ -95,10 +97,12 @@ export function createIntentDraft(input: CreateIntentDraftInput): CreateIntentDr
   const chainVersion = nextChainVersion(projectRoot);
   const relPath = toPosix(path.join('Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`));
   const absPath = path.join(projectRoot, relPath);
+  if (fs.existsSync(absPath)) throw new IntentDraftError('INVALID_OPERATION', `INTENT FILE CONFLICT: ${relPath} already exists.`);
+  const chain = createInitialChain(chainVersion, relPath, title, focus, 'intent_aligned');
   copyTemplateToArtifact('DIR-INTENT-TEMPLATE.md', absPath);
+  writeChainMetadata(absPath, chain);
   controlTestFailpoint('create_after_artifact');
 
-  const chain = createInitialChain(chainVersion, relPath, title, focus);
   writeChain(projectRoot, chainVersion, chain); // chain file first
   controlTestFailpoint('create_after_chain');
   writeActivateStatus(projectRoot, chainVersion); // manifest last — PLAN-EVAL-01 §5.9 write order

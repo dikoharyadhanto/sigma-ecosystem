@@ -17,7 +17,7 @@ Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigm
 |---|---|---|---|---|
 | F00 | Indeks, glosarium, dependensi, register keputusan terbuka, disiplin build | - | Berjalan | file ini |
 | F01 | Peta konsistensi aturan (master, proyek, skill, memory, versi aturan) | 1 | **DITAHAN** - menunggu feedback review Director per dokumen | rencana belum dibuat; bahan review: [F01-lampiran_daftar-periksa-dokumen.md](F01-lampiran_daftar-periksa-dokumen.md) |
-| F02 | Penomoran chain dan warning bootstrap | 5 | Belum dimulai | - |
+| F02 | Penomoran chain dan warning bootstrap | 5 | Diterapkan 7 Oktober setelah O-1 sampai O-3 dan eksekusi disetujui; build lulus, 68 berkas / 934 tes lulus, exit 0; belum di-commit | [F02_penomoran-chain-dan-warning-bootstrap.md](F02_penomoran-chain-dan-warning-bootstrap.md) |
 | F03 | Mailbox per intent | 4 | Belum dimulai | - |
 | F04 | Lifecycle APPROVED/LOCKED, doctor, pengikatan revisi | 2, 9 | Belum dimulai (kemungkinan dipecah F04a/F04b) | - |
 | F05 | Amandemen INTENT melalui Git, penghapusan tier | 8 | Belum dimulai | - |
@@ -82,7 +82,7 @@ Disalin dari dokumen diskusi sebagai titik awal. Setiap butir dibahas di rencana
 
 | ID | Fokus | Butir terbuka |
 |---|---|---|
-| T-01 | F02 | Bentuk penanda permanen aturan penomoran chain dan bukti pemulihannya untuk rekonstruksi saat state chain hilang |
+| T-01 | F02 | **TERKUNCI (Director, 7 Oktober 2026):** field `versioning_scheme` pada JSON chain + marker identitas pada INTENT/PLAN/EXEC baru; fallback legacy dilaporkan; batas kehilangan seluruh metadata diterima sesuai F02 O-1 |
 | T-02 | F03 | Apakah GENERAL ikut send gate dan kuota memo; aturan balasan dengan konteks tidak sesuai |
 | T-03 | F03 | Retensi, auto-outdate, dan akses riwayat lintas konteks |
 | T-04 | F03 | Friksi antar-minor dalam intent yang sama (kasus FYI v4.4 terhadap audit v4.5) |
@@ -107,6 +107,13 @@ Disalin dari dokumen diskusi sebagai titik awal. Setiap butir dibahas di rencana
 | T-23 | F12 | `sigma project sync` menimpa rules dan templates proyek tanpa perbandingan (`overwrite: true`). Peringatan yang mendorong sinkronisasi lebih sering membuat perubahan lokal lebih sering tertimpa. Bertabrakan dengan T-18 (pertahankan perubahan lokal). Rekomendasi: cadangan otomatis dan laporan berkas yang berubah sebelum menimpa |
 | T-24 | F12 | Proyek yang dibuat sebelum stempel ada. Rekomendasi: dianggap "versi tidak diketahui", peringatan yang sama; `sigma doctor` mengisi stempel setelah sinkronisasi berhasil |
 | T-25 | F04 | **Kosakata lock pada artefak PLAN schema 3 dan FMN-RULE (Director, 7 Oktober 2026: dibiarkan sampai F04).** Pada Sigma v2 PLAN tidak di-lock sendiri: PLAN berstatus APPROVED dan ikut terkunci otomatis ketika EXEC pasangannya di-lock. Template dan rules yang ditulis pada E02 masih memakai kosakata CLI saat ini. Yang diganti pada F04: template FMN-PLAN (header "before lock" dan "After lock", petunjuk Contract Changes "after lock", "this lock cycle" pada SKIP_FOR_AUDIT); FMN-RULE (PLAN Creation Rules: "before lock", "as of this PLAN's lock", "snapshot as of lock", "pre-lock contract", "the PLAN locks"; AUD Findings Section Authorization: `sigma plan lock` dan "lock cycle"; Role Activation dan CLI Operation Policy: perintah `plan lock`); validator `docCheck.ts` (nama "lock requirements", `plan lock`); memory FMN. Makna APPROVED, pihak penyetuju, apakah isi masih berubah sesudahnya, dan titik "checkpoint" pada Contract Changes ditetapkan F04. **Tambahan E03 (kosakata lock EXEC, sama perlakuannya):** verdict `READY_FOR_LOCK` pada template EXEC schema 3, validator, dan test; perintah `exec lock` dan frasa "approved and locked" pada DEV-RULE (CLI Operation Policy, Change Evidence), skill DEV (empat target), dan memory DEV; nama "Lock Requirements" pada validator |
+
+Tambahan dari penyusunan F02, ditutup melalui persetujuan eksplisit Director atas seluruh rekomendasi dan eksekusi pada 7 Oktober 2026:
+
+| ID | Fokus | Butir terbuka |
+|---|---|---|
+| T-26 | F02 | **TERKUNCI:** rekonstruksi tidak menulis chain terdampak konflik; chain independen boleh dipulihkan pada `--all-versions`; kegagalan target dilaporkan dengan exit nonzero dan history yang terdampak dipertahankan (O-2) |
+| T-27 | F02 | **TERKUNCI:** alokasi minor terbesar + 1 pada kedua skema, mencakup SUPERSEDED; benturan file ditolak tanpa overwrite. Nomor yang seluruh buktinya terhapus tidak dapat dipulihkan dari state saja (O-3) |
 
 ## 6. Disiplin kerja dan build (tentatif)
 

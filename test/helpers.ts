@@ -146,7 +146,12 @@ function baseChain(version: string): Record<string, unknown> {
 }
 
 export function makeChain(version: string, overrides: Record<string, unknown> = {}): object {
-  return { ...baseChain(version), ...overrides };
+  // Synthetic built-cycle fixtures historically used aligned numbers even
+  // before production supported them. Declare that identity explicitly;
+  // empty/unmarked fixtures remain legacy for compatibility coverage.
+  const plans = (overrides.plan as { versions?: { version: string }[] } | undefined)?.versions ?? [];
+  const alignedFixture = plans.length > 0 && plans.every(p => p.version.split('.')[0] === version);
+  return { ...baseChain(version), ...(alignedFixture ? { versioning_scheme: 'intent_aligned' } : {}), ...overrides };
 }
 
 export function makeChainWithDraftIntent(version = 'v1'): object {
@@ -165,10 +170,9 @@ export function makeChainWithLockedIntent(version = 'v1'): object {
 // Roadmap LOCKED, one PLAN LOCKED, one EXEC LOCKED, CLOSE DRAFT — the
 // chain-scoped equivalent of the old single-file fullLockedChain() fixtures
 // used across intent-supersede.test.ts / progress-hardening.test.ts. Version
-// numbers deliberately match what those tests already asserted against
-// (plan/exec "v1.1"), not the nextPlanVersion()-generated "v0.1" — fixtures
-// don't need to be generatable, only internally consistent for the
-// assertions that read them.
+// numbers match the tests' historical aligned synthetic cycles. makeChain()
+// explicitly identifies these as aligned; unmarked legacy fixtures retain
+// the production offset rule.
 export function makeChainWithFullBuiltCycle(version = 'v1', planExecVersion = 'v1.1'): object {
   const now = new Date().toISOString();
   return makeChain(version, {
@@ -234,16 +238,17 @@ export function makeChainWithLockedExec(version = 'v1', planExecVersion = 'v1.1'
 // original fixture.
 export function makeChainWithDraftExec(version = 'v1'): object {
   const now = new Date().toISOString();
+  const planVersion = `v${Number(version.slice(1)) - 1}.1`;
   return makeChain(version, {
     lifecycle_state: 'BUILD',
     intent: { version, state: 'RATIFIED', file: `Sigma/charter/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
     plan: {
-      active_version: version, active_state: 'LOCKED', pending: [],
-      versions: [{ version, state: 'LOCKED', file: `Sigma/contract/FMN-PLAN-${version}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+      active_version: planVersion, active_state: 'LOCKED', pending: [],
+      versions: [{ version: planVersion, state: 'LOCKED', file: `Sigma/contract/FMN-PLAN-${planVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
     },
     exec: {
-      active_version: 'v0.1', active_state: 'DRAFT',
-      versions: [{ version: 'v0.1', state: 'DRAFT', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, plan_version_ref: version }],
+      active_version: planVersion, active_state: 'DRAFT',
+      versions: [{ version: planVersion, state: 'DRAFT', file: `Sigma/evidence/DEV-EXEC-${planVersion}.md`, created_at: now, updated_at: now, plan_version_ref: planVersion }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
   });
@@ -253,16 +258,17 @@ export function makeChainWithDraftExec(version = 'v1'): object {
 // — chain-scoped equivalent of makeProgressWithDraftClose().
 export function makeChainWithDraftClose(version = 'v1'): object {
   const now = new Date().toISOString();
+  const planVersion = `v${Number(version.slice(1)) - 1}.1`;
   return makeChain(version, {
     lifecycle_state: 'BUILD',
     intent: { version, state: 'RATIFIED', file: `Sigma/charter/DIR-INTENT-${version}.md`, created_at: now, updated_at: now, ratified_at: now },
     plan: {
-      active_version: version, active_state: 'LOCKED', pending: [],
-      versions: [{ version, state: 'LOCKED', file: `Sigma/contract/FMN-PLAN-${version}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
+      active_version: planVersion, active_state: 'LOCKED', pending: [],
+      versions: [{ version: planVersion, state: 'LOCKED', file: `Sigma/contract/FMN-PLAN-${planVersion}.md`, created_at: now, updated_at: now, locked_at: now, intent_version_ref: version }],
     },
     exec: {
-      active_version: 'v0.1', active_state: 'LOCKED',
-      versions: [{ version: 'v0.1', state: 'LOCKED', file: 'Sigma/evidence/DEV-EXEC-v0.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: version }],
+      active_version: planVersion, active_state: 'LOCKED',
+      versions: [{ version: planVersion, state: 'LOCKED', file: `Sigma/evidence/DEV-EXEC-${planVersion}.md`, created_at: now, updated_at: now, locked_at: now, plan_version_ref: planVersion }],
     },
     close: { version, state: 'DRAFT', file: `Sigma/close/DIR-CLOSE-${version}.md`, created_at: now, updated_at: now },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: true },

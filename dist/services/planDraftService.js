@@ -23,6 +23,8 @@ exports.PlanDraftError = void 0;
 exports.createPlanDraftTransactionFiles = createPlanDraftTransactionFiles;
 exports.createPlanDraft = createPlanDraft;
 const path_1 = __importDefault(require("path"));
+const fs_extra_1 = __importDefault(require("fs-extra"));
+const numbering_1 = require("../engine/numbering");
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
@@ -96,11 +98,14 @@ function createPlanDraft(input) {
     const version = (0, chain_1.nextPlanVersion)(chain, intentVersionRef);
     const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'contract', `FMN-PLAN-${version}.md`));
     const absPath = path_1.default.join(projectRoot, relPath);
+    if (fs_extra_1.default.existsSync(absPath))
+        throw new PlanDraftError('INVALID_OPERATION', `PLAN FILE CONFLICT: ${relPath} already exists. Refusing to overwrite.`);
     // Artifact write first, chain last — same order intentDraftService uses,
     // same rationale (a half-written artifact with no chain entry is an
     // orphan file, recoverable; a chain entry pointing at a missing artifact
     // is not).
     (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath);
+    (0, numbering_1.writeChainMetadata)(absPath, chain);
     (0, controlStore_1.controlTestFailpoint)('plan_create_after_artifact');
     (0, chain_1.registerPlanDraft)(chain, version, relPath, intentVersionRef, title, focus);
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain);

@@ -11,6 +11,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
 const fs_1 = require("../utils/fs");
+const numbering_1 = require("./numbering");
 const chain_1 = require("./chain");
 // PLAN-IMPL-SIGMA-ARTIFACT-FOLDER-RENAME-20260816 — `dirs` (plural, new name
 // first) instead of a single `dir`. Reconstruct has no stored entry.file to
@@ -76,16 +77,6 @@ function sortByMajorMinor(entries) {
         return (0, chain_1.parseMinorVersion)(a.version) - (0, chain_1.parseMinorVersion)(b.version);
     });
 }
-function groupByMajor(entries) {
-    const groups = new Map();
-    for (const entry of sortByMajorMinor(entries)) {
-        const major = (0, chain_1.parseMajorVersion)(entry.version);
-        const list = groups.get(major) ?? [];
-        list.push(entry);
-        groups.set(major, list);
-    }
-    return groups;
-}
 let markerSeq = 0;
 function makeMarker(domain, gate, reason, chain, now) {
     markerSeq += 1;
@@ -99,6 +90,156 @@ function makeMarker(domain, gate, reason, chain, now) {
         first_detected_at: now,
         last_detected_at: now,
     };
+}
+// Membership is resolved before rebuilding lifecycle. A conflict excludes every
+// claimant, allowing independent chains to recover without overwriting evidence.
+function resolveArtifactMembership(projectRoot, found) {
+    const schemes = new Map();
+    const sources = new Map();
+    const metadata = new Map();
+    const claims = new Map();
+    const conflicts = [];
+    const planGroups = new Map();
+    const execGroups = new Map();
+    const unresolved = [];
+    const conflict = (major, reason, artifacts) => conflicts.push({ major, reason, artifacts });
+    const declare = (major, scheme, source, file) => {
+        const previous = schemes.get(major);
+        if (previous && previous !== scheme)
+            conflict(major, `Conflicting numbering schemes: ${previous} / ${scheme}`, [file]);
+        else {
+            schemes.set(major, scheme);
+            sources.set(major, source);
+        }
+    };
+    const intentMajors = new Set(found.intent.map(a => (0, chain_1.parseMajorVersion)(a.version)));
+    for (const intent of found.intent) {
+        try {
+            const raw = fs_extra_1.default.readJsonSync((0, chain_1.chainFilePath)(projectRoot, intent.version));
+            if (raw.chain_version !== intent.version || raw.intent?.version !== intent.version) {
+                conflict((0, chain_1.parseMajorVersion)(intent.version), 'Stored chain/INTENT identity conflicts with its filename', [intent.file]);
+                continue;
+            }
+            if (raw.versioning_scheme !== undefined)
+                declare((0, chain_1.parseMajorVersion)(intent.version), (0, numbering_1.resolveVersioningScheme)(raw), 'state', intent.file);
+            // Preserve identity claims independently of document metadata checks. A
+            // forged/edited child marker must not make its original owner's claim
+            // disappear just because readExistingChain() rejects that document.
+            (0, chain_1.validateChainNumbering)(raw);
+            for (const entry of [...raw.plan.versions, ...raw.exec.versions]) {
+                if (!entry.file)
+                    continue;
+                const file = normalizeSlashes(entry.file);
+                const owners = claims.get(file) ?? new Set();
+                owners.add((0, chain_1.parseMajorVersion)(intent.version));
+                claims.set(file, owners);
+            }
+        }
+        catch (error) {
+            // A missing/unparseable state is what reconstruction repairs; an explicit
+            // unsupported scheme must never silently fall back to legacy.
+            if (error.message.includes('Unknown versioning_scheme'))
+                conflict((0, chain_1.parseMajorVersion)(intent.version), error.message, [intent.file]);
+        }
+    }
+    for (const domain of ['intent', 'roadmap', 'close', 'plan', 'exec']) {
+        const byVersion = new Map();
+        for (const artifact of found[domain]) {
+            const list = byVersion.get(artifact.version) ?? [];
+            list.push(artifact);
+            byVersion.set(artifact.version, list);
+            if (domain !== 'intent' && domain !== 'plan' && domain !== 'exec')
+                continue;
+            try {
+                const meta = (0, numbering_1.readChainMetadata)(path_1.default.join(projectRoot, artifact.file), projectRoot);
+                if (!meta)
+                    continue;
+                metadata.set(artifact.file, meta);
+                const major = (0, chain_1.parseMajorVersion)(meta.intent);
+                declare(major, meta.versioning_scheme, 'artifact', artifact.file);
+                if (domain === 'intent' && meta.intent !== artifact.version) {
+                    conflict((0, chain_1.parseMajorVersion)(artifact.version), 'INTENT filename conflicts with SIGMA:CHAIN identity', [artifact.file]);
+                    conflict(major, 'INTENT filename conflicts with SIGMA:CHAIN identity', [artifact.file]);
+                }
+                if (domain === 'exec' && meta.plan !== artifact.version)
+                    conflict(major, 'EXEC metadata must reference an identical PLAN version', [artifact.file]);
+                if (domain !== 'exec' && meta.plan !== undefined)
+                    conflict(major, 'Unexpected PLAN reference in non-EXEC metadata', [artifact.file]);
+            }
+            catch (error) {
+                const major = (0, chain_1.parseMajorVersion)(artifact.version);
+                conflict(major, error.message, [artifact.file]);
+                if (domain !== 'intent')
+                    conflict(major + 1, error.message, [artifact.file]);
+            }
+        }
+        for (const [version, artifacts] of byVersion) {
+            if (artifacts.length <= 1)
+                continue;
+            const major = (0, chain_1.parseMajorVersion)(version);
+            conflict(major, `Duplicate ${domain} artifact version ${version}`, artifacts.map(a => a.file));
+            if (domain === 'plan' || domain === 'exec')
+                conflict(major + 1, `Duplicate ${domain} artifact version ${version}`, artifacts.map(a => a.file));
+        }
+    }
+    for (const major of intentMajors) {
+        if (!schemes.has(major)) {
+            schemes.set(major, 'legacy_offset');
+            sources.set(major, 'legacy_fallback');
+        }
+        const existing = readExistingChain(projectRoot, `v${major}`);
+        if (!existing)
+            continue;
+        for (const entry of [...existing.plan.versions, ...existing.exec.versions]) {
+            if (!entry.file)
+                continue;
+            const file = normalizeSlashes(entry.file);
+            const owners = claims.get(file) ?? new Set();
+            owners.add(major);
+            claims.set(file, owners);
+        }
+    }
+    for (const domain of ['plan', 'exec']) {
+        for (const artifact of found[domain]) {
+            const meta = metadata.get(artifact.file);
+            const owners = new Set(claims.get(artifact.file) ?? []);
+            if (meta)
+                owners.add((0, chain_1.parseMajorVersion)(meta.intent));
+            if (owners.size === 0) {
+                for (const major of intentMajors) {
+                    if ((0, numbering_1.planMajorForChain)({ intent: { version: `v${major}` }, versioning_scheme: schemes.get(major) }) === (0, chain_1.parseMajorVersion)(artifact.version))
+                        owners.add(major);
+                }
+            }
+            if (owners.size > 1) {
+                for (const major of owners)
+                    conflict(major, 'Artifact has competing INTENT owners', [artifact.file]);
+                continue;
+            }
+            const owner = [...owners][0];
+            if (owner === undefined || !intentMajors.has(owner)) {
+                unresolved.push({ major: owner ?? (0, chain_1.parseMajorVersion)(artifact.version) + 1, artifacts: [artifact.file] });
+                continue;
+            }
+            const expected = (0, numbering_1.planMajorForChain)({ intent: { version: `v${owner}` }, versioning_scheme: schemes.get(owner) });
+            if ((0, chain_1.parseMajorVersion)(artifact.version) !== expected) {
+                conflict(owner, `Artifact ${artifact.version} conflicts with the chain's numbering scheme`, [artifact.file]);
+                continue;
+            }
+            const groups = domain === 'plan' ? planGroups : execGroups;
+            const list = groups.get(owner) ?? [];
+            list.push(artifact);
+            groups.set(owner, list);
+        }
+    }
+    for (const major of intentMajors) {
+        const plans = planGroups.get(major) ?? [];
+        const execs = execGroups.get(major) ?? [];
+        if (plans.length === 1 && execs.length === 1 && plans[0].version !== execs[0].version) {
+            conflict(major, 'EXEC and PLAN versions do not match; refusing inferred pairing', [plans[0].file, execs[0].file]);
+        }
+    }
+    return { schemes, sources, planGroups, execGroups, conflicts, unresolved };
 }
 // PLAN-EVAL-06 §6 — Sigma/design/intent-history.md is the only place `title`/`focus`
 // persist outside progress-v<N>.json (DIR-INTENT templates never carry them). If it
@@ -233,10 +374,8 @@ function buildReconstructedChains(projectRoot, found, recoveredMetadata = new Ma
     const closesByMajor = new Map();
     for (const entry of found.close)
         closesByMajor.set((0, chain_1.parseMajorVersion)(entry.version), entry);
-    // Plan/exec major = intent major − 1 (invariant confirmed never to
-    // collide across chains — DISCUSSION "Konsolidasi Lanjutan" bagian 7).
-    const planGroups = groupByMajor(found.plan);
-    const execGroups = groupByMajor(found.exec);
+    const membership = resolveArtifactMembership(projectRoot, found);
+    const { planGroups, execGroups } = membership;
     const allMajors = new Set();
     for (const m of intentsByMajor.keys())
         allMajors.add(m);
@@ -244,17 +383,20 @@ function buildReconstructedChains(projectRoot, found, recoveredMetadata = new Ma
         allMajors.add(m);
     for (const m of closesByMajor.keys())
         allMajors.add(m);
-    for (const planMajor of planGroups.keys())
-        allMajors.add(planMajor + 1);
-    for (const execMajor of execGroups.keys())
-        allMajors.add(execMajor + 1);
+    for (const major of planGroups.keys())
+        allMajors.add(major);
+    for (const major of execGroups.keys())
+        allMajors.add(major);
     const chains = new Map();
-    const unresolved = [];
+    const unresolved = [...membership.unresolved];
     for (const major of [...allMajors].sort((a, b) => a - b)) {
+        if (membership.conflicts.some(c => c.major === major))
+            continue;
         const intentEntry = intentsByMajor.get(major);
-        const planMajor = major - 1;
-        const plans = planGroups.get(planMajor) ?? [];
-        const execs = execGroups.get(planMajor) ?? [];
+        const scheme = membership.schemes.get(major) ?? 'legacy_offset';
+        const planMajor = (0, numbering_1.planMajorForChain)({ intent: { version: `v${major}` }, versioning_scheme: scheme });
+        const plans = planGroups.get(major) ?? [];
+        const execs = execGroups.get(major) ?? [];
         const roadmapEntry = roadmapsByMajor.get(major);
         const closeEntry = closesByMajor.get(major);
         if (!intentEntry) {
@@ -273,7 +415,7 @@ function buildReconstructedChains(projectRoot, found, recoveredMetadata = new Ma
         const chainVersion = `v${major}`;
         const markers = [];
         const recovered = recoveredMetadata.get(chainVersion) ?? {};
-        const chain = (0, chain_1.createInitialChain)(chainVersion, intentEntry.file, recovered.title, recovered.focus);
+        const chain = (0, chain_1.createInitialChain)(chainVersion, intentEntry.file, recovered.title, recovered.focus, scheme);
         chain.created_at = now;
         chain.updated_at = now;
         // PLAN-EVAL-07 — trust an existing, still-valid progress-v<N>.json's
@@ -415,9 +557,9 @@ function buildReconstructedChains(projectRoot, found, recoveredMetadata = new Ma
         chain.runtime_invalid = { markers: [], last_doctor_run_at: null };
         (0, chain_1.runDoctorReconciliation)(chain, []);
         chain.runtime_invalid.markers = [...markers, ...chain.runtime_invalid.markers];
-        chains.set(major, { chainVersion, data: chain });
+        chains.set(major, { chainVersion, data: chain, numberingSource: membership.sources.get(major) ?? 'legacy_fallback' });
     }
-    return { chains, unresolved, skipped: [...found.skipped] };
+    return { chains, unresolved, skipped: [...found.skipped], conflicts: membership.conflicts };
 }
 function reconstructAllChains(projectRoot) {
     const found = discoverArtifacts(projectRoot);

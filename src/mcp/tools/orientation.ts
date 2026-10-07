@@ -86,6 +86,8 @@ export function computeOrientation(root: string | null, role?: SigmaRole): unkno
     active: true,
     phase: chain ? chain.lifecycle_state : null,
     active_chain: chainVersion,
+    numbering: view.numbering,
+    compatibility_warnings: view.compatibilityWarnings,
     gate_summary: gates,
     next_valid_operations: nextOps,
     stale_intent_warnings: chain ? getInvalidWarningLines(chain) : [],
@@ -107,7 +109,7 @@ export function registerOrientationTool(server: McpServer): void {
     {
       title: 'Get Sigma Orientation',
       description:
-        'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, gate summary, the CLI-valid next operations, stale/invalid runtime warnings, blockers, unread cross-role inbox counts, unread self-addressed memo counts, and DIR-INTENT certification state. Read-only. Optional argument role (ARC | FMN | DEV | AUD) scopes both counts to that role. Optional project_root sets the project directory. Returns { active, phase, active_chain, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, memo_unread, intent_doc_uncertified, intent_doc_uncertified_since, source }.',
+        'Return a one-shot orientation for an AI role operating Sigma: lifecycle phase, active chain, numbering scheme and compatibility warnings, gate summary, next operations, runtime warnings, blockers, unread counts, and INTENT certification. Read-only. Optional role scopes counts; project_root selects the project. Returns { active, phase, active_chain, numbering, compatibility_warnings, gate_summary, next_valid_operations, stale_intent_warnings, blockers, inbox_unread, memo_unread, intent_doc_uncertified, intent_doc_uncertified_since, source }.',
       inputSchema: {
         role: z
           .enum(['ARC', 'FMN', 'DEV', 'AUD'])

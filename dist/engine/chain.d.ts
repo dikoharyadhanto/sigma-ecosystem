@@ -1,3 +1,4 @@
+import { VersioningScheme } from './numbering';
 export type LifecycleState = 'DESIGN' | 'BUILD' | 'CLOSE' | 'CLOSED';
 export interface EvidenceRecord {
     description: string;
@@ -126,6 +127,7 @@ export interface SingleCloseState {
 }
 export interface ChainState {
     schema_version: string;
+    versioning_scheme?: VersioningScheme;
     chain_version: string;
     created_at: string;
     updated_at: string;
@@ -167,7 +169,7 @@ export declare function readActiveChain(projectRoot: string): {
     data: ChainState;
 };
 export declare function readProjectIdentity(projectRoot: string): ProjectIdentity;
-export declare function createInitialChain(chainVersion: string, intentFilePath: string, title?: string, focus?: string): ChainState;
+export declare function createInitialChain(chainVersion: string, intentFilePath: string, title?: string, focus?: string, versioningScheme?: VersioningScheme): ChainState;
 export declare function hasRatifiedIntent(chain: ChainState): boolean;
 export declare function hasCleanGate2Chain(chain: ChainState): boolean;
 export declare function hasCleanGate3Chain(chain: ChainState): boolean;
@@ -188,6 +190,8 @@ export interface DoctorReport {
     remainingInvalid: InvalidMarker[];
 }
 export declare function runDoctorReconciliation(chain: ChainState, overrides?: OverrideEntry[]): DoctorReport;
+export declare function validatePlanNumbering(chain: ChainState, version: string, intentVersionRef: string): void;
+export declare function validateChainNumbering(chain: ChainState): void;
 export declare function nextPlanVersion(chain: ChainState, intentVersionRef: string): string;
 export declare function nextExecVersion(_chain: ChainState, planVersionRef: string): string;
 export declare function ratifyIntent(chain: ChainState): void;

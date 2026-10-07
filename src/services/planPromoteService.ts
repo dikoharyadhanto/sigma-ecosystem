@@ -34,12 +34,14 @@
 
 import path from 'path';
 import fs from 'fs-extra';
+import { withChainMetadata, resolveVersioningScheme } from '../engine/numbering';
 import {
   ChainState,
   readActiveChain,
   assertChainCanMutate,
   getOperationalGate,
   nextPlanVersion,
+  validatePlanNumbering,
   promotePendingPlan,
   writeChain,
   chainFilePath,
@@ -199,9 +201,15 @@ export function promotePlanUseCase(projectRoot: string, id: string, title: strin
   const oldAbsPath = assertPendingPlanCanonicalPath(projectRoot, id, pending.file);
   const newRelPath = toPosix(path.join('Sigma', 'contract', `FMN-PLAN-${newVersion}.md`));
   const newAbsPath = path.join(projectRoot, newRelPath);
+  validatePlanNumbering(chain, newVersion, chain.intent.version);
+  if (fs.existsSync(newAbsPath)) throw new PlanPromoteError('INVALID_OPERATION', `PLAN FILE CONFLICT: ${newRelPath} already exists.`);
+  const promotedContent = withChainMetadata(fs.readFileSync(oldAbsPath, 'utf8'), {
+    intent: chain.intent.version, versioning_scheme: resolveVersioningScheme(chain),
+  });
 
   fs.ensureDirSync(path.dirname(newAbsPath));
   fs.moveSync(oldAbsPath, newAbsPath);
+  fs.writeFileSync(newAbsPath, promotedContent, 'utf8');
 
   promotePendingPlan(chain, id, newVersion, newRelPath, chain.intent.version, title, focus);
   writeChain(projectRoot, chainVersion, chain);

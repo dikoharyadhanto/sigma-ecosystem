@@ -18,6 +18,7 @@ import {
   ProjectIdentity,
 } from '../engine/chain';
 import { findProjectRoot } from '../utils/fs';
+import { VersioningScheme, resolveVersioningScheme, planMajorForChain } from '../engine/numbering';
 
 export interface BootstrapView {
   projectRoot: string;
@@ -26,6 +27,8 @@ export interface BootstrapView {
   chain: ChainState | null;
   gates: Gates | null;
   nextOps: string[];
+  numbering: { scheme: VersioningScheme; intent_version: string; plan_major: number; source: 'chain' | 'legacy_fallback' } | null;
+  compatibilityWarnings: string[];
 }
 
 // Pure reads only — mirrors the data-gathering prologue of runBootstrap.
@@ -43,5 +46,12 @@ export function buildBootstrapView(projectRoot: string = findProjectRoot()): Boo
   const gates = chain ? getGateStatus(chain) : null;
   const nextOps = chain ? getNextValidOperations(chain) : ['intent new'];
 
-  return { projectRoot, identity, chainVersion, chain, gates, nextOps };
+  const numbering = chain ? {
+    scheme: resolveVersioningScheme(chain), intent_version: chain.intent.version,
+    plan_major: planMajorForChain(chain), source: chain.versioning_scheme === undefined ? 'legacy_fallback' as const : 'chain' as const,
+  } : null;
+  const compatibilityWarnings = numbering?.scheme === 'legacy_offset' ? [
+    `[KOMPATIBILITAS] INTENT ${numbering.intent_version} memakai penomoran lama: PLAN/EXEC v${numbering.plan_major}.x (major PLAN = major INTENT - 1). Pola ini dipertahankan untuk kompatibilitas chain lama. Gunakan pola tersebut selama bekerja pada chain ini.`,
+  ] : [];
+  return { projectRoot, identity, chainVersion, chain, gates, nextOps, numbering, compatibilityWarnings };
 }

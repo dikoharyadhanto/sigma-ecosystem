@@ -22,8 +22,8 @@ function makeLockedPlanWithExec(opts: {
     lifecycle_state: 'BUILD',
     intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
-      active_version: 'v1', active_state: 'LOCKED', pending: [],
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      active_version: 'v1.1', active_state: 'LOCKED', pending: [],
+      versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     exec: {
       active_version: 'v1.1',
@@ -31,7 +31,7 @@ function makeLockedPlanWithExec(opts: {
       versions: [
         {
           version: 'v1.1', state: execState, file: 'Sigma/evidence/DEV-EXEC-v1.1.md',
-          created_at: now, updated_at: now, plan_version_ref: 'v1',
+          created_at: now, updated_at: now, plan_version_ref: 'v1.1',
           ...(execState === 'LOCKED' ? { locked_at: now } : {}),
         },
       ],
@@ -46,8 +46,8 @@ function makeLockedPlanNoExec() {
     lifecycle_state: 'BUILD',
     intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
-      active_version: 'v1', active_state: 'LOCKED', pending: [],
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      active_version: 'v1.1', active_state: 'LOCKED', pending: [],
+      versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
   });
@@ -59,8 +59,8 @@ function makeDraftPlanWithIntent() {
     lifecycle_state: 'BUILD',
     intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
-      active_version: 'v1', active_state: 'DRAFT', pending: [],
-      versions: [{ version: 'v1', state: 'DRAFT', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, intent_version_ref: 'v1' }],
+      active_version: 'v1.1', active_state: 'DRAFT', pending: [],
+      versions: [{ version: 'v1.1', state: 'DRAFT', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, intent_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: false, gate_3_satisfied: false },
   });
@@ -77,8 +77,8 @@ function makeLockedPlanNoExecWithRoadmap() {
     intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     roadmap: { version: 'v1', state: 'LOCKED', file: 'Sigma/roadmap/ROADMAP-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
-      active_version: 'v1', active_state: 'LOCKED', pending: [],
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      active_version: 'v1.1', active_state: 'LOCKED', pending: [],
+      versions: [{ version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
   });
@@ -90,15 +90,18 @@ function makeLockedPlanWithMultipleExecs() {
     lifecycle_state: 'BUILD',
     intent: { version: 'v1', state: 'LOCKED', file: 'Sigma/charter/DIR-INTENT-v1.md', created_at: now, updated_at: now, locked_at: now },
     plan: {
-      active_version: 'v1', active_state: 'LOCKED', pending: [],
-      versions: [{ version: 'v1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' }],
+      active_version: 'v1.1', active_state: 'LOCKED', pending: [],
+      versions: [
+        { version: 'v1.1', state: 'LOCKED', file: 'Sigma/contract/FMN-PLAN-v1.1.md', created_at: now, updated_at: now, locked_at: now, intent_version_ref: 'v1' },
+        { version: 'v1.2', state: 'SUPERSEDED', file: 'Sigma/contract/FMN-PLAN-v1.2.md', created_at: now, updated_at: now, intent_version_ref: 'v1', supersede_reason: 'old' },
+      ],
     },
     exec: {
-      active_version: 'v1.2',
+      active_version: 'v1.1',
       active_state: 'LOCKED',
       versions: [
-        { version: 'v1.1', state: 'SUPERSEDED', file: 'Sigma/evidence/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, plan_version_ref: 'v1', supersede_reason: 'old' },
-        { version: 'v1.2', state: 'LOCKED',     file: 'Sigma/evidence/DEV-EXEC-v1.2.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1' },
+        { version: 'v1.2', state: 'SUPERSEDED', file: 'Sigma/evidence/DEV-EXEC-v1.2.md', created_at: now, updated_at: now, plan_version_ref: 'v1.2', supersede_reason: 'old' },
+        { version: 'v1.1', state: 'LOCKED',     file: 'Sigma/evidence/DEV-EXEC-v1.1.md', created_at: now, updated_at: now, locked_at: now, plan_version_ref: 'v1.1' },
       ],
     },
     gates: { gate_1_open: true, gate_2_open: true, gate_3_satisfied: false },
@@ -134,14 +137,14 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeDraftPlanWithIntent());
 
-    const result = runCli('plan supersede --v v1 --reason "deprioritized"', env.projectDir, env.homeDir);
+    const result = runCli('plan supersede --v v1.1 --reason "deprioritized"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
     const plan = data.plan as Record<string, unknown>;
     const versions = plan.versions as Array<Record<string, unknown>>;
-    const v1 = versions.find(v => v.version === 'v1');
+    const v1 = versions.find(v => v.version === 'v1.1');
     expect(v1?.state).toBe('SUPERSEDED');
     expect(v1?.supersede_reason).toBe('deprioritized');
   });
@@ -150,9 +153,9 @@ describe('sigma plan supersede', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExec());
-    runCli('plan supersede --v v1 --reason "original reason"', env.projectDir, env.homeDir);
+    runCli('plan supersede --v v1.1 --reason "original reason"', env.projectDir, env.homeDir);
 
-    const result = runCli('plan supersede --v v1 --reason "second attempt"', env.projectDir, env.homeDir);
+    const result = runCli('plan supersede --v v1.1 --reason "second attempt"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/already SUPERSEDED/i);
@@ -161,7 +164,7 @@ describe('sigma plan supersede', () => {
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
     const plan = data.plan as Record<string, unknown>;
     const versions = plan.versions as Array<Record<string, unknown>>;
-    const v1 = versions.find(v => v.version === 'v1');
+    const v1 = versions.find(v => v.version === 'v1.1');
     expect(v1?.supersede_reason).toBe('original reason');
   });
 
@@ -172,14 +175,14 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExec());
 
-    const result = runCli('plan supersede --v v1 --reason "replaced by v2"', env.projectDir, env.homeDir);
+    const result = runCli('plan supersede --v v1.1 --reason "replaced by v2"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
     const plan = data.plan as Record<string, unknown>;
     const versions = plan.versions as Array<Record<string, unknown>>;
-    const v1 = versions.find(v => v.version === 'v1');
+    const v1 = versions.find(v => v.version === 'v1.1');
     expect(v1?.state).toBe('SUPERSEDED');
     expect(v1?.supersede_reason).toBe('replaced by v2');
   });
@@ -189,13 +192,13 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExec());
 
-    runCli('plan supersede --v v1 --reason "replaced by v2"', env.projectDir, env.homeDir);
+    runCli('plan supersede --v v1.1 --reason "replaced by v2"', env.projectDir, env.homeDir);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
     const plan = data.plan as Record<string, unknown>;
 
     // This is the regression guard: active_state must match the entry state
-    expect(plan.active_version).toBe('v1');
+    expect(plan.active_version).toBe('v1.1');
     expect(plan.active_state).toBe('SUPERSEDED');
   });
 
@@ -206,7 +209,7 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanWithExec({ execState: 'LOCKED' }));
 
-    const result = runCli('plan supersede --v v1 --reason "replan"', env.projectDir, env.homeDir);
+    const result = runCli('plan supersede --v v1.1 --reason "replan"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/auto-superseded/i);
@@ -226,7 +229,7 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanWithExec({ execState: 'DRAFT' }));
 
-    const result = runCli('plan supersede --v v1 --reason "replan"', env.projectDir, env.homeDir);
+    const result = runCli('plan supersede --v v1.1 --reason "replan"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
 
@@ -241,13 +244,13 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanWithMultipleExecs());
 
-    const result = runCli('plan supersede --v v1 --reason "replaced"', env.projectDir, env.homeDir);
+    const result = runCli('plan supersede --v v1.1 --reason "replaced"', env.projectDir, env.homeDir);
     expect(result.exitCode).toBe(0);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
     const exec = data.exec as Record<string, unknown>;
     const versions = exec.versions as Array<Record<string, unknown>>;
-    const v11 = versions.find(v => v.version === 'v1.1') as Record<string, unknown>;
+    const v11 = versions.find(v => v.version === 'v1.2') as Record<string, unknown>;
 
     // Original supersede_reason must not be overwritten
     expect(v11?.supersede_reason).toBe('old');
@@ -258,7 +261,7 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanWithExec({ execState: 'LOCKED' }));
 
-    const result = runCli('plan supersede --v v1 --reason "replan"', env.projectDir, env.homeDir);
+    const result = runCli('plan supersede --v v1.1 --reason "replan"', env.projectDir, env.homeDir);
     expect(result.exitCode).toBe(0);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
@@ -273,7 +276,7 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExec());
 
-    const result = runCli('plan supersede --v v1 --reason "no exec"', env.projectDir, env.homeDir);
+    const result = runCli('plan supersede --v v1.1 --reason "no exec"', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).not.toMatch(/auto-superseded/i);
@@ -286,7 +289,7 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanNoExec());
 
-    const supersedeResult = runCli('plan supersede --v v1 --reason "regression check"', env.projectDir, env.homeDir);
+    const supersedeResult = runCli('plan supersede --v v1.1 --reason "regression check"', env.projectDir, env.homeDir);
     expect(supersedeResult.exitCode).toBe(0);
 
     const statusResult = runCli('plan status', env.projectDir, env.homeDir);
@@ -310,7 +313,7 @@ describe('sigma plan supersede', () => {
       '# ROADMAP v1\n\n<!-- SIGMA:RENDER:START:stage-overview -->\n<!-- SIGMA:ROADMAP:SECTION:STAGE_OVERVIEW -->\n## 3. Stage Overview\n<!-- SIGMA:RENDER:END:stage-overview -->\n'
     );
 
-    const supersedeResult = runCli('plan supersede --v v1 --reason "regression check"', env.projectDir, env.homeDir);
+    const supersedeResult = runCli('plan supersede --v v1.1 --reason "regression check"', env.projectDir, env.homeDir);
     expect(supersedeResult.exitCode).toBe(0);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
@@ -328,7 +331,7 @@ describe('sigma plan supersede', () => {
     stubProjectRootAnchor(env);
     writeChainFixture(env, 'v1', makeLockedPlanWithExec({ execState: 'LOCKED' }));
 
-    const result = runCli('plan supersede --v v1 --reason "consistency check"', env.projectDir, env.homeDir);
+    const result = runCli('plan supersede --v v1.1 --reason "consistency check"', env.projectDir, env.homeDir);
     expect(result.exitCode).toBe(0);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;

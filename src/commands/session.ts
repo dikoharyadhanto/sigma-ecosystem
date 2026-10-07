@@ -136,7 +136,7 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
   // MCP orientation tool can reuse it without any console output. The printing
   // below is unchanged and must stay byte-identical (regression: role-memory-
   // bootstrap.test.ts, lifecycle-hardening.test.ts).
-  const { projectRoot, identity, chainVersion, chain, gates, nextOps } = buildBootstrapView();
+  const { projectRoot, identity, chainVersion, chain, gates, nextOps, compatibilityWarnings } = buildBootstrapView();
   const role = opts.role?.toUpperCase() as SigmaRole | undefined;
   const roleGuidance = getRoleGuidance(role, gates?.gate_2_open ?? false);
 
@@ -160,6 +160,7 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
   // bagian 6): `intent activate` doesn't require --director-confirm, so
   // bootstrap is the compensating visibility for which chain is active.
   console.log(`Active Chain:     ${chainVersion ?? 'none — no DIR-INTENT yet'}`);
+  for (const warning of compatibilityWarnings) console.log(warning);
   console.log(`Lifecycle Phase:  ${chain?.lifecycle_state ?? '—'}`);
 
   // Director language preferences — always shown, even at default.

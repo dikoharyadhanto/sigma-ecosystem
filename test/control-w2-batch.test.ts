@@ -320,6 +320,7 @@ describe('sigma_prepare_plan_lock / sigma_commit_plan_lock', () => {
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md'), validIntentDoc('v1'));
     // Register a DRAFT plan by hand (chain-level), mirroring plan_new's shape.
     const chain = readChain(env.projectDir, 'v1');
+    chain.versioning_scheme = 'intent_aligned';
     (chain as any).plan.versions.push({
       version: 'v1.1', state: 'DRAFT', file: 'Sigma/contract/FMN-PLAN-v1.1.md',
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(), intent_version_ref: 'v1',

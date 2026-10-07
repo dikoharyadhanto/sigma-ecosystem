@@ -21,7 +21,8 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { setBinding, resetBindingForTest } from '../src/mcp/shared';
 import { Binding, fingerprintRoot } from '../src/mcp/binding';
 import { computeStateRevision } from '../src/mcp/contract';
-import { readChain } from '../src/engine/chain';
+import { readChain, writeChain } from '../src/engine/chain';
+import { parseChainMetadata } from '../src/engine/numbering';
 import { createPlanDraft, createPlanDraftTransactionFiles, PlanDraftError } from '../src/services/planDraftService';
 import { respondControlWrite, staleStateCheck } from '../src/mcp/control/shared';
 import { buildControlServer } from '../src/mcp/control/index';
@@ -391,9 +392,11 @@ describe('sigma-control — sigma_create_plan_draft through a real in-process MC
     env?.cleanup();
   });
 
-  it('creates a plan draft end-to-end and returns a structured, versioned response', async () => {
+  it.each(['legacy_offset', 'intent_aligned'] as const)('creates a %s plan through MCP with matching metadata', async scheme => {
     env = setupTestEnv();
     bootstrapReadyProject(env);
+    const initial = readChain(env.projectDir, 'v1'); initial.versioning_scheme = scheme;
+    writeChain(env.projectDir, 'v1', initial);
     setControlBinding(env.projectDir, 'FMN');
 
     const server = buildControlServer();
@@ -408,7 +411,10 @@ describe('sigma-control — sigma_create_plan_draft through a real in-process MC
     });
     const text = (res.content as Array<{ type: string; text: string }>)[0].text;
     const payload = JSON.parse(text) as Payload;
-    expect(payload.version).toBe('v0.1');
+    const expectedVersion = scheme === 'legacy_offset' ? 'v0.1' : 'v1.1';
+    expect(payload.version).toBe(expectedVersion);
+    const content = fs.readFileSync(path.join(env.sigmaDir, 'contract', `FMN-PLAN-${expectedVersion}.md`), 'utf8');
+    expect(parseChainMetadata(content)).toEqual({ intent: 'v1', versioning_scheme: scheme });
     expect(payload.contract_version).toBe('1.0');
     expect(res.structuredContent).toEqual(payload);
 

@@ -45,6 +45,7 @@ exports.planPromoteTransactionFiles = planPromoteTransactionFiles;
 exports.promotePlanUseCase = promotePlanUseCase;
 const path_1 = __importDefault(require("path"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
+const numbering_1 = require("../engine/numbering");
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const roadmap_1 = require("../utils/roadmap");
@@ -187,8 +188,15 @@ function promotePlanUseCase(projectRoot, id, title, focus) {
     const oldAbsPath = assertPendingPlanCanonicalPath(projectRoot, id, pending.file);
     const newRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'contract', `FMN-PLAN-${newVersion}.md`));
     const newAbsPath = path_1.default.join(projectRoot, newRelPath);
+    (0, chain_1.validatePlanNumbering)(chain, newVersion, chain.intent.version);
+    if (fs_extra_1.default.existsSync(newAbsPath))
+        throw new PlanPromoteError('INVALID_OPERATION', `PLAN FILE CONFLICT: ${newRelPath} already exists.`);
+    const promotedContent = (0, numbering_1.withChainMetadata)(fs_extra_1.default.readFileSync(oldAbsPath, 'utf8'), {
+        intent: chain.intent.version, versioning_scheme: (0, numbering_1.resolveVersioningScheme)(chain),
+    });
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(newAbsPath));
     fs_extra_1.default.moveSync(oldAbsPath, newAbsPath);
+    fs_extra_1.default.writeFileSync(newAbsPath, promotedContent, 'utf8');
     (0, chain_1.promotePendingPlan)(chain, id, newVersion, newRelPath, chain.intent.version, title, focus);
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
     (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, chain);

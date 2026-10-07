@@ -11,6 +11,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildBootstrapView = buildBootstrapView;
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
+const numbering_1 = require("../engine/numbering");
 // Pure reads only — mirrors the data-gathering prologue of runBootstrap.
 // A fresh project (before the first `intent new`) has no chain yet; that is a
 // valid state, represented as chain: null / chainVersion: null, matching the
@@ -23,6 +24,13 @@ function buildBootstrapView(projectRoot = (0, fs_1.findProjectRoot)()) {
         : { chainVersion: null, data: null };
     const gates = chain ? (0, chain_1.getGateStatus)(chain) : null;
     const nextOps = chain ? (0, chain_1.getNextValidOperations)(chain) : ['intent new'];
-    return { projectRoot, identity, chainVersion, chain, gates, nextOps };
+    const numbering = chain ? {
+        scheme: (0, numbering_1.resolveVersioningScheme)(chain), intent_version: chain.intent.version,
+        plan_major: (0, numbering_1.planMajorForChain)(chain), source: chain.versioning_scheme === undefined ? 'legacy_fallback' : 'chain',
+    } : null;
+    const compatibilityWarnings = numbering?.scheme === 'legacy_offset' ? [
+        `[KOMPATIBILITAS] INTENT ${numbering.intent_version} memakai penomoran lama: PLAN/EXEC v${numbering.plan_major}.x (major PLAN = major INTENT - 1). Pola ini dipertahankan untuk kompatibilitas chain lama. Gunakan pola tersebut selama bekerja pada chain ini.`,
+    ] : [];
+    return { projectRoot, identity, chainVersion, chain, gates, nextOps, numbering, compatibilityWarnings };
 }
 //# sourceMappingURL=bootstrapView.js.map

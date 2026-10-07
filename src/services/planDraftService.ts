@@ -16,6 +16,8 @@
 // and stays CLI-only for now (not part of the Stage E W1 primitive list).
 
 import path from 'path';
+import fs from 'fs-extra';
+import { writeChainMetadata } from '../engine/numbering';
 import {
   ChainState,
   readActiveChain,
@@ -118,12 +120,14 @@ export function createPlanDraft(input: CreatePlanDraftInput): CreatePlanDraftRes
   const version = nextPlanVersion(chain, intentVersionRef);
   const relPath = toPosix(path.join('Sigma', 'contract', `FMN-PLAN-${version}.md`));
   const absPath = path.join(projectRoot, relPath);
+  if (fs.existsSync(absPath)) throw new PlanDraftError('INVALID_OPERATION', `PLAN FILE CONFLICT: ${relPath} already exists. Refusing to overwrite.`);
 
   // Artifact write first, chain last — same order intentDraftService uses,
   // same rationale (a half-written artifact with no chain entry is an
   // orphan file, recoverable; a chain entry pointing at a missing artifact
   // is not).
   copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);
+  writeChainMetadata(absPath, chain);
   controlTestFailpoint('plan_create_after_artifact');
 
   registerPlanDraft(chain, version, relPath, intentVersionRef, title, focus);

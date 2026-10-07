@@ -15,7 +15,8 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 
 import { setBinding, resetBindingForTest } from '../src/mcp/shared';
 import { Binding, fingerprintRoot } from '../src/mcp/binding';
-import { readChain } from '../src/engine/chain';
+import { readChain, writeChain } from '../src/engine/chain';
+import { parseChainMetadata } from '../src/engine/numbering';
 import { buildControlServer } from '../src/mcp/control/index';
 import { respondControlWrite } from '../src/mcp/control/shared';
 import { promotePlanUseCase, planPromoteTransactionFiles } from '../src/services/planPromoteService';
@@ -147,14 +148,17 @@ describe('sigma_prepare_plan_promote / sigma_commit_plan_promote', () => {
     env.cleanup();
   });
 
-  it('end-to-end: promotes the pending plan into the DRAFT queue with an assigned version', async () => {
+  it.each(['legacy_offset', 'intent_aligned'] as const)('end-to-end: %s promotion preview matches committed version and metadata', async scheme => {
     const env = setupTestEnv();
     projectWithPendingPlan(env);
+    const initial = readChain(env.projectDir, 'v1'); initial.versioning_scheme = scheme;
+    writeChain(env.projectDir, 'v1', initial);
+    const expectedVersion = scheme === 'legacy_offset' ? 'v0.1' : 'v1.1';
     const s = await session(env, 'FMN');
 
     const prep = await s.call('sigma_prepare_plan_promote', { id: 'ab12', title: 'Stage 2', focus: 'Build the thing', idempotency_key: 'p1' });
     expect(prep.isError, JSON.stringify(prep.payload)).not.toBe(true);
-    expect(prep.payload.projected_version).toBe('v0.1');
+    expect(prep.payload.projected_version).toBe(expectedVersion);
     const chainMidway = readChain(env.projectDir, 'v1');
     expect(chainMidway.plan.pending).toHaveLength(1); // prepare must not mutate
 
@@ -168,13 +172,14 @@ describe('sigma_prepare_plan_promote / sigma_commit_plan_promote', () => {
       idempotency_key: 'c1',
     });
     expect(commit.isError, JSON.stringify(commit.payload)).not.toBe(true);
-    expect(commit.payload.version).toBe('v0.1');
+    expect(commit.payload.version).toBe(expectedVersion);
 
     const chainAfter = readChain(env.projectDir, 'v1');
     expect(chainAfter.plan.pending).toHaveLength(0);
     expect(chainAfter.plan.versions).toHaveLength(1);
-    expect(chainAfter.plan.versions[0]).toMatchObject({ version: 'v0.1', state: 'DRAFT', file: 'Sigma/contract/FMN-PLAN-v0.1.md' });
-    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v0.1.md'))).toBe(true);
+    const promotedFile = `Sigma/contract/FMN-PLAN-${expectedVersion}.md`;
+    expect(chainAfter.plan.versions[0]).toMatchObject({ version: expectedVersion, state: 'DRAFT', file: promotedFile });
+    expect(parseChainMetadata(fs.readFileSync(path.join(env.projectDir, promotedFile), 'utf8'))).toEqual({ intent: 'v1', versioning_scheme: scheme });
     expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'pending', 'FMN-PLAN-ab12.md'))).toBe(false);
     await s.close();
     env.cleanup();

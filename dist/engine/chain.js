@@ -33,6 +33,8 @@ exports.getInvalidWarningLines = getInvalidWarningLines;
 exports.assertChainCanMutate = assertChainCanMutate;
 exports.getGateStatus = getGateStatus;
 exports.runDoctorReconciliation = runDoctorReconciliation;
+exports.validatePlanNumbering = validatePlanNumbering;
+exports.validateChainNumbering = validateChainNumbering;
 exports.nextPlanVersion = nextPlanVersion;
 exports.nextExecVersion = nextExecVersion;
 exports.ratifyIntent = ratifyIntent;
@@ -64,6 +66,7 @@ const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
 const config_1 = require("../config");
 const fs_1 = require("../utils/fs");
+const numbering_1 = require("./numbering");
 // ── Overrides (read by doctor.ts / override.ts) ─────────────────────────────
 function readOverrides(projectRoot) {
     const filePath = path_1.default.join(projectRoot, config_1.OVERRIDES_FILE);
@@ -315,6 +318,27 @@ function readChain(projectRoot, chainVersion) {
     const chain = raw;
     normalizeIntentStateOnRead(chain);
     normalizeFilePathsOnRead(chain);
+    const scheme = (0, numbering_1.resolveVersioningScheme)(chain);
+    const artifacts = [
+        { domain: 'intent', entry: chain.intent },
+        ...chain.plan.versions.map(entry => ({ domain: 'plan', entry })),
+        ...chain.exec.versions.map(entry => ({ domain: 'exec', entry })),
+    ];
+    for (const { domain, entry } of artifacts) {
+        if (!entry.file || !fs_extra_1.default.existsSync(path_1.default.join(projectRoot, entry.file)))
+            continue;
+        const layout = config_1.ARTIFACT_LAYOUT[domain];
+        const declared = entry.file.replace(/\\/g, '/');
+        // Do not open arbitrary tracker paths before the caller's artifact-boundary
+        // validation. Metadata is inspected only at a recognized artifact location.
+        if (!layout.dirs.some(dir => new RegExp(`^${config_1.PROJECT_SIGMA_DIR}/${dir}/${layout.prefix}-${layout.versionSource}\\.md$`).test(declared)))
+            continue;
+        const metadata = (0, numbering_1.readChainMetadata)(path_1.default.join(projectRoot, entry.file), projectRoot);
+        if (metadata && (metadata.intent !== chain.intent.version || metadata.versioning_scheme !== scheme ||
+            ('plan_version_ref' in entry && metadata.plan !== entry.plan_version_ref))) {
+            throw new Error(`Chain identity conflict in ${entry.file}. Run sigma doctor --reconstruct --v ${chainVersion}.`);
+        }
+    }
     return chain;
 }
 function writeChain(projectRoot, chainVersion, data) {
@@ -346,10 +370,11 @@ function readProjectIdentity(projectRoot) {
 // than creating an empty shell and registering the intent as a second step
 // (intent is non-nullable on ChainState, so there is no valid intermediate
 // "shell with no intent" state).
-function createInitialChain(chainVersion, intentFilePath, title, focus) {
+function createInitialChain(chainVersion, intentFilePath, title, focus, versioningScheme = 'legacy_offset') {
     const now = new Date().toISOString();
     return {
         schema_version: config_1.SCHEMA_VERSION,
+        versioning_scheme: versioningScheme,
         chain_version: chainVersion,
         created_at: now,
         updated_at: now,
@@ -550,6 +575,7 @@ function describeGate3Blockers(chain) {
     return reasons;
 }
 function validateChainSemantics(chain) {
+    validateChainNumbering(chain);
     if (chain.schema_version !== config_1.SCHEMA_VERSION && isNewerSchema(chain.schema_version, config_1.SCHEMA_VERSION)) {
         throw semanticError(chain.chain_version, 'schema_version', `schema_version "${chain.schema_version}" is newer than supported "${config_1.SCHEMA_VERSION}"`);
     }
@@ -630,6 +656,8 @@ function getInvalidWarningLines(chain) {
     });
 }
 function assertChainCanMutate(chain) {
+    // Recovery mode may relax lifecycle gates, never chain identity.
+    validateChainNumbering(chain);
     if (hasInvalidRuntime(chain)) {
         process.stderr.write(`WARNING: Sigma runtime is in INVALID recovery mode for chain ${chain.chain_version}. ` +
             'Normal gate enforcement is temporarily relaxed. Run `sigma doctor` to re-check recovery.\n');
@@ -662,6 +690,20 @@ function runDoctorReconciliation(chain, overrides = []) {
     const nextMarkers = [];
     const repaired = [];
     const now = new Date().toISOString();
+    const scheme = (0, numbering_1.resolveVersioningScheme)(chain);
+    if (chain.versioning_scheme === undefined) {
+        chain.versioning_scheme = scheme;
+        repaired.push('versioning_scheme persisted as legacy_offset (unmarked legacy fallback)');
+    }
+    try {
+        validateChainNumbering(chain);
+    }
+    catch (error) {
+        nextMarkers.push(buildMarker(previous, now, {
+            id: 'numbering:identity', domain: 'intent', reason: error.message,
+            gate: 'gate_1_open', chain: markerChain(chain.intent.version, null, null),
+        }));
+    }
     // Migrate the RATIFIED rename (Director directive 2026-08-12) from
     // in-memory-only to persisted-on-disk. readChain() already normalized
     // intent.state/locked_at before this function ever saw the chain, so
@@ -823,11 +865,30 @@ function runDoctorReconciliation(chain, overrides = []) {
 // parseMajorVersion/parseMinorVersion themselves live near the top of this
 // file (relocated from progress.ts, PLAN-EVAL-05) — they never touched
 // ProgressJson/ChainState shape at all.
-// PLAN major = INTENT major − 1; minor starts at 1
+function validatePlanNumbering(chain, version, intentVersionRef) {
+    const expectedMajor = (0, numbering_1.planMajorForChain)(chain);
+    if (intentVersionRef !== chain.intent.version || !/^v\d+\.[1-9]\d*$/.test(version) || parseMajorVersion(version) !== expectedMajor) {
+        throw new Error(`Version sync error: PLAN ${version} is not valid under INTENT ${chain.intent.version} (${(0, numbering_1.resolveVersioningScheme)(chain)}). Expected PLAN major: ${expectedMajor}; reference must equal this chain's INTENT.`);
+    }
+}
+function validateChainNumbering(chain) {
+    (0, numbering_1.resolveVersioningScheme)(chain);
+    for (const plan of chain.plan.versions) {
+        validatePlanNumbering(chain, plan.version, plan.intent_version_ref ?? chain.intent.version);
+    }
+    for (const exec of chain.exec.versions) {
+        if (exec.plan_version_ref && exec.version !== exec.plan_version_ref) {
+            throw new Error(`EXEC ${exec.version} must equal PLAN ${exec.plan_version_ref}.`);
+        }
+    }
+}
+// Major follows the immutable chain scheme; all historical minors remain reserved.
 function nextPlanVersion(chain, intentVersionRef) {
-    const planMajor = parseMajorVersion(intentVersionRef) - 1;
+    const planMajor = (0, numbering_1.planMajorForChain)(chain);
+    validatePlanNumbering(chain, `v${planMajor}.1`, intentVersionRef);
     const existingUnderMajor = chain.plan.versions.filter(v => parseMajorVersion(v.version) === planMajor);
-    return `v${planMajor}.${existingUnderMajor.length + 1}`;
+    const highestMinor = Math.max(0, ...existingUnderMajor.map(v => parseMinorVersion(v.version)));
+    return `v${planMajor}.${highestMinor + 1}`;
 }
 // PLAN-IMPL-MULTIDRAFT-LOCK §6.3 (Director directive 2026-08-12) — EXEC
 // version is always identical to the PLAN version it references, never
@@ -1040,13 +1101,9 @@ function lockActiveRoadmap(chain) {
 // Unchanged logic from progress.ts — plan stays an array tracker, retyped
 // for ChainState.
 function registerPlanDraft(chain, version, filePath, intentVersionRef, title, focus) {
-    const planMajor = parseMajorVersion(version);
-    const expectedPlanMajor = parseMajorVersion(intentVersionRef) - 1;
-    if (planMajor !== expectedPlanMajor) {
-        throw new Error(`Version sync error: FMN-PLAN ${version} (major ${planMajor}) is not valid under DIR-INTENT ${intentVersionRef}. ` +
-            `Expected PLAN major: ${expectedPlanMajor} (INTENT major ${parseMajorVersion(intentVersionRef)} − 1). ` +
-            `Valid PLAN versions: v${expectedPlanMajor}.1, v${expectedPlanMajor}.2, ...`);
-    }
+    validatePlanNumbering(chain, version, intentVersionRef);
+    if (chain.plan.versions.some(v => v.version === version))
+        throw new Error(`Duplicate PLAN version: ${version}`);
     const now = new Date().toISOString();
     const entry = {
         version, state: 'DRAFT', file: filePath,
@@ -1120,6 +1177,9 @@ function registerPendingPlan(chain, id, filePath, title, focus) {
     chain.plan.pending.push(entry);
 }
 function promotePendingPlan(chain, id, version, newFilePath, intentVersionRef, title, focus) {
+    validatePlanNumbering(chain, version, intentVersionRef);
+    if (chain.plan.versions.some(v => v.version === version))
+        throw new Error(`Duplicate PLAN version: ${version}`);
     const idx = chain.plan.pending.findIndex(p => p.id === id);
     if (idx === -1)
         throw new Error(`Pending plan ID "${id}" not found`);
