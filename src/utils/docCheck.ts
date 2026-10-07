@@ -194,6 +194,38 @@ const PLAN_SPEC_V3: SigmaDocSpec = {
   verdictSectionId: 'AUD_NOTES',
 };
 
+// First execution-document schema version with the unnumbered section layout
+// (summary first, build result and verification in one section). Earlier
+// schemas keep validating against DOC_SPECS.exec.
+const EXEC_SCHEMA_V3 = 3;
+
+const EXEC_SPEC_V3: SigmaDocSpec = {
+  heading: 'Sigma Exec Check',
+  expectedType: 'DEV_EXEC',
+  fallbackPath: path.join('Sigma', 'evidence', 'DEV-EXEC.md'),
+  requiredSections: [
+    'DIRECTOR_SUMMARY',
+    'IMPLEMENTATION_PLAN',
+    'FMN_PRE_BUILD_REVIEW',
+    'BUILD_RESULT_AND_VERIFICATION',
+    'DEVIATIONS_ISSUES_LIMITATIONS',
+    'FMN_POST_BUILD_REVIEW',
+    'DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS',
+  ],
+  // Present only when the author chooses to research; nothing gates on it.
+  optionalSections: ['TECHNICAL_RESEARCH'],
+  sectionOrder: [
+    'DIRECTOR_SUMMARY',
+    'IMPLEMENTATION_PLAN',
+    'TECHNICAL_RESEARCH',
+    'FMN_PRE_BUILD_REVIEW',
+    'BUILD_RESULT_AND_VERIFICATION',
+    'DEVIATIONS_ISSUES_LIMITATIONS',
+    'FMN_POST_BUILD_REVIEW',
+    'DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS',
+  ],
+};
+
 const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
   intent: {
     heading: 'Sigma Intent Check',
@@ -352,6 +384,7 @@ function resolveDocSpec(domain: SigmaDocDomain, schema: string | null): SigmaDoc
   if (Number.isInteger(version)) {
     if (domain === 'intent' && version >= INTENT_SCHEMA_V5) return INTENT_SPEC_V5;
     if (domain === 'plan' && version >= PLAN_SCHEMA_V3) return PLAN_SPEC_V3;
+    if (domain === 'exec' && version >= EXEC_SCHEMA_V3) return EXEC_SPEC_V3;
   }
   return DOC_SPECS[domain];
 }
@@ -711,6 +744,53 @@ function evaluateExecVerdictGate(
   }
 }
 
+const PLAN_VERSION_REFERENCE = /PLAN[-\s]?v?\s*\d+/i;
+const PLACEHOLDER_TEXT = '[...]';
+
+// Blocking: the summary is stated. Advisory (warnings only): the plan section
+// names the source plan version, and no `[...]` placeholder remains in a
+// required section. A placeholder can be legitimate content (a code sample),
+// which is why it only warns.
+function evaluateExecV3Gate(
+  spec: SigmaDocSpec,
+  relevantMarkers: SectionMarker[],
+  lines: string[],
+  requirements: SigmaDocRequirement[],
+  passes: string[],
+  warnings: string[],
+): void {
+  const summaryMarker = relevantMarkers.find(m => m.sectionId === 'DIRECTOR_SUMMARY');
+  if (summaryMarker) {
+    const end = sectionEndLine(relevantMarkers, summaryMarker, lines.length);
+    const summaryText = findHeadingBody(lines, summaryMarker.line, end, /^###\s*Summary\s*$/i);
+    requirements.push({ label: 'Director Summary is stated', satisfied: !isPlaceholderContent(summaryText), scope: 'lock' });
+  }
+
+  const planMarker = relevantMarkers.find(m => m.sectionId === 'IMPLEMENTATION_PLAN');
+  if (planMarker) {
+    const end = sectionEndLine(relevantMarkers, planMarker, lines.length);
+    const body = lines.slice(planMarker.line, end).join('\n');
+    if (PLAN_VERSION_REFERENCE.test(body)) {
+      passes.push('Implementation Plan: PLAN version named');
+    } else {
+      warnings.push('Implementation Plan: PLAN version not named');
+    }
+  }
+
+  const unfilled = relevantMarkers
+    .filter(marker => spec.requiredSections.includes(marker.sectionId))
+    .filter(marker => {
+      const end = sectionEndLine(relevantMarkers, marker, lines.length);
+      return lines.slice(marker.line, end).some(line => line.includes(PLACEHOLDER_TEXT));
+    })
+    .map(marker => marker.sectionId);
+  if (unfilled.length > 0) {
+    warnings.push(`Placeholder ${PLACEHOLDER_TEXT} remains in: ${unfilled.join(', ')}`);
+  } else {
+    passes.push('No placeholder remains in required sections');
+  }
+}
+
 function evaluateCloseVerdictGate(
   relevantMarkers: SectionMarker[],
   lines: string[],
@@ -930,6 +1010,9 @@ export function validateSigmaDocFile(
 
   if (domain === 'exec') {
     evaluateExecVerdictGate(relevantMarkers, lines, requirements, passes, warnings);
+    if (spec === EXEC_SPEC_V3) {
+      evaluateExecV3Gate(spec, relevantMarkers, lines, requirements, passes, warnings);
+    }
   }
 
   if (domain === 'close') {

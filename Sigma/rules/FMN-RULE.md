@@ -545,9 +545,9 @@ FMN MUST send a message to DEV immediately after PLAN is locked.
 Message must include:
 
 - PLAN version that was just locked (e.g., PLAN-v1.2)
-- instruction to open a new EXEC and begin filling the DEV pre-build planning sections
+- instruction to open a new EXEC and begin filling the Implementation Plan section
 - key highlights from the plan that DEV must pay attention to (acceptance criteria, constraints, test contract notes)
-- reminder to fill the DEV Pre-Build Assessment section before starting any code
+- reminder to complete the Implementation Plan section, including Readiness Status, before starting any code
 
 ```
 sigma send --from fmn --to DEV --subject "PLAN-v{X.Y} LOCKED — Open EXEC" \
@@ -557,7 +557,7 @@ sigma send --from fmn --to DEV --subject "PLAN-v{X.Y} LOCKED — Open EXEC" \
 Message file content:
 
 ```
-Plan is locked. Please open a new EXEC and fill the DEV pre-build planning sections and the DEV Pre-Build Assessment section before writing any code.
+Plan is locked. Please open a new EXEC and complete the Implementation Plan section, including Readiness Status, before writing any code.
 Key highlights:
 - Acceptance criteria: [summary]
 - Constraints: [summary]

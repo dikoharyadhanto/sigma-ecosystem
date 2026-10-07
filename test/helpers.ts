@@ -747,6 +747,58 @@ Test director's summary.
 `;
 }
 
+// DEV_EXEC schema 3 (E03): unnumbered layout, Director Summary first.
+export function validExecDocV3(version: string, planVersionRef: string, verdict = 'READY_FOR_LOCK'): string {
+  return `<!-- SIGMA:DOC type=DEV_EXEC schema=3 -->
+# DEV-EXEC ${version}
+
+<!-- SIGMA:DEV_EXEC:SECTION:DIRECTOR_SUMMARY -->
+## Director Summary
+
+### Summary
+
+Test summary.
+
+<!-- SIGMA:DEV_EXEC:SECTION:IMPLEMENTATION_PLAN -->
+## Implementation Plan
+
+| Link | References |
+|:---- |:---------- |
+| PLAN version | PLAN-${planVersionRef} |
+
+<!-- SIGMA:DEV_EXEC:SECTION:FMN_PRE_BUILD_REVIEW -->
+## FMN Pre-Build Review
+
+Test pre-build review.
+
+<!-- SIGMA:DEV_EXEC:SECTION:BUILD_RESULT_AND_VERIFICATION -->
+## Build Result and Verification
+
+Test build result.
+
+<!-- SIGMA:DEV_EXEC:SECTION:DEVIATIONS_ISSUES_LIMITATIONS -->
+## Deviations, Issues, and Limitations
+
+No material deviation, issue, or limitation.
+
+<!-- SIGMA:DEV_EXEC:SECTION:FMN_POST_BUILD_REVIEW -->
+## FMN Post-Build Review
+
+| AC ID | Expected Result (PLAN) | Actual Result and Evidence | Status |
+|:----- |:---------------------- |:-------------------------- |:------ |
+| AC-001 | Test result. | Test evidence. | PASS |
+
+### Advisory Verdict
+
+- [x] ${verdict}
+
+<!-- SIGMA:DEV_EXEC:SECTION:DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS -->
+## Director Observation Report & Minor Requests
+
+No observations from Director manual testing.
+`;
+}
+
 export function validCloseDoc(version: string, verdict = 'CLOSE_ACCEPTED'): string {
   return `<!-- SIGMA:DOC type=DIR_CLOSE schema=2 -->
 # DIR-CLOSE ${version}

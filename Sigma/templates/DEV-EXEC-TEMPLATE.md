@@ -1,51 +1,56 @@
-<!-- SIGMA:DOC type=DEV_EXEC schema=2 -->
+<!-- SIGMA:DOC type=DEV_EXEC schema=3 -->
 # DEV-EXEC
 
-> Implementation approach, execution report, verification evidence, and developer walkthrough.
-> FMN reviews are recorded in FMN Pre-Build Review and FMN Post-Build Review. Director observations and minor requests are recorded in Director Observation Report & Minor Requests.
->
-> **Lock State**: Managed by Sigma CLI via `progress-v<N>.json`. Do not edit lock state here.
-> **Section Ownership**: Source Plan Alignment through Key Technical Decisions are DEV pre-build. FMN Pre-Build Review is FMN pre-build. Implementation Walkthrough through DEV Completion Statement are DEV post-build. FMN Post-Build Review is FMN post-build. Director Observation Report & Minor Requests is DEV-authored — transcribed from Director's direct chat report.
+> Implementation plan, build result, and verification evidence for the locked PLAN.
+> Lock state is managed by Sigma CLI. Do not record it here.
+> Ownership: DEV fills Implementation Plan and Technical Research before the build, and Build Result and Verification and Deviations, Issues, and Limitations after it. FMN fills FMN Pre-Build Review and FMN Post-Build Review; DEV does not write in them. DEV transcribes Director Observation Report & Minor Requests from the Director's chat report. DEV or FMN fills Director Summary, last.
 
 ---
 
-<!-- SIGMA:DEV_EXEC:SECTION:SOURCE_PLAN_ALIGNMENT -->
-## 1. Source Plan Alignment
+<!-- SIGMA:DEV_EXEC:SECTION:DIRECTOR_SUMMARY -->
+## Director Summary
 
-> **Filled by DEV — Before Build**
+> Five sentences at most, in plain language and without IDs. The Director should be able to judge from this section alone what was built and whether it is ready. Fill it last, after FMN Post-Build Review. Include any decision or deviation the Director must know about.
 
-Summarize how this execution follows the locked FMN-PLAN.
+### Summary
 
-- FMN task plan followed:
-- Acceptance criteria targeted:
-- Test contract referenced:
-- Constraints respected:
-- Known implementation boundary:
+[...]
+
+### Open Question / Unclear Decision
+
+> Optional. Delete this heading and the placeholder when nothing applies.
+
+[...]
 
 ---
 
-<!-- SIGMA:DEV_EXEC:SECTION:DEV_PRE_BUILD_ASSESSMENT -->
-## 2. DEV Pre-Build Assessment
+<!-- SIGMA:DEV_EXEC:SECTION:IMPLEMENTATION_PLAN -->
+## Implementation Plan
 
-> **Filled by DEV — Before Build** (after studying FMN-PLAN and prior session artifacts)
+> Filled by DEV before the build, after studying the PLAN and prior session artifacts.
 
-### Context Reviewed
+### Source Alignment
 
-- Prior DEV-EXEC studied: [version(s) or N/A]
-- Inbox handoff messages consulted: [list or N/A]
+| Link | References |
+|:---- |:---------- |
+| PLAN version | PLAN-v{X} |
+| Acceptance criteria targeted | [AC-xxx, ...] |
+| Constraints respected | [...] / none |
+| Known implementation boundary | [...] |
+| Prior EXEC studied | [version(s)] / N/A |
+| Inbox handoff messages consulted | [...] / N/A |
 
 ### Plan Assessment
 
 | Item | DEV Assessment | Status |
-| :--- | :--- | :--- |
-| [AC or task from FMN-PLAN] | [DEV's understanding or concern] | Clear / Unclear |
+|:---- |:-------------- |:------ |
+| [AC or task from the PLAN] | [DEV's understanding or concern] | Clear / Unclear |
 
 ### Questions & Concerns
 
-[DEV writes open questions, disagreements, or risks not covered by the plan.
-If none, write: No concerns — plan is clear and sufficient to proceed.]
+[Open questions, disagreements, or risks the PLAN does not cover. If none: No concerns. The plan is clear and sufficient to proceed.]
 
-### DEV Readiness Status
+### Readiness Status
 
 > Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
 
@@ -53,35 +58,34 @@ If none, write: No concerns — plan is clear and sufficient to proceed.]
 - [ ] NEED_CLARIFICATION
 - [ ] OTHER: [describe]
 
-[If NEED_CLARIFICATION: list specific unresolved items that require FMN or Director response before DEV proceeds to Implementation Approach]
+[If NEED_CLARIFICATION: list the unresolved items that need an FMN or Director response before DEV continues.]
+
+### Approach
+
+[What will be built or changed, and how.]
+
+### Files / Components To Change
+
+| File / Component | Action | Purpose |
+|:---------------- |:------ |:------- |
+| [...] | Create / Modify / Delete | [...] |
+
+### Key Technical Decisions
+
+> A rejected alternative is recorded in Trade-Off / Risk.
+
+| Decision | Rationale | Trade-Off / Risk |
+|:-------- |:--------- |:---------------- |
+| [...] | [...] | [...] |
 
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:TECHNICAL_RESEARCH -->
-## 3. Technical Research
+## Technical Research
 
-> Filled by DEV — Before Build. Entirely DEV's discretion.
-> Technical Research is an execution-time research mechanism for resolving
-> implementation-specific knowledge gaps. It does not re-open, replace, or
-> supersede DIR-INTENT Comprehensive Research.
->
-> **No gate, no AI-role review.** Unlike DIR-INTENT's Comprehensive
-> Research, nothing here blocks `sigma exec lock`, and only DEV's own
-> judgment triggers it — Director or FMN cannot mark it NEEDED. No AI role
-> (FMN, AUD, ARC) is required to review, verify, or approve what DEV writes
-> in this section. "No gate" does not mean "no accountability" — if an
-> unverified assumption later causes a problem, that remains legitimate
-> content for Issues Encountered or FMN Post-Build Review, exactly as any
-> other DEV judgment already is.
-> **Must not become a backdoor to silently change FMN-PLAN.** If research
-> reveals that a PLAN-specified approach is actually wrong, that is a
-> finding, not authority to unilaterally substitute a different approach.
-> If the finding stays within DEV's Freedom of Method
-> (`Sigma/rules/DEV-RULE.md`), proceed and record it in Deviations From
-> FMN-PLAN. If it touches a contract-level constraint or decision, use the
-> Escalation Path before acting.
+> Optional. Delete this section when not needed. Filled by DEV before the build, at DEV's discretion; there is no gate and no AI role reviews it. Procedure and limits are in DEV-RULE.
 
-### 3.1 Status
+### Status
 
 - [ ] NEEDED
 - [ ] NOT_NEEDED
@@ -90,108 +94,36 @@ If NOT_NEEDED, state briefly why existing knowledge is sufficient:
 
 [...]
 
-### 3.2 Technical / Implementation Approach Research
-
-> Investigating the correct way to implement a specific technical
-> requirement (library/API/framework behavior, established pattern or
-> algorithm).
-> Sources: official documentation from the official/authoritative source
-> (preferred), or a reputable technical Q&A community (e.g. Stack Overflow,
-> GIS Stack Exchange). Cite by `Sigma/reference/reference-list.md` row ID
-> only (LA/WL/OS) — reuse the project-wide reference list, do not build a
-> parallel citation system.
-> Each entry must resolve into a decision, not just record that research
-> happened. Fixed shape: **Question → Finding → Decision → Implication**.
-> "Decision" is DEV's own implementation-level judgment call, already
-> within DEV's existing Freedom of Method — not a contract-level decision.
-> "Implication" should cross-reference the specific Implementation Approach
-> / Key Technical Decisions item the finding feeds into.
+### Implementation Approach Research
 
 | Question | Finding | Decision | Implication |
-| :--- | :--- | :--- | :--- |
-| [...] | [...] (cite reference-list.md row ID) | [...] | [...] |
+|:-------- |:------- |:-------- |:----------- |
+| [...] | [...] (reference-list row ID) | [...] | [...] |
 
-### 3.3 Technical Risk / Unknown Resolution
-
-> Resolving a specific technical uncertainty already flagged in §2's
-> Questions & Concerns or in Key Technical Decisions, before DEV commits to
-> an approach.
-> Must NOT re-derive DIR-INTENT's Theory/Concept or Problem/Data grounding
-> — cite DIR-INTENT by ID if relevant, do not re-argue it. Same entry shape
-> as §3.2: Question / Finding / Decision / Implication.
+### Technical Risk / Unknown Resolution
 
 | Question | Finding | Decision | Implication |
-| :--- | :--- | :--- | :--- |
-| [...] | [...] (cite reference-list.md row ID) | [...] | [...] |
-
----
-
-<!-- SIGMA:DEV_EXEC:SECTION:IMPLEMENTATION_APPROACH -->
-## 4. Implementation Approach
-
-> **Filled by DEV — Before Build**
-
-### What Will Be Built / Changed
-
-[...]
-
-### Technical Approach
-
-[...]
-
-### Rationale
-
-Why this approach fits the FMN-PLAN and DIR-INTENT:
-
-[...]
-
-### Alternatives Considered
-
-| Option | Reason Rejected / Deferred |
-| :---   | :---                       |
-| [...]  | [...]                      |
-
----
-
-<!-- SIGMA:DEV_EXEC:SECTION:FILES_COMPONENTS_TO_CHANGE -->
-## 5. Files / Components To Change
-
-> **Filled by DEV — Before Build**
-
-| File / Component | Action                   | Purpose |
-| :---             | :---                     | :---    |
-| [...]            | Create / Modify / Delete | [...]   |
-| [...]            | Create / Modify / Delete | [...]   |
-
----
-
-<!-- SIGMA:DEV_EXEC:SECTION:KEY_TECHNICAL_DECISIONS -->
-## 6. Key Technical Decisions
-
-> **Filled by DEV — Before Build**
-
-| Decision | Rationale | Trade-Off / Risk |
-| :---     | :---      | :---             |
-| [...]    | [...]     | [...]            |
+|:-------- |:------- |:-------- |:----------- |
+| [...] | [...] (reference-list row ID) | [...] | [...] |
 
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:FMN_PRE_BUILD_REVIEW -->
-## 7. FMN Pre-Build Review
+## FMN Pre-Build Review
 
-> **Filled by FMN — After DEV Pre-Build Planning (Sections 1–6). DEV must not write in this section.**
+> Filled by FMN after DEV completes Implementation Plan. DEV must not write in this section.
 
 ### Pre-Build Clarification
 
-> *(Populate only if DEV Pre-Build Assessment status was NEED_CLARIFICATION)*
+> Only if Readiness Status was NEED_CLARIFICATION.
 
-[FMN answers to DEV's open items from DEV Pre-Build Assessment]
+[FMN answers to DEV's open items]
 
 ### Plan Review
 
 | Item | FMN Assessment | Status |
-| :--- | :--- | :--- |
-| [AC or constraint from FMN-PLAN] | [FMN's assessment of DEV's plan] | Approved / Concern / Rejected |
+|:---- |:-------------- |:------ |
+| [AC or constraint from the PLAN] | [FMN's assessment of DEV's plan] | Approved / Concern / Rejected |
 
 ### Pre-Build Verdict
 
@@ -208,10 +140,10 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ---
 
-<!-- SIGMA:DEV_EXEC:SECTION:IMPLEMENTATION_WALKTHROUGH -->
-## 8. Implementation Walkthrough
+<!-- SIGMA:DEV_EXEC:SECTION:BUILD_RESULT_AND_VERIFICATION -->
+## Build Result and Verification
 
-> **Filled by DEV — After Build**
+> Filled by DEV after the build.
 
 ### What Was Implemented
 
@@ -223,132 +155,53 @@ Why this approach fits the FMN-PLAN and DIR-INTENT:
 
 ### Main Flow
 
+> Optional. Keep for a non-trivial change; delete for a small one.
+
 1. [...]
-2. [...]
-3. [...]
 
 ### Important Logic / Abstractions
 
+> Optional. Keep for a non-trivial change; delete for a small one.
+
 - [...]
 
----
+### Key Output Locations
 
-<!-- SIGMA:DEV_EXEC:SECTION:DEVIATIONS_FROM_FMN_PLAN -->
-## 9. Deviations From FMN-PLAN
+> One row per Key Output of the PLAN. A behavior change with no file is "No file output".
 
-> **Filled by DEV — After Build**
-> Record any deviation from the locked FMN-PLAN. Do not hide deviations.
+| Key Output No | Location |
+|:------------- |:-------- |
+| 1 | [...] |
 
-| Deviation | Reason | Impact              | Needs FMN Review? |
-| :---      | :---   | :---                | :---              |
-| [...]     | [...]  | Low / Medium / High | Yes / No          |
+### Dependency / Environment Changes
 
-If no deviation exists, write:
+| Dependency / Tool / Environment | Action | Reason | Risk |
+|:------------------------------- |:------ |:------ |:---- |
+| [...] | Add / Update / Remove / Configure | [...] | [...] |
 
-> No material deviation from FMN-PLAN.
+If none, replace the table with: No dependency or environment changes.
 
-> **Deviation Update Checklist** — when any deviation is added above, verify:
-> - [ ] Implementation Approach still accurate?
-> - [ ] Implementation Walkthrough reflects actual implementation?
-> - [ ] Developer Verification counts and results still current?
-> - [ ] Git / Change Evidence still reflects the implementation handoff snapshot?
-> - [ ] Issues Encountered records deviation-related bugs if any?
-> - [ ] DEV Completion Statement is consistent with all changes?
+### Verification
 
----
+| Check | Command / Method | Result | Evidence |
+|:----- |:---------------- |:------ |:-------- |
+| Build / compile | [...] | PASS / FAIL / N/A | [...] |
+| Unit tests | [...] | PASS / FAIL / N/A | [...] |
+| Integration tests | [...] | PASS / FAIL / N/A | [...] |
+| Manual smoke check | [...] | PASS / FAIL / N/A | [...] |
 
-<!-- SIGMA:DEV_EXEC:SECTION:DEPENDENCY_ENVIRONMENT_CHANGES -->
-## 10. Dependency / Environment Changes
+### Change Evidence
 
-> **Filled by DEV — After Build**
+> Snapshot at implementation handoff. DEV fills it from `sigma git evidence`; it is not updated after the Director commits or pushes. A Git repository is enough; a remote and a push are not required. If the project is not managed by Git, write `N/A — project is not managed by Git` for the Git fields and use Changed Files and Diff Summary as the change trace.
 
-| Dependency / Tool / Environment | Action                            | Reason | Risk  |
-| :---                            | :---                              | :---   | :---  |
-| [...]                           | Add / Update / Remove / Configure | [...]  | [...] |
+| Field | Value |
+|:----- |:----- |
+| Branch | [...] |
+| Commit at Evidence Capture | [...] |
+| Changed Files | [...] |
+| Diff Summary | [...] |
 
-If none, write:
-
-> No dependency or environment changes.
-
----
-
-<!-- SIGMA:DEV_EXEC:SECTION:DEVELOPER_VERIFICATION -->
-## 11. Developer Verification
-
-> **Filled by DEV — After Build**
-
-DEV records checks performed before handing back to FMN.
-
-| Check              | Command / Method | Result             | Evidence |
-| :---               | :---             | :---               | :---     |
-| Build / compile    | [...]            | PASS / FAIL / N/A  | [...]    |
-| Unit tests         | [...]            | PASS / FAIL / N/A  | [...]    |
-| Integration tests  | [...]            | PASS / FAIL / N/A  | [...]    |
-| Manual smoke check | [...]            | PASS / FAIL / N/A  | [...]    |
-
----
-
-<!-- SIGMA:DEV_EXEC:SECTION:GIT_CHANGE_EVIDENCE -->
-## 12. Git / Change Evidence
-
-> **Filled by DEV — After Build**
-
-Minimal physical trace captured at implementation handoff. Git evidence requires
-only a local Git repository; GitHub, another remote, and a push are not required.
-It is not updated after the Director commits or pushes. If the project is not
-managed by Git, write `N/A — project is not managed by Git` for Git fields and
-use Changed Files and Diff Summary as an alternative change trace. Mark N/A only
-if no material file changes exist.
-
-| Field              | Value         |
-| :---               | :---          |
-| Branch             | [...]         |
-| Commit at Evidence Capture | [...]  |
-| Changed Files      | [...]         |
-| Diff Summary       | [...]         |
-
----
-
-<!-- SIGMA:DEV_EXEC:SECTION:ISSUES_ENCOUNTERED -->
-## 13. Issues Encountered
-
-> **Filled by DEV — After Build**
-
-| Issue | Cause | Resolution | Residual Risk |
-| :---  | :---  | :---       | :---          |
-| [...] | [...] | [...]      | [...]         |
-
-If none, write:
-
-> No material implementation issues encountered.
-
----
-
-<!-- SIGMA:DEV_EXEC:SECTION:KNOWN_LIMITATIONS_TECH_DEBT -->
-## 14. Known Limitations / Technical Debt
-
-> **Filled by DEV — After Build**
-
-| Item  | Impact | Recommended Follow-Up |
-| :---  | :---   | :---                  |
-| [...] | [...]  | [...]                 |
-
-If none, write:
-
-> No known technical debt introduced.
-
----
-
-<!-- SIGMA:DEV_EXEC:SECTION:DEV_COMPLETION_STATEMENT -->
-## 15. DEV Completion Statement
-
-> **Filled by DEV — After Build**
-
-### Completion Summary
-
-[...]
-
-### DEV Advisory Status
+### DEV Status
 
 > Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
 
@@ -364,22 +217,31 @@ If none, write:
 
 ---
 
-<!-- SIGMA:DEV_EXEC:SECTION:FMN_POST_BUILD_REVIEW -->
-## 16. FMN Post-Build Review
+<!-- SIGMA:DEV_EXEC:SECTION:DEVIATIONS_ISSUES_LIMITATIONS -->
+## Deviations, Issues, and Limitations
 
-> **Filled by FMN — After DEV completes. DEV must not write in this section.**
+> Filled by DEV after the build. Record every deviation from the PLAN. Type is `Deviation`, `Issue`, or `Limitation`. Fill `Needs FMN Review?` for a Deviation; write N/A for the other types.
+
+| No | Type | Item | Cause / Reason | Impact / Residual Risk | Resolution / Follow-Up | Needs FMN Review? |
+|:-- |:---- |:---- |:-------------- |:---------------------- |:---------------------- |:----------------- |
+| 1 | Deviation / Issue / Limitation | [...] | [...] | [...] | [...] | Yes / No / N/A |
+
+If none, replace the table with: No material deviation, issue, or limitation.
+
+---
+
+<!-- SIGMA:DEV_EXEC:SECTION:FMN_POST_BUILD_REVIEW -->
+## FMN Post-Build Review
+
+> Filled by FMN after DEV completes Build Result and Verification. DEV must not write in this section.
 
 ### AC Verification
 
-| AC ID | Criteria (ref FMN-PLAN) | Evidence in DEV-EXEC | Status |
-| :--- | :--- | :--- | :--- |
-| AC-001 | [...] | Section X / [...] | PASS / FAIL / PARTIAL |
+> One row per AC of the PLAN.
 
-### Test Contract Result
-
-| TC ID | Expected (ref FMN-PLAN) | Actual Result | Status |
-| :--- | :--- | :--- | :--- |
-| TC-001 | [...] | [...] | PASS / FAIL / NOT_RUN |
+| AC ID | Expected Result (PLAN) | Actual Result and Evidence | Status |
+|:----- |:---------------------- |:-------------------------- |:------ |
+| AC-001 | [...] | [...] | PASS / FAIL / PARTIAL / NOT_RUN |
 
 ### Advisory Verdict
 
@@ -398,73 +260,24 @@ If none, write:
 ---
 
 <!-- SIGMA:DEV_EXEC:SECTION:DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS -->
-## 17. Director Observation Report & Minor Requests
+## Director Observation Report & Minor Requests
 
-> **Filled by DEV — transcribed from Director's direct chat report. Append-only.**
+> Filled by DEV, transcribed from the Director's direct chat report. Append-only.
 
 ### Observation Report
 
-> Unexpected friction found during Director manual testing — errors, bugs, or behavior that does not match the plan or intent.
-> DEV transcribes Director's verbal/chat findings into this table.
+> Unexpected friction found in the Director's manual testing: errors, bugs, or behavior that does not match the PLAN or INTENT. To record one, replace the sentence below with a table with columns `OBS ID | Observation | Location | Severity` (Low / Medium / High / Critical), IDs `OBS-001`, `OBS-002`, and so on.
 
-| OBS ID | Observation | Location | Severity |
-| :--- | :--- | :--- | :--- |
-| OBS-001 | [...] | [...] | Low / Medium / High / Critical |
-
-If none, write:
-
-> No observations from Director manual testing.
+No observations from Director manual testing.
 
 ### Minor Requests
 
-> Small additions or adjustments Director raised during manual testing — not in the plan, too minor to open a new plan cycle.
-> DEV transcribes Director's request only.
+> Small additions or adjustments the Director raised in manual testing that are too minor to open a new PLAN cycle. DEV transcribes the request only. To record one, replace the sentence below with a table with columns `REQ ID | Director Request`, IDs `REQ-001`, `REQ-002`, and so on.
 
-| REQ ID | Director Request |
-| :--- | :--- |
-| REQ-001 | [...] |
-
-If none, write:
-
-> No minor requests in this execution.
+No minor requests in this execution.
 
 ### DEV Implementation Follow-up
 
-> **Filled by DEV — after acting on Observation Report and Minor Requests above.**
-> Reference the ID (OBS-xxx or REQ-xxx) from the tables above. One row per item acted on.
+> Filled by DEV after acting on the items above. One row per item acted on, referencing its ID. To record one, replace the sentence below with a table with columns `ID | Type | What Was Done | Files Affected | Status`. Type is `Observation` or `Minor Request`. Status is `Fixed`, `Explained`, `Accepted`, or `Deferred` for an observation, and `Done` or `Deferred` for a minor request.
 
-| ID | Type | What Was Done | Files Affected | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| OBS-001 | Observation | [...] | [...] | Fixed / Explained / Accepted / Deferred |
-| REQ-001 | Minor Request | [...] | [...] | Done / Deferred |
-
-If none, write:
-
-> No follow-up actions taken.
-
----
-
-<!-- SIGMA:DEV_EXEC:SECTION:DIRECTORS_SUMMARY -->
-## 18. Director's Summary
-
-> **Filled by DEV or FMN — Append-only.**
-> This is a concise, human-readable summary specifically for the Director. DEV and FMN may freely collaborate to fill this section.
-> **Recommended timing:** Best filled after receiving the FMN Post-Build Review, so it captures the final execution state and readiness.
-
-### Overview
-
-> Max 5 sentences. Plain-language core of what this execution builds or built — not a status checklist, not a restatement of every task.
-> Write for a Director who will read only this paragraph and nothing else in the document. No TASK-/AC-/TC-/OBS-/REQ- ID references, no jargon that requires scrolling up to decode — spell out the substance inline instead of pointing at a section.
-> Fold in any key implementation decision or deviation the Director must know about; don't leave it for a separate list.
-
-[...]
-
-### Open Question / Unclear Decision
-
-> Optional — leave as [...] or omit if nothing applies. Only fill if there is a genuine open question or undecided point the Director should know before proceeding. Not a place to restate issues already covered elsewhere.
-
-[...]
-
-### Open Risks / Next Actions
-
-[...]
+No follow-up actions taken.

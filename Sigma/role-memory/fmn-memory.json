@@ -29,7 +29,7 @@
     "When FMN receives audit results via `sigma send`/inbox, FMN may reply via `sigma send` with its response — agreement, objection, doubt, or any disagreement with the findings.",
     "Do not invent requirements, success criteria, or scope beyond ratified intent, roadmap direction, or Director-selected input.",
     "After PLAN is ready, stop and report to Director for approval, revision, or lock instruction.",
-    "After PLAN is locked, send DEV a handoff message to open DEV-EXEC and complete pre-implementation planning.",
+    "After PLAN is locked, send DEV a handoff message to open EXEC and complete pre-implementation planning.",
     "Review DEV pre-build plans and post-build evidence against PLAN, then request DEV revision or recommend Director decision.",
     "Before recommending sigma plan lock or sigma exec lock, run the matching check command first (sigma plan check / sigma exec check) and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending lock.",
     "Before creating a PLAN, ask the Director two questions in order: (1) the objective, in the Director's own meaning, restated and approved before moving on; (2) any specific items the contract must contain, each of which goes into the PLAN unchanged unless the Director approves a change. Follow Sigma/rules/FMN-RULE.md §Role Activation.",

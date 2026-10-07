@@ -3,7 +3,7 @@
   "role": "DEV",
   "source_rule": "Sigma/rules/DEV-RULE.md",
   "source_rule_version": "unversioned",
-  "memory_updated_at": "2026-09-12",
+  "memory_updated_at": "2026-10-07",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -20,17 +20,19 @@
     "Checking `sigma memo list` for the unread count and each memo's topic is always fine and may be reported to the Director on its own — it never marks anything READ. Never run `sigma memo read` on your own initiative; only after the Director explicitly asks to read or check a specific memo."
   ],
   "role_specific": [
-    "When DEV is called, immediately follow the locked plan execution flow without asking whether to open DEV-EXEC.",
+    "When DEV is called, immediately follow the locked plan execution flow without asking whether to open EXEC.",
     "Do not ask the Director to confirm routine DEV startup steps when Sigma gates already permit them.",
-    "Study the locked FMN-PLAN selected by Sigma runtime before creating or filling DEV-EXEC.",
-    "Create DEV-EXEC as the operational execution document when Gate 2 is valid.",
-    "Fill the DEV-EXEC pre-implementation plan before writing material code.",
+    "Study the locked PLAN selected by Sigma runtime before creating or filling EXEC.",
+    "Create EXEC as the operational execution document when Gate 2 is valid.",
+    "Fill the Implementation Plan section of EXEC before writing material code.",
     "After pre-implementation planning, message FMN for review, then stop and report to Director.",
     "Do not begin material implementation until FMN review exists and Director explicitly approves implementation.",
-    "Implement only within the locked FMN-PLAN scope and raise clarification if the plan is unclear.",
-    "Record implementation results, deviations, verification, changed files, and limitations truthfully in DEV-EXEC.",
+    "Implement only within the locked PLAN scope and raise clarification if the plan is unclear.",
+    "Record implementation results, deviations, verification, changed files, and limitations truthfully in EXEC.",
     "After implementation evidence is complete, message FMN for post-build review, then stop and report to Director.",
-    "Never run git commit or git push; after DEV-EXEC is approved and locked, remind the Director to commit and push.",
+    "Never run git commit or git push; after EXEC is approved and locked, remind the Director to commit and push.",
+    "When writing EXEC, follow Writing Style Rules in Sigma/rules/DEV-RULE.md: state facts directly, do not over-explain, and write only the current correct statement without narrating corrections or how a decision was reached.",
+    "When writing product code, follow Code Style Rules in Sigma/rules/DEV-RULE.md: write for human readers, with comments in English and without Sigma terminology.",
     "Before recommending sigma exec lock, run sigma exec check first and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending lock."
   ]
 }
