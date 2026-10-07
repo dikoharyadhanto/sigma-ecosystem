@@ -90,6 +90,7 @@ Aturan kategori (ditulis di FMN-RULE): `Modification` mencantumkan di Location p
 
 Jawaban Director (7 Oktober 2026), mengikuti rekomendasi: (1) peringatan validator (tidak memblokir) bila satu tabel melebihi 5 baris; (2) Key Output wajib, dengan satu baris "Tidak ada keluaran berupa file" bila hasilnya perubahan perilaku. Kolom Category ditambahkan atas permintaan Director.
 Jawaban: DIJAWAB (lihat di atas)
+Revisi 7 Oktober 2026 (setelah E02 ditutup): kolom Location dihapus dari Key Output atas keputusan Director ("salah tempat kalau ditaruh di kontrak"; lokasi ditunjukkan di EXEC). Seluruh teks tentang Location di atas, termasuk kolom Location, aturan kategori `Modification`, dan bagian 7 butir 4, digantikan oleh revisi ini. Lihat [lampiran](E02_lampiran_keterlacakan-fmn-rule.md) bagian 6.
 
 **A-4. Constraints for DEV.** Tabel Constraint/Source/DEV Freedom dipertahankan, ditambah dua daftar "DEV must" dan "DEV must not". Daftar "DEV should report in DEV-EXEC" dihapus karena sama di setiap proyek; DEV-RULE sudah memuat daftar laporan (baris 169 dan 560). Opsi: (a) hapus daftar dari template tanpa menambah apa pun ke DEV-RULE; (b) hapus dan pindahkan butir yang belum ada di DEV-RULE (sesi DEV).
 Rekomendasi: (b). Pada E02 saya hanya membandingkan dan melaporkan butir yang belum tercakup; penambahan ke DEV-RULE menunggu sesi DEV.

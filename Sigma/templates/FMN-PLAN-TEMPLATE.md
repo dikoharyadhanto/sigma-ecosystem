@@ -63,11 +63,11 @@
 <!-- SIGMA:FMN_PLAN:SECTION:KEY_OUTPUT -->
 ## Key Output
 
-> Only final outputs named in the Objective. Intermediate files and logs go in Work Order or Constraints. A behavior change with no file is one row: "No file output". An output of many files (for example a source tree) is one row, with the folder as Location. Location may be empty for Modification.
+> Only final outputs named in the Objective. Intermediate files and logs go in Work Order or Constraints. A behavior change with no file is one row: "No file output". An output of many files (for example a source tree) is one row.
 
-| No | Output | Category | Description | Location |
-|:-- |:------ |:-------- |:----------- |:-------- |
-| 1 | [...] | Creation / Modification / Report | [...] | [...] |
+| No | Output | Category | Description |
+|:-- |:------ |:-------- |:----------- |
+| 1 | [...] | Creation / Modification / Report | [...] |
 
 ---
 
