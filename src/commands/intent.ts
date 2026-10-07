@@ -22,7 +22,10 @@ import {
 import { renderIntentHistoryFile } from '../utils/intentHistory';
 import { createIntentDraft, IntentDraftError } from '../services/intentDraftService';
 import { ratifyIntentDraft } from '../services/intentRatifyService';
-import { recordIntentAmendmentUseCase } from '../services/intentAmendmentService';
+import { recordIntentAmendmentUseCase, intentAmendmentTransactionFiles } from '../services/intentAmendmentService';
+import { adoptIntentBaselineUseCase, adoptIntentBaselineTransactionFiles } from '../services/intentBaselineService';
+import { withGovernanceTransaction } from '../engine/governanceTransaction';
+import { inspectIntentGit, previewIntentAmendment, intentGitDrift, IntentGitReport } from '../engine/intentGit';
 import { recordArcScoreUseCase } from '../services/intentScoreService';
 import { supersedeIntentUseCase } from '../services/intentSupersedeService';
 
@@ -39,6 +42,13 @@ function promptApprove(message: string): Promise<boolean> {
       resolve(answer.trim().toUpperCase() === 'APPROVE');
     });
   });
+}
+
+function printGitReport(report: IntentGitReport): void {
+  for (const c of report.checks) {
+    const tag = c.ok ? 'OK  ' : c.blocking ? 'FAIL' : 'WARN';
+    console.log(`  [${tag}] ${c.id}: ${c.detail}`);
+  }
 }
 
 function intentDocPath(projectRoot: string, chain: ChainState): string {
@@ -160,25 +170,136 @@ export function intentCommand(): Command {
       process.exit(1);
     });
 
-  // Amendment mechanism (Discussion 2026-08-11_0115 §3 item 4, Director
-  // directive 2026-08-12). Approval-class like `intent ratify`/`intent score`
-  // — no --director-confirm: the blast radius is one append-only entry on one
-  // chain, not the cross-domain cascade --director-confirm exists for
-  // (override, intent supersede). What Director authorizes here is the act of
-  // *recording* an amendment ARC has already evaluated — not a judgment on
-  // the content itself.
-  cmd.command('amendment')
-    .description('Record a Director-approved Amendment against a RATIFIED DIR-INTENT')
-    .requiredOption('--change <change>', 'Free-text description of the change, commit-message style')
+  // Amendment (F05) — Git-based, option B (F05 §4.3). `preview` is read-only and
+  // shows the baseline check, diff and impact; the recording command is the
+  // single effective point: it verifies the result commit, creates the
+  // annotated tag, then writes the chain. The document is never written.
+  // Options are validated manually: Commander checks an ancestor's mandatory
+  // options even when a subcommand (`preview`) runs.
+  const amendment = cmd.command('amendment')
+    .description('Record a Director-approved amendment of a RATIFIED DIR-INTENT from a Git commit; `amendment preview` is read-only')
+    .option('--change <change>', 'Single-line summary of the change, commit-message style')
+    .option('--purpose-changed <yes|no>', 'Director-reviewed declaration whether the purpose or core outcome changes (informational, never a gate)')
+    .option('--commit <ref>', 'Commit that holds exactly the reviewed and approved INTENT content')
+    .option('--doc-sha256 <hash>', 'INTENT file hash shown by `amendment preview` (binds the approval to the reviewed content)')
     .option('--v <version>', 'Chain version to amend instead of the active one', normalizeVersionArg)
-    .action((opts: { change: string; v?: string }) => {
+    .option('--director-confirm', 'Required. Explicit Director approval of the reviewed content and change list.')
+    .action(async (opts: { change?: string; purposeChanged?: string; commit?: string; docSha256?: string; v?: string; directorConfirm?: boolean }) => {
       try {
         const projectRoot = findProjectRoot();
-        const { chainVersion, entry } = recordIntentAmendmentUseCase(projectRoot, opts.change, opts.v);
+        const missing: string[] = [];
+        if (!opts.change) missing.push('--change');
+        if (!opts.purposeChanged) missing.push('--purpose-changed yes|no');
+        else if (!['yes', 'no'].includes(opts.purposeChanged)) throw new Error('--purpose-changed must be yes or no.');
+        if (!opts.commit) missing.push('--commit <ref>');
+        if (!opts.docSha256) missing.push('--doc-sha256 <hash from preview>');
+        if (!opts.directorConfirm) missing.push('--director-confirm');
+        if (missing.length) {
+          console.error(`Amendment not completed. Missing: ${missing.join(', ')}.`);
+          console.error('Steps: (1) sigma intent baseline check, (2) edit INTENT, (3) sigma intent amendment preview,');
+          console.error('       (4) Director approves the reviewed content, (5) commit that content, (6) re-run this command with all options.');
+          process.exit(1);
+        }
+        const request = { change: opts.change!, purposeChanged: opts.purposeChanged === 'yes', commit: opts.commit!, docSha256: opts.docSha256! };
+        const result = await withGovernanceTransaction(
+          projectRoot,
+          'intent_amendment',
+          () => intentAmendmentTransactionFiles(projectRoot, opts.v),
+          () => recordIntentAmendmentUseCase(projectRoot, request, opts.v),
+        );
+        console.log(`${result.entry.id} recorded for DIR-INTENT ${result.chainVersion}.`);
+        console.log(`Change: ${result.entry.change}`);
+        console.log(`Purpose changed: ${request.purposeChanged ? 'yes' : 'no'}`);
+        console.log(`Commit: ${result.commit}`);
+        console.log(`Tag: ${result.tag}${result.tagCreated ? ' (created, local only)' : ' (existing tag at the same commit adopted)'}`);
+        console.log('Document re-certified. APPROVED PLANs are flagged for INTENT review; LOCKED pairs are unchanged.');
+        console.log(`Distribution: Sigma never pushes. Push is yours; "git push --follow-tags" sends annotated tags, otherwise "git push origin ${result.tag}".`);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
 
-        console.log(`${entry.id} recorded for DIR-INTENT ${chainVersion}.`);
-        console.log(`Change: ${entry.change}`);
-        console.log('Section 14 (Amendment History) re-rendered. Document re-certified.');
+  amendment.command('preview')
+    .description('Read-only review package: Git baseline check, diff against the baseline, hash to approve, impact on PLAN/EXEC')
+    .option('--v <version>', 'Chain version instead of the active one', normalizeVersionArg)
+    .action((opts: { v?: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const { chainVersion, data: chain } = opts.v ? { chainVersion: opts.v, data: readChain(projectRoot, opts.v) } : readActiveChain(projectRoot);
+        const preview = previewIntentAmendment(projectRoot, chainVersion, chain);
+        console.log(`\n=== Amendment Preview — INTENT ${chainVersion} ===\n`);
+        printGitReport(preview.report);
+        console.log(`\nINTENT file: ${preview.report.repo_path ?? preview.report.file ?? '(unknown)'}`);
+        console.log(`SHA-256 (use as --doc-sha256 after approval): ${preview.report.working_sha256 ?? '(unavailable)'}`);
+        console.log(`Next: ${preview.next_amendment_id} -> tag ${preview.next_tag}`);
+        console.log('\n--- Impact ---');
+        console.log(`INTENT revision: ${preview.impact.current_revision ?? '(none)'} -> ${preview.impact.next_revision}`);
+        console.log(`PLAN APPROVED, flagged for INTENT review: ${preview.impact.plans_flagged_for_review.join(', ') || 'none'}`);
+        console.log(`PLAN/EXEC LOCKED pairs, unchanged (not retroactive): ${preview.impact.locked_pairs_unchanged.join(', ') || 'none'}`);
+        console.log(`Drafts (informational): PLAN ${preview.impact.drafts.plan.join(', ') || 'none'}; EXEC ${preview.impact.drafts.exec.join(', ') || 'none'}`);
+        console.log('\n--- Diff against baseline (mechanical evidence, not a semantic judgment) ---');
+        console.log(preview.diff.stat || '(no diff available)');
+        console.log(preview.diff.patch || '');
+        if (preview.report.blockers.length) {
+          console.error('Blocked:\n' + preview.report.blockers.map(b => ` - ${b}`).join('\n'));
+          process.exit(1);
+        }
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  const baseline = cmd.command('baseline').description('Git baseline of the certified INTENT content (F05)');
+  baseline.command('check')
+    .description('Read-only: verify that the INTENT in Git is the latest certified content (before editing an amendment and before a Petition)')
+    .option('--v <version>', 'Chain version instead of the active one', normalizeVersionArg)
+    .action((opts: { v?: string }) => {
+      try {
+        const projectRoot = findProjectRoot();
+        const { chainVersion, data: chain } = opts.v ? { chainVersion: opts.v, data: readChain(projectRoot, opts.v) } : readActiveChain(projectRoot);
+        const report = inspectIntentGit(projectRoot, chainVersion, chain, 'clean');
+        console.log(`\n=== INTENT Git Baseline — ${chainVersion} ===\n`);
+        printGitReport(report);
+        for (const line of intentGitDrift(projectRoot, chainVersion, chain)) console.log(`  [DRIFT] ${line}`);
+        if (report.blockers.length) {
+          console.error('Not ready:\n' + report.blockers.map(b => ` - ${b}`).join('\n'));
+          process.exit(1);
+        }
+        console.log('\nINTENT in Git matches the certified baseline.');
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
+  baseline.command('adopt')
+    .description('Bind the certified INTENT content to a commit and a local annotated tag (requires --director-confirm)')
+    .requiredOption('--commit <ref>', 'Commit that holds exactly the current INTENT content')
+    .option('--import-current', 'Adopt the reviewed current content when the certified content cannot be recovered from Git (no amendment is invented)')
+    .option('--v <version>', 'Chain version instead of the active one', normalizeVersionArg)
+    .option('--director-confirm', 'Required. Explicit Director authorization.')
+    .action(async (opts: { commit: string; importCurrent?: boolean; v?: string; directorConfirm?: boolean }) => {
+      try {
+        if (!opts.directorConfirm) {
+          console.error('Error: --director-confirm is required to adopt an INTENT Git baseline.');
+          process.exit(1);
+        }
+        const projectRoot = findProjectRoot();
+        const result = await withGovernanceTransaction(
+          projectRoot,
+          'intent_baseline_adopt',
+          () => adoptIntentBaselineTransactionFiles(projectRoot, opts.v),
+          () => adoptIntentBaselineUseCase(projectRoot, { commit: opts.commit, importCurrent: !!opts.importCurrent }, opts.v),
+        );
+        if (result.alreadyRecorded) {
+          console.log(`Baseline already recorded for ${result.chainVersion} at ${result.baseline.commit} (tag ${result.baseline.tag}).`);
+          return;
+        }
+        console.log(`Baseline recorded for ${result.chainVersion}: ${result.baseline.commit} (${result.baseline.provenance}).`);
+        console.log(`Tag: ${result.baseline.tag}${result.tagCreated ? ' (created, local only)' : ' (existing tag at the same commit adopted)'}`);
+        console.log(`Distribution: Sigma never pushes. "git push --follow-tags" sends annotated tags, otherwise "git push origin ${result.baseline.tag}".`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
@@ -290,7 +411,7 @@ export function intentCommand(): Command {
         printSigmaDocReport(report, projectRoot);
         if (isIntentDocUncertified(chain, absPath)) {
           const since = chain.intent.effective_amendment ?? 'ratification';
-          console.log(`[WARNING] Doc state: UNCERTIFIED_EDIT — file edited after ${since} without a recorded amendment. Run: sigma intent amendment --change "..."`);
+          console.log(`[WARNING] Doc state: UNCERTIFIED_EDIT — file edited after ${since} without a recorded amendment. Review it with: sigma intent amendment preview`);
         }
         if (!report.ok) process.exit(1);
       } catch (e) {
@@ -323,6 +444,12 @@ export function intentCommand(): Command {
           const since = chain.intent.effective_amendment ?? 'ratification';
           console.log(`Doc state:  UNCERTIFIED_EDIT (edited after ${since})`);
         }
+        const gitBaseline = chain.intent.git_baseline;
+        console.log(gitBaseline
+          ? `Git baseline: ${gitBaseline.commit.slice(0, 12)} (${gitBaseline.tag}, ${gitBaseline.provenance})`
+          : 'Git baseline: none (run: sigma intent baseline adopt --commit <ref> --director-confirm)');
+        const lastAmendment = chain.intent.amendments?.[chain.intent.amendments.length - 1];
+        if (lastAmendment) console.log(`Last amendment: ${lastAmendment.id} (${lastAmendment.created_at.slice(0, 10)})${lastAmendment.result_tag ? ` ${lastAmendment.result_tag}` : ' — no Git reference (pre-F05)'}`);
         console.log(`\nGate 1:     ${chain.gates.gate_1_open ? 'OPEN' : 'BLOCKED'}`);
         console.log('');
       } catch (e) {

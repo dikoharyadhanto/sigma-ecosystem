@@ -483,8 +483,8 @@ describe('DEV workspace — CLI', () => {
     const registry = fs.readJsonSync(path.resolve(__dirname, '..', 'Sigma', 'SIGMA-OPERATION-REGISTRY.json'));
     const byId = new Map<string, Record<string, unknown>>(registry.operations.map((o: Record<string, unknown>) => [o.operation_id as string, o]));
 
-    expect(registry.total_operations).toBe(64);
-    expect(registry.operations).toHaveLength(64);
+    expect(registry.total_operations).toBe(65);
+    expect(registry.operations).toHaveLength(65);
     expect(byId.get('dev_create_workspace')).toMatchObject({ level: 'semantic', role: 'director' });
     expect(byId.get('dev_status')).toMatchObject({ level: 'read_only', role: 'any' });
   });

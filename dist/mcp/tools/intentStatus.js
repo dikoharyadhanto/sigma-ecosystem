@@ -26,6 +26,7 @@ function computeIntentStatus(root) {
     }
     const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(root);
     const uncertified = (0, chain_1.isIntentDocUncertified)(chain, intentDocPath(root, chain));
+    const lastAmendment = chain.intent.amendments?.[chain.intent.amendments.length - 1];
     return {
         active: true,
         active_chain: chainVersion,
@@ -36,6 +37,13 @@ function computeIntentStatus(root) {
         doc_uncertified: uncertified,
         doc_uncertified_since: uncertified ? (chain.intent.effective_amendment ?? 'ratification') : null,
         gate_1_open: chain.gates.gate_1_open,
+        // F05 — recorded Git references only; no Git is executed by a query tool.
+        git_baseline: chain.intent.git_baseline
+            ? { commit: chain.intent.git_baseline.commit, tag: chain.intent.git_baseline.tag, provenance: chain.intent.git_baseline.provenance, revision: chain.intent.git_baseline.revision }
+            : null,
+        last_amendment: lastAmendment
+            ? { id: lastAmendment.id, created_at: lastAmendment.created_at, purpose_changed: lastAmendment.purpose_changed ?? null, result_tag: lastAmendment.result_tag ?? null }
+            : null,
         source: shared_1.SOURCE_ENGINE,
     };
 }
@@ -45,7 +53,7 @@ function registerIntentStatusTool(server) {
         description: 'Return the active chain\'s DIR-INTENT status — the query-plane equivalent of `sigma intent status`: ' +
             'version, state, ratification timestamp, whether the document was edited since it was last ' +
             'certified/ratified, and Gate 1. Read-only. Returns { active, active_chain, version, state, ratified_at, ' +
-            'file, doc_uncertified, doc_uncertified_since, gate_1_open, source }, or { active: false, gate_1_open: ' +
+            'file, doc_uncertified, doc_uncertified_since, gate_1_open, git_baseline, last_amendment, source }, or { active: false, gate_1_open: ' +
             'false, source } when no chain exists yet.',
         inputSchema: {},
         annotations: {

@@ -14,6 +14,7 @@ const reconstruct_1 = require("../engine/reconstruct");
 const fs_1 = require("../utils/fs");
 const intentHistory_1 = require("../utils/intentHistory");
 const config_1 = require("../config");
+const intentGit_1 = require("../engine/intentGit");
 const devWorkspace_1 = require("../engine/devWorkspace");
 // Non-blocking check: cross-role skills (e.g. /write-memo) read
 // Sigma/templates/MEMO-TEMPLATE.md directly by project-relative path rather
@@ -48,6 +49,17 @@ function collectDiagnostics(projectRoot) {
     }
     catch (err) {
         warnings.push(`Mailbox diagnosis failed: ${err.message}`);
+    }
+    // F05 §4.7 — read-only drift of recorded INTENT Git references. Never repairs or re-certifies.
+    try {
+        for (const version of (0, chain_1.listChainVersions)(projectRoot)) {
+            const chain = (0, chain_1.readChain)(projectRoot, version);
+            for (const line of (0, intentGit_1.intentGitDrift)(projectRoot, version, chain))
+                warnings.push(`INTENT ${version} Git: ${line}`);
+        }
+    }
+    catch (err) {
+        warnings.push(`INTENT Git drift check failed: ${err.message}`);
     }
     return warnings;
 }

@@ -112,6 +112,23 @@ export interface AmendmentEntry {
     created_at: string;
     change: string;
     director_approved_at: string;
+    purpose_changed?: boolean;
+    baseline_commit?: string;
+    result_commit?: string;
+    result_tag?: string;
+    doc_sha256?: string;
+    doc_sha256_lf?: string;
+    diff_stat?: string;
+}
+export interface IntentGitBaseline {
+    commit: string;
+    tag: string;
+    doc_sha256: string;
+    doc_sha256_lf: string;
+    revision: number;
+    provenance: 'ratified_commit' | 'amendment' | 'imported_current';
+    recorded_at: string;
+    amendment?: string;
 }
 export interface SingleIntentState {
     version: string;
@@ -132,6 +149,7 @@ export interface SingleIntentState {
     revision?: number;
     revision_provenance?: string;
     certified_at?: string;
+    git_baseline?: IntentGitBaseline;
 }
 export interface SingleRoadmapState {
     version: string;
@@ -225,7 +243,7 @@ export declare function ratifyIntent(chain: ChainState): void;
 export declare function certifyIntentDoc(chain: ChainState, absDocPath: string): void;
 export declare function isIntentDocUncertified(chain: ChainState, absDocPath: string): boolean;
 export declare function nextAmendmentId(chain: ChainState): string;
-export declare function recordIntentAmendment(chain: ChainState, change: string): AmendmentEntry;
+export declare function recordIntentAmendment(chain: ChainState, change: string, git?: Partial<AmendmentEntry>): AmendmentEntry;
 export declare function arcScoreBand(score: number): 'OUTPUT_INCOMPLETE' | 'SATISFIED_NEEDS_REVIEW' | 'SATISFIED_RECOMMENDED';
 export declare function hasGate35Score(chain: ChainState): boolean;
 export declare function recordArcScore(chain: ChainState, score: number, notes: string): void;

@@ -36,7 +36,7 @@ FMN MUST ensure tasks are:
 - realistic,
 - aligned with Director Intent.
 
-FMN MUST NOT invent requirements beyond the ratified `INTENT` in its last effective state. A Director-approved amendment (see `INTENT` Amendment History) moves that boundary. If FMN believes the `INTENT` itself, beyond the `PLAN`, needs to change, FMN raises an Amendment Request (`Sigma/rules/ARC-RULE.md` §Amendment Request) and does not plan ahead of what is ratified.
+FMN MUST NOT invent requirements beyond the ratified `INTENT` in its last effective state. A Director-approved amendment (recorded by Sigma and shown by `sigma intent status`) moves that boundary. If FMN believes the `INTENT` itself, beyond the `PLAN`, needs to change, FMN raises an Amendment Request (`Sigma/rules/ARC-RULE.md` §Amendment Request) and does not plan ahead of what is ratified.
 
 ---
 
@@ -354,7 +354,7 @@ Status vocabulary:
 - `AMENDMENT_REQUESTED`: escalated through `Sigma/rules/ARC-RULE.md` §Amendment Request; the outcome is not final as of this `PLAN`'s lock.
 - `AMENDMENT_RATIFIED`: a real `AMD-NNN` already covers this item before PLAN approval; FMN cites the ID in Notes.
 
-The table is a snapshot as of the approved revision. The live record of amendments is the `INTENT` Amendment History, and a `PLAN` is not edited later to follow a status change.
+The table is a snapshot as of the approved revision. The live record of amendments is the one Sigma keeps for the `INTENT` (`sigma intent status`, with a Git tag per amendment), and a `PLAN` is not edited later to follow a status change.
 
 Every post-approval contract change must be staged, classified, certified, notified to DEV and acknowledged explicitly before pair approval.
 

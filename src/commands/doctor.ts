@@ -20,6 +20,7 @@ import { reconstructAllChains, findSigmaProjectRoot, MultiReconstructResult } fr
 import { findProjectRoot, fileExists } from '../utils/fs';
 import { renderIntentHistoryFile } from '../utils/intentHistory';
 import { PROJECT_SIGMA_DIR } from '../config';
+import { intentGitDrift } from '../engine/intentGit';
 import { describeDevWorkspace, getDevWorkspaceStatus, repairDevWorkspace } from '../engine/devWorkspace';
 
 // Non-blocking check: cross-role skills (e.g. /write-memo) read
@@ -51,6 +52,13 @@ function collectDiagnostics(projectRoot: string): string[] {
   const warnings = [checkMemoTemplate(projectRoot), checkDevWorkspace(projectRoot)].filter((w): w is string => w !== null);
   try { warnings.push(...mailboxMigrationDiagnosis(projectRoot).warnings); }
   catch (err) { warnings.push(`Mailbox diagnosis failed: ${(err as Error).message}`); }
+  // F05 §4.7 — read-only drift of recorded INTENT Git references. Never repairs or re-certifies.
+  try {
+    for (const version of listChainVersions(projectRoot)) {
+      const chain = readChain(projectRoot, version);
+      for (const line of intentGitDrift(projectRoot, version, chain)) warnings.push(`INTENT ${version} Git: ${line}`);
+    }
+  } catch (err) { warnings.push(`INTENT Git drift check failed: ${(err as Error).message}`); }
   return warnings;
 }
 

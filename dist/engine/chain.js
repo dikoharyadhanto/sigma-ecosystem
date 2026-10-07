@@ -989,10 +989,11 @@ function nextAmendmentId(chain) {
     return `AMD-${String(n).padStart(3, '0')}`;
 }
 // Pure schema mutation — appends one AmendmentEntry and advances
-// effective_amendment. Does not touch the filesystem: the command layer
-// (intent.ts) renders Section 14 and re-certifies the doc hash separately,
-// same division of responsibility as ratifyIntent()/certifyIntentDoc().
-function recordIntentAmendment(chain, change) {
+// effective_amendment. Does not touch the filesystem: the service layer
+// (intentAmendmentService.ts) verifies Git and re-certifies the doc hash
+// separately, same division of responsibility as
+// ratifyIntent()/certifyIntentDoc(). `git` carries the F05 references.
+function recordIntentAmendment(chain, change, git = {}) {
     if (chain.intent.state !== 'RATIFIED') {
         throw new Error(`INTENT ${chain.intent.version} is in state "${chain.intent.state}"; amendment requires RATIFIED`);
     }
@@ -1000,10 +1001,10 @@ function recordIntentAmendment(chain, change) {
     if (!trimmed) {
         throw new Error('--change cannot be empty');
     }
-    // Section 14 is a pipe-table — same sanitization reason as
-    // assertRequiredIntentMetadata() for --title/--focus (intent.ts).
+    // One-line JSONL log record and Git tag message; the pipe ban is kept from
+    // the table era (same sanitization as --title/--focus in intent.ts).
     if (/[|\n\r]/.test(change)) {
-        throw new Error('--change cannot contain "|" or a newline (breaks the Amendment History table)');
+        throw new Error('--change cannot contain "|" or a newline (single-line amendment summary)');
     }
     const now = new Date().toISOString();
     const entry = {
@@ -1011,6 +1012,7 @@ function recordIntentAmendment(chain, change) {
         created_at: now,
         change: trimmed,
         director_approved_at: now,
+        ...git,
     };
     chain.intent.amendments = [...(chain.intent.amendments ?? []), entry];
     chain.intent.effective_amendment = entry.id;

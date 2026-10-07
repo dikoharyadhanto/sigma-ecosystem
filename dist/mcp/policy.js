@@ -56,6 +56,7 @@ exports.OPERATION_TIERS = Object.freeze({
     project_start: 'W3', project_sync: 'W3', project_register: 'W3',
     setup_install: 'W3', setup_update: 'W3', setup_uninstall: 'W3',
     override: 'W3', config: 'W3', dev_create_workspace: 'W3',
+    intent_baseline: 'W3', // F05 — CLI only, Director-confirm; not admissible through MCP
 });
 /** Owner role per matrix §3. Derived, NOT ratified — advisory only. */
 exports.OPERATION_OWNER = Object.freeze({

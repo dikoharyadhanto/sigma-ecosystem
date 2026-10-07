@@ -193,9 +193,9 @@ export function parseMinorVersion(version: string): number {
 // PLAN-EVAL-01 §3.4 — INACTIVE dropped: structurally dead once each chain
 // file holds exactly one intent (nothing left in the same file to demote).
 // Rename doctrinal (Discussion 2026-08-11_0115 §3 item 1, Director directive
-// 2026-08-12): ratification establishes the governing Director intent — it
-// does not freeze its operationalization. Only DIR-INTENT uses RATIFIED;
-// Roadmap/Plan/Exec/Close keep LOCKED.
+// 2026-08-12): ratification establishes the governing Director intent; every
+// part of it can later be changed through an amendment. Only DIR-INTENT uses
+// RATIFIED; Roadmap/Plan/Exec/Close keep LOCKED.
 export type IntentState = 'DRAFT' | 'RATIFIED' | 'SUPERSEDED';
 // PLAN-EVAL-01 §3.5 — ACTIVE/INACTIVE dropped: nothing to arbitrate with a
 // single roadmap object per chain. `roadmap lock` stays a manual command
@@ -205,8 +205,9 @@ export type RoadmapState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 export type CloseState = 'DRAFT' | 'LOCKED' | 'SUPERSEDED';
 
 // Amendment mechanism (Discussion 2026-08-11_0115, Director directive 2026-08-12).
-// One entry per `sigma intent amendment` call — append-only, rendered into
-// DIR-INTENT Section 14 (Amendment History) by generateAmendmentHistory().
+// One entry per `sigma intent amendment` call — append-only. Since F05 the
+// chain, the amendment log and Git tags are the history; the document is not
+// written to.
 export interface AmendmentEntry {
   id: string;                    // "AMD-001" — zero-padded, PREFIX-NNN
   created_at: string;            // ISO, stamped when the command runs
@@ -217,6 +218,28 @@ export interface AmendmentEntry {
   // this recorded" vs. "when was this authorized"); a future asynchronous
   // approval flow would need them to diverge without a schema migration.
   director_approved_at: string;
+  // F05 — Git references, all optional: entries recorded before F05 carry none
+  // and are shown as "no Git reference (pre-F05)".
+  purpose_changed?: boolean;     // informational Director-reviewed declaration; never a gate
+  baseline_commit?: string;      // commit holding the certified content this amendment started from
+  result_commit?: string;        // commit holding the approved content
+  result_tag?: string;           // annotated tag on result_commit
+  doc_sha256?: string;           // raw-byte SHA-256 certified by this amendment
+  doc_sha256_lf?: string;        // same content with CRLF folded to LF (stable across core.autocrlf)
+  diff_stat?: string;
+}
+
+// F05 — the certified INTENT content that is reproducible from Git. Written by
+// `sigma intent baseline adopt` and by every completed amendment.
+export interface IntentGitBaseline {
+  commit: string;
+  tag: string;
+  doc_sha256: string;
+  doc_sha256_lf: string;
+  revision: number;
+  provenance: 'ratified_commit' | 'amendment' | 'imported_current';
+  recorded_at: string;
+  amendment?: string;
 }
 
 export interface SingleIntentState {
@@ -238,12 +261,13 @@ export interface SingleIntentState {
   arc_score_updated_at?: string; // ISO timestamp of last `sigma intent score`
   // Amendment mechanism — all optional, chain files predating this feature
   // stay valid without migration.
-  amendments?: AmendmentEntry[];       // append-only; source for Section 14 render
+  amendments?: AmendmentEntry[];       // append-only amendment history
   effective_amendment?: string | null; // last AMD-NNN this doc was certified against; null = certified at ratification, no amendment yet
   certified_doc_sha256?: string;       // SHA-256 of the DIR-INTENT file at last ratify/amendment
   revision?: number;
   revision_provenance?: string;
   certified_at?: string;               // ISO — when certified_doc_sha256 was last stamped
+  git_baseline?: IntentGitBaseline;    // F05 — Git-reproducible certified content; absent = no baseline yet
 }
 
 export interface SingleRoadmapState {
@@ -1296,10 +1320,11 @@ export function nextAmendmentId(chain: ChainState): string {
 }
 
 // Pure schema mutation — appends one AmendmentEntry and advances
-// effective_amendment. Does not touch the filesystem: the command layer
-// (intent.ts) renders Section 14 and re-certifies the doc hash separately,
-// same division of responsibility as ratifyIntent()/certifyIntentDoc().
-export function recordIntentAmendment(chain: ChainState, change: string): AmendmentEntry {
+// effective_amendment. Does not touch the filesystem: the service layer
+// (intentAmendmentService.ts) verifies Git and re-certifies the doc hash
+// separately, same division of responsibility as
+// ratifyIntent()/certifyIntentDoc(). `git` carries the F05 references.
+export function recordIntentAmendment(chain: ChainState, change: string, git: Partial<AmendmentEntry> = {}): AmendmentEntry {
   if (chain.intent.state !== 'RATIFIED') {
     throw new Error(`INTENT ${chain.intent.version} is in state "${chain.intent.state}"; amendment requires RATIFIED`);
   }
@@ -1307,10 +1332,10 @@ export function recordIntentAmendment(chain: ChainState, change: string): Amendm
   if (!trimmed) {
     throw new Error('--change cannot be empty');
   }
-  // Section 14 is a pipe-table — same sanitization reason as
-  // assertRequiredIntentMetadata() for --title/--focus (intent.ts).
+  // One-line JSONL log record and Git tag message; the pipe ban is kept from
+  // the table era (same sanitization as --title/--focus in intent.ts).
   if (/[|\n\r]/.test(change)) {
-    throw new Error('--change cannot contain "|" or a newline (breaks the Amendment History table)');
+    throw new Error('--change cannot contain "|" or a newline (single-line amendment summary)');
   }
 
   const now = new Date().toISOString();
@@ -1319,6 +1344,7 @@ export function recordIntentAmendment(chain: ChainState, change: string): Amendm
     created_at: now,
     change: trimmed,
     director_approved_at: now,
+    ...git,
   };
   chain.intent.amendments = [...(chain.intent.amendments ?? []), entry];
   chain.intent.effective_amendment = entry.id;

@@ -229,13 +229,3 @@ Verificator Mode - Audit 1:
 ### Recommended Director Action
 
 [...]
-
----
-
-<!-- SIGMA:DIR_INTENT:SECTION:AMENDMENT_HISTORY -->
-## Amendment History
-
-> Auto-rendered by `sigma intent amendment`. Do not edit by hand.
-
-<!-- SIGMA:RENDER:START:amendment-history -->
-<!-- SIGMA:RENDER:END:amendment-history -->

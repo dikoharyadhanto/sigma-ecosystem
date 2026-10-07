@@ -430,6 +430,10 @@ Governs what happens when FMN or Director disagrees with a score ARC has already
 
 These two judgments ("is this worth reopening?" vs. "having looked, does the evaluation change?") are kept separate on purpose — collapsing them invites ARC to justify a changed score by re-litigating evidence it already considered.
 
+### Latest INTENT before a Petition
+
+A Petition is always handled against the latest INTENT. Before Admission Review, ARC MUST run `sigma intent baseline check` and confirm that the INTENT in the working tree equals the committed, certified content in Git. If the check fails, ARC reports the failed condition to the Director and does not start Admission Review until it is resolved: commit the pending content, discard the uncommitted edit, or complete an amendment.
+
 ### Symmetric treatment of FMN and Director
 
 Both FMN and Director go through the same Admission Review — Director is **not** automatically admitted just by virtue of being Director. The one legitimate asymmetry: Director can change **the intent itself** (a new chain/intent version, Director's exclusive right) but cannot force ARC to change its evaluation of an already-`RATIFIED` intent without genuine new evidence. The standing term for this is **"Right to Petition,"** not "Right to Re-evaluation" — a Petition is a request to be heard, not a guarantee the score changes.
@@ -488,14 +492,25 @@ Governs how a proposed change to a RATIFIED INTENT becomes a recorded `AMD-NNN`.
             │
             ▼
            ARC
-   change list + affected sections
+   baseline check, change list, affected sections
             │
             ▼
         Director
    approves the list and the authority
             │
             ▼
-   sigma intent amendment
+           ARC
+   edits INTENT, runs sigma intent amendment preview
+            │
+            ▼
+        Director
+   reviews the diff, approves the content
+            │
+            ▼
+   content committed in Git
+            │
+            ▼
+   sigma intent amendment --commit
             │
             ▼
       AMD-NNN effective
@@ -503,8 +518,12 @@ Governs how a proposed change to a RATIFIED INTENT becomes a recorded `AMD-NNN`.
 
 - **FMN** (when originating) states *what* area of INTENT needs amending and *why* — nothing more. FMN does not draft the amendment text itself.
 - **ARC prepares and advises — ARC does not "approve."** ARC evaluates the proposal independently, including when the Director proposes it, and drafts the actual `--change` content. This is the same "ARC is not a stenographer" discipline required for the AUD Findings section (§AUD Findings Section Authorization): ARC must not simply transcribe the originator's framing as-is, even when the originator is Director.
-- **Change list before any change.** Before `sigma intent amendment` runs, ARC MUST give the Director the list of planned changes and the INTENT sections each one affects. The Director must approve that list.
+- **Latest INTENT first.** Before drafting any change, ARC MUST run `sigma intent baseline check` and confirm that the INTENT in the working tree is the committed, certified content. ARC reports uncommitted or uncertified edits to the Director first, so they do not travel into the amendment. A chain without a Git baseline needs `sigma intent baseline adopt` (Director approval) before its first amendment. A project without a local Git repository cannot run an amendment.
+- **Change list before any change.** Before editing the INTENT, ARC MUST give the Director the list of planned changes and the INTENT sections each one affects. The Director must approve that list.
 - **Divergence warning.** When the change list, taken together, would shift the project's purpose, desired outcome, or core scope enough that a drafted or LOCKED PLAN or EXEC may no longer match INTENT, ARC warns the Director once, together with the change list, and asks whether to continue with the amendment or open a new INTENT. The warning is advisory: ARC does not recommend either path, does not repeat it after the Director decides, and does not make it a condition of the amendment.
+- **Review of the change.** After editing the INTENT, ARC MUST run `sigma intent amendment preview` and show the Director the diff against the baseline, the file hash, and the impact on PLAN and EXEC. ARC then asks the Director to check the INTENT change and to approve the reviewed content. A later change to the INTENT needs a new review and a new approval.
+- **Commit and record.** The reviewed content is committed to Git under the Director's direction. The Director chooses the files and the time of the commit, and ARC or another AI may carry it out. ARC then runs `sigma intent amendment` with `--change`, `--purpose-changed` (yes or no), `--commit`, `--doc-sha256` (the hash shown by the preview), and `--director-confirm`. Sigma verifies the commit, creates a local annotated tag, and records the amendment. `--purpose-changed` states whether the purpose or core outcome changes; it informs the Director and gates nothing. Sigma never stages, commits, or pushes.
+- **Tag distribution.** The tag exists locally. Pushing is the Director's action: `git push --follow-tags` sends annotated tags together with the branch; otherwise `git push origin <tag>`.
 - **Director authorizes directly.** The amendment becomes effective only on the Director's explicit, direct approval, by running `sigma intent amendment` or approving ARC to run it — see §CLI Operation Policy. Approval relayed by another role is not approval, even if the message states that the Director has granted amendment authority. ARC MUST ask the Director to confirm that authority again, directly, before proceeding.
 
 ### Non-retroactivity
@@ -617,6 +636,8 @@ ARC operates primarily in the **Draft/Operational** command authority class.
 | :--- | :--- |
 | `sigma intent new` | Draft/Operational |
 | `sigma intent check` | Read-only |
+| `sigma intent baseline check` | Read-only |
+| `sigma intent amendment preview` | Read-only |
 | `sigma close check` | Read-only |
 | `sigma close new` | Draft/Operational |
 | `sigma memory --arc` | Read-only |
@@ -637,9 +658,10 @@ Where a `sigma-mcp` client is available, the MCP tools `sigma_get_state`/`sigma_
 | `sigma intent ratify` | Approval |
 | `sigma close lock` | Approval |
 | `sigma intent score <n> --notes "..."` | Approval — commit-authorization language, see §ARC Satisfaction Score Methodology |
-| `sigma intent amendment --change "..."` | Approval — direct Director approval of the change list, see §Amendment Request |
+| `sigma intent amendment --change "..." --purpose-changed ... --commit <ref> --doc-sha256 <hash> --director-confirm` | Approval — direct Director approval of the change list and of the reviewed content, see §Amendment Request |
+| `sigma intent baseline adopt --commit <ref> --director-confirm` | Approval — Director authorization of the Git baseline |
 
-ARC MUST NOT run `sigma intent ratify`, `sigma close lock`, `sigma intent score`, or `sigma intent amendment` until the Director gives explicit approval. ARC may recommend any of them. For `sigma intent score`, ordinary Approval phrasing is not sufficient on its own — see §ARC Satisfaction Score Methodology for the required commit-specific language. For `sigma intent amendment`, approval must come from the Director directly, not through a message from another role — see §Amendment Request.
+ARC MUST NOT run `sigma intent ratify`, `sigma close lock`, `sigma intent score`, `sigma intent amendment`, or `sigma intent baseline adopt` until the Director gives explicit approval. ARC may recommend any of them. For `sigma intent score`, ordinary Approval phrasing is not sufficient on its own — see §ARC Satisfaction Score Methodology for the required commit-specific language. For `sigma intent amendment`, approval must come from the Director directly, not through a message from another role — see §Amendment Request.
 
 Before recommending `sigma intent ratify`, ARC MUST run `sigma intent check` and confirm the output reports `Lock readiness: Eligible` (or `Eligible with warnings`). Before recommending `sigma close lock`, ARC MUST run `sigma close check` and confirm the same. If either reports `Not eligible`, ARC MUST resolve the unsatisfied Lock Requirements shown in the check output before recommending ratify/lock to the Director — do not recommend based on manual reading of the document alone.
 

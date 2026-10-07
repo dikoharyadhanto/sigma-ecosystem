@@ -1,10 +1,9 @@
 // Generalized from src/utils/roadmap.ts (PLAN-EVAL-01 §3.5) — the
 // `<!-- SIGMA:RENDER:START/END:<name> -->` delimiter mechanism is not
-// specific to ROADMAP. The Amendment mechanism (Discussion 2026-08-11_0115
-// §3 item 4, Director directive 2026-08-12) reuses it verbatim for DIR-INTENT
-// Section 14 (Amendment History) via amendmentHistory.ts. `docLabel` replaces
-// the hard-coded "ROADMAP file" wording in error messages so both callers get
-// an accurate message.
+// specific to ROADMAP. `docLabel` replaces the hard-coded "ROADMAP file"
+// wording in error messages so any caller gets an accurate message. (Before
+// F05 DIR-INTENT's rendered Amendment History table also used it; Sigma no
+// longer writes into DIR-INTENT.)
 
 export function replaceSection(content: string, name: string, replacement: string, docLabel = 'ROADMAP file'): string {
   const startDelim = `<!-- SIGMA:RENDER:START:${name} -->`;

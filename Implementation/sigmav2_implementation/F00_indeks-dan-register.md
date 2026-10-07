@@ -19,8 +19,8 @@ Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigm
 | F01 | Peta konsistensi aturan (master, proyek, skill, memory, versi aturan) | 1 | **DITAHAN** - menunggu feedback review Director per dokumen | rencana belum dibuat; bahan review: [F01-lampiran_daftar-periksa-dokumen.md](F01-lampiran_daftar-periksa-dokumen.md) |
 | F02 | Penomoran chain dan warning bootstrap | 5 | Diterapkan 7 Oktober setelah O-1 sampai O-3 dan eksekusi disetujui; build lulus, 68 berkas / 934 tes lulus, exit 0; di-commit Director dalam 0c3e3b1; push dilaporkan Director | [F02_penomoran-chain-dan-warning-bootstrap.md](F02_penomoran-chain-dan-warning-bootstrap.md) |
 | F03 | Mailbox per intent | 4 | Diterapkan dan divalidasi 7 Oktober: build lulus, 69 berkas / 966 tes lulus exit 0; tes doctor terakhir 6 berkas / 68 tes lulus; di-commit Director dalam 9f1bea6; push berhasil dilaporkan Director, main sama dengan origin/main saat awal F04 | [F03_mailbox-per-intent.md](F03_mailbox-per-intent.md) |
-| F04 | Lifecycle APPROVED/LOCKED, doctor, pengikatan revisi | 2, 9 | F04a/F04b diterapkan dan diverifikasi 7–8 Oktober sesuai persetujuan O-1–O-14; TypeScript/build, 70 tes khusus, dan suite lengkap 71 berkas / 1.036 tes lulus, exit 0; belum commit/push | [F04_lifecycle-approved-locked-doctor-dan-revisi.md](F04_lifecycle-approved-locked-doctor-dan-revisi.md) |
-| F05 | Amandemen INTENT melalui Git, penghapusan tier | 8 | Belum dimulai | - |
+| F04 | Lifecycle APPROVED/LOCKED, doctor, pengikatan revisi | 2, 9 | F04a/F04b diterapkan dan diverifikasi 7–8 Oktober sesuai persetujuan O-1–O-14; TypeScript/build, 70 tes khusus, dan suite lengkap 71 berkas / 1.036 tes lulus, exit 0; di-commit dalam b8050f8 (memuat src, dist, rules, registry, dan dokumen F04); `main` sama dengan `origin/main` per referensi lokal 8 Oktober | [F04_lifecycle-approved-locked-doctor-dan-revisi.md](F04_lifecycle-approved-locked-doctor-dan-revisi.md) |
+| F05 | Amandemen INTENT melalui Git, penghapusan tier | 8 | Diterapkan dan diverifikasi 8 Oktober 2026 setelah O-1 sampai O-13 disetujui sesuai rekomendasi; TypeScript/build lulus, suite lengkap 72 berkas / 1.072 tes lulus; build `dist/` sudah dijalankan (O-11); belum commit/push | [F05_amandemen-intent-git-dan-penghapusan-tier.md](F05_amandemen-intent-git-dan-penghapusan-tier.md) |
 | F06 | sigma notes | 3 | Belum dimulai (track terpisah, rilis 1.1.0) | - |
 | F07 | Pilot keterbacaan dan penyederhanaan dokumen | 6, 7 | Belum dimulai; bergantung pada F01 | - |
 | F08 | Review sumber/kesiapan, revisi dari artefak lama, paket audit, keputusan tertunda | 10-12 | Belum dimulai | - |
@@ -91,8 +91,8 @@ Disalin dari dokumen diskusi sebagai titik awal. Setiap butir dibahas di rencana
 | T-07 | F04 | **TERKUNCI:** spesifikasi gate, validator, orientasi dan guard diterima sesuai O-1/O-5/O-10/O-11/O-14; dua tahap satu hasil dengan pemeriksaan revisi lengkap, tanpa bypass INVALID/override. Hasil eksekusi dicatat pada F04 bagian 11 |
 | T-08 | F04 | **TERKUNCI:** lifecycle_model terpisah dari numbering; approve mengikuti model legacy/new dengan output eksplisit; CLI/MCP lock lama menjadi tombstone, tiket lama pending ditolak tanpa konsumsi, replay sukses lama historis (O-2/O-12) |
 | T-09 | F04 | **TERKUNCI:** migrasi lifecycle eksplisit per chain melalui --migrate-lifecycle, dry-run/--v dan --director-confirm; konversi pasangan pasti otomatis di dalam migrasi. Doctor biasa/MCP tidak memigrasikan model; tidak migrasi proyek nyata pada F04 (O-3) |
-| T-10 | F05 | Urutan persetujuan, pencatatan, sertifikasi, commit, tag; penanganan kegagalan parsial |
-| T-11 | F05 | Distribusi tag pada alur push manual Director |
+| T-10 | F05 | Urutan persetujuan, pencatatan, sertifikasi, commit, tag; penanganan kegagalan parsial. **TERKUNCI (Director, 8 Oktober 2026, F05 O-1):** persetujuan isi, commit, lalu satu titik efektif yang memverifikasi, membuat tag annotated, dan baru menulis chain; tag sisa percobaan terputus diadopsi bila commit sama, tidak pernah dipindahkan. Diterapkan (F05 bagian 11) |
+| T-11 | F05 | Distribusi tag pada alur push manual Director. **TERKUNCI (Director, 8 Oktober 2026, F05 O-3/O-11):** tag annotated, teks pengingat (`git push --follow-tags` atau `git push origin <tag>`), tanpa pemeriksaan remote. Diterapkan (F05 bagian 11) |
 | T-12 | F06 | Penyimpanan registry, kolom katalog, kebijakan file hilang/rename/benturan nama |
 | T-13 | F06 | Cakupan validasi subfolder dan unregistered-notes; kompatibilitas nama command `sigma note` lama terhadap `sigma notes` |
 | T-14 | F07 | Struktur final template setelah pilot; jumlah contoh brief (3 termasuk, 3 tidak termasuk) |
@@ -134,6 +134,14 @@ Keputusan F04 (Director, 7 Oktober 2026): seluruh rekomendasi O-1 sampai O-14 **
 | T-34 | F04 | **TERKUNCI sesuai rekomendasi:** Baseline legacy yang direview vs unknown/blocker; integrasi minimal INTENT dan batas F05, O-9 |
 | T-35 | F04 | **TERKUNCI sesuai rekomendasi:** Guard tidak dilewati INVALID/override, reconstruct konservatif, transaksi CLI/MCP serta tiket legacy, O-10/O-11/O-12 |
 | T-36 | F04 | **TERKUNCI sesuai rekomendasi:** Cakupan master FMN/DEV, pembaruan registry terbatas, kompatibilitas verdict, titik build/uji, O-13/O-14 |
+
+Tambahan dari penyusunan F05 (8 Oktober 2026), seluruhnya **TERKUNCI** sesuai rekomendasi atas persetujuan Director dan diterapkan (F05 bagian 11):
+
+| ID | Fokus | Butir terbuka |
+|---|---|---|
+| T-37 | F05 | Pembentukan baseline Git untuk chain RATIFIED lama dan chain `UNCERTIFIED_EDIT` tanpa commit yang cocok (rekomendasi: `baseline adopt` terpisah, jalur `imported_current` tanpa delta fiktif; F05 O-2) |
+| T-38 | F05 | Riwayat amandemen keluar dari dokumen INTENT: section `Amendment History` dan baris header "Amandemen terakhir" tidak ditambahkan. Menyimpang dari D-10d (28 September) "satu baris di header"; rekomendasi: status/orientasi menampilkan amandemen terakhir (F05 O-5) |
+| T-39 | F05 | Kosakata `NOTED`/`AMENDMENT_REQUESTED`/`AMENDMENT_RATIFIED` pada PLAN (sisa E02 A-5; rekomendasi: dipertahankan; F05 O-9) |
 
 ## 6. Disiplin kerja dan build (tentatif)
 

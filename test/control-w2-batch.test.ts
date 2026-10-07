@@ -43,6 +43,7 @@ import {
   validExecDoc,
   TestEnv,
 } from './helpers';
+import { GitProject, setupGitProject, editIntent, commitIntent, git, gitTry } from './f05-git-helpers';
 
 type Payload = Record<string, unknown>;
 
@@ -119,16 +120,22 @@ function projectWithRatifiedIntent(env: TestEnv, id = 'TEST'): void {
   fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md'), validIntentDoc('v1'));
 }
 
-describe('sigma_prepare_intent_amendment / sigma_commit_intent_amendment', () => {
+describe('sigma_prepare_intent_amendment / sigma_commit_intent_amendment (F05 Git flow)', () => {
+  async function prepared(p: GitProject, change = 'Scope widened per Director', purpose = false) {
+    editIntent(p);
+    const s = await session(p.env, 'ARC');
+    const prep = await s.call('sigma_prepare_intent_amendment', { change, purpose_changed: purpose, idempotency_key: 'p1' });
+    return { s, prep };
+  }
+
   it('prepare requires ARC role', async () => {
-    const env = setupTestEnv();
-    projectWithRatifiedIntent(env);
-    const s = await session(env, 'DEV');
-    const res = await s.call('sigma_prepare_intent_amendment', { change: 'x', idempotency_key: 'p1' });
+    const p = setupGitProject(setupTestEnv());
+    const s = await session(p.env, 'DEV');
+    const res = await s.call('sigma_prepare_intent_amendment', { change: 'x', purpose_changed: false, idempotency_key: 'p1' });
     expect(res.isError).toBe(true);
     expect((res.payload.error as Payload).code).toBe('ROLE_NOT_AUTHORIZED');
     await s.close();
-    env.cleanup();
+    p.cleanup();
   });
 
   it('prepare refuses when the active intent is not RATIFIED', async () => {
@@ -137,90 +144,164 @@ describe('sigma_prepare_intent_amendment / sigma_commit_intent_amendment', () =>
     writeChainFixture(env, 'v1', makeChainWithDraftIntent('v1'));
     fs.writeFileSync(path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md'), validIntentDoc('v1'));
     const s = await session(env, 'ARC');
-    const res = await s.call('sigma_prepare_intent_amendment', { change: 'x', idempotency_key: 'p1' });
+    const res = await s.call('sigma_prepare_intent_amendment', { change: 'x', purpose_changed: false, idempotency_key: 'p1' });
     expect(res.isError).toBe(true);
     expect((res.payload.error as Payload).code).toBe('INVALID_OPERATION');
     await s.close();
     env.cleanup();
   });
 
-  it('prepare refuses a change containing a pipe (breaks the Amendment History table)', async () => {
-    const env = setupTestEnv();
-    projectWithRatifiedIntent(env);
-    const s = await session(env, 'ARC');
-    const res = await s.call('sigma_prepare_intent_amendment', { change: 'bad | change', idempotency_key: 'p1' });
+  it('prepare refuses a change containing a pipe', async () => {
+    const p = setupGitProject(setupTestEnv());
+    const s = await session(p.env, 'ARC');
+    const res = await s.call('sigma_prepare_intent_amendment', { change: 'bad | change', purpose_changed: false, idempotency_key: 'p1' });
     expect(res.isError).toBe(true);
     expect((res.payload.error as Payload).code).toBe('INVALID_OPERATION');
     await s.close();
-    env.cleanup();
+    p.cleanup();
   });
 
-  it('end-to-end: prepare -> approve -> commit records the amendment and re-certifies the doc', async () => {
-    const env = setupTestEnv();
-    projectWithRatifiedIntent(env);
-    const s = await session(env, 'ARC');
+  it('prepare refuses without a Git baseline, and when nothing changed since the baseline', async () => {
+    const noBaseline = setupGitProject(setupTestEnv(), { baseline: false });
+    editIntent(noBaseline);
+    const s1 = await session(noBaseline.env, 'ARC');
+    const a = await s1.call('sigma_prepare_intent_amendment', { change: 'x', purpose_changed: false, idempotency_key: 'p1' });
+    expect(a.isError).toBe(true);
+    expect(JSON.stringify(a.payload)).toMatch(/baseline_recorded/);
+    await s1.close();
+    noBaseline.cleanup();
 
-    const prep = await s.call('sigma_prepare_intent_amendment', { change: 'Scope widened per Director', idempotency_key: 'p1' });
+    const unchanged = setupGitProject(setupTestEnv());
+    const s2 = await session(unchanged.env, 'ARC');
+    const b = await s2.call('sigma_prepare_intent_amendment', { change: 'x', purpose_changed: false, idempotency_key: 'p1' });
+    expect(b.isError).toBe(true);
+    expect(JSON.stringify(b.payload)).toMatch(/changed_since_baseline/);
+    await s2.close();
+    unchanged.cleanup();
+  });
+
+  it('end-to-end: prepare -> approve -> commit verifies the commit, tags it, and certifies without rewriting the doc', async () => {
+    const p = setupGitProject(setupTestEnv());
+    const { s, prep } = await prepared(p);
     expect(prep.isError, JSON.stringify(prep.payload)).not.toBe(true);
-    const chainMidway = readChain(env.projectDir, 'v1');
-    expect(chainMidway.intent.amendments ?? []).toHaveLength(0); // prepare must not mutate
+    expect(readChain(p.projectDir, 'v1').intent.amendments ?? []).toHaveLength(0); // prepare must not mutate
 
-    const approval = directorDecide(env.projectDir, prep.payload.operation_ticket_id as string, 'approve');
+    const edited = fs.readFileSync(p.intentFile);
+    const commitSha = commitIntent(p);
+    const approval = directorDecide(p.projectDir, prep.payload.operation_ticket_id as string, 'approve');
     const commit = await s.call('sigma_commit_intent_amendment', {
       operation_ticket_id: prep.payload.operation_ticket_id,
       approval_id: approval.approval_id,
       change: 'Scope widened per Director',
+      purpose_changed: false,
+      commit: commitSha,
       idempotency_key: 'c1',
     });
     expect(commit.isError, JSON.stringify(commit.payload)).not.toBe(true);
+    expect(commit.payload.result_tag).toBe('sigma/intent-v1-amd-001');
 
-    const chainAfter = readChain(env.projectDir, 'v1');
-    expect(chainAfter.intent.amendments).toHaveLength(1);
-    expect(chainAfter.intent.amendments[0].change).toBe('Scope widened per Director');
-    const docContent = fs.readFileSync(path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md'), 'utf8');
-    expect(docContent).toContain('Scope widened per Director');
+    const after = readChain(p.projectDir, 'v1');
+    expect(after.intent.amendments).toHaveLength(1);
+    expect(after.intent.amendments![0]).toMatchObject({ change: 'Scope widened per Director', result_commit: commitSha, purpose_changed: false });
+    expect(after.intent.git_baseline).toMatchObject({ commit: commitSha, provenance: 'amendment' });
+    expect(fs.readFileSync(p.intentFile).equals(edited)).toBe(true);
+    expect(git(p.repoDir, 'rev-parse', 'sigma/intent-v1-amd-001^{commit}')).toBe(commitSha);
     await s.close();
-    env.cleanup();
+    p.cleanup();
   });
 
-  it('commit rejects a `change` that does not hash-match what the ticket was prepared with', async () => {
-    const env = setupTestEnv();
-    projectWithRatifiedIntent(env);
-    const s = await session(env, 'ARC');
-    const prep = await s.call('sigma_prepare_intent_amendment', { change: 'original text', idempotency_key: 'p1' });
-    const approval = directorDecide(env.projectDir, prep.payload.operation_ticket_id as string, 'approve');
-    const commit = await s.call('sigma_commit_intent_amendment', {
-      operation_ticket_id: prep.payload.operation_ticket_id,
-      approval_id: approval.approval_id,
-      change: 'substituted text',
-      idempotency_key: 'c1',
-    });
-    expect(commit.isError).toBe(true);
-    expect((commit.payload.error as Payload).code).toBe('INVALID_OPERATION');
-    expect(readChain(env.projectDir, 'v1').intent.amendments ?? []).toHaveLength(0);
+  it('commit rejects a change or purpose_changed that does not hash-match the ticket', async () => {
+    const p = setupGitProject(setupTestEnv());
+    const { s, prep } = await prepared(p, 'original text');
+    const commitSha = commitIntent(p);
+    const approval = directorDecide(p.projectDir, prep.payload.operation_ticket_id as string, 'approve');
+    const base = { operation_ticket_id: prep.payload.operation_ticket_id, approval_id: approval.approval_id, commit: commitSha };
+    const changed = await s.call('sigma_commit_intent_amendment', { ...base, change: 'substituted text', purpose_changed: false, idempotency_key: 'c1' });
+    expect(changed.isError).toBe(true);
+    expect((changed.payload.error as Payload).code).toBe('INVALID_OPERATION');
+    const flipped = await s.call('sigma_commit_intent_amendment', { ...base, change: 'original text', purpose_changed: true, idempotency_key: 'c2' });
+    expect(flipped.isError).toBe(true);
+    expect((flipped.payload.error as Payload).code).toBe('INVALID_OPERATION');
+    expect(readChain(p.projectDir, 'v1').intent.amendments ?? []).toHaveLength(0);
     await s.close();
-    env.cleanup();
+    p.cleanup();
+  });
+
+  it('commit fails with the unfinished steps when the approved content is not committed, and consumes nothing', async () => {
+    const p = setupGitProject(setupTestEnv());
+    const { s, prep } = await prepared(p);
+    const approval = directorDecide(p.projectDir, prep.payload.operation_ticket_id as string, 'approve');
+    const res = await s.call('sigma_commit_intent_amendment', {
+      operation_ticket_id: prep.payload.operation_ticket_id, approval_id: approval.approval_id,
+      change: 'Scope widened per Director', purpose_changed: false, commit: p.baselineCommit!, idempotency_key: 'c1',
+    });
+    expect(res.isError).toBe(true);
+    expect(JSON.stringify(res.payload)).toMatch(/unfinished steps/);
+    expect(readChain(p.projectDir, 'v1').intent.amendments ?? []).toHaveLength(0);
+    expect(readTicket(p.projectDir, prep.payload.operation_ticket_id as string)!.consumed_at).toBeNull();
+    expect(gitTry(p.repoDir, 'rev-parse', '--verify', '--quiet', 'refs/tags/sigma/intent-v1-amd-001').ok).toBe(false);
+    await s.close();
+    p.cleanup();
+  });
+
+  it('commit rejects when the INTENT changed after prepare (stale document)', async () => {
+    const p = setupGitProject(setupTestEnv());
+    const { s, prep } = await prepared(p);
+    editIntent(p, 'a further edit nobody approved');
+    const commitSha = commitIntent(p);
+    const approval = directorDecide(p.projectDir, prep.payload.operation_ticket_id as string, 'approve');
+    const res = await s.call('sigma_commit_intent_amendment', {
+      operation_ticket_id: prep.payload.operation_ticket_id, approval_id: approval.approval_id,
+      change: 'Scope widened per Director', purpose_changed: false, commit: commitSha, idempotency_key: 'c1',
+    });
+    expect(res.isError).toBe(true);
+    expect((res.payload.error as Payload).code).toBe('STALE_ARTIFACT');
+    expect(readChain(p.projectDir, 'v1').intent.amendments ?? []).toHaveLength(0);
+    await s.close();
+    p.cleanup();
+  });
+
+  it('a ticket prepared before F05 (no Git review package) is rejected without consumption', async () => {
+    const p = setupGitProject(setupTestEnv());
+    const { s, prep } = await prepared(p);
+    const commitSha = commitIntent(p);
+    const ticketId = prep.payload.operation_ticket_id as string;
+    const ticket = readTicket(p.projectDir, ticketId)!;
+    delete ticket.dependencies_sha256;
+    delete ticket.review_package;
+    writeTicket(p.projectDir, ticket);
+    const approval = directorDecide(p.projectDir, ticketId, 'approve');
+    const res = await s.call('sigma_commit_intent_amendment', {
+      operation_ticket_id: ticketId, approval_id: approval.approval_id,
+      change: 'Scope widened per Director', purpose_changed: false, commit: commitSha, idempotency_key: 'c1',
+    });
+    expect(res.isError).toBe(true);
+    expect((res.payload.error as Payload).code).toBe('STALE_ARTIFACT');
+    expect(readTicket(p.projectDir, ticketId)!.consumed_at).toBeNull();
+    await s.close();
+    p.cleanup();
   });
 
   it('a consumed ticket cannot be committed twice', async () => {
-    const env = setupTestEnv();
-    projectWithRatifiedIntent(env);
-    const s = await session(env, 'ARC');
-    const prep = await s.call('sigma_prepare_intent_amendment', { change: 'once only', idempotency_key: 'p1' });
-    const approval = directorDecide(env.projectDir, prep.payload.operation_ticket_id as string, 'approve');
+    const p = setupGitProject(setupTestEnv());
+    const { s, prep } = await prepared(p, 'once only');
+    const commitSha = commitIntent(p);
+    const approval = directorDecide(p.projectDir, prep.payload.operation_ticket_id as string, 'approve');
     const args = {
       operation_ticket_id: prep.payload.operation_ticket_id,
       approval_id: approval.approval_id,
       change: 'once only',
+      purpose_changed: false,
+      commit: commitSha,
     };
     const first = await s.call('sigma_commit_intent_amendment', { ...args, idempotency_key: 'c1' });
     expect(first.isError, JSON.stringify(first.payload)).not.toBe(true);
     const second = await s.call('sigma_commit_intent_amendment', { ...args, idempotency_key: 'c2' });
     expect(second.isError).toBe(true);
     expect((second.payload.error as Payload).code).toBe('APPROVAL_MISMATCH');
-    expect(readChain(env.projectDir, 'v1').intent.amendments).toHaveLength(1);
+    expect(readChain(p.projectDir, 'v1').intent.amendments).toHaveLength(1);
     await s.close();
-    env.cleanup();
+    p.cleanup();
   });
 });
 

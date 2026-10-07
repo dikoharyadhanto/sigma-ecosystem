@@ -4,6 +4,10 @@
 // typed commit". This tool only freezes an operation ticket; it grants no
 // authority and never mutates governance state.
 //
+// F05: the ticket also freezes the Git review package (baseline commit, diff
+// hash, INTENT file hash, purpose_changed). The Director approves the reviewed
+// content; the commit holding it is supplied at commit time and verified there.
+//
 // Unlike ratify, this operation carries a business argument (`change`) that
 // the commit tool needs again to perform the write — there is no ticket
 // field that stores raw business payloads (OperationTicket only stores
@@ -18,6 +22,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { readActiveChain } from '../../../engine/chain';
 import { readCanonicalArtifactFile } from '../../artifactPath';
+import { previewIntentAmendment, AmendmentPreview } from '../../../engine/intentGit';
 import { generateId, writeTicket, ticketPath, OperationTicket, TICKET_TTL_MS } from '../../../engine/controlStore';
 import { computeStateRevision, ERROR_CODES } from '../../contract';
 import { McpQueryError } from '../../errors';
@@ -32,7 +37,7 @@ function assertValidChange(change: string): void {
     throw new McpQueryError(ERROR_CODES.INVALID_OPERATION, '--change cannot be empty.');
   }
   if (/[|\n\r]/.test(change)) {
-    throw new McpQueryError(ERROR_CODES.INVALID_OPERATION, '--change cannot contain "|" or a newline (breaks the Amendment History table).');
+    throw new McpQueryError(ERROR_CODES.INVALID_OPERATION, '--change cannot contain "|" or a newline (single-line amendment summary).');
   }
   if (change.length > MAX_CHANGE_LENGTH) {
     throw new McpQueryError(ERROR_CODES.INVALID_OPERATION, `--change exceeds ${MAX_CHANGE_LENGTH} characters.`);
@@ -51,6 +56,7 @@ export function registerPrepareIntentAmendmentTool(server: McpServer): void {
         '<ticket_id>`) before sigma_commit_intent_amendment can use it. Tickets expire after 30 minutes. ARC role only.',
       inputSchema: {
         change: z.string().min(1).max(MAX_CHANGE_LENGTH),
+        purpose_changed: z.boolean(),
         idempotency_key: z.string().min(1),
       },
       annotations: {
@@ -60,16 +66,30 @@ export function registerPrepareIntentAmendmentTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async (args: { change: string; idempotency_key: string }) => {
+    async (args: { change: string; purpose_changed: boolean; idempotency_key: string }) => {
       const operationTicketId = generateId('opt');
+      // Git work is slow; the control layer limits mutate() to a short lease-safety budget,
+      // so the preview is computed in checkPreconditions (still under the project lock).
+      let preview: AmendmentPreview | undefined;
       return respondControlWrite(
         {
           tool: 'sigma_prepare_intent_amendment',
           operationId: 'intent_amendment_prepare',
           idempotencyKey: args.idempotency_key,
-          argumentsForHash: { change: args.change },
+          argumentsForHash: { change: args.change, purpose_changed: args.purpose_changed },
           allowedRoles: ['ARC'],
-          checkPreconditions: () => assertValidChange(args.change),
+          checkPreconditions: (root) => {
+            assertValidChange(args.change);
+            const { chainVersion, data: chain } = readActiveChain(root);
+            if (chain.intent.state !== 'RATIFIED' || !chain.intent.file) return; // mutate reports these
+            preview = previewIntentAmendment(root, chainVersion, chain);
+            if (preview.report.blockers.length) {
+              throw new McpQueryError(
+                ERROR_CODES.INVALID_OPERATION,
+                'Git preflight failed; resolve before preparing an amendment:\n' + preview.report.blockers.map(b => ' - ' + b).join('\n')
+              );
+            }
+          },
           transactionFiles: (root) => [ticketPath(root, operationTicketId)],
         },
         (root) => {
@@ -89,6 +109,8 @@ export function registerPrepareIntentAmendmentTool(server: McpServer): void {
             throw new McpQueryError(ERROR_CODES.INVALID_OPERATION, 'The RATIFIED DIR-INTENT file is not present on disk.');
           }
 
+          if (!preview) throw new McpQueryError(ERROR_CODES.INTERNAL_ERROR, 'Amendment preview was not computed.');
+
           const { revision } = computeStateRevision(root);
           if (!revision) {
             throw new McpQueryError(ERROR_CODES.INTERNAL_ERROR, 'Could not compute a state_revision for this project.');
@@ -101,17 +123,27 @@ export function registerPrepareIntentAmendmentTool(server: McpServer): void {
             operation_id: 'intent_amendment',
             project_id: binding.projectId ?? '',
             bound_role: binding.role ?? '',
-            arguments_hash: stableHash({ change: args.change }),
+            arguments_hash: stableHash({ change: args.change, purpose_changed: args.purpose_changed }),
             target: { artifact: 'intent', version: chain.intent.version, sha256: doc.sha256 },
             expected_state_revision: revision,
             effects: [
-              `intent.amendments: +1 entry (change: "${args.change}")`,
-              'intent.certified_doc_sha256: recomputed after Section 14 (Amendment History) re-render',
+              `intent.amendments: +1 entry ${preview.next_amendment_id} (purpose_changed: ${args.purpose_changed ? 'yes' : 'no'}; change: "${args.change}")`,
+              'Result commit supplied at commit time is verified; annotated tag ' + preview.next_tag + ' is created locally (never pushed)',
+              'intent.certified_doc_sha256: certified from the reviewed file bytes (the document is not rewritten); APPROVED PLANs flagged for INTENT review',
             ],
             authority: 'director',
             issued_at: now.toISOString(),
             expires_at: new Date(now.getTime() + TICKET_TTL_MS).toISOString(),
             consumed_at: null,
+            dependencies_sha256: preview.diff_sha256,
+            review_package: {
+              baseline_commit: preview.report.baseline?.commit,
+              diff_stat: preview.diff.stat,
+              diff_sha256: preview.diff_sha256,
+              doc_sha256: preview.report.working_sha256,
+              purpose_changed: args.purpose_changed,
+              impact: preview.impact,
+            },
           };
           writeTicket(root, ticket);
 

@@ -584,7 +584,10 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | session  | `sigma session bootstrap`          | Load project state at session start                                            |
 | intent   | `sigma intent new`                 | Create a `DIR-INTENT` draft                                                    |
 | intent   | `sigma intent ratify`              | Ratify the active `DIR-INTENT` with Director approval                          |
-| intent   | `sigma intent amendment --change`  | Record a Director-approved Amendment against a RATIFIED intent                 |
+| intent   | `sigma intent baseline check`      | Verify the INTENT in Git is the latest certified content (read-only)           |
+| intent   | `sigma intent baseline adopt`      | Bind the certified INTENT to a Git commit and local tag (Director-confirmed)   |
+| intent   | `sigma intent amendment preview`   | Diff against the Git baseline, hash to approve, impact on PLAN/EXEC (read-only)|
+| intent   | `sigma intent amendment`           | Record a Director-approved amendment from a verified Git commit; creates a tag |
 | intent   | `sigma intent check`               | Validate `DIR-INTENT` structure and report lock readiness (read-only)          |
 | intent   | `sigma intent status`              | Show active intent version and state                                           |
 | intent   | `sigma intent list`                | List intent versions                                                           |

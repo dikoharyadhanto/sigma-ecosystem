@@ -149,8 +149,8 @@ describe('F14 — registries', () => {
     const registry = fs.readJsonSync(path.resolve(__dirname, '..', 'Sigma', 'SIGMA-OPERATION-REGISTRY.json'));
     const ids: string[] = registry.operations.map((o: { operation_id: string }) => o.operation_id);
 
-    expect(registry.total_operations).toBe(64);
-    expect(ids).toHaveLength(64);
+    expect(registry.total_operations).toBe(65);
+    expect(ids).toHaveLength(65);
     expect(ids.filter((id) => /notion|humanize/.test(id))).toEqual([]);
   });
 

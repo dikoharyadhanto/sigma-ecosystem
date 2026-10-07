@@ -69,8 +69,9 @@ const INTENT_SPEC_V5 = {
         'FUNCTIONAL_REQUIREMENTS',
         'AUD_NOTES',
     ],
-    // RESEARCH is present only when needed. AMENDMENT_HISTORY stays optional
-    // until the Git-based amendment flow replaces `sigma intent amendment` (F05).
+    // RESEARCH is present only when needed. AMENDMENT_HISTORY is tolerated for
+    // documents that carry a legacy rendered table; schema 5 no longer includes it
+    // in the template (F05: amendment history is in the chain, log, and Git tags).
     optionalSections: ['RESEARCH', 'AMENDMENT_HISTORY'],
     sectionOrder: [
         'DIRECTOR_SUMMARY',
@@ -172,11 +173,10 @@ const DOC_SPECS = {
             'AUD_FINDINGS_ADVISORY_ONLY',
             'FINAL_VALIDATION_CHECKLIST',
         ],
-        // Amendment History (Fase 4) — known-but-optional so DIR-INTENT docs
-        // predating the Amendment mechanism keep passing check/ratify unchanged.
-        // sigma intent amendment auto-injects it into old docs on first use
-        // (amendmentHistory.ts); promoting it to requiredSections is a separate
-        // future decision (D-05), not automatic once every project has migrated.
+        // Amendment History — known-but-optional so DIR-INTENT docs that already
+        // carry the rendered table keep passing check/ratify unchanged. Since F05
+        // Sigma no longer writes or injects this section; history lives in the
+        // chain, the amendment log, and Git tags.
         optionalSections: ['AMENDMENT_HISTORY'],
         sectionOrder: [
             'INTENT_CORE',

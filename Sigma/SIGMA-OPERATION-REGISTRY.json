@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-10-07T09:06:34.589Z",
   "description": "Sigma Operation Registry \u2014 all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 64,
+  "total_operations": 65,
   "domains": [
     "close",
     "config",
@@ -318,13 +318,37 @@
       "action": "amendment",
       "level": "semantic",
       "role": "director",
-      "description": "Record a Director-approved Amendment against a RATIFIED DIR-INTENT \u2014 Operationalization content only, never Sovereign (see SIGMA_PROTOCOL.md \u00a75.1.1). Appends one AMD-NNN entry to intent.amendments[], re-renders DIR-INTENT Section 14 (Amendment History), re-certifies the document hash (intent.certified_doc_sha256/certified_at), and appends an audit record to Sigma/logs/intent_amendment.log. Auto-injects the Section 14 skeleton into documents that predate the Amendment mechanism.",
+      "description": "Record a Director-approved amendment of a RATIFIED DIR-INTENT from a Git commit; any part of the INTENT may be amended. Read-only `sigma intent amendment preview` shows the Git baseline check, the diff against the baseline commit, the file hash to approve, and the impact on PLAN/EXEC. The recording command verifies that the supplied commit holds exactly the reviewed content, creates a local annotated tag (never moved or overwritten), appends one AMD-NNN entry to intent.amendments[] with the Git references, re-certifies the document hash from the file bytes (the document is not rewritten), flags APPROVED PLANs for INTENT review, and appends an audit record to Sigma/logs/intent_amendment.log. Sigma never stages, commits, or pushes. Requires a Git baseline (`sigma intent baseline adopt`).",
       "inputs": [
         {
           "name": "--change",
           "type": "string",
           "required": true,
-          "description": "Free-text description of the change, commit-message style. Must not contain \"|\" or a newline (breaks the Section 14 pipe-table)."
+          "description": "Single-line summary of the change, commit-message style. Must not contain \"|\" or a newline."
+        },
+        {
+          "name": "--purpose-changed",
+          "type": "string",
+          "required": true,
+          "description": "yes or no. Director-reviewed declaration whether the purpose or core outcome changes; informational, never a gate."
+        },
+        {
+          "name": "--commit",
+          "type": "string",
+          "required": true,
+          "description": "Commit holding exactly the reviewed and approved INTENT content; must descend from the baseline commit."
+        },
+        {
+          "name": "--doc-sha256",
+          "type": "string",
+          "required": true,
+          "description": "INTENT file hash shown by `amendment preview`; binds the approval to the reviewed content."
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": true,
+          "description": "Explicit Director approval of the reviewed content and change list."
         },
         {
           "name": "--v",
@@ -336,15 +360,15 @@
       "outputs": [
         {
           "type": "state_change",
-          "description": "intent.amendments[] gains one AmendmentEntry {id, created_at, change, director_approved_at}; intent.effective_amendment updated to the new AMD-NNN"
+          "description": "intent.amendments[] gains one AmendmentEntry {id, created_at, change, director_approved_at, purpose_changed, baseline_commit, result_commit, result_tag, doc_sha256}; intent.effective_amendment and intent.git_baseline updated"
         },
         {
           "type": "state_change",
-          "description": "intent.certified_doc_sha256/certified_at re-stamped from the re-rendered DIR-INTENT file"
+          "description": "intent.certified_doc_sha256/certified_at/revision re-stamped from the reviewed DIR-INTENT file bytes"
         },
         {
-          "type": "file",
-          "description": "DIR-INTENT Section 14 (Amendment History) re-rendered in place; every other section left untouched"
+          "type": "git",
+          "description": "Local annotated tag sigma/intent-<chain>-amd-NNN on the result commit"
         },
         {
           "type": "file",
@@ -365,12 +389,73 @@
         {
           "type": "value",
           "condition": "--change must not contain \"|\" or newline characters",
-          "error_message": "--change cannot contain \"|\" or a newline (breaks the Amendment History table)"
+          "error_message": "--change cannot contain \"|\" or a newline (single-line amendment summary)"
+        },
+        {
+          "type": "git",
+          "condition": "Git baseline recorded; INTENT tracked; result commit descends from the baseline and holds the working-tree content; no uncommitted change on the INTENT path",
+          "error_message": "Amendment cannot be completed; unfinished steps are listed"
         }
       ],
       "gating": {
-        "pre_condition": "target chain intent.state == 'RATIFIED'",
-        "post_condition": "AMD-NNN recorded; DIR-INTENT re-certified (UNCERTIFIED_EDIT cleared for this document if it was previously set)"
+        "pre_condition": "target chain intent.state == 'RATIFIED'; Git baseline recorded and verified",
+        "post_condition": "AMD-NNN recorded with Git references; DIR-INTENT re-certified (UNCERTIFIED_EDIT cleared for this document if it was previously set)"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "intent_baseline",
+      "domain": "intent",
+      "action": "baseline",
+      "level": "semantic",
+      "role": "director",
+      "description": "`sigma intent baseline adopt --commit <ref> --director-confirm` binds the certified INTENT content of a RATIFIED chain to a commit and a local annotated tag sigma/intent-<chain>-base. When the certified content cannot be recovered from Git, `--import-current` adopts the reviewed current content without inventing an amendment. `sigma intent baseline check` is read-only and verifies that the INTENT in Git is the latest certified content (before editing an amendment and before a Petition). CLI only; not admissible through MCP.",
+      "inputs": [
+        {
+          "name": "--commit",
+          "type": "string",
+          "required": true,
+          "description": "Commit holding exactly the current INTENT content"
+        },
+        {
+          "name": "--import-current",
+          "type": "flag",
+          "required": false,
+          "description": "Adopt the reviewed current content when the certified content is unrecoverable from Git"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": true,
+          "description": "Explicit Director authorization"
+        },
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "Chain version instead of the active one"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "intent.git_baseline recorded {commit, tag, doc_sha256, doc_sha256_lf, revision, provenance}"
+        },
+        {
+          "type": "git",
+          "description": "Local annotated tag sigma/intent-<chain>-base"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "target chain intent.state == 'RATIFIED' and no baseline recorded at a different commit",
+          "error_message": "A baseline is already recorded; amendments advance it"
+        }
+      ],
+      "gating": {
+        "pre_condition": "INTENT tracked by Git; commit reachable from HEAD and holding the current content",
+        "post_condition": "Git baseline recorded; first amendment becomes possible"
       },
       "error_messages": {}
     },

@@ -4,8 +4,8 @@ import { replaceSection, removeSectionIfPresent } from './renderMarkers';
 
 // Re-exported for existing call sites/tests — the implementation moved to
 // renderMarkers.ts (PLAN-IMPL Fase 4) since the delimiter mechanism is no
-// longer ROADMAP-specific (DIR-INTENT Section 14 / Amendment History uses it
-// too). Behavior unchanged: both default to the "ROADMAP file" error label.
+// longer ROADMAP-specific. Behavior unchanged: both default to the
+// "ROADMAP file" error label.
 export { replaceSection, removeSectionIfPresent };
 
 // PLAN-EVAL-01 Fase 3 — every entry in chain.plan.versions already belongs

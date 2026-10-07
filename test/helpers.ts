@@ -6,7 +6,7 @@ import os from 'os';
 
 import { SCHEMA_VERSION } from '../src/config';
 
-const CLI = path.resolve(__dirname, '..', 'dist', 'cli.js');
+const CLI = path.resolve(__dirname, '..', process.env.SIGMA_TEST_DIST ?? 'dist', 'cli.js');
 // Previously a hardcoded local mirror of src/config.ts's SCHEMA_VERSION —
 // drifted out of sync on the 1.2.0 bump (PLAN-IMPL-SIGMA-HUMANIZE-OPERATION
 // §4 Fase 2) and broke fixtures silently. Imported directly now so this
