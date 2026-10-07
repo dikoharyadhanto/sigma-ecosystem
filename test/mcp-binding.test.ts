@@ -582,7 +582,7 @@ describe('policy projection (§12, matrix §6)', () => {
     expect(out.active).toBe(true);
     expect(out.advisory).toBe(true);
     const ops = out.operations as Payload[];
-    expect(ops.length).toBe(59);
+    expect(ops.length).toBe(61);
     // Every registry operation is classified — no silent gaps.
     expect(ops.filter((o) => o.tier === null && o.availability !== 'forbidden')).toHaveLength(0);
     // Nothing in Batch 1 is exposed as an executable write.

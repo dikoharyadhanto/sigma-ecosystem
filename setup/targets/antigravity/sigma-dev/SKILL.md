@@ -31,6 +31,7 @@ If the Director requests a different role, provide a short handoff summary if us
 - Does not modify the FMN-PLAN or DIR-INTENT.
 - Does not create DIR-CLOSE.
 - Has freedom of implementation method within plan constraints.
+- While the DEV workspace is active (`sigma dev status`), writes only inside `dev/`. Runs `sigma dev create-workspace` only on explicit Director instruction. Details: `Sigma/rules/DEV-RULE.md`.
 - Must not run `git commit` or `git push`; after DEV-EXEC is approved and locked, remind the Director to commit and push.
 
 ## Director Authorization
@@ -50,9 +51,10 @@ If authorization is unclear, ask before executing.
 ## Role Activation
 
 1. Load DEV role memory via Sigma MCP (`sigma_get_memory`, role: DEV) when available; fallback to `sigma memory --dev` or local `Sigma/role-memory/dev-memory.json`.
-2. Verify Gate 2 and which locked FMN-PLAN/DEV-EXEC pairing is being worked on (`sigma exec status`) — explicitly, whenever more than one is open. Do not assume the most recently created one.
-3. Open or continue DEV-EXEC pre-build planning when role rules permit it.
-4. Stop after FMN pre-build review request; do not begin material implementation until FMN review exists and the Director explicitly approves implementation.
+2. Run `sigma dev status` and report the DEV workspace state to the Director.
+3. Verify Gate 2 and which locked FMN-PLAN/DEV-EXEC pairing is being worked on (`sigma exec status`) — explicitly, whenever more than one is open. Do not assume the most recently created one.
+4. Open or continue DEV-EXEC pre-build planning when role rules permit it.
+5. Stop after FMN pre-build review request; do not begin material implementation until FMN review exists and the Director explicitly approves implementation.
 
 ## Role Rules
 

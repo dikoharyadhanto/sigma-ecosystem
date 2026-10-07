@@ -1,11 +1,12 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-08-19T10:01:41.423Z",
+  "generated_at": "2026-10-07T09:06:34.589Z",
   "description": "Sigma Operation Registry \u2014 all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 59,
+  "total_operations": 61,
   "domains": [
     "close",
     "config",
+    "dev",
     "doctor",
     "exec",
     "git",
@@ -1544,7 +1545,7 @@
       "action": "doctor",
       "level": "semantic",
       "role": "any",
-      "description": "Diagnose and reconcile Sigma runtime state. Default (or --recovery) reconciles the active chain file against artifacts on disk; --reconstruct rebuilds a missing/corrupted progress-v<N>.json from artifact files; --all-versions applies to every chain.",
+      "description": "Diagnose and reconcile Sigma runtime state. Default (or --recovery) reconciles the active chain file against artifacts on disk; --reconstruct rebuilds a missing/corrupted progress-v<N>.json from artifact files; --all-versions applies to every chain. --repair-workspace recreates a missing DEV workspace folder or marker from the record in .sigma-identity.json, without reconciling chains and without touching the contents of dev/.",
       "inputs": [
         {
           "name": "--recovery",
@@ -1569,6 +1570,12 @@
           "type": "string",
           "required": false,
           "description": "With --reconstruct, target one specific chain instead of the active one (e.g. v2)"
+        },
+        {
+          "name": "--repair-workspace",
+          "type": "flag",
+          "required": false,
+          "description": "Recreate a missing DEV workspace folder or marker from the project identity (cannot be combined with other doctor options)"
         }
       ],
       "outputs": [
@@ -1582,6 +1589,11 @@
           "type": "flag",
           "condition": "--v is only meaningful together with --reconstruct",
           "error_message": "--v requires --reconstruct"
+        },
+        {
+          "type": "flag",
+          "condition": "--repair-workspace is exclusive",
+          "error_message": "--repair-workspace cannot be combined with other doctor options."
         }
       ],
       "gating": {
@@ -2347,6 +2359,73 @@
       "gating": {
         "pre_condition": "memo exists and is type MEMO",
         "post_condition": "memo no longer counts against the role's unread memo quota"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "dev_create_workspace",
+      "domain": "dev",
+      "action": "create-workspace",
+      "level": "semantic",
+      "role": "director",
+      "description": "Create the DEV workspace folder dev/ at the project root, its marker dev/.sigma-workspace.json, and the dev_workspace record in .sigma-identity.json. The record is written last and is the switch: while it exists the DEV workspace rules apply. Run by DEV only on explicit Director instruction; the CLI has no confirmation option. Refuses when any entry named dev exists in the project root (case-insensitive) or a record already exists.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "folder",
+          "description": "dev/ at the project root (empty except for the marker)"
+        },
+        {
+          "type": "file",
+          "description": "dev/.sigma-workspace.json (role, project_id, created_at)"
+        },
+        {
+          "type": "state_change",
+          "description": ".sigma-identity.json gains dev_workspace { path, created_at }"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "existence",
+          "condition": "no entry named dev (any case) exists in the project root",
+          "error_message": "An entry named \"<name>\" already exists in the project root. To activate the workspace, the Director must rename or move that entry first."
+        },
+        {
+          "type": "state",
+          "condition": "no dev_workspace record exists in .sigma-identity.json",
+          "error_message": "A DEV workspace is already registered for this project. Run `sigma dev status` to see its state, or `sigma doctor` to check it."
+        }
+      ],
+      "gating": {
+        "pre_condition": "inside a Sigma project with a readable .sigma-identity.json; explicit Director instruction",
+        "post_condition": "dev/, its marker, and the dev_workspace record all exist; on any failure none of them remain"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "dev_status",
+      "domain": "dev",
+      "action": "status",
+      "level": "read_only",
+      "role": "any",
+      "description": "Read-only report of the DEV workspace state from three sources: the dev_workspace record in .sigma-identity.json, the dev/ folder, and its marker. States: INACTIVE, ACTIVE, ACTIVE_DEGRADED.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "State and the rule message for DEV; for INACTIVE, a note when an unregistered dev/ folder exists"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "existence",
+          "condition": ".sigma-identity.json must exist and be readable",
+          "error_message": "No Sigma project identity found. Run: sigma project start"
+        }
+      ],
+      "gating": {
+        "pre_condition": "inside a Sigma project",
+        "post_condition": "none (read-only)"
       },
       "error_messages": {}
     }

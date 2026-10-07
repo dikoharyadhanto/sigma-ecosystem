@@ -310,6 +310,9 @@ export interface ProjectIdentity {
   project_name: string;
   registered: true;
   logs_created_at: string;
+  // Present once a DEV workspace has been activated. Other fields written by
+  // newer versions are preserved on rewrite (see writeProjectIdentity).
+  dev_workspace?: { path: string; created_at: string };
 }
 
 // ── Path helpers ─────────────────────────────────────────────────────────────

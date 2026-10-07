@@ -11,6 +11,7 @@ const reconstruct_1 = require("../engine/reconstruct");
 const fs_1 = require("../utils/fs");
 const intentHistory_1 = require("../utils/intentHistory");
 const config_1 = require("../config");
+const devWorkspace_1 = require("../engine/devWorkspace");
 // Non-blocking check: cross-role skills (e.g. /write-memo) read
 // Sigma/templates/MEMO-TEMPLATE.md directly by project-relative path rather
 // than through resolveTemplate(). A project scaffolded before this template
@@ -23,6 +24,23 @@ function checkMemoTemplate(projectRoot) {
         return null;
     return 'Sigma/templates/MEMO-TEMPLATE.md not found — the /write-memo skill will not be able to read it. Run: sigma project sync --confirm';
 }
+// Non-blocking check: a registered DEV workspace whose folder or marker is
+// missing still restricts DEV. Reports only; `--repair-workspace` fixes it.
+function checkDevWorkspace(projectRoot) {
+    try {
+        const status = (0, devWorkspace_1.getDevWorkspaceStatus)(projectRoot);
+        if (status.state !== 'ACTIVE_DEGRADED')
+            return null;
+        return `DEV workspace is ACTIVE_DEGRADED. ${(0, devWorkspace_1.describeDevWorkspace)(status).join(' ')}`;
+    }
+    catch {
+        // No readable identity: nothing to diagnose here.
+        return null;
+    }
+}
+function collectDiagnostics(projectRoot) {
+    return [checkMemoTemplate(projectRoot), checkDevWorkspace(projectRoot)].filter((w) => w !== null);
+}
 // PLAN-EVAL-01 Fase 4 / PLAN-EVAL-05 — every mode below now targets
 // Sigma/progress-v<N>.json via chain.ts. `--reconstruct` (3 modes) and
 // `--all-versions` are PLAN-EVAL-05 additions; the default mode is
@@ -34,9 +52,8 @@ function runDefaultDoctor() {
     if ((0, chain_1.listChainVersions)(projectRoot).length === 0) {
         console.log('\n=== Sigma Doctor ===\n');
         console.log('No chain exists yet. Nothing to reconcile. Run: sigma intent new');
-        const templateWarning = checkMemoTemplate(projectRoot);
-        if (templateWarning) {
-            console.log(`\n[WARN] ${templateWarning}`);
+        for (const warning of collectDiagnostics(projectRoot)) {
+            console.log(`\n[WARN] ${warning}`);
         }
         console.log('');
         return;
@@ -77,10 +94,12 @@ function runDefaultDoctor() {
         }
         console.log('\n  Gate enforcement is temporarily relaxed for affected chains while INVALID markers remain.');
     }
-    const templateWarning = checkMemoTemplate(projectRoot);
-    if (templateWarning) {
+    const diagnostics = collectDiagnostics(projectRoot);
+    if (diagnostics.length > 0) {
         console.log('\n--- Diagnostics ---');
-        console.log(`  [WARN] ${templateWarning}`);
+        for (const warning of diagnostics) {
+            console.log(`  [WARN] ${warning}`);
+        }
     }
     console.log('');
 }
@@ -123,6 +142,12 @@ function runAllVersionsDoctor() {
         console.log('');
     }
     (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — self-heal net
+    const workspaceWarning = checkDevWorkspace(projectRoot);
+    if (workspaceWarning) {
+        console.log('--- Diagnostics ---');
+        console.log(`  [WARN] ${workspaceWarning}`);
+        console.log('');
+    }
 }
 // ── --reconstruct (3 modes: default/active, --v, --all-versions) ───────────
 // PLAN-EVAL-05 §5.2/§5.4 — migrated off progress.ts/reconstruct.ts's old
@@ -216,6 +241,29 @@ function runReconstruct(opts) {
     (0, intentHistory_1.renderIntentHistoryFile)(projectRoot); // PLAN-EVAL-06 — self-heal net
     console.log('');
 }
+// ── --repair-workspace ───────────────────────────────────────────────────────
+// Opt-in and separate from reconciliation: it only recreates a missing folder
+// and a missing or invalid marker from the record in the project identity.
+function runRepairWorkspace() {
+    const projectRoot = (0, fs_1.findProjectRoot)();
+    const result = (0, devWorkspace_1.repairDevWorkspace)(projectRoot);
+    console.log('\n=== Sigma Doctor — Repair Workspace ===\n');
+    console.log(`State before: ${result.before.state}`);
+    if (result.before.state === 'INACTIVE') {
+        console.log('No DEV workspace is registered. Nothing to repair.');
+    }
+    else if (result.actions.length === 0) {
+        console.log('The DEV workspace is active. Nothing to repair.');
+    }
+    else {
+        console.log('Actions:');
+        for (const action of result.actions)
+            console.log(`  - ${action}`);
+        console.log(`State after: ${result.after.state}`);
+        console.log('The contents of dev/ were not changed. Work lost together with a missing folder cannot be recovered here.');
+    }
+    console.log('');
+}
 // ── Command ───────────────────────────────────────────────────────────────────
 function doctorCommand() {
     const cmd = new commander_1.Command('doctor');
@@ -225,8 +273,16 @@ function doctorCommand() {
         .option('--all-versions', 'Apply to every chain found on disk instead of just the active one')
         .option('--reconstruct', 'Rebuild chain file(s) from artifact files on disk (use when a progress-v<N>.json is missing or corrupted)')
         .option('--v <version>', 'With --reconstruct, target one specific chain instead of the active one (e.g. v2)', chain_1.normalizeVersionArg)
+        .option('--repair-workspace', 'Recreate a missing DEV workspace folder or marker from the project identity (does not reconcile chains)')
         .action((opts) => {
         try {
+            if (opts.repairWorkspace) {
+                if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v) {
+                    throw new Error('--repair-workspace cannot be combined with other doctor options.');
+                }
+                runRepairWorkspace();
+                return;
+            }
             if (opts.v && !opts.reconstruct) {
                 throw new Error('--v is only valid combined with --reconstruct.');
             }

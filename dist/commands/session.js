@@ -12,6 +12,7 @@ const mailbox_1 = require("../engine/mailbox");
 const config_1 = require("../config");
 const projectConfig_1 = require("../engine/projectConfig");
 const bootstrapView_1 = require("../session/bootstrapView");
+const devWorkspace_1 = require("../engine/devWorkspace");
 // ── Format helpers ────────────────────────────────────────────────────────────
 function fmtVersion(v) {
     return v ?? 'none';
@@ -93,6 +94,23 @@ function printReferenceDocuments(opts, docEntries) {
     }
     else {
         console.log('  none');
+    }
+}
+// One line for the DEV guidance. A missing or unreadable identity is not worth failing bootstrap over.
+function devWorkspaceLine(projectRoot) {
+    try {
+        const status = (0, devWorkspace_1.getDevWorkspaceStatus)(projectRoot);
+        switch (status.state) {
+            case 'ACTIVE':
+                return 'ACTIVE: write only inside dev/ (details: sigma dev status)';
+            case 'ACTIVE_DEGRADED':
+                return 'ACTIVE_DEGRADED: restrictions apply; ask the Director to repair with sigma doctor --repair-workspace';
+            case 'INACTIVE':
+                return 'INACTIVE: no workspace restriction (details: sigma dev status)';
+        }
+    }
+    catch {
+        return null;
     }
 }
 // ── sigma session bootstrap ───────────────────────────────────────────────────
@@ -180,6 +198,13 @@ function runBootstrap(opts) {
     }
     else {
         console.log('  none');
+    }
+    if (role === 'DEV') {
+        const workspaceLine = devWorkspaceLine(projectRoot);
+        if (workspaceLine) {
+            console.log('\n--- DEV Workspace ---');
+            console.log(`  ${workspaceLine}`);
+        }
     }
     if (roleGuidance) {
         console.log('\n--- Role-Permitted Routine Actions ---');

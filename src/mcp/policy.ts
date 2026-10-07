@@ -38,13 +38,13 @@ export type Availability =
 export type McpStatus = 'implemented' | 'deferred' | 'not_admissible';
 
 export const OPERATION_TIERS: Readonly<Record<string, Tier>> = Object.freeze({
-  // ── Q (24) ────────────────────────────────────────────────────────────────
+  // ── Q (25) ────────────────────────────────────────────────────────────────
   project_status: 'Q', session_bootstrap: 'Q', memory: 'Q', doctor: 'Q',
   intent_status: 'Q', plan_status: 'Q', exec_status: 'Q', close_status: 'Q',
   intent_list: 'Q', plan_list: 'Q', exec_list: 'Q', roadmap_list: 'Q',
   intent_check: 'Q', plan_check: 'Q', exec_check: 'Q', close_check: 'Q',
   roadmap_check: 'Q', inbox: 'Q', inbox_check: 'Q', memo_list: 'Q',
-  config_show: 'Q', report_logs: 'Q', git_evidence: 'Q',
+  config_show: 'Q', report_logs: 'Q', git_evidence: 'Q', dev_status: 'Q',
   scan: 'NA', // read_only by level, inadmissible by shape — matrix §3.5
 
   // ── W1 (16) ───────────────────────────────────────────────────────────────
@@ -60,10 +60,10 @@ export const OPERATION_TIERS: Readonly<Record<string, Tier>> = Object.freeze({
   plan_supersede: 'W2', plan_promote: 'W2', exec_lock: 'W2',
   close_new: 'W2', close_lock: 'W2',
 
-  // ── W3 (8) ────────────────────────────────────────────────────────────────
+  // ── W3 (9) ────────────────────────────────────────────────────────────────
   project_start: 'W3', project_sync: 'W3', project_register: 'W3',
   setup_install: 'W3', setup_update: 'W3', setup_uninstall: 'W3',
-  override: 'W3', config: 'W3',
+  override: 'W3', config: 'W3', dev_create_workspace: 'W3',
 });
 
 /** Owner role per matrix §3. Derived, NOT ratified — advisory only. */
@@ -73,7 +73,7 @@ export const OPERATION_OWNER: Readonly<Record<string, string>> = Object.freeze({
   plan_update: 'FMN', roadmap_new: 'FMN', roadmap_list: 'FMN',
   roadmap_check: 'FMN', roadmap_render: 'FMN', plan_promote: 'FMN',
   exec_new: 'DEV', exec_status: 'DEV', exec_list: 'DEV', exec_check: 'DEV',
-  exec_humanize: 'DEV', git_evidence: 'DEV',
+  exec_humanize: 'DEV', git_evidence: 'DEV', dev_status: 'DEV',
   close_status: 'AUD', close_check: 'AUD', close_humanize: 'AUD', report_logs: 'AUD',
 });
 

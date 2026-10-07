@@ -1,7 +1,7 @@
 import path from 'path';
 import os from 'os';
 
-export const SIGMA_VERSION = '1.0.0';
+export const SIGMA_VERSION = '2.0.0';
 // 1.1.0 — RATIFIED rename (Director directive 2026-08-12): DIR-INTENT
 // intent.state "LOCKED" → "RATIFIED", intent.locked_at → intent.ratified_at.
 // A chain written by an older binary still reads fine (readChain()
@@ -34,6 +34,9 @@ export const GLOBAL_NOTION_CREDENTIALS_FILE = path.join(GLOBAL_SIGMA_DIR, 'notio
 export const PROJECT_SIGMA_DIR = 'Sigma';
 // Root-level (sibling to Sigma/), not inside it — so identity survives even if Sigma/ itself is corrupted.
 export const PROJECT_IDENTITY_FILE = '.sigma-identity.json';
+// The DEV write area at the project root, and the marker file inside it.
+export const DEV_WORKSPACE_DIR = 'dev';
+export const DEV_WORKSPACE_MARKER_FILE = '.sigma-workspace.json';
 // D-03 — written only after a confirmed-successful Notion push that purges
 // Sigma/ locally. Root-level, same reasoning as PROJECT_IDENTITY_FILE: must
 // survive the purge it documents. Deliberately NOT an anchor for the shared

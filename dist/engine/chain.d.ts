@@ -157,6 +157,10 @@ export interface ProjectIdentity {
     project_name: string;
     registered: true;
     logs_created_at: string;
+    dev_workspace?: {
+        path: string;
+        created_at: string;
+    };
 }
 export declare function chainFilePath(projectRoot: string, chainVersion: string): string;
 export declare function activateStatusPath(projectRoot: string): string;

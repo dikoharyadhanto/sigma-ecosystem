@@ -1,7 +1,7 @@
 # F13 - Boundary workspace DEV
 
 Tanggal: 7 Oktober 2026
-Status: seluruh butir bagian 6 (O-1 sampai O-12) dijawab Director (7 Oktober 2026). Belum ada kode, rules, skill, memory, template, atau konfigurasi yang diubah. Dikerjakan setelah E03 selesai (urutan disetujui Director, 7 Oktober 2026).
+Status: DITERAPKAN (7 Oktober 2026), belum di-commit. Seluruh butir bagian 6 (O-1 sampai O-12) dijawab Director. Hasil: kode (`devWorkspace.ts`, `dev.ts`, identitas baca-gabung-tulis, doctor, bootstrap), registry 61 operasi, klasifikasi MCP, DEV-RULE, skill DEV (4 target), memory DEV, dan 35 test pada `test/dev-workspace.test.ts`. Satu build bersama perubahan versi Sigma menjadi 2.0.0; `npm test` 73 file dan 991 test lulus. Catatan penerapan: pemeriksaan "catatan sudah ada" dilakukan sebelum pemeriksaan entri `dev`; `sigma dev status` tetap menulis satu baris ke log operasi bawaan semua perintah; skrip `refresh-registries.js` memetakan tanda hubung pada nama perintah ke garis bawah; section "DEV Workspace Boundary" berada setelah Key Rules & Constraints.
 Dasar: keputusan Director 7 Oktober 2026 pada sesi evaluasi, dan [F00](F00_indeks-dan-register.md). Label: **TERKUNCI** (keputusan Director), **TERVERIFIKASI** (diperiksa pada berkas), **REKOMENDASI** (asisten, belum keputusan).
 
 ## 1. Tujuan dan batas fokus

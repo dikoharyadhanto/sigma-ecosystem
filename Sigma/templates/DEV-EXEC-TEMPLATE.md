@@ -18,7 +18,7 @@
 
 ### Open Question / Unclear Decision
 
-> Optional. Delete this heading and the placeholder when nothing applies.
+> Optional. One open question or undecided point about the project that needs the Director's answer. Exclude Sigma process status (commits, gates, next steps) and anything that goes stale quickly or would not change a decision. Delete this heading and the placeholder when nothing applies.
 
 [...]
 

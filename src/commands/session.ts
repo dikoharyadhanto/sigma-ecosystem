@@ -15,6 +15,7 @@ import { readIndex, getUnreadForRole, countUnreadMemos, MessageEntry } from '../
 import { MESSAGING_ROLES, SigmaRole } from '../config';
 import { readProjectConfig } from '../engine/projectConfig';
 import { buildBootstrapView } from '../session/bootstrapView';
+import { getDevWorkspaceStatus } from '../engine/devWorkspace';
 
 interface RoleBootstrapGuidance {
   routine: string[];
@@ -111,6 +112,23 @@ function printReferenceDocuments(opts: { role?: string }, docEntries: DocumentEn
   }
 }
 
+// One line for the DEV guidance. A missing or unreadable identity is not worth failing bootstrap over.
+function devWorkspaceLine(projectRoot: string): string | null {
+  try {
+    const status = getDevWorkspaceStatus(projectRoot);
+    switch (status.state) {
+      case 'ACTIVE':
+        return 'ACTIVE: write only inside dev/ (details: sigma dev status)';
+      case 'ACTIVE_DEGRADED':
+        return 'ACTIVE_DEGRADED: restrictions apply; ask the Director to repair with sigma doctor --repair-workspace';
+      case 'INACTIVE':
+        return 'INACTIVE: no workspace restriction (details: sigma dev status)';
+    }
+  } catch {
+    return null;
+  }
+}
+
 // ── sigma session bootstrap ───────────────────────────────────────────────────
 
 function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
@@ -204,6 +222,14 @@ function runBootstrap(opts: { role?: string; showDocs?: boolean }): void {
     }
   } else {
     console.log('  none');
+  }
+
+  if (role === 'DEV') {
+    const workspaceLine = devWorkspaceLine(projectRoot);
+    if (workspaceLine) {
+      console.log('\n--- DEV Workspace ---');
+      console.log(`  ${workspaceLine}`);
+    }
   }
 
   if (roleGuidance) {

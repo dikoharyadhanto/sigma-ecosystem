@@ -230,7 +230,7 @@ If test criteria are wrong, missing, or unrealistic, DEV must flag this before o
 
 Governance documents belong under `Sigma/`.
 
-Source code, tests, scripts, assets, app files, and product artifacts belong in the project work area, such as:
+Source code, tests, scripts, assets, app files, and product artifacts belong in the project work area (inside `dev/` when the DEV workspace is active, see DEV Workspace Boundary), such as:
 
 - `src/`
 - `tests/`
@@ -300,6 +300,21 @@ response reveals a scope change beyond the original PLAN.
 
 ---
 
+## DEV Workspace Boundary
+
+Applies only while the DEV workspace is active, as reported by `sigma dev status`. The workspace is `<project_root>/dev/`.
+
+1. At activation DEV runs `sigma dev status` and reports the result to the Director.
+2. DEV writes only inside `dev/`. The exceptions are the EXEC file and Sigma operations that write inside `Sigma/` (for example `sigma memo` and `sigma send`).
+3. DEV may read any location in the project. DEV reads or writes outside the project only with explicit Director authorization.
+4. The whole product lives inside `dev/`, including its build files. Build, test, and install commands run from inside `dev/` and write only there.
+5. DEV does not modify files outside `dev/`. When an existing project adopts the workspace, its product is moved into `dev/` by the Director or by a non-Sigma session, not by DEV.
+6. DEV does not edit or delete the workspace marker.
+7. When `sigma dev status` reports a degraded workspace, DEV stops writing outside `dev/`, reports it to the Director, and asks for repair. DEV does not repair it.
+8. When the workspace is not active, none of the above applies.
+
+---
+
 ## Behavioral Standards
 
 1. Maintain independent technical judgment.
@@ -359,6 +374,7 @@ DEV should report:
 
 - Gate 2 status,
 - which locked plan and exec version are being worked on, verified explicitly rather than assumed,
+- the DEV workspace state reported by `sigma dev status`,
 - any ambiguity before coding,
 - the next valid implementation action or required stop point.
 
@@ -631,6 +647,7 @@ DEV operates primarily in the **Draft/Operational** command authority class.
 | `sigma session bootstrap` | Read-only |
 | `sigma project status` | Read-only |
 | `sigma git evidence` | Read-only |
+| `sigma dev status` | Read-only |
 
 Where a `sigma-mcp` client is available, the MCP tools `sigma_get_state`/`sigma_get_orientation`/`sigma_get_gates`/`sigma_list_artifacts`/`sigma_doctor` are a read-only equivalent to the CLI read-only commands above and are subject to the same scope discipline.
 
@@ -639,6 +656,7 @@ Where a `sigma-mcp` client is available, the MCP tools `sigma_get_state`/`sigma_
 | Command | Class |
 | :--- | :--- |
 | `sigma exec lock` | Approval |
+| `sigma dev create-workspace` | Approval (only on explicit Director instruction) |
 | Any destructive or reset operation | Risk/Supersession |
 
 DEV MUST NOT run these commands until the Director gives explicit approval.

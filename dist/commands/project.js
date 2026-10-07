@@ -130,7 +130,11 @@ function resolveLogsCreatedAt(projectRoot, logsReinitialized) {
     return new Date().toISOString();
 }
 function writeProjectIdentity(projectRoot, projectId, projectName, logsCreatedAt) {
+    // Read-merge-write: fields this function does not own (for example the DEV
+    // workspace record) must survive a re-initialization.
+    const existing = readExistingIdentity(projectRoot);
     const identity = {
+        ...existing,
         schema_version: config_1.SCHEMA_VERSION,
         project_id: projectId,
         project_name: projectName,
@@ -138,6 +142,21 @@ function writeProjectIdentity(projectRoot, projectId, projectName, logsCreatedAt
         logs_created_at: logsCreatedAt,
     };
     fs_extra_1.default.writeJsonSync(path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE), identity, { spaces: 2 });
+}
+function readExistingIdentity(projectRoot) {
+    const identityPath = path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE);
+    if (!(0, fs_1.fileExists)(identityPath))
+        return {};
+    try {
+        const parsed = fs_extra_1.default.readJsonSync(identityPath);
+        return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+            ? parsed
+            : {};
+    }
+    catch {
+        // A corrupt identity file is the case `project register` repairs; there is nothing to preserve.
+        return {};
+    }
 }
 // ── sigma project start ───────────────────────────────────────────────────────
 async function runStart(opts) {

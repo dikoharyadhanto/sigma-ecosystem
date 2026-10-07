@@ -23,6 +23,7 @@ const report_1 = require("./commands/report");
 const notion_1 = require("./commands/notion");
 const scan_1 = require("./commands/scan");
 const control_1 = require("./commands/control");
+const dev_1 = require("./commands/dev");
 const operationLog_1 = require("./utils/operationLog");
 const program = new commander_1.Command();
 program
@@ -50,6 +51,7 @@ program.addCommand((0, report_1.reportCommand)());
 program.addCommand((0, notion_1.notionCommand)());
 program.addCommand((0, scan_1.scanCommand)());
 program.addCommand((0, control_1.controlCommand)());
+program.addCommand((0, dev_1.devCommand)());
 program.on('command:*', (operands) => {
     console.error(`Unknown command: sigma ${operands.join(' ')}`);
     console.error('Run `sigma --help` for available commands.');

@@ -67,7 +67,7 @@ function collectOps(cmd, idChain) {
     .replace(/<[^>]*>/g, '')   // remove <arg>
     .replace(/\[[^\]]*\]/g, '') // remove [opt]
     .trim()
-    .replace(/\s+/g, '_');     // spaces → underscores
+    .replace(/[\s-]+/g, '_');  // spaces and hyphens → underscores (registry ids use underscores only)
 
   if (!cleanName) return results;
 

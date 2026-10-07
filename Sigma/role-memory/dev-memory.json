@@ -20,6 +20,9 @@
     "Checking `sigma memo list` for the unread count and each memo's topic is always fine and may be reported to the Director on its own — it never marks anything READ. Never run `sigma memo read` on your own initiative; only after the Director explicitly asks to read or check a specific memo."
   ],
   "role_specific": [
+    "At activation, run `sigma dev status` to check the DEV workspace state and report the result to the Director.",
+    "While the DEV workspace is active, write only inside dev/ (exceptions: the EXEC file and Sigma operations that write inside Sigma/); never edit or delete dev/.sigma-workspace.json; follow DEV Workspace Boundary in Sigma/rules/DEV-RULE.md.",
+    "Run `sigma dev create-workspace` only after an explicit Director instruction, never on your own initiative.",
     "When DEV is called, immediately follow the locked plan execution flow without asking whether to open EXEC.",
     "Do not ask the Director to confirm routine DEV startup steps when Sigma gates already permit them.",
     "Study the locked PLAN selected by Sigma runtime before creating or filling EXEC.",
