@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.ARTIFACT_LAYOUT = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.INTENT_AMENDMENT_LOG_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.ACTIVATE_STATUS_FILE = exports.BRIDGE_STUBS = exports.DEV_WORKSPACE_MARKER_FILE = exports.DEV_WORKSPACE_DIR = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
+exports.VALID_ACTIONS = exports.VALID_MESSAGE_TYPES = exports.MESSAGING_ROLES = exports.VALID_ROLES = exports.REFERENCE_DATA_DIR = exports.REFERENCE_LIST_FILE = exports.REFERENCE_DIR = exports.NOTES_REGISTRY_FILE = exports.NOTES_CATALOG_FILE = exports.NOTES_UNREGISTERED_DIR = exports.NOTES_REGISTERED_DIR = exports.NOTES_DIR = exports.MESSAGE_SUBFOLDERS = exports.MESSAGES_ATTACHMENTS_DIR = exports.MESSAGES_INDEX_FILE = exports.MESSAGES_DIR = exports.ARTIFACT_LAYOUT = exports.SUBFOLDERS = exports.PROJECT_CONFIG_FILE = exports.DOCUMENT_REGISTRY_FILE = exports.OPERATION_REGISTRY_FILE = exports.INTENT_AMENDMENT_LOG_FILE = exports.OPERATIONS_LOG_FILE = exports.OVERRIDES_FILE = exports.ACTIVATE_STATUS_FILE = exports.BRIDGE_STUBS = exports.DEV_WORKSPACE_MARKER_FILE = exports.DEV_WORKSPACE_DIR = exports.PROJECT_IDENTITY_FILE = exports.PROJECT_SIGMA_DIR = exports.GLOBAL_CONFIG_FILE = exports.GLOBAL_BRIDGE_DIR = exports.GLOBAL_GOVERNANCE_DIR = exports.GLOBAL_RULES_DIR = exports.GLOBAL_TEMPLATES_DIR = exports.GLOBAL_SIGMA_DIR = exports.SCHEMA_VERSION = exports.SIGMA_VERSION = void 0;
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 exports.SIGMA_VERSION = '2.0.0';
@@ -90,6 +90,13 @@ exports.MESSAGES_DIR = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'messages'
 exports.MESSAGES_INDEX_FILE = path_1.default.join(exports.MESSAGES_DIR, 'index.json');
 exports.MESSAGES_ATTACHMENTS_DIR = path_1.default.join(exports.MESSAGES_DIR, 'attachments');
 exports.MESSAGE_SUBFOLDERS = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR', 'attachments'];
+// F06 — sigma notes. Free-form Markdown notes registered only through `sigma notes new`.
+// The registry (source of truth) lives outside Sigma/notes/ because that folder is Markdown-only.
+exports.NOTES_DIR = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'notes');
+exports.NOTES_REGISTERED_DIR = path_1.default.join(exports.NOTES_DIR, 'note-list');
+exports.NOTES_UNREGISTERED_DIR = path_1.default.join(exports.NOTES_DIR, 'unregistered-notes');
+exports.NOTES_CATALOG_FILE = path_1.default.join(exports.NOTES_DIR, 'note-list.md');
+exports.NOTES_REGISTRY_FILE = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'notes-registry.json');
 exports.REFERENCE_DIR = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'reference');
 exports.REFERENCE_LIST_FILE = path_1.default.join(exports.REFERENCE_DIR, 'reference-list.md');
 exports.REFERENCE_DATA_DIR = path_1.default.join(exports.REFERENCE_DIR, 'data');

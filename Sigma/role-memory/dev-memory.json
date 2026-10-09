@@ -3,7 +3,7 @@
   "role": "DEV",
   "source_rule": "Sigma/rules/DEV-RULE.md",
   "source_rule_version": "unversioned",
-  "memory_updated_at": "2026-10-07",
+  "memory_updated_at": "2026-10-10",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -23,7 +23,7 @@
   ],
   "role_specific": [
     "At activation, run `sigma dev status` to check the DEV workspace state and report the result to the Director.",
-    "While the DEV workspace is active, write only inside dev/ (exceptions: the EXEC file and Sigma operations that write inside Sigma/); never edit or delete dev/.sigma-workspace.json; follow DEV Workspace Boundary in Sigma/rules/DEV-RULE.md.",
+    "While the DEV workspace is active, write only inside dev/ (exceptions: the EXEC file, Sigma operations that write inside Sigma/, and a note file created with `sigma notes new`); never edit or delete dev/.sigma-workspace.json; follow DEV Workspace Boundary in Sigma/rules/DEV-RULE.md.",
     "Run `sigma dev create-workspace` only after an explicit Director instruction, never on your own initiative.",
     "When DEV is called, immediately follow the approved plan execution flow without asking whether to open EXEC.",
     "Do not ask the Director to confirm routine DEV startup steps when Sigma gates already permit them.",

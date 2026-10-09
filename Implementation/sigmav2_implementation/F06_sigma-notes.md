@@ -1,7 +1,7 @@
 # F06 - sigma notes: katalog catatan bebas Markdown
 
 Tanggal: 9 Oktober 2026
-Status: RENCANA dan EKSEKUSI. Per 9 Oktober 2026 seluruh keputusan terbuka (O-1 sampai O-18) tertutup: rekomendasi disetujui Director, kecuali satu penyimpangan yang ditetapkan Director sendiri (notes tidak merujuk artefak, K-10). Tujuan notes ditetapkan Director (bagian 1.1, K-9). DIEKSEKUSI 9 Oktober 2026 (W0-W4, bagian 11): 76 berkas / 1.178 tes lulus terhadap build sementara; `dist/` belum dibangun (menunggu persetujuan Director); belum di-commit. Pada tahap ini tidak ada kode, rules, template, registry, build, atau Git yang diubah; hanya berkas ini dan baris F06 di F00.
+Status: RENCANA dan EKSEKUSI. Per 9 Oktober 2026 seluruh keputusan terbuka (O-1 sampai O-18) tertutup: rekomendasi disetujui Director, kecuali satu penyimpangan yang ditetapkan Director sendiri (notes tidak merujuk artefak, K-10). Tujuan notes ditetapkan Director (bagian 1.1, K-9). DIEKSEKUSI 9 Oktober 2026 (W0-W5, bagian 11): 76 berkas / 1.178 tes lulus; kode, tes, dan dokumen di-commit Director dalam 6b493ee dan di-push; `dist/` dibangun sesudahnya (11.5), menunggu commit. Pada tahap ini tidak ada kode, rules, template, registry, build, atau Git yang diubah; hanya berkas ini dan baris F06 di F00.
 Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigma dan bukan otorisasi mengubah kode atau state.
 Basis kode: branch `main`, HEAD `d996c5d`, worktree bersih saat dokumen ini dibuat. Seluruh rujukan kode di bagian 3 diperiksa read-only pada HEAD tersebut.
 
@@ -283,7 +283,7 @@ Commit dan push hanya atas instruksi Director.
 
 ## 11. Hasil eksekusi F06 (9 Oktober 2026)
 
-Dieksekusi atas instruksi Director ("silahkan lakukan eksekusi") pada `main`, HEAD `d996c5d`. Belum di-commit. Build `dist/` **belum** dijalankan: titik build memerlukan persetujuan Director (bagian 3 dan F00 bagian 6), jadi `dist/` dan symlink global `sigma-mcp` tidak berubah.
+Dieksekusi atas instruksi Director ("silahkan lakukan eksekusi") pada `main`, HEAD `d996c5d`. Belum di-commit. Build `dist/` tidak dijalankan pada tahap eksekusi awal karena memerlukan persetujuan Director (bagian 3 dan F00 bagian 6); dijalankan kemudian, lihat 11.5.
 
 ### 11.1 Yang diterapkan (W0-W4)
 
@@ -311,13 +311,22 @@ Dieksekusi atas instruksi Director ("silahkan lakukan eksekusi") pada `main`, HE
 2. **Peringatan `list`** (Markdown tidak terdaftar, non-Markdown) ditulis ke stderr, bukan stdout, agar keluaran daftar tetap bersih.
 3. **U-12 sebagian.** `project sync` diuji tidak mengubah registry yang ada; `project start --reinit` memakai jalur `initNotes` yang tidak menimpa registry yang ada, dicakup oleh logika (tidak ada tes `--reinit` tersendiri).
 4. **U-11** diuji dengan dua proses `notes new` paralel: keduanya terdaftar dengan ID berbeda.
-5. **`refresh-registries:dry`** melaporkan `notes_new`/`notes_list`/`notes_update` sebagai "terdaftar tetapi tidak terdeteksi di CLI" karena skrip membaca `dist/` yang belum dibangun (butir `intent_baseline` lama mengalami hal yang sama). Diverifikasi ulang setelah build disetujui.
-6. **Role memory DEV** (`dev-memory.json` L26) masih menulis pengecualian boundary tanpa menyebut note. Memory adalah pengingat dan bukan otoritas, serta tidak ada dalam daftar titik sentuh rencana; tidak diubah. Opsi tindak lanjut bagi Director.
+5. **`refresh-registries:dry`** (sebelum build) melaporkan `notes_new`/`notes_list`/`notes_update` sebagai "terdaftar tetapi tidak terdeteksi di CLI" karena skrip membaca `dist/` yang belum dibangun (butir `intent_baseline` lama mengalami hal yang sama). Diverifikasi ulang setelah build disetujui.
+6. **Role memory DEV** (`dev-memory.json` L26) semula menulis pengecualian boundary tanpa menyebut note. Ditambahkan 10 Oktober 2026 atas permintaan Director setelah commit 6b493ee: `(exceptions: the EXEC file, Sigma operations that write inside Sigma/, and a note file created with sigma notes new)`; `memory_updated_at` menjadi 2026-10-10. Hanya master; salinan di `~/.sigma` dan proyek menunggu F09.
 7. **Memo lama** dengan rujukan `Sigma/notes/<berkas>` tidak diubah (R-3).
 8. **Protocol** (`SIGMA_PROTOCOL.md` L471 dan bagian perintah) belum menyebut `sigma notes` (R-7); menunggu pekerjaan Protocol.
 
 ### 11.4 Menunggu Director
 
-1. Persetujuan build `dist/` (mengubah perilaku `sigma` dan `sigma-mcp` global; tidak ada kode server MCP yang berubah). Setelah itu: jalankan ulang `refresh-registries:dry` untuk memastikan tiga operasi terdeteksi, dan suite penuh terhadap `dist/`.
-2. Instruksi commit (usulan dua kelompok: kode/tes/registry/skill/bridge/DEV-RULE/README/CHANGELOG/dist; lalu dokumen F06 dan F00).
+1. ~~Persetujuan build `dist/`~~ Selesai, lihat 11.5.
+2. Instruksi commit untuk `dist/` dan pembaruan dokumen F06/F00 (kode, tes, dan dokumen awal sudah di 6b493ee).
 3. Smoke manual opsional: `sigma notes new` pada proyek uji, lalu satu sesi `/write-memo` yang membuat note.
+
+### 11.5 Build `dist/` (9 Oktober 2026, setelah commit 6b493ee)
+
+- Commit 6b493ee (kode, tes, dokumen) sudah di-push Director, tetapi belum memuat `dist/`; tes CLI terhadap `dist/` yang lama akan gagal. Atas instruksi "lanjutkan" Director, `npm run build` dijalankan. Hasil pada worktree: `dist/cli.js`, `dist/config.js`, `dist/config.d.ts` (+ map), `dist/commands/project.js` (+ map) berubah; `dist/commands/notes.*` dan `dist/services/notesService.*` baru. Tidak ada perubahan `dist/` lain.
+- Suite penuh terhadap `dist/` sebenarnya: 76 berkas / 1.178 tes lulus, tanpa kegagalan.
+- `refresh-registries:dry`: tiga operasi notes tidak lagi dilaporkan; yang tersisa hanya `intent_baseline` (butir lama, tidak terkait F06).
+- Symlink global `sigma`/`sigma-mcp` kini menjalankan perintah `sigma notes`; tidak ada kode server MCP yang berubah.
+- Belum di-commit: perubahan `dist/` ini dan pembaruan dokumen bagian 11.5. Menunggu instruksi commit Director.
+- Tambahan 10 Oktober 2026: `Sigma/role-memory/dev-memory.json` (satu kalimat, lihat 11.3 butir 6) ikut belum di-commit. Suite penuh sesudahnya 76 berkas / 1.178 tes lulus. Tes F04 `U-06/U-11` (varian `target`/`audit`) gagal secara berselang pada 3 dari 7 run penuh hari ini, selalu lulus bila dijalankan sendiri (24/24, dua kali); dugaan penyebab (inferensi, belum dibuktikan): anggaran 250 ms `CONTROL_MUTATION_MAX_MS` terlampaui saat beban paralel. Tidak terkait F06.

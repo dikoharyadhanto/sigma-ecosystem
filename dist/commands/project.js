@@ -22,6 +22,7 @@ const languageWizard_1 = require("../engine/languageWizard");
 const output_1 = require("../utils/output");
 const fs_1 = require("../utils/fs");
 const operationLog_1 = require("../utils/operationLog");
+const notesService_1 = require("../services/notesService");
 const detect_1 = require("../utils/detect");
 const mcpConfig_1 = require("../utils/mcpConfig");
 // ── Bundle paths ─────────────────────────────────────────────────────────────
@@ -237,6 +238,9 @@ async function runStart(opts) {
     // Scaffold the project-wide reference list (Comprehensive Research source index)
     (0, artifacts_1.copyTemplateToArtifact)('REFERENCE-LIST-TEMPLATE.md', path_1.default.join(projectRoot, config_1.REFERENCE_LIST_FILE));
     console.log('  Reference: Sigma/reference/reference-list.md initialized.');
+    // Free-form notes: registry, note-list.md, note-list/ and unregistered-notes/ (F06)
+    (0, notesService_1.initNotes)(projectRoot);
+    console.log('  Notes: Sigma/notes/note-list.md initialized.');
     // Copy governance documents
     const constitution = path_1.default.join(config_1.GLOBAL_GOVERNANCE_DIR, 'SIGMA_CONSTITUTION.md');
     const protocol = path_1.default.join(config_1.GLOBAL_GOVERNANCE_DIR, 'SIGMA_PROTOCOL.md');
