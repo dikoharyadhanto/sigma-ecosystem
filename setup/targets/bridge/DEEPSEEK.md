@@ -70,6 +70,15 @@ If authorization is unclear, ask before executing.
 Do not edit `Sigma/progress-v<N>.json` directly. Use sigma CLI commands to
 modify workflow state. Run `sigma --help` to see available commands.
 
+Do not edit `Sigma/notes-registry.json` or `Sigma/notes/note-list.md` either; `sigma notes` manages both.
+
+Notes (`Sigma/notes/`):
+
+- Create a note only with `sigma notes new --title "<title>"`; never create a `.md` file directly under `Sigma/notes/` (it would not be registered, and `sigma notes update` would move it to `unregistered-notes/`).
+- A role may create a note without prior approval for a memo attachment, an output of its own PLAN/EXEC task, or an important note on its own initiative (report the note ID and path in the same response). The Director's explicit instruction always suffices.
+- A note is free-form, independent, and non-authoritative. It never replaces an artifact: conclusions and claims that matter belong in the artifact itself. An artifact may cite a note by ID and path; a note does not cite or depend on an artifact.
+- `sigma notes update --dry-run` is free for any role. Run `sigma notes update` for real only on the Director's instruction.
+
 ## Sigma CLI Awareness
 
 - Run `sigma --help` at session start to verify current command syntax.

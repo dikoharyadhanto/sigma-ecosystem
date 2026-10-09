@@ -646,6 +646,10 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | git      | `sigma git evidence`               | Show read-only Git state summary                                               |
 | memory   | `sigma memory --<role>`            | Show role activation memory reminders for arc/fmn/dev/aud (read-only)          |
 | reference| `sigma reference update`           | Rebuild the project-wide reference list (Comprehensive Research source index)  |
+| notes    | `sigma notes new --title <title> [--role <role>]` | Create a registered free-form note in `Sigma/notes/note-list/` and refresh `note-list.md` (the only way to register a note) |
+| notes    | `sigma notes list [--search <kw>]` | List registered notes, newest first (read-only)                                |
+| notes    | `sigma notes update [--dry-run]`   | Refuse if any non-Markdown file is under `Sigma/notes/`; move unregistered Markdown to `unregistered-notes/`; regenerate `note-list.md`. Run for real on the Director's instruction |
+| notes    | `sigma notes update --rebuild-registry [--director-confirm]` | Restore a missing or unreadable `Sigma/notes-registry.json` from `note-list.md` (preview unless confirmed) |
 | report   | `sigma report logs`                | View the operation history log with filters (read-only)                        |
 | override | `sigma override`                   | Bypass current lifecycle gate under Director authority (recorded in audit log) |
 | doctor   | `sigma doctor`                     | Diagnose and reconcile runtime state (repairs drift, marks unresolved breaks INVALID) |

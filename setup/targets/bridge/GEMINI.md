@@ -123,6 +123,15 @@ If authorization is unclear, ask before executing.
 | `Sigma/progress-v<N>.json` | `sigma intent ratify`, `sigma plan approve`, `sigma exec approve`, etc. |
 | `Sigma/SIGMA-REGISTRY.json` | `sigma project sync --confirm` |
 | `Sigma/SIGMA-OPERATION-REGISTRY.json` | `sigma project sync --confirm` |
+| `Sigma/notes-registry.json` | `sigma notes new`, `sigma notes update` |
+| `Sigma/notes/note-list.md` | `sigma notes new`, `sigma notes update` (generated; manual edits are overwritten) |
+
+Notes (`Sigma/notes/`):
+
+- Create a note only with `sigma notes new --title "<title>"`; never create a `.md` file directly under `Sigma/notes/` (it would not be registered, and `sigma notes update` would move it to `unregistered-notes/`).
+- A role may create a note without prior approval for a memo attachment, an output of its own PLAN/EXEC task, or an important note on its own initiative (report the note ID and path in the same response). The Director's explicit instruction always suffices.
+- A note is free-form, independent, and non-authoritative. It never replaces an artifact: conclusions and claims that matter belong in the artifact itself. An artifact may cite a note by ID and path; a note does not cite or depend on an artifact.
+- `sigma notes update --dry-run` is free for any role. Run `sigma notes update` for real only on the Director's instruction.
 
 ## Governance Role Activation
 

@@ -80,6 +80,8 @@ Check that the following paths exist relative to the project root:
 - `Sigma/evidence/`
 - `Sigma/close/`
 - `Sigma/notes/`
+- `Sigma/notes/note-list/`
+- `Sigma/notes/unregistered-notes/`
 - `Sigma/rules/`
 - `Sigma/logs/`
 - `Sigma/memory/`
@@ -124,6 +126,8 @@ Platform: Reasonix
 | Project | `Sigma/evidence/` | PASS/WARN/N/A | |
 | Project | `Sigma/close/` | PASS/WARN/N/A | |
 | Project | `Sigma/notes/` | PASS/WARN/N/A | |
+| Project | `Sigma/notes/note-list/` | PASS/WARN/N/A | |
+| Project | `Sigma/notes/unregistered-notes/` | PASS/WARN/N/A | |
 | Project | `Sigma/rules/` | PASS/WARN/N/A | |
 | Project | `Sigma/logs/` | PASS/WARN/N/A | |
 | Project | `Sigma/memory/` | PASS/WARN/N/A | |

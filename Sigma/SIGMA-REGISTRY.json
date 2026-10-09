@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-08-19T10:02:21.533Z",
   "description": "Sigma Document Registry \u2014 permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE) are tracked in progress-v<N>.json, not here.",
-  "total_documents": 18,
+  "total_documents": 20,
   "authority_model": {
     "description": "Two separate, non-conflatable authority axes.",
     "semantic_authority": {
@@ -317,6 +317,30 @@
       "description": "Project-wide source index for DIR-INTENT's Comprehensive Research section. Three tables (Local Artifact, Website Link, Online Source Data), each row carrying an ID (LA/WL/OS + sequential number) that DIR-INTENT cites by ID only. Local Artifact rows are synced from Sigma/reference/data/ via sigma reference update, which also auto-assigns the next LA id; Website Link and Online Source Data rows are always manual. Not tracked in progress-v<N>.json \u2014 no lifecycle state, no lock, no gate.",
       "tolerate_missing": true,
       "missing_behavior": "sigma reference update self-heals a missing file by scaffolding it from REFERENCE-LIST-TEMPLATE.md before syncing."
+    },
+    {
+      "document_id": "notes_registry",
+      "file": "notes-registry.json",
+      "location": "Sigma/",
+      "authority_tier": "agent_config",
+      "owner": "Director",
+      "lifecycle": "project-wide, cumulative \u2014 written only by sigma notes new / update; never versioned per DIR-INTENT. Source of truth for which Markdown files are registered notes (ID, file name, title, path, creation time). Do not edit by hand.",
+      "mandatory_when": [],
+      "description": "Registry of free-form notes created through sigma notes new. Identity of a note is its registry entry, not its position or content hash. Lives outside Sigma/notes/ because that folder is Markdown-only. Not tracked in progress-v<N>.json \u2014 no lifecycle state, no lock, no gate.",
+      "tolerate_missing": true,
+      "missing_behavior": "A project that never used notes gets an empty registry from sigma project start or the first sigma notes update. If the registry is missing but note-list.md lists notes, sigma notes refuses and points to sigma notes update --rebuild-registry."
+    },
+    {
+      "document_id": "notes_catalog",
+      "file": "notes/note-list.md",
+      "location": "Sigma/",
+      "authority_tier": "agent_config",
+      "owner": "Director",
+      "lifecycle": "generated view of notes-registry.json; fully rewritten by sigma notes new / update. Manual edits are overwritten and never register or deregister a note.",
+      "mandatory_when": [],
+      "description": "Three-column catalog (ID, file name, title) of registered notes so the Director and AI roles can find a note. Notes are independent free-form Markdown files in Sigma/notes/note-list/; artifacts may cite a note by ID and path, a note never cites an artifact.",
+      "tolerate_missing": true,
+      "missing_behavior": "sigma notes update regenerates a missing note-list.md from the registry."
     },
     {
       "document_id": "sigma_terminology_registry",

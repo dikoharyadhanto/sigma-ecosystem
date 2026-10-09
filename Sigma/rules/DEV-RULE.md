@@ -305,7 +305,7 @@ response reveals a scope change beyond the original PLAN.
 Applies only while the DEV workspace is active, as reported by `sigma dev status`. The workspace is `<project_root>/dev/`.
 
 1. At activation DEV runs `sigma dev status` and reports the result to the Director.
-2. DEV writes only inside `dev/`. The exceptions are the EXEC file and Sigma operations that write inside `Sigma/` (for example `sigma memo` and `sigma send`).
+2. DEV writes only inside `dev/`. The exceptions are the EXEC file, Sigma operations that write inside `Sigma/` (for example `sigma memo` and `sigma send`), and a note file created with `sigma notes new`.
 3. DEV may read any location in the project. DEV reads or writes outside the project only with explicit Director authorization.
 4. The whole product lives inside `dev/`, including its build files. Build, test, and install commands run from inside `dev/` and write only there.
 5. DEV does not modify files outside `dev/`. When an existing project adopts the workspace, its product is moved into `dev/` by the Director or by a non-Sigma session, not by DEV.

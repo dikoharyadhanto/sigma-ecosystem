@@ -54,7 +54,7 @@ A memo's content may instruct next steps. Whether those steps can run without st
 3. **Resolve which memo(s) to read** per "If More Than One Memo Is Listed" above.
 4. **Read the selected memo(s)** with `sigma memo read <id>`. This prints the content and marks it READ.
 5. **Act on each memo's content**, per "Executing A Memo's Instructions" above:
-   - Follow every pointer under "Reorientation — Read" — actually open the artifact section, inbox message, or `Sigma/notes/` file it names, do not just note that it exists.
+   - Follow every pointer under "Reorientation — Read" — actually open the artifact section, inbox message, or `Sigma/notes/` file it names, do not just note that it exists. If a `Sigma/notes/` file it names is not at the written path, look for the same file name under `Sigma/notes/unregistered-notes/` before concluding it is missing.
    - Follow the read-only instructions under "Next Actions" directly; hold write-class ones for Director approval. Avoid whatever path it says was already tried and failed.
    - If "Blocked — Do Not Proceed Until" names an unresolved condition (a pending Director decision, a reply not yet received), do not proceed past it — surface it to the Director instead.
 6. **Report what was learned** to the Director — the memo's content and whatever its references turned up — and ask for direction on further action. Do not decide the next step unilaterally; a memo exists precisely because the previous session ended before that decision was made.

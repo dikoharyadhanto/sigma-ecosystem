@@ -40,6 +40,7 @@ import { promptLanguageWizard } from '../engine/languageWizard';
 import { success, info, warn, error } from '../utils/output';
 import { ensureDir, fileExists, findProjectRoot } from '../utils/fs';
 import { ensureOperationsLog } from '../utils/operationLog';
+import { initNotes } from '../services/notesService';
 import { detectTools } from '../utils/detect';
 import {
   writeClaudeMcpConfig,
@@ -304,6 +305,10 @@ async function runStart(opts: {
   // Scaffold the project-wide reference list (Comprehensive Research source index)
   copyTemplateToArtifact('REFERENCE-LIST-TEMPLATE.md', path.join(projectRoot, REFERENCE_LIST_FILE));
   console.log('  Reference: Sigma/reference/reference-list.md initialized.');
+
+  // Free-form notes: registry, note-list.md, note-list/ and unregistered-notes/ (F06)
+  initNotes(projectRoot);
+  console.log('  Notes: Sigma/notes/note-list.md initialized.');
 
   // Copy governance documents
   const constitution = path.join(GLOBAL_GOVERNANCE_DIR, 'SIGMA_CONSTITUTION.md');

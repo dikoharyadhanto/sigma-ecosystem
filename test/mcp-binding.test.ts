@@ -585,7 +585,7 @@ describe('policy projection (§12, matrix §6)', () => {
     expect(out.active).toBe(true);
     expect(out.advisory).toBe(true);
     const ops = out.operations as Payload[];
-    expect(ops.length).toBe(65);
+    expect(ops.length).toBe(68);
     // Every registry operation is classified — no silent gaps.
     expect(ops.filter((o) => o.tier === null && o.availability !== 'forbidden')).toHaveLength(0);
     // Canonical F04 approval/ack tools are executable under their declared authority.

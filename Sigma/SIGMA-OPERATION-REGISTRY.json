@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-10-07T09:06:34.589Z",
   "description": "Sigma Operation Registry \u2014 all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 65,
+  "total_operations": 68,
   "domains": [
     "close",
     "config",
@@ -14,6 +14,7 @@
     "intent",
     "memo",
     "memory",
+    "notes",
     "override",
     "plan",
     "project",
@@ -2538,6 +2539,130 @@
         "post_condition": "candidate/evidence updated without final pair lock"
       },
       "error_messages": {}
+    },
+    {
+      "operation_id": "notes_new",
+      "domain": "notes",
+      "action": "new",
+      "level": "semantic",
+      "role": "any",
+      "description": "Create a free-form Markdown note in Sigma/notes/note-list/ as NOTE-<YYMMDDHHMM>-<slug>.md, register it in Sigma/notes-registry.json with the next sequential ID (N01, N02, ...), and regenerate Sigma/notes/note-list.md (ID, file name, title). The only way to register a note. Notes are independent of governance artifacts: no chain, no --ref, no Director approval.",
+      "inputs": [
+        {
+          "name": "--title",
+          "type": "string",
+          "required": true,
+          "description": "Note title. Cannot be empty, cannot contain a newline, and must contain at least one ASCII letter or digit after normalisation (diacritics are stripped)."
+        },
+        {
+          "name": "--role",
+          "type": "string",
+          "required": false,
+          "description": "Role creating the note (arc|fmn|dev|aud|director), recorded in the registry"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "file",
+          "description": "Sigma/notes/note-list/NOTE-<YYMMDDHHMM>-<slug>.md with the title and creation time"
+        },
+        {
+          "type": "file",
+          "description": "Sigma/notes-registry.json (source of truth) and Sigma/notes/note-list.md (generated view)"
+        }
+      ],
+      "constraints": [
+        "Same title in the same minute gets a -2, -3 suffix; an existing file is never overwritten",
+        "IDs are never reused, even when a registered file disappears",
+        "Refuses when the registry is unreadable, or missing while note-list.md lists notes (run update --rebuild-registry)",
+        "Not tracked in progress-v<N>.json \u2014 no gate, no lock state"
+      ],
+      "gating": {
+        "pre_condition": "none \u2014 no active chain required",
+        "post_condition": "Note file created, registered, and listed in note-list.md"
+      },
+      "error_messages": {
+        "invalid_title": "--title is required and cannot be empty.",
+        "registry_unreadable": "Sigma/notes-registry.json is unreadable. It was not modified."
+      }
+    },
+    {
+      "operation_id": "notes_list",
+      "domain": "notes",
+      "action": "list",
+      "level": "read_only",
+      "role": "any",
+      "description": "List registered notes from Sigma/notes-registry.json, newest first (ID, created time, title, path). Registered notes whose file is missing are flagged. Warns when unregistered Markdown or non-Markdown files wait in Sigma/notes/.",
+      "inputs": [
+        {
+          "name": "--search",
+          "type": "string",
+          "required": false,
+          "description": "Filter by title, case-insensitive substring"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "One line per note; warnings on stderr for files that `sigma notes update` would move or refuse"
+        }
+      ],
+      "constraints": [
+        "Reads the registry only; never writes"
+      ],
+      "gating": {
+        "pre_condition": "none",
+        "post_condition": "none \u2014 read-only"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "notes_update",
+      "domain": "notes",
+      "action": "update",
+      "level": "semantic",
+      "role": "any",
+      "description": "Validate Sigma/notes/ and refresh it. Refuses the whole run (no move, no write) if any non-Markdown file exists anywhere under Sigma/notes/. Otherwise moves every Markdown file that is not a registered note to Sigma/notes/unregistered-notes/ (relative path kept, leading note-list/ dropped, never overwriting) and regenerates note-list.md from the registry. --dry-run prints the plan. --rebuild-registry restores a missing or unreadable registry from note-list.md and only writes with --director-confirm. Running it for real is done on the Director's instruction.",
+      "inputs": [
+        {
+          "name": "--dry-run",
+          "type": "flag",
+          "required": false,
+          "description": "Print what would be moved or refused without changing anything"
+        },
+        {
+          "name": "--rebuild-registry",
+          "type": "flag",
+          "required": false,
+          "description": "Restore the registry from note-list.md; applies only when it is missing or unreadable"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": false,
+          "description": "Confirm a --rebuild-registry write; without it the rebuild is a preview"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "file",
+          "description": "Moved Markdown files under Sigma/notes/unregistered-notes/; Sigma/notes/note-list.md regenerated"
+        }
+      ],
+      "constraints": [
+        "Non-Markdown files are never moved, deleted, or converted; the run is refused until the Director removes them",
+        "Files named .gitkeep, desktop.ini, Thumbs.db, and .DS_Store are ignored",
+        "Safe to re-run; interrupted moves resume on the next run",
+        "Not tracked in progress-v<N>.json \u2014 no gate, no lock state"
+      ],
+      "gating": {
+        "pre_condition": "none",
+        "post_condition": "Every Markdown file under Sigma/notes/ is either a registered note or under unregistered-notes/; note-list.md matches the registry"
+      },
+      "error_messages": {
+        "non_markdown": "[REFUSED] Non-Markdown files found under Sigma/notes/.",
+        "registry_missing": "Sigma/notes-registry.json is missing but note-list.md lists notes."
+      }
     }
   ]
 }

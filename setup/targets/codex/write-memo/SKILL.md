@@ -31,9 +31,9 @@ A memo must stay brief — a few dense sentences per section, not a report. If a
 
 Instead:
 
-1. Check whether something already covers it — a DEV-EXEC, another Sigma artifact, or an existing file under `Sigma/notes/`. If so, point to that from "Reorientation — Read" instead of writing anything new.
-2. If nothing existing covers it, create a new `.md` file under `Sigma/notes/` with the detailed explanation, and point to that file from "Reorientation — Read" instead of inlining the detail into the memo.
-3. Creating a new file under `Sigma/notes/` for this purpose does not require Director approval — it is a normal AI-operational action, exactly like writing the memo itself.
+1. Check whether something already covers it — a DEV-EXEC, another Sigma artifact, or an existing registered note (`sigma notes list --search <keyword>`). If so, point to that from "Reorientation — Read" instead of writing anything new.
+2. If nothing existing covers it, create the note **only** with `sigma notes new --title "<title>" --role <your role>`, then write the detailed explanation into the file it prints. **Never create a `.md` file directly under `Sigma/notes/`**: a file that was not created by `sigma notes new` is not registered, does not appear in `note-list.md`, and `sigma notes update` moves it to `unregistered-notes/`, which breaks the memo's pointer.
+3. Point to the note from "Reorientation — Read" by its ID (for example `N07`) and the path that `sigma notes new` printed. Creating a note this way does not require Director approval — it is a normal AI-operational action, exactly like writing the memo itself.
 
 This keeps the memo short while still making sure the detail is captured somewhere durable and pointed-to, rather than lost or crammed into a section that is supposed to stay brief.
 
@@ -85,7 +85,7 @@ The Director may give the activation phrase in whichever language the current se
 - Switching the active role.
 - Treating a memo as a place to record a decision permanently — see the shadow-artifact guardrail above.
 
-The free-form `Sigma/notes/` file this skill may create per "Keeping Memos Brief" above is not a governance artifact and is not covered by this list — it needs no CLI command and no Director approval.
+The free-form note this skill may create per "Keeping Memos Brief" above is not a governance artifact and is not covered by this list — it is created with `sigma notes new` (never by writing a file directly under `Sigma/notes/`) and needs no Director approval.
 
 ## No Invented Content
 

@@ -92,6 +92,14 @@ export const MESSAGES_INDEX_FILE = path.join(MESSAGES_DIR, 'index.json');
 export const MESSAGES_ATTACHMENTS_DIR = path.join(MESSAGES_DIR, 'attachments');
 export const MESSAGE_SUBFOLDERS = ['ARC', 'FMN', 'DEV', 'AUD', 'DIRECTOR', 'attachments'];
 
+// F06 — sigma notes. Free-form Markdown notes registered only through `sigma notes new`.
+// The registry (source of truth) lives outside Sigma/notes/ because that folder is Markdown-only.
+export const NOTES_DIR = path.join(PROJECT_SIGMA_DIR, 'notes');
+export const NOTES_REGISTERED_DIR = path.join(NOTES_DIR, 'note-list');
+export const NOTES_UNREGISTERED_DIR = path.join(NOTES_DIR, 'unregistered-notes');
+export const NOTES_CATALOG_FILE = path.join(NOTES_DIR, 'note-list.md');
+export const NOTES_REGISTRY_FILE = path.join(PROJECT_SIGMA_DIR, 'notes-registry.json');
+
 export const REFERENCE_DIR = path.join(PROJECT_SIGMA_DIR, 'reference');
 export const REFERENCE_LIST_FILE = path.join(REFERENCE_DIR, 'reference-list.md');
 export const REFERENCE_DATA_DIR = path.join(REFERENCE_DIR, 'data');
