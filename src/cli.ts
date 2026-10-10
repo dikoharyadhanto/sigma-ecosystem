@@ -84,6 +84,7 @@ function commandPath(cmd: Command): string {
 
 program.hook('preAction', (_thisCommand, actionCommand) => {
   pendingOperation = commandPath(actionCommand);
+  if (pendingOperation === 'doctor' && actionCommand.opts().checkAssets) pendingOperation = null;
 });
 
 process.on('exit', (code) => {

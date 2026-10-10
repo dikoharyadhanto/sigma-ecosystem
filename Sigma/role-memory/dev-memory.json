@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "role": "DEV",
   "source_rule": "Sigma/rules/DEV-RULE.md",
-  "source_rule_version": "unversioned",
+  "source_rule_version": "sha256:dcf30e7a699d7218dc6500ace385a2ddad4a10c710af1080a19e1cd1872f8547",
   "memory_updated_at": "2026-10-10",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [

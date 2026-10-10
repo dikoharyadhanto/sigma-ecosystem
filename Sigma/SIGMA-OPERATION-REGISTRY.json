@@ -113,30 +113,36 @@
       "action": "sync",
       "level": "semantic",
       "role": "director",
-      "description": "Sync doctrine files inside the project's Sigma/ from global ~/.sigma/templates/. Targets: SIGMA_PROTOCOL.md, SIGMA_CONSTITUTION.md, rules/*, and bridge files at project root. Backs up all affected files to Sigma/logs/sync-backup-{timestamp}/ before writing. Does NOT auto-run on CLI update \u2014 must be explicitly invoked by Director.",
+      "description": "Preview managed project assets per file from global Sigma sources and the installed bundle. --confirm copies missing files; each differing file requires its exact --accept token from the preview. Existing differing files are backed up before replacement. Does NOT auto-run on CLI update.",
       "inputs": [
         {
           "name": "--confirm",
           "type": "flag",
-          "required": true,
-          "description": "Required to proceed \u2014 touches existing project files"
+          "required": false,
+          "description": "Apply missing files and accepted replacements; without this flag, preview only"
+        },
+        {
+          "name": "--accept",
+          "type": "string",
+          "required": false,
+          "description": "Exact token from dry run for one differing file; repeat for every approved replacement"
         }
       ],
       "outputs": [
         {
           "type": "file",
-          "description": "Updated Sigma/SIGMA_PROTOCOL.md, Sigma/SIGMA_CONSTITUTION.md, Sigma/rules/* from templates"
+          "description": "Managed Sigma files copied only when missing or explicitly accepted"
         },
         {
           "type": "folder",
-          "description": "Sigma/logs/sync-backup-{timestamp}/ containing pre-sync file backups"
+          "description": "~/.local/share/sigma/sync-backups/<project-key>/<timestamp>/ containing previous bytes of accepted replacements"
         }
       ],
       "constraints": [
         {
           "type": "flag",
-          "condition": "--confirm flag must be present",
-          "error_message": "sigma project sync requires --confirm. This operation overwrites existing project files."
+          "condition": "Each differing target has a matching --accept token",
+          "error_message": "Managed asset differences require a decision for each file."
         },
         {
           "type": "existence",
@@ -145,11 +151,11 @@
         }
       ],
       "gating": {
-        "pre_condition": "--confirm present; ~/.sigma/templates/ exists",
-        "post_condition": "doctrine files updated; backup written to Sigma/logs/sync-backup-{timestamp}/"
+        "pre_condition": "--confirm present; every differing target explicitly accepted; managed paths safe",
+        "post_condition": "missing and accepted files updated; previous bytes of replacements backed up"
       },
       "error_messages": {
-        "missing_confirm": "sigma project sync requires --confirm. This operation overwrites existing project files.",
+        "unaccepted_difference": "Managed asset differences require a decision for each file.",
         "templates_not_found": "~/.sigma/templates/ not found. Run: sigma setup install"
       }
     },
@@ -686,7 +692,7 @@
           "name": "--plan",
           "type": "string",
           "required": false,
-          "description": "LOCKED plan version to execute. Required when more than one unexecuted LOCKED plan exists."
+          "description": "Eligible APPROVED (paired) or legacy LOCKED plan version to execute. Required when more than one eligible plan exists."
         }
       ],
       "outputs": [
@@ -703,7 +709,7 @@
         {
           "type": "gate",
           "condition": "gates.gate_2_open == true",
-          "error_message": "GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock"
+          "error_message": "GATE 2 BLOCKED: No eligible FMN-PLAN. Run: sigma plan approve --director-confirm"
         },
         {
           "type": "cardinality",
@@ -716,7 +722,7 @@
         "post_condition": "exec.active_state == 'DRAFT'; plan_version_ref recorded; new exec version == plan version"
       },
       "error_messages": {
-        "gate_2_blocked": "GATE 2 BLOCKED: No locked FMN-PLAN. Run: sigma plan lock",
+        "gate_2_blocked": "GATE 2 BLOCKED: No eligible FMN-PLAN. Run: sigma plan approve --director-confirm",
         "plan_already_executing": "EXEC CONFLICT: FMN-PLAN <version> already has DEV-EXEC <version> in <state> state."
       }
     },
@@ -1382,7 +1388,7 @@
       "action": "promote",
       "level": "semantic",
       "role": "any",
-      "description": "Promote a pending plan into the official draft queue with an assigned version (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 \u2014 no longer FIFO; see plan_lock). Stage title/focus are written into the chain ROADMAP Stage Overview data.",
+      "description": "Promote a pending plan into the official draft queue with an assigned version (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 \u2014 no longer FIFO; see plan_approve). Stage title/focus are written into the chain ROADMAP Stage Overview data.",
       "inputs": [
         {
           "name": "--id",
@@ -1423,7 +1429,7 @@
       ],
       "gating": {
         "pre_condition": "pending plan exists; chain ROADMAP exists (Gate 1.5)",
-        "post_condition": "plan is an official DRAFT, targetable by version via plan_lock's --v"
+        "post_condition": "plan is an official DRAFT, targetable by version via plan_approve's --v"
       },
       "error_messages": {}
     },
@@ -1593,8 +1599,14 @@
       "action": "doctor",
       "level": "semantic",
       "role": "any",
-      "description": "Diagnose and reconcile Sigma runtime state. Default (or --recovery) reconciles the active chain file against artifacts on disk; --reconstruct rebuilds a missing/corrupted progress-v<N>.json from artifact files; --all-versions applies to every chain. --repair-workspace recreates a missing DEV workspace folder or marker from the record in .sigma-identity.json, without reconciling chains and without touching the contents of dev/. Lifecycle migration is opt-in per chain via --migrate-lifecycle [--v] [--dry-run], requires --director-confirm to mutate, rejects ambiguous pairs before repair; no baseline certification.",
+      "description": "Diagnose and reconcile Sigma runtime state. Default (or --recovery) reconciles the active chain file against artifacts on disk; --reconstruct rebuilds a missing/corrupted progress-v<N>.json from artifact files; --all-versions applies to every chain. --check-assets is read-only and compares master, installed host, and project copies with hashes, including role memory source-rule hashes. --repair-workspace recreates a missing DEV workspace folder or marker from the record in .sigma-identity.json, without reconciling chains and without touching the contents of dev/. Lifecycle migration is opt-in per chain via --migrate-lifecycle [--v] [--dry-run], requires --director-confirm to mutate, rejects ambiguous pairs before repair; no baseline certification.",
       "inputs": [
+        {
+          "name": "--check-assets",
+          "type": "flag",
+          "required": false,
+          "description": "Read-only asset difference report; cannot be combined with other doctor modes"
+        },
         {
           "name": "--recovery",
           "type": "flag",
@@ -1674,7 +1686,7 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate a DEV-EXEC document structure and markers, and report Lock readiness for `sigma exec lock`. Read-only \u2014 never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT exec is open (PLAN-IMPL-MULTIDRAFT-LOCK \u00a78.3, Director directive 2026-08-12 \u2014 no command may act on an implicit target under ambiguity, including read-only ones).",
+      "description": "Validate a DEV-EXEC document structure and markers, and report approval readiness for `sigma exec approve`. Read-only \u2014 never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT exec is open (PLAN-IMPL-MULTIDRAFT-LOCK \u00a78.3, Director directive 2026-08-12 \u2014 no command may act on an implicit target under ambiguity, including read-only ones).",
       "inputs": [
         {
           "name": "--v",
@@ -1686,7 +1698,7 @@
       "outputs": [
         {
           "type": "display",
-          "description": "Validation report and Lock readiness verdict for DEV-EXEC"
+          "description": "Validation report and approval readiness verdict for DEV-EXEC"
         }
       ],
       "constraints": [
@@ -1778,7 +1790,7 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate an FMN-PLAN document structure and markers, and report Lock readiness for `sigma plan lock`. Read-only \u2014 never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT plan is open (PLAN-IMPL-MULTIDRAFT-LOCK \u00a78.3, Director directive 2026-08-12 \u2014 no command may act on an implicit target under ambiguity, including read-only ones).",
+      "description": "Validate an FMN-PLAN document structure and markers, and report approval readiness for `sigma plan approve`. Read-only \u2014 never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT plan is open (PLAN-IMPL-MULTIDRAFT-LOCK \u00a78.3, Director directive 2026-08-12 \u2014 no command may act on an implicit target under ambiguity, including read-only ones).",
       "inputs": [
         {
           "name": "--v",
@@ -1790,7 +1802,7 @@
       "outputs": [
         {
           "type": "display",
-          "description": "Validation report and Lock readiness verdict for FMN-PLAN"
+          "description": "Validation report and approval readiness verdict for FMN-PLAN"
         }
       ],
       "constraints": [

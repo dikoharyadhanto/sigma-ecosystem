@@ -1202,8 +1202,8 @@ or destructive.
 AUD MUST NOT execute any of the following, regardless of context:
 
 - `sigma intent ratify`
-- `sigma plan lock`
-- `sigma exec lock`
+- `sigma plan approve`
+- `sigma exec approve`
 - `sigma close lock`
 - `sigma plan supersede`
 - `sigma intent supersede`

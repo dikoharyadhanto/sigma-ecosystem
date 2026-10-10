@@ -23,6 +23,7 @@ const output_1 = require("../utils/output");
 const fs_1 = require("../utils/fs");
 const operationLog_1 = require("../utils/operationLog");
 const notesService_1 = require("../services/notesService");
+const assetConsistency_1 = require("../services/assetConsistency");
 const detect_1 = require("../utils/detect");
 const mcpConfig_1 = require("../utils/mcpConfig");
 // ── Bundle paths ─────────────────────────────────────────────────────────────
@@ -177,6 +178,13 @@ async function runStart(opts) {
             (0, output_1.error)('This directory is already a Sigma project. ' +
                 'Use `sigma project status` to inspect, or pass --reinit to re-initialize.');
         }
+    }
+    const existingAssetDifferences = (0, assetConsistency_1.inspectProjectAssets)(projectRoot)
+        .filter(item => item.status === 'DIFF' || item.status === 'UNSAFE');
+    if (existingAssetDifferences.length) {
+        (0, output_1.error)('Existing managed files differ from the installation. Project start would overwrite them. ' +
+            'Review and resolve these files before starting or re-initializing:\n' +
+            existingAssetDifferences.map(item => (0, assetConsistency_1.formatAssetDifference)(item)).join('\n'));
     }
     // Collect project_id and project_name
     let projectId;
@@ -452,71 +460,29 @@ function runStatus() {
 // ── sigma project sync ────────────────────────────────────────────────────────
 function runSync(opts) {
     const projectRoot = (0, fs_1.findProjectRoot)();
-    const sigmaDir = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR);
-    const filesToSync = [
-        { src: path_1.default.join(config_1.GLOBAL_GOVERNANCE_DIR, 'SIGMA_CONSTITUTION.md'), dest: path_1.default.join(sigmaDir, 'SIGMA_CONSTITUTION.md') },
-        { src: path_1.default.join(config_1.GLOBAL_GOVERNANCE_DIR, 'SIGMA_PROTOCOL.md'), dest: path_1.default.join(sigmaDir, 'SIGMA_PROTOCOL.md') },
-    ];
-    const rulesDestDir = path_1.default.join(sigmaDir, 'rules');
-    const templatesDestDir = path_1.default.join(sigmaDir, 'templates');
-    const templatesSource = (0, fs_1.fileExists)(config_1.GLOBAL_TEMPLATES_DIR) ? config_1.GLOBAL_TEMPLATES_DIR : BUNDLE_TEMPLATES_DIR;
+    if (!opts.confirm && opts.accept?.length) {
+        throw new Error('--accept requires --confirm after reviewing the dry run.');
+    }
+    const differences = (0, assetConsistency_1.inspectProjectAssets)(projectRoot);
     if (!opts.confirm) {
-        (0, output_1.info)('Dry run — files that would be updated:');
-        for (const f of filesToSync) {
-            console.log(`  ${f.src} → ${f.dest}`);
-        }
-        console.log(`  ${config_1.GLOBAL_RULES_DIR}/ → ${rulesDestDir}/`);
-        if ((0, fs_1.fileExists)(templatesSource)) {
-            console.log(`  ${templatesSource}/ → ${templatesDestDir}/`);
-        }
-        if ((0, fs_1.fileExists)(BUNDLE_OP_REGISTRY)) {
-            console.log(`  SIGMA-OPERATION-REGISTRY.json (from bundle)`);
-        }
-        if ((0, fs_1.fileExists)(BUNDLE_DOC_REGISTRY)) {
-            console.log(`  SIGMA-REGISTRY.json (from bundle)`);
-        }
-        if ((0, fs_1.fileExists)(BUNDLE_ROLE_MEMORY_DIR)) {
-            console.log('  role-memory/ (from bundle)');
-        }
+        (0, output_1.info)('Dry run — managed files, one line per difference:');
+        const changed = differences.filter(item => item.status !== 'SAME');
+        if (!changed.length)
+            console.log('  All available managed files already match their sources.');
+        for (const item of changed)
+            console.log('  ' + (0, assetConsistency_1.formatAssetDifference)(item));
+        console.log('  Review each DIFF source and target. A replacement requires --confirm and its exact --accept token.');
         console.log('  .mcp.json (sigma-mcp — upsert key sigma)');
         console.log('  opencode.jsonc / opencode.json (sigma-mcp — upsert key mcp.sigma)');
         (0, output_1.warn)('Pass --confirm to apply.');
         return;
     }
-    const updated = [];
-    for (const f of filesToSync) {
-        if ((0, fs_1.fileExists)(f.src)) {
-            fs_extra_1.default.copySync(f.src, f.dest, { overwrite: true });
-            updated.push(path_1.default.basename(f.dest));
-        }
-    }
-    if ((0, fs_1.fileExists)(config_1.GLOBAL_RULES_DIR)) {
-        fs_extra_1.default.copySync(config_1.GLOBAL_RULES_DIR, rulesDestDir, { overwrite: true });
-        updated.push('rules/');
-    }
-    if ((0, fs_1.fileExists)(templatesSource)) {
-        fs_extra_1.default.copySync(templatesSource, templatesDestDir, { overwrite: true });
-        updated.push('templates/');
-    }
-    if ((0, fs_1.fileExists)(BUNDLE_OP_REGISTRY)) {
-        const dest = path_1.default.join(sigmaDir, 'SIGMA-OPERATION-REGISTRY.json');
-        fs_extra_1.default.copySync(BUNDLE_OP_REGISTRY, dest, { overwrite: true });
-        updated.push('SIGMA-OPERATION-REGISTRY.json');
-    }
-    if ((0, fs_1.fileExists)(BUNDLE_DOC_REGISTRY)) {
-        const dest = path_1.default.join(sigmaDir, 'SIGMA-REGISTRY.json');
-        fs_extra_1.default.copySync(BUNDLE_DOC_REGISTRY, dest, { overwrite: true });
-        updated.push('SIGMA-REGISTRY.json');
-    }
-    if ((0, fs_1.fileExists)(BUNDLE_ROLE_MEMORY_DIR)) {
-        const dest = path_1.default.join(sigmaDir, 'role-memory');
-        fs_extra_1.default.copySync(BUNDLE_ROLE_MEMORY_DIR, dest, { overwrite: true });
-        updated.push('role-memory/');
-    }
+    const result = (0, assetConsistency_1.syncManagedAssets)(projectRoot, opts.accept ?? []);
     (0, output_1.success)('Project synced successfully.');
-    for (const f of updated) {
-        console.log(`  Updated: ${f}`);
-    }
+    for (const item of result.copied)
+        console.log('  Updated: ' + item);
+    if (result.backupDir)
+        console.log('  Previous files backed up at: ' + result.backupDir);
     // Stage 2 & PLAN-EVAL-04 — Upsert local & global MCP config dengan explicit projectRoot
     {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeClaudeMcpConfig)(projectRoot), '.mcp.json');
@@ -616,7 +582,8 @@ function projectCommand() {
     cmd
         .command('sync')
         .description('Sync governance files from ~/.sigma/ into this project')
-        .option('--confirm', 'Apply changes (without this flag, dry-run only)')
+        .option('--confirm', 'Apply non-conflicting changes (without this flag, dry-run only)')
+        .option('--accept <token>', 'Approve one exact file replacement shown by the dry run; repeat for each DIFF', (token, values) => [...values, token], [])
         .action((opts) => {
         try {
             runSync(opts);

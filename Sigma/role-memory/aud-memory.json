@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "role": "AUD",
   "source_rule": "Sigma/rules/AUD-RULE.md",
-  "source_rule_version": "unversioned",
+  "source_rule_version": "sha256:59e98d7184f63f43587a3d702aa603c5b73929300529af3e9832c5e1b967989d",
   "memory_updated_at": "2026-10-07",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [

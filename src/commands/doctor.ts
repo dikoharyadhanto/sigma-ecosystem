@@ -22,6 +22,21 @@ import { renderIntentHistoryFile } from '../utils/intentHistory';
 import { PROJECT_SIGMA_DIR } from '../config';
 import { intentGitDrift } from '../engine/intentGit';
 import { describeDevWorkspace, getDevWorkspaceStatus, repairDevWorkspace } from '../engine/devWorkspace';
+import { formatAssetDifference, inspectAssetDrift } from '../services/assetConsistency';
+
+function runAssetCheck(): void {
+  let projectRoot: string | undefined;
+  try { projectRoot = findProjectRoot(); } catch { projectRoot = undefined; }
+  const report = inspectAssetDrift(projectRoot);
+  const changed = report.differences.filter(item => item.status !== 'SAME');
+  console.log('\n=== Sigma Doctor — Asset Differences (read-only) ===\n');
+  console.log('Project: ' + (projectRoot ?? 'none (master and host only)'));
+  console.log('Compared: ' + report.differences.length + ' file pairs; differences: ' + changed.length);
+  for (const item of changed) console.log('  [' + item.layer + '] ' + formatAssetDifference(item, false));
+  for (const warning of report.memoryWarnings) console.log('  [memory-rule] ' + warning);
+  if (!changed.length && !report.memoryWarnings.length) console.log('  No differences found in the available copies.');
+  console.log('Differences identify byte changes only; their origin and approval status are unknown.');
+}
 
 // Non-blocking check: cross-role skills (e.g. /write-memo) read
 // Sigma/templates/MEMO-TEMPLATE.md directly by project-relative path rather
@@ -354,8 +369,17 @@ export function doctorCommand(): Command {
     .option('--migrate-mailbox', 'Move legacy messages/memos to LEGACY and reset legacy UNREAD to READ')
     .option('--dry-run', 'With --migrate-mailbox: preview without writing')
     .option('--repair-workspace', 'Recreate a missing DEV workspace folder or marker from the project identity (does not reconcile chains)')
-    .action(async (opts: { recovery?: boolean; allVersions?: boolean; reconstruct?: boolean; v?: string; repairWorkspace?: boolean; migrateMailbox?: boolean; migrateLifecycle?: boolean; directorConfirm?: boolean; dryRun?: boolean }) => {
+    .option('--check-assets', 'Compare master, installed, and project assets without writing or reconciling runtime state')
+    .action(async (opts: { recovery?: boolean; allVersions?: boolean; reconstruct?: boolean; v?: string; repairWorkspace?: boolean; migrateMailbox?: boolean; migrateLifecycle?: boolean; directorConfirm?: boolean; dryRun?: boolean; checkAssets?: boolean }) => {
       try {
+        if (opts.checkAssets) {
+          if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v || opts.repairWorkspace ||
+              opts.migrateMailbox || opts.migrateLifecycle || opts.directorConfirm || opts.dryRun) {
+            throw new Error('--check-assets cannot be combined with other doctor modes.');
+          }
+          runAssetCheck();
+          return;
+        }
         if (opts.migrateLifecycle) {
           if(opts.recovery||opts.allVersions||opts.reconstruct||opts.migrateMailbox||opts.repairWorkspace)throw new Error('--migrate-lifecycle cannot be combined with other doctor mutation modes.');
           console.log(JSON.stringify(await migrateLifecycle(findProjectRoot(),opts.v,!!opts.dryRun,!!opts.directorConfirm),null,2));return;

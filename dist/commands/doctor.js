@@ -16,6 +16,28 @@ const intentHistory_1 = require("../utils/intentHistory");
 const config_1 = require("../config");
 const intentGit_1 = require("../engine/intentGit");
 const devWorkspace_1 = require("../engine/devWorkspace");
+const assetConsistency_1 = require("../services/assetConsistency");
+function runAssetCheck() {
+    let projectRoot;
+    try {
+        projectRoot = (0, fs_1.findProjectRoot)();
+    }
+    catch {
+        projectRoot = undefined;
+    }
+    const report = (0, assetConsistency_1.inspectAssetDrift)(projectRoot);
+    const changed = report.differences.filter(item => item.status !== 'SAME');
+    console.log('\n=== Sigma Doctor — Asset Differences (read-only) ===\n');
+    console.log('Project: ' + (projectRoot ?? 'none (master and host only)'));
+    console.log('Compared: ' + report.differences.length + ' file pairs; differences: ' + changed.length);
+    for (const item of changed)
+        console.log('  [' + item.layer + '] ' + (0, assetConsistency_1.formatAssetDifference)(item, false));
+    for (const warning of report.memoryWarnings)
+        console.log('  [memory-rule] ' + warning);
+    if (!changed.length && !report.memoryWarnings.length)
+        console.log('  No differences found in the available copies.');
+    console.log('Differences identify byte changes only; their origin and approval status are unknown.');
+}
 // Non-blocking check: cross-role skills (e.g. /write-memo) read
 // Sigma/templates/MEMO-TEMPLATE.md directly by project-relative path rather
 // than through resolveTemplate(). A project scaffolded before this template
@@ -324,8 +346,17 @@ function doctorCommand() {
         .option('--migrate-mailbox', 'Move legacy messages/memos to LEGACY and reset legacy UNREAD to READ')
         .option('--dry-run', 'With --migrate-mailbox: preview without writing')
         .option('--repair-workspace', 'Recreate a missing DEV workspace folder or marker from the project identity (does not reconcile chains)')
+        .option('--check-assets', 'Compare master, installed, and project assets without writing or reconciling runtime state')
         .action(async (opts) => {
         try {
+            if (opts.checkAssets) {
+                if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v || opts.repairWorkspace ||
+                    opts.migrateMailbox || opts.migrateLifecycle || opts.directorConfirm || opts.dryRun) {
+                    throw new Error('--check-assets cannot be combined with other doctor modes.');
+                }
+                runAssetCheck();
+                return;
+            }
             if (opts.migrateLifecycle) {
                 if (opts.recovery || opts.allVersions || opts.reconstruct || opts.migrateMailbox || opts.repairWorkspace)
                     throw new Error('--migrate-lifecycle cannot be combined with other doctor mutation modes.');

@@ -116,14 +116,14 @@ Gates prevent downstream work from starting before upstream decisions are stable
 |:--- |:--- |
 | Gate 1 | `DIR-INTENT` must be RATIFIED before creating a ROADMAP |
 | Gate 1.5 | The chain's ROADMAP must exist (not SUPERSEDED) before creating a non-pending `FMN-PLAN` |
-| Gate 2 | `FMN-PLAN` must be LOCKED before creating `DEV-EXEC` |
+| Gate 2 | An eligible PLAN must be APPROVED on paired lifecycle chains or LOCKED on legacy chains before creating EXEC |
 | Gate 3 | `DEV-EXEC` must be LOCKED before creating `DIR-CLOSE` |
 
 ### Lock / Ratify
 
-A **lock** is a Director authorization that advances an artifact from DRAFT to LOCKED state, opening the next gate. `DIR-INTENT` uses the same mechanism under the name **ratify** (`sigma intent ratify`, DRAFT → RATIFIED) — same function, distinct term to underline that ratifying establishes the governing intent without freezing how it gets operationalized. Every other artifact (ROADMAP, FMN-PLAN, DEV-EXEC, DIR-CLOSE) keeps `lock`/`LOCKED`.
+A **ratification** establishes the governing INTENT (`sigma intent ratify`, DRAFT → RATIFIED). On paired lifecycle chains, `sigma plan approve --director-confirm` records APPROVED, and `sigma exec approve --director-confirm` locks the same-number PLAN and EXEC together. Legacy chains retain separate lock semantics through the approve commands. CLOSE still uses `sigma close lock`.
 
-Locking (or ratifying) is irreversible without a supersede. A locked or ratified artifact is never edited in place.
+Approved PLAN revisions follow the controlled review and certification workflow. Locked evidence is retained as history; INTENT amendments follow the Git-based baseline and review workflow.
 
 ---
 
@@ -245,7 +245,7 @@ Create the build plan for the ratified intent.
 
 ```text
 /dev
-Implement according to the locked FMN-PLAN.
+Implement according to the approved FMN-PLAN.
 ```
 
 ```text
@@ -488,7 +488,7 @@ The query server registers 23 tools:
 | `sigma_get_operation_log` | Bounded operation log entries |
 | `sigma_get_git_evidence` | Git status and change evidence |
 
-The control server registers 29 tools: 9 bounded-write tools for drafts, roadmap, references, evidence, and inbox archiving; and 10 pairs of `prepare`/`commit` tools for intent ratification, amendment, scoring and superseding, plan locking, promotion and superseding, execution locking, and closure creation and locking.
+The control server registers 29 tools: 9 bounded-write tools for drafts, roadmap, references, evidence, and inbox archiving; and 10 pairs of `prepare`/`commit` tools for intent ratification, amendment, scoring and superseding, plan approval, promotion and superseding, execution approval, and closure creation and locking.
 
 Sending messages and reading inbox/memo content remain CLI/skill operations. The MCP tools for mailbox integrity and inbox archiving do not expose message content.
 
@@ -589,7 +589,8 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 |:-------- |:---------------------------------- |:------------------------------------------------------------------------------ |
 | project  | `sigma project start [--init-git]` | Initialize a Sigma project; optionally initialize local Git when none exists   |
 | project  | `sigma project status`             | Show lifecycle phase, gate status, and active artifact versions                |
-| project  | `sigma project sync --confirm`     | Sync doctrine files from global templates into this project                    |
+| project  | `sigma project sync`               | Preview per-file differences between installed assets and this project          |
+| project  | `sigma project sync --confirm`     | Copy missing files; differing files require an exact `--accept` token and backup |
 | project  | `sigma project register`           | Repair/backfill `.sigma-identity.json` at project root (not a global registry) |
 | session  | `sigma session bootstrap`          | Load project state at session start                                            |
 | intent   | `sigma intent new`                 | Create a `DIR-INTENT` draft                                                    |
@@ -611,15 +612,15 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | plan     | `sigma plan new`                   | Create an `FMN-PLAN` draft (requires ratified INTENT + existing ROADMAP)       |
 | plan     | `sigma plan new --pending`         | Stage a future plan without entering the version queue                         |
 | plan     | `sigma plan promote`               | Promote a pending plan into the official draft queue                          |
-| plan     | `sigma plan lock [--v <ver>]`      | Lock a DRAFT `FMN-PLAN` (opens Gate 2); `--v` required when more than one DRAFT is open |
-| plan     | `sigma plan check [--v <ver>]`     | Validate `FMN-PLAN` structure and report lock readiness (read-only); `--v` required when ambiguous |
-| plan     | `sigma plan status`                | Show open DRAFTs, LOCKED plans with exec pairing, pending plans, Gate 2        |
+| plan     | `sigma plan approve [--v <ver>] [--director-confirm]` | Preview or approve an exact PLAN and its dependencies; confirmation requires Director authorization |
+| plan     | `sigma plan check [--v <ver>]`     | Validate PLAN structure and report approval readiness (read-only); `--v` required when ambiguous |
+| plan     | `sigma plan status`                | Show DRAFT, APPROVED, and LOCKED plans, exec pairing, pending plans, Gate 2    |
 | plan     | `sigma plan list`                  | List plan versions                                                             |
 | plan     | `sigma plan update --v <ver>`      | Update stage title/focus for an existing plan (`--title`/`--focus`)            |
 | plan     | `sigma plan supersede --v <ver>`   | Supersede a plan version, DRAFT or LOCKED (auto-cascades any linked non-final exec) |
-| exec     | `sigma exec new [--plan <ver>]`    | Create a `DEV-EXEC` draft for a LOCKED plan with no open exec (one exec per plan) |
-| exec     | `sigma exec lock [--v <ver>]`      | Lock a DRAFT `DEV-EXEC` (re-evaluates Gate 3); `--v` required when more than one DRAFT is open |
-| exec     | `sigma exec check [--v <ver>]`     | Validate `DEV-EXEC` structure and report lock readiness (read-only); `--v` required when ambiguous |
+| exec     | `sigma exec new [--plan <ver>]`    | Create an EXEC draft for an eligible PLAN with no open EXEC (one EXEC per PLAN) |
+| exec     | `sigma exec approve [--v <ver>] [--director-confirm]` | Preview or approve EXEC; paired lifecycle locks PLAN and EXEC together |
+| exec     | `sigma exec check [--v <ver>]`     | Validate EXEC structure and report approval readiness (read-only); `--v` required when ambiguous |
 | exec     | `sigma exec status`                | Show open DRAFTs with plan pairing, LOCKED execs, Gate 3                       |
 | exec     | `sigma exec list`                  | List execution versions                                                        |
 | close    | `sigma close new`                  | Create a `DIR-CLOSE` draft                                                     |
@@ -653,6 +654,7 @@ Lock, supersede, reconstruct, stale-intent acknowledgment, and risk-related comm
 | report   | `sigma report logs`                | View the operation history log with filters (read-only)                        |
 | override | `sigma override`                   | Bypass current lifecycle gate under Director authority (recorded in audit log) |
 | doctor   | `sigma doctor`                     | Diagnose and reconcile runtime state (repairs drift, marks unresolved breaks INVALID) |
+| doctor   | `sigma doctor --check-assets`      | Compare master, installed, and project assets without writing                 |
 | doctor   | `sigma doctor --recovery`          | Explicit alias for the default `sigma doctor` behavior                        |
 | doctor   | `sigma doctor --reconstruct`       | Rebuild `progress-v<N>.json` from artifact files when missing or corrupted     |
 | setup    | `sigma setup install`              | Install Sigma globally to `~/.sigma/`, deploy skill files + hook               |
@@ -684,10 +686,13 @@ sigma setup update
 # 2. Navigate to your project
 cd your-project
 
-# 3. Sync doctrine files from updated global templates into the project
+# 3. Preview per-file differences and record the exact tokens for replacements
+sigma project sync
+
+# 4. Apply missing files; add --accept <token> for each approved replacement
 sigma project sync --confirm
 
-# 4. Verify project state is consistent
+# 5. Verify project state is consistent
 sigma session bootstrap
 ```
 
@@ -696,7 +701,8 @@ sigma session bootstrap
 | Command                        | What it updates                                                                            |
 |:------------------------------ |:------------------------------------------------------------------------------------------ |
 | `sigma setup update`           | Updates global `~/.sigma/` templates and governance files                                  |
-| `sigma project sync --confirm` | Syncs doctrine files (role rules, protocol) from updated global templates into the project |
+| `sigma project sync`           | Previews managed files with source and target hashes; shows an acceptance token for each difference |
+| `sigma project sync --confirm` | Copies missing files and approved replacements; backs up previous bytes before replacement |
 | `sigma session bootstrap`      | Verifies project state after migration                                                     |
 
 > **No automatic legacy schema/ROADMAP migration.** Older projects with a pre-current `progress.json` schema (legacy `BUILDING`/`TESTING`/`COMPLETED` exec states, a leftover root-level `cso` array) or a freeform ROADMAP (no H2 stage convention) no longer have a CLI migration path — `sigma sync progress`/`sigma sync roadmap` were removed as trivial/redundant. This is an accepted risk; such projects require manual schema/document adjustment.
