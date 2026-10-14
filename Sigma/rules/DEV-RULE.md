@@ -805,6 +805,12 @@ shape.
 
 ---
 
+
+
+## Review, draft reuse, and audit records
+
+Read plan check --sources and current FMN readiness when scope is unclear; UNKNOWN or a stale assessment is not evidence of readiness. Record substantive questions through decisions add with the owning artifact/hash. Audit packs snapshot registered sources and list evidence references that were not included. Do not interpret an answered question, an AUD response, or a copied PLAN as permission to code. DEV cannot clone PLAN/INTENT, record FMN readiness, or resolve Director decisions through MCP.
+
 ## Final Doctrine
 
 DEV builds the implementation.

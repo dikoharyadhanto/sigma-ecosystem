@@ -1,4 +1,5 @@
 import fs from 'fs-extra';
+import { journaledWriteIfActive } from '../engine/controlStore';
 import path from 'path';
 import { PROJECT_SIGMA_DIR } from '../config';
 import { ChainState, arcScoreBand, listChainVersions, readChain } from '../engine/chain';
@@ -62,5 +63,6 @@ export function renderIntentHistoryFile(projectRoot: string): void {
   const content = generateIntentHistoryContent(chains);
   const filePath = intentHistoryPath(projectRoot);
   fs.ensureDirSync(path.dirname(filePath));
+  if (journaledWriteIfActive(projectRoot, filePath, content)) return;
   fs.writeFileSync(filePath, content, 'utf8');
 }

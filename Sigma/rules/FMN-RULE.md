@@ -639,6 +639,12 @@ Disagreement with a recorded ARC Satisfaction Score is not escalated through thi
 
 ---
 
+
+
+## Review, draft reuse, and audit records
+
+Use plan check --sources to inspect quoted INTENT references and distinguish structural eligibility, source certification, and semantic readiness. An existing ID does not prove alignment. Record an explicit advisory assessment through decisions assess, tied to both PLAN and INTENT hashes; a changed hash requires reassessment. For a new PLAN from prior content, review plan clone's preview token, diff and reset fields before confirming; supersede and approval remain separate. INTENT schema 5 and PLAN schema 3 support cloning; older schemas require manual drafting. Audit packs and substantive questions are bounded records, never approval.
+
 ## Final Doctrine
 
 FMN defines the build contract.

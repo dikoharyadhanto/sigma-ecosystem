@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { journaledWriteIfActive } from './controlStore';
 
 export type VersioningScheme = 'legacy_offset' | 'intent_aligned';
 export interface NumberedChain {
@@ -64,9 +65,10 @@ export function withChainMetadata(content: string, metadata: ChainMetadata): str
   return content.slice(0, firstEnd + 1) + marker + newline + content.slice(firstEnd + 1);
 }
 
-export function writeChainMetadata(file: string, chain: NumberedChain, plan?: string): void {
+export function writeChainMetadata(file: string, chain: NumberedChain, plan?: string, projectRoot?: string): void {
   const content = withChainMetadata(fs.readFileSync(file, 'utf8'), {
     intent: chain.intent.version, versioning_scheme: resolveVersioningScheme(chain), ...(plan ? { plan } : {}),
   });
+  if (projectRoot && journaledWriteIfActive(projectRoot, file, content)) return;
   fs.writeFileSync(file, content, 'utf8');
 }

@@ -22,6 +22,7 @@ import { reportCommand } from './commands/report';
 import { scanCommand } from './commands/scan';
 import { controlCommand } from './commands/control';
 import { devCommand } from './commands/dev';
+import { auditCommand, decisionsCommand } from './commands/f08';
 import { appendOperationLogEntry } from './utils/operationLog';
 
 const program = new Command();
@@ -53,6 +54,8 @@ program.addCommand(reportCommand());
 program.addCommand(scanCommand());
 program.addCommand(controlCommand());
 program.addCommand(devCommand());
+program.addCommand(auditCommand());
+program.addCommand(decisionsCommand());
 
 program.on('command:*', (operands: string[]) => {
   console.error(`Unknown command: sigma ${operands.join(' ')}`);
@@ -85,6 +88,9 @@ function commandPath(cmd: Command): string {
 program.hook('preAction', (_thisCommand, actionCommand) => {
   pendingOperation = commandPath(actionCommand);
   if (pendingOperation === 'doctor' && actionCommand.opts().checkAssets) pendingOperation = null;
+  if (pendingOperation === 'plan check' && actionCommand.opts().sources ||
+      ['audit show', 'decisions list', 'decisions target'].includes(pendingOperation ?? '') ||
+      ['intent clone', 'plan clone'].includes(pendingOperation ?? '') && !actionCommand.opts().confirm) pendingOperation = null;
 });
 
 process.on('exit', (code) => {

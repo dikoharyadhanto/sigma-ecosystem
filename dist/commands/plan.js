@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.planCommand = planCommand;
 const lifecycleView_1 = require("../engine/lifecycleView");
 const commander_1 = require("commander");
+const f08_1 = require("./f08");
+const sourceReviewService_1 = require("../services/sourceReviewService");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
@@ -62,6 +64,7 @@ function assertPlanCheckUnambiguous(chain, explicit) {
 function planCommand() {
     const cmd = new commander_1.Command('plan');
     cmd.description('Manage FMN-PLAN artifact');
+    cmd.addCommand((0, f08_1.cloneCommand)('plan'));
     cmd.command('new')
         .description('Create a new FMN-PLAN draft (requires ratified DIR-INTENT + ROADMAP). Use --pending to stage a future plan without entering the version queue.')
         .option('--pending', 'Stage as a pending plan (no version assigned; not in lock queue)')
@@ -166,11 +169,19 @@ function planCommand() {
     cmd.command('check')
         .description('Validate an FMN-PLAN structure and markers')
         .option('--v <version>', 'Check a specific FMN-PLAN version. Required when more than one DRAFT/APPROVED contract is open.', chain_1.normalizeVersionArg)
+        .option('--sources', 'Show quoted INTENT sources, certification facts and advisory readiness')
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
             assertPlanCheckUnambiguous(chain, opts.v);
+            if (opts.sources) {
+                const review = (0, sourceReviewService_1.reviewPlanSources)(projectRoot, opts.v);
+                console.log(JSON.stringify(review, null, 2));
+                if (!review.structure.ok)
+                    process.exitCode = 1;
+                return;
+            }
             const absPath = planDocPath(projectRoot, chain, opts.v);
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'plan');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);

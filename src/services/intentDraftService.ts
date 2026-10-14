@@ -99,8 +99,8 @@ export function createIntentDraft(input: CreateIntentDraftInput): CreateIntentDr
   const absPath = path.join(projectRoot, relPath);
   if (fs.existsSync(absPath)) throw new IntentDraftError('INVALID_OPERATION', `INTENT FILE CONFLICT: ${relPath} already exists.`);
   const chain = createInitialChain(chainVersion, relPath, title, focus, 'intent_aligned');
-  copyTemplateToArtifact('DIR-INTENT-TEMPLATE.md', absPath);
-  writeChainMetadata(absPath, chain);
+  copyTemplateToArtifact('DIR-INTENT-TEMPLATE.md', absPath, projectRoot);
+  writeChainMetadata(absPath, chain, undefined, projectRoot);
   controlTestFailpoint('create_after_artifact');
 
   writeChain(projectRoot, chainVersion, chain); // chain file first

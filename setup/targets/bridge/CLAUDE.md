@@ -164,3 +164,8 @@ Hard prohibitions:
 Inter-role context handoff uses `sigma send` / `sigma inbox`.
 
 Every new `sigma send` MUST include `--related-artifact` with the actual registered artifact concerned, owned by the active INTENT. Use `GENERAL` explicitly only for content unrelated to Sigma artifacts; operational discussion about an artifact still needs its reference. LEGACY is only for migrated old messages. A reply may inherit an appropriate, verified parent reference via `--reply-to`. Authorized memo writes use required `--ref` with the same policy. Resolve references within the active role's evidence authority; report unknown, ambiguous, or inactive references instead of relying on GENERAL fallback. These rules do not authorize additional commands, evidence access, INTENT activation, or migration. Full policy: the active role's `Sigma/rules/<ROLE>-RULE.md` §Inter-Role Communication Protocol.
+
+
+## Review and audit records
+
+Use plan check --sources for source facts; semantic readiness is an explicit FMN assessment tied to PLAN/INTENT hashes, never an automatic gate or approval. Clone previews bind source, template and state, show resets/diff, and create fresh DRAFTs only after confirmation. Audit packs and original AUD responses are bounded records; stale sources require review again. Substantive decisions are separate from control tickets; only the trusted local Director command resolves them, without ratifying or approving an artifact. All internal F08 records are CLI/MCP-managed in Sigma/logs/f08.json; never edit that file manually.

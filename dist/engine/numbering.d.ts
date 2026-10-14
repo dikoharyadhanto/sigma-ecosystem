@@ -15,5 +15,5 @@ export declare function planMajorForChain(chain: NumberedChain): number;
 export declare function parseChainMetadata(content: string): ChainMetadata | null;
 export declare function readChainMetadata(file: string, projectRoot?: string): ChainMetadata | null;
 export declare function withChainMetadata(content: string, metadata: ChainMetadata): string;
-export declare function writeChainMetadata(file: string, chain: NumberedChain, plan?: string): void;
+export declare function writeChainMetadata(file: string, chain: NumberedChain, plan?: string, projectRoot?: string): void;
 //# sourceMappingURL=numbering.d.ts.map

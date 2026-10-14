@@ -41,6 +41,9 @@ exports.OPERATION_TIERS = Object.freeze({
     roadmap_check: 'Q', inbox: 'Q', inbox_check: 'Q', memo_list: 'Q',
     config_show: 'Q', report_logs: 'Q', git_evidence: 'Q', dev_status: 'Q',
     scan: 'NA', // read_only by level, inadmissible by shape — matrix §3.5
+    audit_show: 'Q', decisions_list: 'Q', decisions_target: 'Q',
+    intent_clone: 'W1', plan_clone: 'W1', audit_new: 'W1', audit_record: 'W1',
+    decisions_add: 'W1', decisions_assess: 'W1', decisions_resolve: 'W3',
     // ── W1 (13) ───────────────────────────────────────────────────────────────
     intent_new: 'W1', plan_new: 'W1', exec_new: 'W1', plan_update: 'W1',
     send: 'W1', memo_write: 'W1', memo_read: 'W1', inbox_read: 'W1',
@@ -60,7 +63,8 @@ exports.OPERATION_TIERS = Object.freeze({
 });
 /** Owner role per matrix §3. Derived, NOT ratified — advisory only. */
 exports.OPERATION_OWNER = Object.freeze({
-    intent_new: 'ARC', intent_status: 'ARC', intent_check: 'ARC',
+    intent_new: 'ARC', intent_status: 'ARC', intent_check: 'ARC', intent_clone: 'ARC',
+    plan_clone: 'FMN', decisions_assess: 'FMN', audit_record: 'AUD',
     plan_new: 'FMN', plan_status: 'FMN', plan_list: 'FMN', plan_check: 'FMN',
     plan_approve: 'FMN', plan_revise_prepare: 'FMN', plan_revise_check: 'FMN', plan_revise_commit: 'FMN', exec_approve: 'DEV', exec_acknowledge_plan: 'DEV',
     plan_update: 'FMN', roadmap_new: 'FMN', roadmap_list: 'FMN',
@@ -79,7 +83,7 @@ exports.OPERATION_OWNER = Object.freeze({
  * (`sigma send`, `sigma inbox read`, write-memo/read-memo) — there is no MCP
  * primitive for it, so both operations report `deferred`.
  */
-const IMPLEMENTED = new Set(['project_status', 'session_bootstrap', 'memory', 'doctor', 'plan_approve', 'exec_approve', 'exec_acknowledge_plan']);
+const IMPLEMENTED = new Set(['project_status', 'session_bootstrap', 'memory', 'doctor', 'plan_approve', 'exec_approve', 'exec_acknowledge_plan', 'intent_clone', 'plan_clone', 'audit_new', 'audit_show', 'audit_record', 'decisions_add', 'decisions_list', 'decisions_assess', 'decisions_target']);
 function mcpStatusFor(operationId) {
     const tier = exports.OPERATION_TIERS[operationId];
     if (tier === undefined || tier === 'NA' || tier === 'W3')
@@ -94,7 +98,8 @@ function mcpStatusFor(operationId) {
  */
 function gateBlocks(operationId, g) {
     switch (operationId) {
-        case 'plan_new': return !g.gate_1_open;
+        case 'plan_new':
+        case 'plan_clone': return !g.gate_1_open;
         case 'exec_new': return !g.gate_2_open;
         case 'close_new': return !g.gate_3_satisfied;
         case 'intent_ratify': return g.intent_state !== 'DRAFT';

@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "role": "ARC",
   "source_rule": "Sigma/rules/ARC-RULE.md",
-  "source_rule_version": "sha256:4233febe85b73380b2e7688bdcf471feb4e5f35a5b50bc5bdb072e3944a34b28",
-  "memory_updated_at": "2026-10-07",
+  "source_rule_version": "sha256:7f2f15b814c1de875d65a0a57a2601c4e6046c42545047413462b452d974c87a",
+  "memory_updated_at": "2026-10-14",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -37,6 +37,7 @@
     "After INTENT is ratified, send FMN a handoff message with key intent notes for roadmap and planning.",
     "If the INTENT needs research, research may start before, during, or after the Director interview, but must be finished before any AUD audit and before sigma intent ratify.",
     "Before recommending sigma intent ratify, run sigma intent check first and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending ratify.",
-    "When writing INTENT, follow Writing Style Rules in Sigma/rules/ARC-RULE.md: state facts directly, do not over-explain, and write only the current correct statement without narrating corrections or how a decision was reached."
+    "When writing INTENT, follow Writing Style Rules in Sigma/rules/ARC-RULE.md: state facts directly, do not over-explain, and write only the current correct statement without narrating corrections or how a decision was reached.",
+    "Use intent clone only after the Director selects the new intent direction. Review its preview token, diff, reset fields, and new-chain activation effect before confirming; cloning creates a fresh DRAFT and inherits no certification or audit verdict. Only INTENT schema 5 and PLAN schema 3 currently support cloning; older schemas require manual drafting. Record substantive questions through decisions add with an explicit artifact/hash. Only the trusted local Director surface may resolve them. Source review, audit records, and answered questions never grant ratification or approval."
   ]
 }

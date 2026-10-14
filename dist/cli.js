@@ -24,6 +24,7 @@ const report_1 = require("./commands/report");
 const scan_1 = require("./commands/scan");
 const control_1 = require("./commands/control");
 const dev_1 = require("./commands/dev");
+const f08_1 = require("./commands/f08");
 const operationLog_1 = require("./utils/operationLog");
 const program = new commander_1.Command();
 program
@@ -52,6 +53,8 @@ program.addCommand((0, report_1.reportCommand)());
 program.addCommand((0, scan_1.scanCommand)());
 program.addCommand((0, control_1.controlCommand)());
 program.addCommand((0, dev_1.devCommand)());
+program.addCommand((0, f08_1.auditCommand)());
+program.addCommand((0, f08_1.decisionsCommand)());
 program.on('command:*', (operands) => {
     console.error(`Unknown command: sigma ${operands.join(' ')}`);
     console.error('Run `sigma --help` for available commands.');
@@ -79,6 +82,10 @@ function commandPath(cmd) {
 program.hook('preAction', (_thisCommand, actionCommand) => {
     pendingOperation = commandPath(actionCommand);
     if (pendingOperation === 'doctor' && actionCommand.opts().checkAssets)
+        pendingOperation = null;
+    if (pendingOperation === 'plan check' && actionCommand.opts().sources ||
+        ['audit show', 'decisions list', 'decisions target'].includes(pendingOperation ?? '') ||
+        ['intent clone', 'plan clone'].includes(pendingOperation ?? '') && !actionCommand.opts().confirm)
         pendingOperation = null;
 });
 process.on('exit', (code) => {

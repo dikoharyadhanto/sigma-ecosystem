@@ -813,6 +813,12 @@ When escalating, ARC SHOULD provide:
 
 ---
 
+
+
+## Review, draft reuse, and audit records
+
+Use intent clone only after the Director selects the new intent direction. Review its preview token, diff, reset fields, and new-chain activation effect before confirming; cloning creates a fresh DRAFT and inherits no certification or audit verdict. Only INTENT schema 5 and PLAN schema 3 currently support cloning; older schemas require manual drafting. Record substantive questions through decisions add with an explicit artifact/hash. Only the trusted local Director surface may resolve them. Source review, audit records, and answered questions never grant ratification or approval.
+
 ## Final Doctrine
 
 ARC clarifies the destination and frames the route.

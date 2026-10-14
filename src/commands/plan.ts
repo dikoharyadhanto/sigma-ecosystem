@@ -1,5 +1,7 @@
 import { lifecycleView, effectiveLifecycleGates } from '../engine/lifecycleView';
 import { Command } from 'commander';
+import { cloneCommand } from './f08';
+import { reviewPlanSources } from '../services/sourceReviewService';
 import fs from 'fs-extra';
 import path from 'path';
 import {
@@ -73,6 +75,7 @@ export function planCommand(): Command {
   const cmd = new Command('plan');
   cmd.description('Manage FMN-PLAN artifact');
 
+  cmd.addCommand(cloneCommand('plan'));
   cmd.command('new')
     .description('Create a new FMN-PLAN draft (requires ratified DIR-INTENT + ROADMAP). Use --pending to stage a future plan without entering the version queue.')
     .option('--pending', 'Stage as a pending plan (no version assigned; not in lock queue)')
@@ -180,11 +183,18 @@ export function planCommand(): Command {
   cmd.command('check')
     .description('Validate an FMN-PLAN structure and markers')
     .option('--v <version>', 'Check a specific FMN-PLAN version. Required when more than one DRAFT/APPROVED contract is open.', normalizeVersionArg)
-    .action((opts: { v?: string }) => {
+    .option('--sources', 'Show quoted INTENT sources, certification facts and advisory readiness')
+    .action((opts: { v?: string; sources?: boolean }) => {
       try {
         const projectRoot = findProjectRoot();
         const { data: chain } = readActiveChain(projectRoot);
         assertPlanCheckUnambiguous(chain, opts.v);
+        if (opts.sources) {
+          const review = reviewPlanSources(projectRoot, opts.v);
+          console.log(JSON.stringify(review, null, 2));
+          if (!review.structure.ok) process.exitCode = 1;
+          return;
+        }
         const absPath = planDocPath(projectRoot, chain, opts.v);
         const report = validateSigmaDocFile(absPath, 'plan');
         printSigmaDocReport(report, projectRoot);

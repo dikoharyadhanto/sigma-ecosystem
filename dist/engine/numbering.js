@@ -11,6 +11,7 @@ exports.withChainMetadata = withChainMetadata;
 exports.writeChainMetadata = writeChainMetadata;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
+const controlStore_1 = require("./controlStore");
 function resolveVersioningScheme(chain) {
     const value = chain.versioning_scheme;
     if (value === undefined)
@@ -66,10 +67,12 @@ function withChainMetadata(content, metadata) {
         return content + newline + marker + newline;
     return content.slice(0, firstEnd + 1) + marker + newline + content.slice(firstEnd + 1);
 }
-function writeChainMetadata(file, chain, plan) {
+function writeChainMetadata(file, chain, plan, projectRoot) {
     const content = withChainMetadata(fs_extra_1.default.readFileSync(file, 'utf8'), {
         intent: chain.intent.version, versioning_scheme: resolveVersioningScheme(chain), ...(plan ? { plan } : {}),
     });
+    if (projectRoot && (0, controlStore_1.journaledWriteIfActive)(projectRoot, file, content))
+        return;
     fs_extra_1.default.writeFileSync(file, content, 'utf8');
 }
 //# sourceMappingURL=numbering.js.map

@@ -33,6 +33,7 @@ exports.startMcpServer = startMcpServer;
 const mcp_js_1 = require("@modelcontextprotocol/sdk/server/mcp.js");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const config_1 = require("../config");
+const f08Queries_1 = require("./tools/f08Queries");
 const state_1 = require("./tools/state");
 const orientation_1 = require("./tools/orientation");
 const gates_1 = require("./tools/gates");
@@ -62,6 +63,7 @@ const binding_1 = require("./binding");
 function buildServer() {
     const server = new mcp_js_1.McpServer({ name: 'sigma-mcp-server', version: config_1.SIGMA_VERSION });
     (0, state_1.registerStateTool)(server);
+    (0, f08Queries_1.registerF08QueryTools)(server);
     (0, orientation_1.registerOrientationTool)(server);
     (0, gates_1.registerGatesTool)(server);
     (0, artifacts_1.registerArtifactsTool)(server);

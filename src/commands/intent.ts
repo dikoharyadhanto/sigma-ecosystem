@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { cloneCommand } from './f08';
 import path from 'path';
 import readline from 'readline';
 import {
@@ -59,6 +60,7 @@ export function intentCommand(): Command {
   const cmd = new Command('intent');
   cmd.description('Manage DIR-INTENT artifact');
 
+  cmd.addCommand(cloneCommand('intent'));
   cmd.command('new')
     .description('Create a new DIR-INTENT draft (auto-creates and auto-activates a new chain)')
     .requiredOption('--title <title>', 'Intent title written into Sigma/design/intent-history.md')

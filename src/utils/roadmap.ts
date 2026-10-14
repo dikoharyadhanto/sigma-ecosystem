@@ -1,4 +1,5 @@
 import fs from 'fs-extra';
+import { journaledWriteIfActive } from '../engine/controlStore';
 import { ArtifactVersion, parseMinorVersion, ChainState } from '../engine/chain';
 import { replaceSection, removeSectionIfPresent } from './renderMarkers';
 
@@ -48,7 +49,7 @@ export function generateStageOverview(chain: ChainState): string {
 // there is only ever one roadmap per chain, and it's rendered regardless of
 // its own lock state (DRAFT/LOCKED) since the Stage Overview table is
 // independent of that.
-export function renderRoadmapFile(roadmapPath: string, chain: ChainState): void {
+export function renderRoadmapFile(roadmapPath: string, chain: ChainState, projectRoot?: string): void {
   if (!fs.existsSync(roadmapPath)) {
     throw new Error(`ROADMAP file not found: ${roadmapPath}`);
   }
@@ -60,5 +61,6 @@ export function renderRoadmapFile(roadmapPath: string, chain: ChainState): void 
   content = replaceSection(content, 'stage-overview', generateStageOverview(chain));
   content = removeSectionIfPresent(content, 'plan-breakdown');
 
+  if (projectRoot && journaledWriteIfActive(projectRoot, roadmapPath, content)) return;
   fs.writeFileSync(roadmapPath, content, 'utf8');
 }

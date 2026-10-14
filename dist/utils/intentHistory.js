@@ -7,6 +7,7 @@ exports.intentHistoryPath = intentHistoryPath;
 exports.generateIntentHistoryContent = generateIntentHistoryContent;
 exports.renderIntentHistoryFile = renderIntentHistoryFile;
 const fs_extra_1 = __importDefault(require("fs-extra"));
+const controlStore_1 = require("../engine/controlStore");
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
 const chain_1 = require("../engine/chain");
@@ -65,6 +66,8 @@ function renderIntentHistoryFile(projectRoot) {
     const content = generateIntentHistoryContent(chains);
     const filePath = intentHistoryPath(projectRoot);
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(filePath));
+    if ((0, controlStore_1.journaledWriteIfActive)(projectRoot, filePath, content))
+        return;
     fs_extra_1.default.writeFileSync(filePath, content, 'utf8');
 }
 //# sourceMappingURL=intentHistory.js.map

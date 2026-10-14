@@ -22,8 +22,8 @@ Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigm
 | F04 | Lifecycle APPROVED/LOCKED, doctor, pengikatan revisi | 2, 9 | F04a/F04b diterapkan dan diverifikasi 7–8 Oktober sesuai persetujuan O-1–O-14; TypeScript/build, 70 tes khusus, dan suite lengkap 71 berkas / 1.036 tes lulus, exit 0; di-commit dalam b8050f8 (memuat src, dist, rules, registry, dan dokumen F04); `main` sama dengan `origin/main` per referensi lokal 8 Oktober | [F04_lifecycle-approved-locked-doctor-dan-revisi.md](F04_lifecycle-approved-locked-doctor-dan-revisi.md) |
 | F05 | Amandemen INTENT melalui Git, penghapusan tier | 8 | Diterapkan dan diverifikasi 8 Oktober 2026 setelah O-1 sampai O-13 disetujui sesuai rekomendasi; TypeScript/build lulus, suite lengkap 72 berkas / 1.072 tes lulus; build `dist/` sudah dijalankan (O-11); di-commit dalam 90ef165, push dilaporkan Director | [F05_amandemen-intent-git-dan-penghapusan-tier.md](F05_amandemen-intent-git-dan-penghapusan-tier.md) |
 | F06 | sigma notes | 3 | Rencana disusun 9 Oktober 2026 (track terpisah); katalog `note-list.md` ditetapkan Director (K-1..K-6: tiga kolom otomatis, `new` memperbarui katalog, perintah `sigma notes`, ID `N01`, registry JSON sebagai sumber); O-1..O-18 ditutup (9 Oktober: rekomendasi disetujui; K-7 `update --rebuild-registry` dibuat; K-8 notes rujukan memo wajib lewat `sigma notes new`; K-9..K-12 tujuan notes independen tanpa rujukan ke artefak, dua jalur laporan DEV, otoritas AI/Director); dieksekusi 9 Oktober 2026 (W0-W5): tsc bersih, 76 berkas / 1.178 tes hijau; kode/tes/dokumen di-commit dalam 6b493ee dan di-push; `dist/` dibangun sesudahnya dan menunggu commit; belum ada kode yang diubah | [F06_sigma-notes.md](F06_sigma-notes.md) |
-| F07 | Pilot keterbacaan dan penyederhanaan dokumen | 6, 7 | Draf rencana disusun 10 Oktober 2026; O-1 sampai O-5 menunggu keputusan Director. PLAN KLHK v5.4 belum ditemukan pada salinan proyek saat ini; belum ada pilot atau perubahan aset | [F07_pilot-keterbacaan-dan-penyederhanaan-dokumen.md](F07_pilot-keterbacaan-dan-penyederhanaan-dokumen.md) |
-| F08 | Review sumber/kesiapan, revisi dari artefak lama, paket audit, keputusan tertunda | 10-12 | Belum dimulai | - |
+| F07 | Pilot keterbacaan dan penyederhanaan dokumen | 6, 7 | PENDING PROCESS (Director, 14 Oktober 2026): dilewati dari urutan kerja sekarang; tidak dijadwalkan atau dijanjikan untuk dikerjakan. Tindak lanjut bergantung pada evaluasi penggunaan nyata dan arahan Director; bukan prasyarat F08/F09 | [F07_pilot-keterbacaan-dan-penyederhanaan-dokumen.md](F07_pilot-keterbacaan-dan-penyederhanaan-dokumen.md) |
+| F08 | Review sumber/kesiapan, revisi dari artefak lama, paket audit, keputusan tertunda | 10-12 | O-1–O-10 disetujui dan F08a–F08c dieksekusi 14 Oktober 2026: build lulus; 78 berkas / 1.209 tes lulus, termasuk 27 kasus F08. Perubahan master belum commit/push; distribusi tetap F09; batas clone dan sisa registry dicatat pada bagian 11 | [F08_review-sumber-revisi-audit-dan-keputusan.md](F08_review-sumber-revisi-audit-dan-keputusan.md) |
 | F09 | Distribusi skill/bridge dan validasi paritas CLI/MCP, chain lama/baru | 13 | Belum dimulai | - |
 | F10 | Penamaan artefak tanpa prefix role untuk artefak baru; proyek/artefak lama tidak diubah | (tambahan, sumber: D-07 dokumen 28 September) | Ditambahkan 6 Oktober atas keputusan Director; urutan ditentukan kemudian | - |
 | F11 | Writing Style Rules pada rules, skill, dan memory ARC, FMN, DEV (AUD dikeluarkan), berlaku untuk artefak INTENT, PLAN, EXEC, CLOSE, dan bagian ROADMAP yang disunting manual | (tambahan, permintaan Director 6 Oktober) | Seluruh keputusan terbuka dijawab; bagian ARC bergabung dengan ARC-RULE batch A | [F11_writing-style-rules.md](F11_writing-style-rules.md) |
@@ -35,6 +35,10 @@ Sifat dokumen: catatan kerja rencana implementasi. Bukan artefak governance Sigm
 Catatan penomoran: F15 tetap dicadangkan untuk usulan amandemen Constitution (belum disetujui).
 
 Urutan penyusunan yang disetujui Director: F00, F02, F03, F04, F05, F06, F01, F07, F08, F09. Satu fokus per giliran; setiap fokus berakhir dengan pertanyaan terbuka dan rekomendasi, lalu menunggu keputusan Director.
+
+Pembaruan Director 14 Oktober 2026: F07 berstatus PENDING PROCESS dan dilewati; bukan komitmen pengerjaan berikutnya. Kebutuhan membuka kembali F07 ditentukan dari evaluasi pemakaian nyata. F08 dimulai pada sesi ini, dengan urutan internal review sumber/kesiapan, revisi dari artefak lama, lalu paket audit/keputusan tertunda. F07 tidak menjadi gate F08 atau F09. Urutan usulan setelah F08: F10, F12, finalisasi Protocol dan keputusan review Constitution, lalu F09; implementasi tiap fokus tetap menunggu persetujuan rencananya.
+
+Hasil eksekusi 14 Oktober 2026: F08 selesai pada master dalam cakupan yang disetujui; build dan regresi 1.209 tes lulus. F07 tetap ditunda bersyarat. Fokus berikut sesuai urutan yang diterima adalah F10; belum dieksekusi. Rincian dan batas hasil F08 ada pada bagian 11 dokumen F08.
 
 Penyimpangan dari tabel Strategy Action pada dokumen diskusi: F02 didahulukan dari F03 karena pemetaan pesan bertanda v2.1 ke INTENT v2 membutuhkan identitas chain dan aturan penomoran.
 
@@ -72,7 +76,8 @@ F02 (identitas chain, aturan penomoran)
  |-- F04 (lifecycle, acuan revisi)
  |-- F05 (amandemen; PLAN menunjuk revisi INTENT)
 F04 --> F08 (review sumber, revisi dari artefak lama)
-F01 --> F07 --> (template, rules, memory baru)
+F01 --> F08 (fondasi konsistensi aset)
+F07: PENDING PROCESS; tindak lanjut bersyarat evaluasi nyata, bukan gate
 F06 independen
 F09 menutup seluruh fokus
 ```
@@ -98,7 +103,7 @@ Disalin dari dokumen diskusi sebagai titik awal. Setiap butir dibahas di rencana
 | T-11 | F05 | Distribusi tag pada alur push manual Director. **TERKUNCI (Director, 8 Oktober 2026, F05 O-3/O-11):** tag annotated, teks pengingat (`git push --follow-tags` atau `git push origin <tag>`), tanpa pemeriksaan remote. Diterapkan (F05 bagian 11) |
 | T-12 | F06 | Penyimpanan registry, kolom katalog, kebijakan file hilang/rename/benturan nama |
 | T-13 | F06 | Cakupan validasi subfolder dan unregistered-notes; kompatibilitas nama command `sigma note` lama terhadap `sigma notes` |
-| T-14 | F07 | Struktur final template diputuskan dari hasil pilot; jumlah contoh brief 3 termasuk dan 3 tidak termasuk tetap nilai awal/peringatan sampai F07 O-3 diputuskan |
+| T-14 | F07 | PENDING PROCESS (14 Oktober 2026): struktur final dan jumlah contoh brief tidak dibuka untuk keputusan sekarang. Nilai awal/peringatan yang ada dipertahankan; tindak lanjut hanya jika evaluasi penggunaan nyata menunjukkan kebutuhan dan Director mengarahkan |
 | T-15 | F01 | Penahanan dicabut pada 10 Oktober 2026; O-1 sampai O-5 disetujui dan diterapkan pada master |
 | T-16 | F10 | **TERKUNCI (Director, 6 Oktober 2026):** sejak Sigma v2 terpasang, setiap `intent new`, `plan new`, `exec new`, dan `close new` membuat file tanpa prefix role. Artefak lama tetap berprefix dan tidak diganti nama. Semua operasi yang bergantung pada pengecekan nama file menerima nama dengan maupun tanpa prefix |
 | T-17 | F06 | **TERKUNCI (Director, 6 Oktober 2026):** struktur notes = `unregistered-notes/`, `note-list/`, `note-list.md`; `LEGACY` hanya untuk mailbox. Definisi Director: **auto rejection** = setiap file non-Markdown yang terdeteksi di folder notes ditolak pada setiap `sigma notes update`; **auto move** = setiap Markdown yang tidak dibuat lewat `sigma notes new` dikategorikan tidak terdaftar dan dipindahkan ke `unregistered-notes/` pada setiap `sigma notes update`. Keduanya perilaku `update`, bukan sistem terpisah. Terbuka untuk F06: bentuk penolakan (hentikan seluruh update atau proses sebagian sambil melaporkan) |

@@ -1319,6 +1319,12 @@ Message sends not covered by the triggers above may be sent at AUD's discretion 
 
 ---
 
+
+
+## Review, draft reuse, and audit records
+
+Audit only the submitted pack or explicitly supplied evidence. Inspect the pack target, hashes, missing material and stale status before assessing it. A stale pack does not support the changed target. audit record / sigma_record_audit_response may preserve your exact original response and declared origin against the unchanged pack; this does not edit the artifact verdict or grant Director approval. Do not infer scope alignment from ID existence or structural eligibility. AUD does not create draft clones, resolve substantive Director questions, or record FMN readiness.
+
 ## Final Doctrine
 
 AUD protects Sigma from false clarity, false execution, false facts, and false closure.

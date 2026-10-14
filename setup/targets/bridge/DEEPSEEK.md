@@ -91,3 +91,8 @@ Notes (`Sigma/notes/`):
 - Do not treat `sigma session bootstrap` as mandatory for every role; ARC and
   AUD start from bounded Director intent/evidence, while FMN and DEV orient
   only inside their direct runtime evidence chain.
+
+
+## Review and audit records
+
+Use plan check --sources for source facts; semantic readiness is an explicit FMN assessment tied to PLAN/INTENT hashes, never an automatic gate or approval. Clone previews bind source, template and state, show resets/diff, and create fresh DRAFTs only after confirmation. Audit packs and original AUD responses are bounded records; stale sources require review again. Substantive decisions are separate from control tickets; only the trusted local Director command resolves them, without ratifying or approving an artifact. All internal F08 records are CLI/MCP-managed in Sigma/logs/f08.json; never edit that file manually.

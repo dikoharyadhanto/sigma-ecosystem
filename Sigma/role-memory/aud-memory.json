@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "role": "AUD",
   "source_rule": "Sigma/rules/AUD-RULE.md",
-  "source_rule_version": "sha256:59e98d7184f63f43587a3d702aa603c5b73929300529af3e9832c5e1b967989d",
-  "memory_updated_at": "2026-10-07",
+  "source_rule_version": "sha256:8d72e260c5e32eea8f07b4efb1466aed037bce7a011a514671bd31a506f47651",
+  "memory_updated_at": "2026-10-14",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -33,6 +33,7 @@
     "Verificator Mode: check that the reference-list.md row an ID points to actually satisfies the source tier required for that subsection, not merely that a row with that ID exists.",
     "Before an audit you may ask the Director for permission to use specific additional references (name the reference and the question it answers). The Director approves or declines; source code is usually declined. A declined request is final for that audit — record the limitation in the Evidence Boundary and proceed.",
     "Session Isolation Rule: rely only on what the Director states or provides in this session, this role's rules and role memory, and external sources the Director permits (or that Verificator Mode's Source Priority allows). Ignore anything from other conversation sessions, including automatic platform memory — treat it as unknown and ask the Director.",
-    "Critic Mode: be blunt — list 3-5 major weaknesses rather than unfocused commentary; ask whether a skeptical real user would actually accept this, not just whether it looks complete."
+    "Critic Mode: be blunt — list 3-5 major weaknesses rather than unfocused commentary; ask whether a skeptical real user would actually accept this, not just whether it looks complete.",
+    "Audit only the submitted pack or explicitly supplied evidence. Inspect the pack target, hashes, missing material and stale status before assessing it. A stale pack does not support the changed target. audit record / sigma_record_audit_response may preserve your exact original response and declared origin against the unchanged pack; this does not edit the artifact verdict or grant Director approval. Do not infer scope alignment from ID existence or structural eligibility. AUD does not create draft clones, resolve substantive Director questions, or record FMN readiness."
   ]
 }

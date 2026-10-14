@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeCheckDocument = computeCheckDocument;
 exports.registerCheckDocumentTool = registerCheckDocumentTool;
+const sourceReviewService_1 = require("../../services/sourceReviewService");
 const lifecycleView_1 = require("../../engine/lifecycleView");
 const zod_1 = require("zod");
 const chain_1 = require("../../engine/chain");
@@ -50,7 +51,7 @@ function resolveArrayEntry(chain, type, version) {
     }
     return { version: entry.version, file: entry.file };
 }
-function computeCheckDocument(root, type, version) {
+function computeCheckDocument(root, type, version, sources = false) {
     if (!root)
         return (0, shared_1.noProject)();
     if ((0, chain_1.listChainVersions)(root).length === 0)
@@ -77,6 +78,7 @@ function computeCheckDocument(root, type, version) {
         passes: report.passes,
         requirements: report.requirements,
         source: shared_1.SOURCE_ENGINE,
+        ...(sources && type === 'plan' ? { source_review: (0, sourceReviewService_1.reviewPlanSources)(root, resolved.version) } : {}),
     };
 }
 function registerCheckDocumentTool(server) {
@@ -89,6 +91,7 @@ function registerCheckDocumentTool(server) {
             'errors, warnings, passes, requirements, source } — file is project-relative, never a host absolute path.',
         inputSchema: {
             type: zod_1.z.enum(['intent', 'roadmap', 'plan', 'exec', 'close']),
+            sources: zod_1.z.boolean().optional().describe('For PLAN, include quoted source and certification/advisory readiness review.'),
             version: zod_1.z
                 .string()
                 .optional()
@@ -100,6 +103,6 @@ function registerCheckDocumentTool(server) {
             idempotentHint: true,
             openWorldHint: false,
         },
-    }, async ({ type, version }) => (0, contract_1.respond)('sigma_check_document', undefined, (root) => computeCheckDocument(root, type, version)));
+    }, async ({ type, version, sources }) => (0, contract_1.respond)('sigma_check_document', undefined, (root) => computeCheckDocument(root, type, version, sources)));
 }
 //# sourceMappingURL=checkDocument.js.map

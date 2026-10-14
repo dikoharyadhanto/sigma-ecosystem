@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+### F08 — source review, draft reuse, audit and decisions (2026-10-14)
+
+- Add read-only PLAN source review with quoted INTENT references and separate structural, certification and explicit advisory readiness results.
+- Add preview-bound INTENT/PLAN cloning with fresh identity, reset approvals/checklists, diff, provenance and transaction recovery. Unsupported schema mappings are refused.
+- Add audit snapshots with hash-bound original AUD responses and opt-in registered text evidence; report missing/stale material.
+- Add intent-scoped substantive questions separately from control tickets. Director answers stay CLI-only and never approve artifacts.
+- Align master role rules, memory hashes, five skill targets, bridges and operation/MCP policy. Host/project distribution remains F09.
+
+
 ### Added
 
 - Project-bound MCP queries for policy, artifacts, evidence, status, validation, configuration, operation logs, and Git evidence.

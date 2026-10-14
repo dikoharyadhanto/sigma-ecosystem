@@ -91,3 +91,8 @@ Sufficient: "approved", "lock it", "I approve this plan", "go ahead", "run it"
 Ambiguous (not sufficient for lock/risk): "okay", "noted", "makes sense"
 
 If authorization is unclear, ask before executing.
+
+
+## Review and audit records
+
+Use plan check --sources for source facts; semantic readiness is an explicit FMN assessment tied to PLAN/INTENT hashes, never an automatic gate or approval. Clone previews bind source, template and state, show resets/diff, and create fresh DRAFTs only after confirmation. Audit packs and original AUD responses are bounded records; stale sources require review again. Substantive decisions are separate from control tickets; only the trusted local Director command resolves them, without ratifying or approving an artifact. All internal F08 records are CLI/MCP-managed in Sigma/logs/f08.json; never edit that file manually.

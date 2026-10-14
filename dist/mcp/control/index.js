@@ -26,6 +26,7 @@ const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const config_1 = require("../../config");
 const shared_1 = require("../shared");
 const binding_1 = require("../binding");
+const f08_1 = require("./tools/f08");
 const createIntentDraft_1 = require("./tools/createIntentDraft");
 const updateArtifactDraft_1 = require("./tools/updateArtifactDraft");
 const prepareIntentRatify_1 = require("./tools/prepareIntentRatify");
@@ -61,6 +62,7 @@ function buildControlServer() {
     const server = new mcp_js_1.McpServer({ name: 'sigma-control-server', version: config_1.SIGMA_VERSION });
     // Stage C — W1 bounded command pilot (create + update DRAFT).
     (0, createIntentDraft_1.registerCreateIntentDraftTool)(server);
+    (0, f08_1.registerF08ControlTools)(server);
     (0, updateArtifactDraft_1.registerUpdateArtifactDraftTool)(server);
     // Stage D — W2 governance transition pilot (prepare -> Director approval
     // via trusted local CLI -> commit). No MCP tool writes an approval record;

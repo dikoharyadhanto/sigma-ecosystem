@@ -151,3 +151,8 @@ DEV reads the notice and current PLAN, then runs sigma exec acknowledge-plan --v
 INTENT amendments require FMN review of APPROVED work, a PLAN revision binding current INTENT revision/hash, a notice, and DEV acknowledgement. LOCKED history is not demoted or recertified retroactively. Append-only AUD Notes do not change the PLAN contract hash, but every approval ticket binds full document bytes and all source/ledger/notice dependencies. Rerun prepare after any dependency changes.
 
 Before asking for approval, run the matching check and inspect runtime approval blockers, then preview plan approve or exec approve without --director-confirm. Only an explicit Director decision permits the confirming command or the exact MCP ticket commit. FMN/AUD verdicts remain advisory. Never commit/push or migrate/synchronize real projects without separate Director instructions.
+
+
+## Review, draft reuse, and audit records
+
+Use plan check --sources to inspect quoted INTENT references and distinguish structural eligibility, source certification, and semantic readiness. An existing ID does not prove alignment. Record an explicit advisory assessment through decisions assess, tied to both PLAN and INTENT hashes; a changed hash requires reassessment. For a new PLAN from prior content, review plan clone's preview token, diff and reset fields before confirming; supersede and approval remain separate. INTENT schema 5 and PLAN schema 3 support cloning; older schemas require manual drafting. Audit packs and substantive questions are bounded records, never approval.

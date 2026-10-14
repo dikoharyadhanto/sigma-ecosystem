@@ -126,8 +126,8 @@ export function createPlanDraft(input: CreatePlanDraftInput): CreatePlanDraftRes
   // same rationale (a half-written artifact with no chain entry is an
   // orphan file, recoverable; a chain entry pointing at a missing artifact
   // is not).
-  copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);
-  writeChainMetadata(absPath, chain);
+  copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath, projectRoot);
+  writeChainMetadata(absPath, chain, undefined, projectRoot);
   controlTestFailpoint('plan_create_after_artifact');
 
   registerPlanDraft(chain, version, relPath, intentVersionRef, title, focus);
@@ -138,7 +138,7 @@ export function createPlanDraft(input: CreatePlanDraftInput): CreatePlanDraftRes
   // command used.
   const roadmapAbsPath = getRoadmapPathIfEligible(projectRoot, chain);
   if (roadmapAbsPath) {
-    renderRoadmapFile(roadmapAbsPath, chain);
+    renderRoadmapFile(roadmapAbsPath, chain, projectRoot);
   }
   controlTestFailpoint('plan_create_after_roadmap');
 

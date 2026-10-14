@@ -8,6 +8,7 @@ exports.getStagePlansForRoadmap = getStagePlansForRoadmap;
 exports.generateStageOverview = generateStageOverview;
 exports.renderRoadmapFile = renderRoadmapFile;
 const fs_extra_1 = __importDefault(require("fs-extra"));
+const controlStore_1 = require("../engine/controlStore");
 const chain_1 = require("../engine/chain");
 const renderMarkers_1 = require("./renderMarkers");
 Object.defineProperty(exports, "replaceSection", { enumerable: true, get: function () { return renderMarkers_1.replaceSection; } });
@@ -48,7 +49,7 @@ function generateStageOverview(chain) {
 // there is only ever one roadmap per chain, and it's rendered regardless of
 // its own lock state (DRAFT/LOCKED) since the Stage Overview table is
 // independent of that.
-function renderRoadmapFile(roadmapPath, chain) {
+function renderRoadmapFile(roadmapPath, chain, projectRoot) {
     if (!fs_extra_1.default.existsSync(roadmapPath)) {
         throw new Error(`ROADMAP file not found: ${roadmapPath}`);
     }
@@ -58,6 +59,8 @@ function renderRoadmapFile(roadmapPath, chain) {
     let content = fs_extra_1.default.readFileSync(roadmapPath, 'utf8');
     content = (0, renderMarkers_1.replaceSection)(content, 'stage-overview', generateStageOverview(chain));
     content = (0, renderMarkers_1.removeSectionIfPresent)(content, 'plan-breakdown');
+    if (projectRoot && (0, controlStore_1.journaledWriteIfActive)(projectRoot, roadmapPath, content))
+        return;
     fs_extra_1.default.writeFileSync(roadmapPath, content, 'utf8');
 }
 //# sourceMappingURL=roadmap.js.map

@@ -104,8 +104,8 @@ function createPlanDraft(input) {
     // same rationale (a half-written artifact with no chain entry is an
     // orphan file, recoverable; a chain entry pointing at a missing artifact
     // is not).
-    (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath);
-    (0, numbering_1.writeChainMetadata)(absPath, chain);
+    (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath, projectRoot);
+    (0, numbering_1.writeChainMetadata)(absPath, chain, undefined, projectRoot);
     (0, controlStore_1.controlTestFailpoint)('plan_create_after_artifact');
     (0, chain_1.registerPlanDraft)(chain, version, relPath, intentVersionRef, title, focus);
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
@@ -114,7 +114,7 @@ function createPlanDraft(input) {
     // command used.
     const roadmapAbsPath = getRoadmapPathIfEligible(projectRoot, chain);
     if (roadmapAbsPath) {
-        (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, chain);
+        (0, roadmap_1.renderRoadmapFile)(roadmapAbsPath, chain, projectRoot);
     }
     (0, controlStore_1.controlTestFailpoint)('plan_create_after_roadmap');
     return { chainVersion, version, relPath, intentVersionRef, title, focus };

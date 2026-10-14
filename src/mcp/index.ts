@@ -29,6 +29,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SIGMA_VERSION } from '../config';
+import { registerF08QueryTools } from './tools/f08Queries';
 import { registerStateTool } from './tools/state';
 import { registerOrientationTool } from './tools/orientation';
 import { registerGatesTool } from './tools/gates';
@@ -59,6 +60,7 @@ import { parseBindingArgs, resolveBinding, BindingError } from './binding';
 export function buildServer(): McpServer {
   const server = new McpServer({ name: 'sigma-mcp-server', version: SIGMA_VERSION });
   registerStateTool(server);
+  registerF08QueryTools(server);
   registerOrientationTool(server);
   registerGatesTool(server);
   registerArtifactsTool(server);

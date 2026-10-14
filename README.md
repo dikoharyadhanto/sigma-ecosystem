@@ -460,7 +460,7 @@ Sigma ships a native, read-only [MCP](https://modelcontextprotocol.io) server, `
 
 ### Tools
 
-The query server registers 23 tools:
+The query server registers 26 tools:
 
 | Tool | Returns |
 |:--- | :--- |
@@ -474,7 +474,10 @@ The query server registers 23 tools:
 | `sigma_get_effective_policy` | Operation availability and approval requirements; advisory, not authorization |
 | `sigma_read_artifact` | Governance document content selected by type and version |
 | `sigma_get_evidence` | Plan/exec status, references, and registered document hash |
-| `sigma_check_document` | Structural and eligibility checks for an artifact |
+| `sigma_check_document` | Structural and eligibility checks; optional quoted PLAN sources |
+| `sigma_preview_clone` | Source/template-bound clone preview and diff |
+| `sigma_get_audit_pack` | Audit snapshot, original responses, integrity and stale status |
+| `sigma_list_decisions` | Substantive questions separately from control tickets |
 | `sigma_intent_status` | Intent state |
 | `sigma_plan_status` | Plan states and plan/exec pairing |
 | `sigma_exec_status` | Execution states and plan references |
@@ -488,7 +491,7 @@ The query server registers 23 tools:
 | `sigma_get_operation_log` | Bounded operation log entries |
 | `sigma_get_git_evidence` | Git status and change evidence |
 
-The control server registers 29 tools: 9 bounded-write tools for drafts, roadmap, references, evidence, and inbox archiving; and 10 pairs of `prepare`/`commit` tools for intent ratification, amendment, scoring and superseding, plan approval, promotion and superseding, execution approval, and closure creation and locking.
+The control server registers 39 tools, including the F08 clone, audit and substantive-question/readiness tools. Governance transitions retain prepare/commit approval flows; retired lock tool names remain as tombstones.
 
 Sending messages and reading inbox/memo content remain CLI/skill operations. The MCP tools for mailbox integrity and inbox archiving do not expose message content.
 
@@ -821,3 +824,36 @@ Sigma CLI enforces gates.
 Artifacts preserve proof.
 You decide.
 ```
+
+## Source review, draft reuse, and audit records
+
+Use `sigma plan check --sources --v v1.1` to inspect quoted INTENT references, source certification and advisory semantic readiness separately. A found ID or an eligible structural check does not establish scope alignment. FMN may record an assessment with `sigma decisions assess`; changing the PLAN or INTENT invalidates that assessment.
+
+INTENT and PLAN can start from registered source content with a fresh identity:
+
+```bash
+sigma plan clone --from-chain v1 --from v1.1 --title "Revised stage" --focus "Revised output"
+# Review the returned diff, reset sections, activation effects and preview_token.
+sigma plan clone --from-chain v1 --from v1.1 --title "Revised stage" --focus "Revised output" --confirm --preview-token "<preview_token>"
+```
+
+`sigma intent clone` follows the same preview/confirm pattern and creates and activates a new INTENT chain. A CLOSED chain requires `--yes` on both preview and confirmation. Sources remain unchanged. Cloning currently supports INTENT schema 5→5 and PLAN schema 3→3; older or unmapped schemas are refused and require manual drafting. Summaries, source alignment, audit verdicts, approvals, revision history and checked boxes are reset; retained obligations still require substantive review. Superseding and approval remain separate operations.
+
+Audit and decision commands:
+
+| Command | Behavior |
+|:---|:---|
+| `sigma decisions target --type plan --v v1.1` | Read a registered target identity/hash |
+| `sigma audit new --type plan --v v1.1 --target-sha256 <hash>` | Snapshot the target and available registered sources |
+| `sigma audit show <id> --markdown` | Render the pack for manual handoff; report missing/stale sources |
+| `sigma audit record <id> --text <original-response> --origin <source> --pack-sha256 <hash>` | Preserve the original AUD response and explicitly declared origin |
+| `sigma decisions add --type plan --v v1.1 --question <text> --role FMN --target-sha256 <hash>` | Record a substantive question against current content |
+| `sigma decisions list [--chain v1] [--history]` | Separate questions from pending control transactions |
+| `sigma decisions resolve <id> --answer <text> --target-sha256 <hash> --director-confirm` | Trusted local Director answer; does not approve an artifact |
+| `sigma decisions assess --v v1.1 --status SCOPE_GAP --reason <text> --target-sha256 <plan-hash> --source-sha256 <intent-hash>` | Explicit advisory FMN readiness, tied to both sources |
+
+For EXEC audit targets, `audit new --include-evidence` can also snapshot registered text evidence whose current hash matches its citation. Each evidence file is limited to 512 KiB. Binary, changed, missing or unselected evidence is listed as not included. Packs detect changed artifact/evidence hashes and project state; response recording refuses stale packs. No command sends material to another role/vendor automatically or extracts an authoritative verdict from response text.
+
+Internal records live in CLI/MCP-managed `Sigma/logs/f08.json` (16 MiB limit, no automatic pruning). Do not edit this file manually. Original responses and snapshots are preserved; there is no authenticity claim about a self-declared external response origin. These records never replace artifact approval, certification or the revision ledger.
+
+The query plane adds `sigma_preview_clone`, `sigma_get_audit_pack` and `sigma_list_decisions`. `sigma_check_document` accepts `sources: true` for PLAN. The control plane adds `sigma_clone_draft`, `sigma_create_audit_pack`, `sigma_record_audit_response`, `sigma_add_decision` and `sigma_record_readiness`, with role, expected-state, target/hash, idempotency and transaction checks. Director decision resolution stays on the local CLI.

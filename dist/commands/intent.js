@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.intentCommand = intentCommand;
 const commander_1 = require("commander");
+const f08_1 = require("./f08");
 const path_1 = __importDefault(require("path"));
 const readline_1 = __importDefault(require("readline"));
 const chain_1 = require("../engine/chain");
@@ -44,6 +45,7 @@ function intentDocPath(projectRoot, chain) {
 function intentCommand() {
     const cmd = new commander_1.Command('intent');
     cmd.description('Manage DIR-INTENT artifact');
+    cmd.addCommand((0, f08_1.cloneCommand)('intent'));
     cmd.command('new')
         .description('Create a new DIR-INTENT draft (auto-creates and auto-activates a new chain)')
         .requiredOption('--title <title>', 'Intent title written into Sigma/design/intent-history.md')

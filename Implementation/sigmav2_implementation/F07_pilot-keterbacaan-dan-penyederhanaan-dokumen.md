@@ -1,8 +1,16 @@
 # F07 — Pilot keterbacaan dan penyederhanaan dokumen Sigma
 
 Tanggal: 10 Oktober 2026
-Status: DRAF RENCANA. Belum ada pilot, perubahan template/rule/validator, build, distribusi, atau perubahan proyek KLHK.
+Status: PENDING PROCESS — ditunda bersyarat atas arahan Director 14 Oktober 2026. F07 tidak dijadwalkan atau dijanjikan untuk dikerjakan; tindak lanjut hanya ditentukan bila evaluasi penggunaan nyata menunjukkan kebutuhan. Belum ada pilot atau implementasi F07.
 Dasar: [F00](F00_indeks-dan-register.md) (Strategy Action 6–7 dan T-14), [F01](F01_peta-konsistensi-aturan.md), [diskusi rencana Sigma v2](../../Discussion/Evaluation-06102026/diskusi_rencana_perubahan_sigma_v2.md) bagian "Penyederhanaan dokumen Sigma" dan Strategy Action. Keputusan terbaru Director: Constitution dan Protocol ditangani terakhir setelah fokus isi stabil, sebelum F09 dan uji coba proyek nyata.
+
+## Pembaruan Director — 14 Oktober 2026
+
+- Director menetapkan proses F07 dilewati pada urutan kerja sekarang; pengembangan berlanjut ke F08.
+- **PENDING PROCESS bukan antrean pekerjaan wajib.** Tidak ada komitmen menjalankan pilot atau perubahan dokumen F07 di kemudian hari.
+- Keputusan apakah F07 perlu dibuka kembali, serta cakupannya bila diperlukan, bergantung pada hasil evaluasi penggunaan Sigma v2 secara nyata dan arahan Director berikutnya.
+- F07 tidak menjadi prasyarat untuk memulai F08 atau melanjutkan jalur kesiapan distribusi F09. Kesesuaian aturan dengan runtime dan validasi instalasi tetap harus diselesaikan pada fokus terkait.
+- Kontrak pilot, usulan perubahan, dan O-1 sampai O-5 di bawah dipertahankan sebagai referensi historis rencana; tidak ada keputusan atau eksekusi otomatis atas butir tersebut.
 
 ## 1. Tujuan dan batas
 

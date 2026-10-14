@@ -500,6 +500,11 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      'sigma_clone_draft',
+      'sigma_create_audit_pack',
+      'sigma_record_audit_response',
+      'sigma_add_decision',
+      'sigma_record_readiness',
       'sigma_acknowledge_plan',
       'sigma_commit_close_lock',
       'sigma_commit_exec_approve',

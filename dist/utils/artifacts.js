@@ -7,6 +7,7 @@ exports.resolveTemplate = resolveTemplate;
 exports.copyTemplateToArtifact = copyTemplateToArtifact;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
+const controlStore_1 = require("../engine/controlStore");
 const config_1 = require("../config");
 const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
 const BUNDLE_TEMPLATES = path_1.default.join(PACKAGE_ROOT, 'Sigma', 'templates');
@@ -19,9 +20,11 @@ function resolveTemplate(name) {
         return bundle;
     throw new Error('Template not found. Run: sigma setup install');
 }
-function copyTemplateToArtifact(templateName, absPath) {
+function copyTemplateToArtifact(templateName, absPath, projectRoot) {
     const templatePath = resolveTemplate(templateName);
     fs_extra_1.default.ensureDirSync(path_1.default.dirname(absPath));
+    if (projectRoot && (0, controlStore_1.journaledWriteIfActive)(projectRoot, absPath, fs_extra_1.default.readFileSync(templatePath)))
+        return;
     fs_extra_1.default.copySync(templatePath, absPath);
 }
 //# sourceMappingURL=artifacts.js.map

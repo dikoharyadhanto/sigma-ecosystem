@@ -1,3 +1,4 @@
+import { reviewPlanSources } from '../../services/sourceReviewService';
 import { lifecycleView } from '../../engine/lifecycleView';
 // Stage B2 — sigma_check_document. Query-plane equivalent of `sigma intent
 // check`, `sigma roadmap check`, `sigma plan check`, `sigma exec check`,
@@ -93,7 +94,7 @@ function resolveArrayEntry(
   return { version: entry.version, file: entry.file };
 }
 
-export function computeCheckDocument(root: string | null, type: CheckDocumentType, version?: string): unknown {
+export function computeCheckDocument(root: string | null, type: CheckDocumentType, version?: string, sources = false): unknown {
   if (!root) return noProject();
   if (listChainVersions(root).length === 0) return noProject();
 
@@ -122,6 +123,7 @@ export function computeCheckDocument(root: string | null, type: CheckDocumentTyp
     passes: report.passes,
     requirements: report.requirements,
     source: SOURCE_ENGINE,
+    ...(sources && type === 'plan' ? { source_review: reviewPlanSources(root, resolved.version) } : {}),
   };
 }
 
@@ -138,6 +140,7 @@ export function registerCheckDocumentTool(server: McpServer): void {
         'errors, warnings, passes, requirements, source } — file is project-relative, never a host absolute path.',
       inputSchema: {
         type: z.enum(['intent', 'roadmap', 'plan', 'exec', 'close']),
+        sources: z.boolean().optional().describe('For PLAN, include quoted source and certification/advisory readiness review.'),
         version: z
           .string()
           .optional()
@@ -150,7 +153,7 @@ export function registerCheckDocumentTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async ({ type, version }: { type: CheckDocumentType; version?: string }) =>
-      respond('sigma_check_document', undefined, (root) => computeCheckDocument(root, type, version))
+    async ({ type, version, sources }: { type: CheckDocumentType; version?: string; sources?: boolean }) =>
+      respond('sigma_check_document', undefined, (root) => computeCheckDocument(root, type, version, sources))
   );
 }

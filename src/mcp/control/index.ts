@@ -22,6 +22,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { SIGMA_VERSION } from '../../config';
 import { setBinding, getBinding } from '../shared';
 import { parseBindingArgs, resolveBinding, BindingError } from '../binding';
+import { registerF08ControlTools } from './tools/f08';
 import { registerCreateIntentDraftTool } from './tools/createIntentDraft';
 import { registerUpdateArtifactDraftTool } from './tools/updateArtifactDraft';
 import { registerPrepareIntentRatifyTool } from './tools/prepareIntentRatify';
@@ -58,6 +59,7 @@ export function buildControlServer(): McpServer {
   const server = new McpServer({ name: 'sigma-control-server', version: SIGMA_VERSION });
   // Stage C — W1 bounded command pilot (create + update DRAFT).
   registerCreateIntentDraftTool(server);
+  registerF08ControlTools(server);
   registerUpdateArtifactDraftTool(server);
   // Stage D — W2 governance transition pilot (prepare -> Director approval
   // via trusted local CLI -> commit). No MCP tool writes an approval record;

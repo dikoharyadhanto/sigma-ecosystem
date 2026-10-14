@@ -253,7 +253,7 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
     env?.cleanup();
   });
 
-  it('lists the ten tools (Phase 0 + Batch 1 + Stage B2 evidence-only) and every core call returns source:engine', async () => {
+  it('lists the query tools including F08 and every core call returns source:engine', async () => {
     env = setupTestEnv();
     projectWithChain(env, makeChainWithLockedExec());
     // Registered tools resolve the project via findProjectRoot() from cwd.
@@ -301,6 +301,9 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
         'sigma_get_config',
         'sigma_get_operation_log',
         'sigma_get_git_evidence',
+        'sigma_preview_clone',
+        'sigma_get_audit_pack',
+        'sigma_list_decisions',
       ].sort(),
     );
 
