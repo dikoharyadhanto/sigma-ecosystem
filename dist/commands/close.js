@@ -34,9 +34,9 @@ function closeDocPath(projectRoot, chain) {
 }
 function closeCommand() {
     const cmd = new commander_1.Command('close');
-    cmd.description('Manage DIR-CLOSE artifact');
+    cmd.description('Manage CLOSE artifact');
     cmd.command('new')
-        .description('Create a new DIR-CLOSE draft (requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED)')
+        .description('Create a new CLOSE draft (requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED)')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -55,7 +55,7 @@ function closeCommand() {
         }
     });
     cmd.command('lock')
-        .description('Lock active DIR-CLOSE (lifecycle → CLOSED); auto-locks the chain\'s ROADMAP as a side effect')
+        .description('Lock active CLOSE (lifecycle → CLOSED); auto-locks the chain\'s ROADMAP as a side effect')
         .option('--yes', 'Skip interactive APPROVE prompt')
         .action(async (opts) => {
         try {
@@ -109,8 +109,8 @@ function closeCommand() {
         }
     });
     cmd.command('check')
-        .description('Validate a DIR-CLOSE structure and markers')
-        .option('--v <version>', 'Check the DIR-CLOSE of a specific chain instead of the active one', chain_1.normalizeVersionArg)
+        .description('Validate a CLOSE structure and markers')
+        .option('--v <version>', 'Check the CLOSE of a specific chain instead of the active one', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -127,7 +127,7 @@ function closeCommand() {
         }
     });
     cmd.command('status')
-        .description('Show active DIR-CLOSE status')
+        .description('Show active CLOSE status')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();

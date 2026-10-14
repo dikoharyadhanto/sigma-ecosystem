@@ -1,12 +1,13 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-10-07T09:06:34.589Z",
+  "generated_at": "2026-10-14T18:05:35.000Z",
   "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 78,
+  "total_operations": 88,
   "domains": [
     "audit",
     "close",
     "config",
+    "control",
     "decisions",
     "dev",
     "doctor",
@@ -265,7 +266,7 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create a DIR-INTENT DRAFT from the template. No gate — DIR-INTENT is the first artifact in the Sigma lifecycle. Auto-names the file using the naming convention: charter/INTENT-v{next_version}.md (before F10: DIR-INTENT-v{next_version}.md). Sets intent.state = DRAFT in the new chain's progress-v<N>.json.",
+      "description": "Create a INTENT DRAFT from the template. No gate — INTENT is the first artifact in the Sigma lifecycle. Auto-names the file using the naming convention: charter/INTENT-v{next_version}.md (before F10: INTENT-v{next_version}.md). Sets intent.state = DRAFT in the new chain's progress-v<N>.json.",
       "inputs": [],
       "outputs": [
         {
@@ -290,7 +291,7 @@
       "action": "ratify",
       "level": "semantic",
       "role": "director",
-      "description": "Ratify the active DIR-INTENT. Gate: INTENT must be DRAFT. Each chain file holds exactly one intent, so there is no prior LOCKED/RATIFIED version in the same file to auto-supersede or demote — a complementary or prior intent simply lives in its own chain file, untouched (see sigma intent supersede for the only path to SUPERSEDED). Sets gate_1_open = true and transitions lifecycle_state to BUILD.",
+      "description": "Ratify the active INTENT. Gate: INTENT must be DRAFT. Each chain file holds exactly one intent, so there is no prior LOCKED/RATIFIED version in the same file to auto-supersede or demote — a complementary or prior intent simply lives in its own chain file, untouched (see sigma intent supersede for the only path to SUPERSEDED). Sets gate_1_open = true and transitions lifecycle_state to BUILD.",
       "inputs": [],
       "outputs": [
         {
@@ -327,7 +328,7 @@
       "action": "amendment",
       "level": "semantic",
       "role": "director",
-      "description": "Record a Director-approved amendment of a RATIFIED DIR-INTENT from a Git commit; any part of the INTENT may be amended. Read-only `sigma intent amendment preview` shows the Git baseline check, the diff against the baseline commit, the file hash to approve, and the impact on PLAN/EXEC. The recording command verifies that the supplied commit holds exactly the reviewed content, creates a local annotated tag (never moved or overwritten), appends one AMD-NNN entry to intent.amendments[] with the Git references, re-certifies the document hash from the file bytes (the document is not rewritten), flags APPROVED PLANs for INTENT review, and appends an audit record to Sigma/logs/intent_amendment.log. Sigma never stages, commits, or pushes. Requires a Git baseline (`sigma intent baseline adopt`).",
+      "description": "Record a Director-approved amendment of a RATIFIED INTENT from a Git commit; any part of the INTENT may be amended. Read-only `sigma intent amendment preview` shows the Git baseline check, the diff against the baseline commit, the file hash to approve, and the impact on PLAN/EXEC. The recording command verifies that the supplied commit holds exactly the reviewed content, creates a local annotated tag (never moved or overwritten), appends one AMD-NNN entry to intent.amendments[] with the Git references, re-certifies the document hash from the file bytes (the document is not rewritten), flags APPROVED PLANs for INTENT review, and appends an audit record to Sigma/logs/intent_amendment.log. Sigma never stages, commits, or pushes. Requires a Git baseline (`sigma intent baseline adopt`).",
       "inputs": [
         {
           "name": "--change",
@@ -373,7 +374,7 @@
         },
         {
           "type": "state_change",
-          "description": "intent.certified_doc_sha256/certified_at/revision re-stamped from the reviewed DIR-INTENT file bytes"
+          "description": "intent.certified_doc_sha256/certified_at/revision re-stamped from the reviewed INTENT file bytes"
         },
         {
           "type": "git",
@@ -413,68 +414,12 @@
       "error_messages": {}
     },
     {
-      "operation_id": "intent_baseline",
-      "domain": "intent",
-      "action": "baseline",
-      "level": "semantic",
-      "role": "director",
-      "description": "`sigma intent baseline adopt --commit <ref> --director-confirm` binds the certified INTENT content of a RATIFIED chain to a commit and a local annotated tag sigma/intent-<chain>-base. When the certified content cannot be recovered from Git, `--import-current` adopts the reviewed current content without inventing an amendment. `sigma intent baseline check` is read-only and verifies that the INTENT in Git is the latest certified content (before editing an amendment and before a Petition). CLI only; not admissible through MCP.",
-      "inputs": [
-        {
-          "name": "--commit",
-          "type": "string",
-          "required": true,
-          "description": "Commit holding exactly the current INTENT content"
-        },
-        {
-          "name": "--import-current",
-          "type": "flag",
-          "required": false,
-          "description": "Adopt the reviewed current content when the certified content is unrecoverable from Git"
-        },
-        {
-          "name": "--director-confirm",
-          "type": "flag",
-          "required": true,
-          "description": "Explicit Director authorization"
-        },
-        {
-          "name": "--v",
-          "type": "string",
-          "required": false,
-          "description": "Chain version instead of the active one"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "state_change",
-          "description": "intent.git_baseline recorded {commit, tag, doc_sha256, doc_sha256_lf, revision, provenance}"
-        },
-        {
-          "type": "git",
-          "description": "Local annotated tag sigma/intent-<chain>-base"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "state",
-          "condition": "target chain intent.state == 'RATIFIED' and no baseline recorded at a different commit",
-          "error_message": "A baseline is already recorded; amendments advance it"
-        }
-      ],
-      "gating": {
-        "pre_condition": "INTENT tracked by Git; commit reachable from HEAD and holding the current content",
-        "post_condition": "Git baseline recorded; first amendment becomes possible"
-      },
-      "error_messages": {}
-    },
-    {
       "operation_id": "intent_status",
       "domain": "intent",
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show active DIR-INTENT version, state, and ratified_at timestamp. The stale_intent/STALE_INTENT mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such propagation exists.",
+      "description": "Show active INTENT version, state, and ratified_at timestamp. The stale_intent/STALE_INTENT mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such propagation exists.",
       "inputs": [],
       "outputs": [
         {
@@ -567,7 +512,7 @@
           "name": "--v",
           "type": "string",
           "required": false,
-          "description": "DRAFT version to lock. Required when more than one DRAFT FMN-PLAN is open; auto-resolved when exactly one exists."
+          "description": "DRAFT version to lock. Required when more than one DRAFT PLAN is open; auto-resolved when exactly one exists."
         }
       ],
       "outputs": [],
@@ -586,7 +531,7 @@
       "action": "supersede",
       "level": "semantic",
       "role": "director",
-      "description": "Explicitly supersede an FMN-PLAN version, DRAFT or LOCKED (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — DRAFT accepted since it is the only exit for a plan no longer wanted; no separate discard command). Requires --v <version> and --reason <string>. Sets the target version state to SUPERSEDED and auto-cascades any linked non-final DEV-EXEC. Recomputes gates.gate_2_open/gate_3_satisfied. Rejects a target already SUPERSEDED, to protect the original supersede_reason. Does NOT remove the file. Does NOT auto-trigger — must be explicitly called.",
+      "description": "Explicitly supersede an PLAN version, DRAFT or LOCKED (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — DRAFT accepted since it is the only exit for a plan no longer wanted; no separate discard command). Requires --v <version> and --reason <string>. Sets the target version state to SUPERSEDED and auto-cascades any linked non-final EXEC. Recomputes gates.gate_2_open/gate_3_satisfied. Rejects a target already SUPERSEDED, to protect the original supersede_reason. Does NOT remove the file. Does NOT auto-trigger — must be explicitly called.",
       "inputs": [
         {
           "name": "--v",
@@ -634,7 +579,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show FMN-PLAN chain state: every open DRAFT, every LOCKED plan with its DEV-EXEC pairing, pending plans, and Gate 2 (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — replaces the old single active-pointer view; absorbs the removed `plan queue` command). Never reads plan.active_version as a selection authority.",
+      "description": "Show PLAN chain state: every open DRAFT, every LOCKED plan with its EXEC pairing, pending plans, and Gate 2 (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — replaces the old single active-pointer view; absorbs the removed `plan queue` command). Never reads plan.active_version as a selection authority.",
       "inputs": [],
       "outputs": [
         {
@@ -661,7 +606,7 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List all FMN-PLAN versions with states, intent_version_refs, and created_at timestamps, plus pending plans. The stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such flag exists.",
+      "description": "List all PLAN versions with states, intent_version_refs, and created_at timestamps, plus pending plans. The stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such flag exists.",
       "inputs": [],
       "outputs": [
         {
@@ -740,7 +685,7 @@
           "name": "--v",
           "type": "string",
           "required": false,
-          "description": "DRAFT DEV-EXEC version to lock. Required when more than one DRAFT is open; auto-resolved when exactly one exists."
+          "description": "DRAFT EXEC version to lock. Required when more than one DRAFT is open; auto-resolved when exactly one exists."
         }
       ],
       "outputs": [],
@@ -759,7 +704,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show DEV-EXEC chain state: every open DRAFT with its plan pairing, every LOCKED exec, and Gate 3 (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — replaces the old single active-pointer view). Never reads exec.active_version as a selection authority.",
+      "description": "Show EXEC chain state: every open DRAFT with its plan pairing, every LOCKED exec, and Gate 3 (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — replaces the old single active-pointer view). Never reads exec.active_version as a selection authority.",
       "inputs": [],
       "outputs": [
         {
@@ -786,7 +731,7 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List all DEV-EXEC versions with states, plan_version_refs, and created_at timestamps. The stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such flag exists.",
+      "description": "List all EXEC versions with states, plan_version_refs, and created_at timestamps. The stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such flag exists.",
       "inputs": [],
       "outputs": [
         {
@@ -813,7 +758,7 @@
       "action": "new",
       "level": "semantic",
       "role": "director",
-      "description": "Create a DIR-CLOSE DRAFT from the template. Gate 3 (PLAN-IMPL-MULTIDRAFT-LOCK §7.1, 2026-08-12): active INTENT RATIFIED, nothing left DRAFT in either plan or exec anywhere in the chain, and every LOCKED FMN-PLAN paired with exactly one LOCKED DEV-EXEC. Also requires Gate 3.5 (ARC Satisfaction Score >= 50). No --ack-stale-intent flag exists — the stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01; there is nothing to acknowledge. Sets lifecycle_state to CLOSE.",
+      "description": "Create a CLOSE DRAFT from the template. Gate 3 (PLAN-IMPL-MULTIDRAFT-LOCK §7.1, 2026-08-12): active INTENT RATIFIED, nothing left DRAFT in either plan or exec anywhere in the chain, and every LOCKED PLAN paired with exactly one LOCKED EXEC. Also requires Gate 3.5 (ARC Satisfaction Score >= 50). No --ack-stale-intent flag exists — the stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01; there is nothing to acknowledge. Sets lifecycle_state to CLOSE.",
       "inputs": [],
       "outputs": [
         {
@@ -856,7 +801,7 @@
       "action": "lock",
       "level": "semantic",
       "role": "director",
-      "description": "Lock the active DIR-CLOSE. Gate: chain.close.state must be DRAFT. Auto-locks the chain's ROADMAP as a side effect if it is still DRAFT (roadmap has no separate lock command — see 7 Gate rules / roadmap_new). Interactive APPROVE confirmation required unless --yes is passed. Transitions lifecycle_state to CLOSED. Does not supersede anything — there is no prior LOCKED DIR-CLOSE to supersede (registerCloseDraft's 1:1 guard already prevents a second non-superseded close from existing). No decision-harvest mechanism exists in the codebase.",
+      "description": "Lock the active CLOSE. Gate: chain.close.state must be DRAFT. Auto-locks the chain's ROADMAP as a side effect if it is still DRAFT (roadmap has no separate lock command — see 7 Gate rules / roadmap_new). Interactive APPROVE confirmation required unless --yes is passed. Transitions lifecycle_state to CLOSED. Does not supersede anything — there is no prior LOCKED CLOSE to supersede (registerCloseDraft's 1:1 guard already prevents a second non-superseded close from existing). No decision-harvest mechanism exists in the codebase.",
       "inputs": [
         {
           "name": "--yes",
@@ -900,7 +845,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show DIR-CLOSE version, state, locked_at timestamp, and lifecycle_state (close is a single object per chain — no active_version/active_state field exists).",
+      "description": "Show CLOSE version, state, locked_at timestamp, and lifecycle_state (close is a single object per chain — no active_version/active_state field exists).",
       "inputs": [],
       "outputs": [
         {
@@ -1155,7 +1100,7 @@
           "name": "--sigma-document",
           "type": "flag",
           "required": false,
-          "description": "Set the Sigma document (DIR-INTENT/FMN-PLAN/DEV-EXEC/etc.) language"
+          "description": "Set the Sigma document (INTENT/PLAN/EXEC/etc.) language"
         },
         {
           "name": "--output-document",
@@ -1567,19 +1512,19 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate a DIR-CLOSE document structure and markers, and report Lock readiness for `sigma close lock`. Read-only — never mutates state.",
+      "description": "Validate a CLOSE document structure and markers, and report Lock readiness for `sigma close lock`. Read-only — never mutates state.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
           "required": false,
-          "description": "Check the DIR-CLOSE of a specific chain instead of the active one"
+          "description": "Check the CLOSE of a specific chain instead of the active one"
         }
       ],
       "outputs": [
         {
           "type": "display",
-          "description": "Validation report and Lock readiness verdict for DIR-CLOSE"
+          "description": "Validation report and Lock readiness verdict for CLOSE"
         }
       ],
       "constraints": [
@@ -1688,19 +1633,19 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate a DEV-EXEC document structure and markers, and report approval readiness for `sigma exec approve`. Read-only — never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT exec is open (PLAN-IMPL-MULTIDRAFT-LOCK §8.3, Director directive 2026-08-12 — no command may act on an implicit target under ambiguity, including read-only ones).",
+      "description": "Validate a EXEC document structure and markers, and report approval readiness for `sigma exec approve`. Read-only — never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT exec is open (PLAN-IMPL-MULTIDRAFT-LOCK §8.3, Director directive 2026-08-12 — no command may act on an implicit target under ambiguity, including read-only ones).",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
           "required": false,
-          "description": "Check a specific DEV-EXEC version. Required when more than one DRAFT exec is open."
+          "description": "Check a specific EXEC version. Required when more than one DRAFT exec is open."
         }
       ],
       "outputs": [
         {
           "type": "display",
-          "description": "Validation report and approval readiness verdict for DEV-EXEC"
+          "description": "Validation report and approval readiness verdict for EXEC"
         }
       ],
       "constraints": [
@@ -1722,7 +1667,7 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate a DIR-INTENT document structure and markers, and report Lock readiness (Eligible / Eligible with warnings / Not eligible) for `sigma intent ratify`. Read-only — never mutates state.",
+      "description": "Validate a INTENT document structure and markers, and report Lock readiness (Eligible / Eligible with warnings / Not eligible) for `sigma intent ratify`. Read-only — never mutates state.",
       "inputs": [
         {
           "name": "--v",
@@ -1734,7 +1679,7 @@
       "outputs": [
         {
           "type": "display",
-          "description": "Validation report and Lock readiness verdict for DIR-INTENT"
+          "description": "Validation report and Lock readiness verdict for INTENT"
         }
       ],
       "constraints": [
@@ -1792,13 +1737,13 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate an FMN-PLAN document structure and markers, and report approval readiness for `sigma plan approve`. Read-only — never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT plan is open (PLAN-IMPL-MULTIDRAFT-LOCK §8.3, Director directive 2026-08-12 — no command may act on an implicit target under ambiguity, including read-only ones). Optional --sources adds read-only source review without writing operation logs or changing gates.",
+      "description": "Validate an PLAN document structure and markers, and report approval readiness for `sigma plan approve`. Read-only — never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT plan is open (PLAN-IMPL-MULTIDRAFT-LOCK §8.3, Director directive 2026-08-12 — no command may act on an implicit target under ambiguity, including read-only ones). Optional --sources adds read-only source review without writing operation logs or changing gates.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
           "required": false,
-          "description": "Check a specific FMN-PLAN version. Required when more than one DRAFT plan is open."
+          "description": "Check a specific PLAN version. Required when more than one DRAFT plan is open."
         },
         {
           "name": "--sources",
@@ -1810,7 +1755,7 @@
       "outputs": [
         {
           "type": "display",
-          "description": "Validation report and approval readiness verdict for FMN-PLAN"
+          "description": "Validation report and approval readiness verdict for PLAN"
         }
       ],
       "constraints": [
@@ -1832,7 +1777,7 @@
       "action": "update",
       "level": "semantic",
       "role": "any",
-      "description": "Update stage title and/or focus for an existing FMN-PLAN stage; the change is reflected in the ROADMAP Stage Overview on next render.",
+      "description": "Update stage title and/or focus for an existing PLAN stage; the change is reflected in the ROADMAP Stage Overview on next render.",
       "inputs": [
         {
           "name": "--v",
@@ -1939,7 +1884,7 @@
       "action": "score",
       "level": "semantic",
       "role": "director",
-      "description": "Record ARC Satisfaction Score (integer 0-100) for a RATIFIED DIR-INTENT. Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`. Score and notes are stored on the chain and rendered into Sigma/charter/intent-history.md.",
+      "description": "Record ARC Satisfaction Score (integer 0-100) for a RATIFIED INTENT. Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`. Score and notes are stored on the chain and rendered into Sigma/charter/intent-history.md.",
       "inputs": [
         {
           "name": "<n>",
@@ -1995,7 +1940,7 @@
       "action": "supersede",
       "level": "semantic",
       "role": "director",
-      "description": "Explicitly supersede a RATIFIED DIR-INTENT chain. Cascades SUPERSEDED to the chain's ROADMAP, FMN-PLAN, DEV-EXEC, and DIR-CLOSE artifacts. Requires --director-confirm — this is a Director-authority irreversible governance action.",
+      "description": "Explicitly supersede a RATIFIED INTENT chain. Cascades SUPERSEDED to the chain's ROADMAP, PLAN, EXEC, and CLOSE artifacts. Requires --director-confirm — this is a Director-authority irreversible governance action.",
       "inputs": [
         {
           "name": "--v",
@@ -2143,7 +2088,7 @@
       "action": "scan",
       "level": "read_only",
       "role": "any",
-      "description": "Scan an arbitrary file for Sigma terminology before it is shared externally. Top-level command, independent of any other pipeline. Skips DIR-INTENT/FMN-PLAN/DEV-EXEC/ROADMAP/DIR-CLOSE source artifacts by filename pattern (expected to contain this vocabulary by design). Terminal output is a count only; full findings (line numbers, matched terms) are written to Sigma/logs/<timestamp>_terminology-scan.log.",
+      "description": "Scan an arbitrary file for Sigma terminology before it is shared externally. Top-level command, independent of any other pipeline. Skips INTENT/PLAN/EXEC/ROADMAP/CLOSE source artifacts by filename pattern (expected to contain this vocabulary by design). Terminal output is a count only; full findings (line numbers, matched terms) are written to Sigma/logs/<timestamp>_terminology-scan.log.",
       "inputs": [
         {
           "type": "flag",
@@ -3135,6 +3080,497 @@
       "gating": {
         "pre_condition": "Registered project and explicit, unambiguous artifact identity; operation-specific source/hash checks apply.",
         "post_condition": "No lifecycle approval granted; clone creates DRAFT only."
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "config_set_mailbox_outdate_keep",
+      "domain": "config",
+      "action": "set mailbox outdate keep",
+      "level": "semantic",
+      "role": "any",
+      "description": "Set how many most-recent READ messages `sigma inbox read` keeps before aging the rest to OUTDATED. 0 disables the auto-sweep (mailbox.auto_outdate_read_keep).",
+      "inputs": [
+        {
+          "name": "<n>",
+          "type": "integer",
+          "required": true,
+          "description": "Non-negative integer: how many most-recent READ messages to keep. 0 disables the auto-sweep."
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "mailbox.auto_outdate_read_keep updated in Sigma/project.config.json"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "validation",
+          "condition": "n is a non-negative integer",
+          "error_message": "Expected a non-negative integer, got \"<n>\"."
+        }
+      ],
+      "gating": {
+        "pre_condition": "Inside a Sigma project",
+        "post_condition": "Setting written to Sigma/project.config.json"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "config_set_memo_limit",
+      "domain": "config",
+      "action": "set memo limit",
+      "level": "semantic",
+      "role": "any",
+      "description": "Set the max unread MEMO count per INTENT and role (GENERAL separate) before `sigma memo write` is blocked (default 5). 0 disables the memo feature (mailbox.memo_unread_limit).",
+      "inputs": [
+        {
+          "name": "<n>",
+          "type": "integer",
+          "required": true,
+          "description": "Non-negative integer: maximum unread memos per INTENT and role. 0 disables memo."
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "mailbox.memo_unread_limit updated in Sigma/project.config.json"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "validation",
+          "condition": "n is a non-negative integer",
+          "error_message": "Expected a non-negative integer, got \"<n>\"."
+        }
+      ],
+      "gating": {
+        "pre_condition": "Inside a Sigma project",
+        "post_condition": "Setting written to Sigma/project.config.json"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "control_show",
+      "domain": "control",
+      "action": "show",
+      "level": "read_only",
+      "role": "director",
+      "description": "Preview a sigma-control operation ticket without recording a decision. Trusted local Director surface; not reachable through MCP.",
+      "inputs": [
+        {
+          "name": "<ticketId>",
+          "type": "string",
+          "required": true,
+          "description": "Operation ticket identifier"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Ticket summary: target, operation, bound hashes and state, and approval status"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "existence",
+          "condition": "Ticket exists in the project control store",
+          "error_message": "Ticket not found"
+        }
+      ],
+      "gating": {
+        "pre_condition": "Inside a Sigma project; ticket exists",
+        "post_condition": "none (read-only)"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "control_approve",
+      "domain": "control",
+      "action": "approve",
+      "level": "semantic",
+      "role": "director",
+      "description": "Record Director approval for an operation ticket, enabling exactly one commit. Trusted local Director surface; an MCP tool cannot grant its own approval.",
+      "inputs": [
+        {
+          "name": "<ticketId>",
+          "type": "string",
+          "required": true,
+          "description": "Operation ticket identifier"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": true,
+          "description": "Explicit Director authorization to record this approval"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Durable approval recorded for the ticket; one commit may consume it"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "Ticket is pending: not expired, rejected, or consumed",
+          "error_message": "A stale, expired, rejected, or consumed ticket cannot be approved"
+        },
+        {
+          "type": "authorization",
+          "condition": "--director-confirm present",
+          "error_message": "--director-confirm is required"
+        }
+      ],
+      "gating": {
+        "pre_condition": "Ticket prepared by a role and reviewed by the Director",
+        "post_condition": "Approval bound to the ticket target and hashes"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "control_reject",
+      "domain": "control",
+      "action": "reject",
+      "level": "semantic",
+      "role": "director",
+      "description": "Record Director rejection for an operation ticket. The ticket cannot be committed afterwards.",
+      "inputs": [
+        {
+          "name": "<ticketId>",
+          "type": "string",
+          "required": true,
+          "description": "Operation ticket identifier"
+        },
+        {
+          "name": "--reason",
+          "type": "string",
+          "required": true,
+          "description": "Why the operation is rejected"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": true,
+          "description": "Explicit Director authorization to record this rejection"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Rejection recorded for the ticket"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "authorization",
+          "condition": "--director-confirm present",
+          "error_message": "--director-confirm is required"
+        }
+      ],
+      "gating": {
+        "pre_condition": "Ticket exists and is pending",
+        "post_condition": "Ticket rejected"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "inbox_clear",
+      "domain": "inbox",
+      "action": "clear",
+      "level": "semantic",
+      "role": "any",
+      "description": "Move surplus READ messages to OUTDATED in the selected context, keeping the most recent N. Files are retained; nothing is deleted, moved, or renamed. GENERAL is cleared only when selected explicitly.",
+      "inputs": [
+        {
+          "name": "--role",
+          "type": "string",
+          "required": false,
+          "description": "Recipient role"
+        },
+        {
+          "name": "--all-roles",
+          "type": "flag",
+          "required": false,
+          "description": "All roles (requires --director-confirm)"
+        },
+        {
+          "name": "--keep",
+          "type": "integer",
+          "required": false,
+          "description": "Most recent READ entries to keep per role and intent (default 5)"
+        },
+        {
+          "name": "--dry-run",
+          "type": "flag",
+          "required": false,
+          "description": "Preview without writing"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": false,
+          "description": "Required for all roles or all intents"
+        },
+        {
+          "name": "--intent",
+          "type": "string",
+          "required": false,
+          "description": "Select the owning INTENT major, including legacy numbering"
+        },
+        {
+          "name": "--context",
+          "type": "string",
+          "required": false,
+          "description": "Select storage context: GENERAL, LEGACY, or an artifact version"
+        },
+        {
+          "name": "--all-intents",
+          "type": "flag",
+          "required": false,
+          "description": "Select all intent contexts, GENERAL and LEGACY (requires --director-confirm)"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Surplus READ entries marked OUTDATED in Sigma/messages/index.json"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "authorization",
+          "condition": "--all-roles or --all-intents requires --director-confirm",
+          "error_message": "--all-roles / --all-intents requires --director-confirm."
+        },
+        {
+          "type": "validation",
+          "condition": "--keep is a non-negative integer",
+          "error_message": "--keep must be a non-negative integer."
+        }
+      ],
+      "gating": {
+        "pre_condition": "Inside a Sigma project; mailbox is not locked or awaiting migration",
+        "post_condition": "Surplus READ messages are OUTDATED; files unchanged"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "intent_lock",
+      "domain": "intent",
+      "action": "lock",
+      "level": "semantic",
+      "role": "director",
+      "description": "Removed. `sigma intent lock` exits with an error and changes nothing; use `sigma intent ratify`.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Error directing the caller to `sigma intent ratify`"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "none",
+        "post_condition": "none (tombstone, no mutation)"
+      },
+      "error_messages": {
+        "removed": "Removed — use `sigma intent ratify`"
+      }
+    },
+    {
+      "operation_id": "intent_amendment_preview",
+      "domain": "intent",
+      "action": "amendment preview",
+      "level": "read_only",
+      "role": "any",
+      "description": "Read-only review package for an amendment: Git baseline check, diff against the baseline commit, the file hash to approve, and the impact on PLAN and EXEC.",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "Chain version instead of the active one"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Baseline check, diff, document hash, PLAN/EXEC impact"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "Target chain intent.state == RATIFIED and a Git baseline is recorded",
+          "error_message": "A Git baseline is required (sigma intent baseline adopt)"
+        }
+      ],
+      "gating": {
+        "pre_condition": "INTENT RATIFIED; Git baseline recorded",
+        "post_condition": "none (read-only)"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "intent_baseline_check",
+      "domain": "intent",
+      "action": "baseline check",
+      "level": "read_only",
+      "role": "any",
+      "description": "Read-only: verify that the INTENT in Git is the latest certified content. Run before editing an amendment and before a Petition.",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "Chain version instead of the active one"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Whether the committed INTENT matches the certified content, with any difference"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "INTENT tracked by Git",
+        "post_condition": "none (read-only)"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "intent_baseline_adopt",
+      "domain": "intent",
+      "action": "baseline adopt",
+      "level": "semantic",
+      "role": "director",
+      "description": "Bind the certified INTENT content of a RATIFIED chain to a commit and a local annotated tag sigma/intent-<chain>-base. When the certified content cannot be recovered from Git, --import-current adopts the reviewed current content without inventing an amendment. CLI only; not admissible through MCP.",
+      "inputs": [
+        {
+          "name": "--commit",
+          "type": "string",
+          "required": true,
+          "description": "Commit holding exactly the current INTENT content"
+        },
+        {
+          "name": "--import-current",
+          "type": "flag",
+          "required": false,
+          "description": "Adopt the reviewed current content when the certified content is unrecoverable from Git"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": true,
+          "description": "Explicit Director authorization"
+        },
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "Chain version instead of the active one"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "intent.git_baseline recorded {commit, tag, doc_sha256, doc_sha256_lf, revision, provenance}"
+        },
+        {
+          "type": "git",
+          "description": "Local annotated tag sigma/intent-<chain>-base"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "target chain intent.state == 'RATIFIED' and no baseline recorded at a different commit",
+          "error_message": "A baseline is already recorded; amendments advance it"
+        }
+      ],
+      "gating": {
+        "pre_condition": "INTENT tracked by Git; commit reachable from HEAD and holding the current content",
+        "post_condition": "Git baseline recorded; first amendment becomes possible"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "memo_clear",
+      "domain": "memo",
+      "action": "clear",
+      "level": "semantic",
+      "role": "any",
+      "description": "Move surplus READ memos to OUTDATED in the selected context, keeping the most recent N. Files are retained.",
+      "inputs": [
+        {
+          "name": "--role",
+          "type": "string",
+          "required": false,
+          "description": "Owning role"
+        },
+        {
+          "name": "--all-roles",
+          "type": "flag",
+          "required": false,
+          "description": "All roles (requires --director-confirm)"
+        },
+        {
+          "name": "--keep",
+          "type": "integer",
+          "required": false,
+          "description": "Most recent READ entries to keep per role and intent (default 5)"
+        },
+        {
+          "name": "--dry-run",
+          "type": "flag",
+          "required": false,
+          "description": "Preview without writing"
+        },
+        {
+          "name": "--director-confirm",
+          "type": "flag",
+          "required": false,
+          "description": "Required for all roles or all intents"
+        },
+        {
+          "name": "--intent",
+          "type": "string",
+          "required": false,
+          "description": "Select the owning INTENT major, including legacy numbering"
+        },
+        {
+          "name": "--context",
+          "type": "string",
+          "required": false,
+          "description": "Select storage context: GENERAL, LEGACY, or an artifact version"
+        },
+        {
+          "name": "--all-intents",
+          "type": "flag",
+          "required": false,
+          "description": "Select all intent contexts, GENERAL and LEGACY (requires --director-confirm)"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Surplus READ memo entries marked OUTDATED in Sigma/messages/index.json"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "authorization",
+          "condition": "--all-roles or --all-intents requires --director-confirm",
+          "error_message": "--all-roles / --all-intents requires --director-confirm."
+        }
+      ],
+      "gating": {
+        "pre_condition": "Inside a Sigma project; mailbox is not locked or awaiting migration",
+        "post_condition": "Surplus READ memos are OUTDATED; files unchanged"
       },
       "error_messages": {}
     }

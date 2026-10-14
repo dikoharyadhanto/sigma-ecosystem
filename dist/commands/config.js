@@ -29,7 +29,7 @@ function configCommand() {
         .description('Set a language preference to a free-form language name (e.g. "English", "Indonesia") — not an ISO code. ' +
         'Requires exactly one of --interaction, --sigma-document, or --output-document.')
         .option('--interaction', 'Set the AI communication (Director-facing) language')
-        .option('--sigma-document', 'Set the Sigma document (DIR-INTENT/FMN-PLAN/DEV-EXEC/etc.) language')
+        .option('--sigma-document', 'Set the Sigma document (INTENT/PLAN/EXEC/etc.) language')
         .option('--output-document', 'Set the non-Sigma output document language')
         .action((name, flags) => {
         try {

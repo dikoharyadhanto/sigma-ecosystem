@@ -31,7 +31,7 @@ const program = new Command();
 
 program
   .name('sigma')
-  .description('Sigma — Lightweight project governance CLI')
+  .description('Sigma — AI-operated governance runtime CLI')
   .version(SIGMA_VERSION);
 
 program.addCommand(setupCommand());

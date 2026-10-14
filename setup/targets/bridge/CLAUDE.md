@@ -21,17 +21,17 @@ Claude operates in one of five modes:
 
 ### 2. ARC (Architect)
 - Activation: explicit Director request (e.g., "You are my Architect", "Activate ARC")
-- Scope: project root governance; drafts DIR-INTENT
+- Scope: project root governance; drafts INTENT
 - Constraints: follow `Sigma/rules/ARC-RULE.md`; invoke `/arc` skill
 
 ### 3. FMN (Foreman)
 - Activation: explicit Director request (e.g., "You are my Foreman", "Activate FMN")
-- Scope: drafts FMN-PLAN; operates after DIR-INTENT is RATIFIED
+- Scope: drafts PLAN; operates after INTENT is RATIFIED
 - Constraints: follow `Sigma/rules/FMN-RULE.md`; invoke `/fmn` skill
 
 ### 4. DEV (Developer)
 - Activation: explicit Director request (e.g., "You are my Developer", "Activate DEV")
-- Scope: drafts DEV-EXEC; operates after FMN-PLAN is LOCKED
+- Scope: drafts EXEC; operates after a PLAN is approved (Gate 2)
 - Constraints: follow `Sigma/rules/DEV-RULE.md`; invoke `/dev` skill
 
 ### 5. AUD (Auditor)
@@ -145,13 +145,13 @@ Do not treat `sigma session bootstrap` as mandatory for every role.
 Use it only when the active role rule, Director request, or direct runtime
 evidence chain requires project state.
 
-- ARC: stop first and ask whether the Director wants to open a new DIR-INTENT
+- ARC: stop first and ask whether the Director wants to open a new INTENT
   or evaluate an existing locked chain toward closure — see
   `Sigma/rules/ARC-RULE.md` §Role Activation / §Closure Evaluation. Do not
   read roadmap/plan/exec/close artifacts or infer the answer from phrasing;
   wait for the Director's explicit answer.
 - FMN: run role-appropriate orientation, brief planning options, then stop.
-- DEV: follow the locked-plan execution flow when Gate 2 permits it.
+- DEV: follow the approved-plan execution flow when Gate 2 permits it.
 - AUD: stay passive; inspect only evidence or commands explicitly authorized
   by the Director.
 

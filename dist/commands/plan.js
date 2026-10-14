@@ -64,10 +64,10 @@ function assertPlanCheckUnambiguous(chain, explicit) {
 }
 function planCommand() {
     const cmd = new commander_1.Command('plan');
-    cmd.description('Manage FMN-PLAN artifact');
+    cmd.description('Manage PLAN artifact');
     cmd.addCommand((0, f08_1.cloneCommand)('plan'));
     cmd.command('new')
-        .description('Create a new FMN-PLAN draft (requires ratified DIR-INTENT + ROADMAP). Use --pending to stage a future plan without entering the version queue.')
+        .description('Create a new PLAN draft (requires ratified INTENT + ROADMAP). Use --pending to stage a future plan without entering the version queue.')
         .option('--pending', 'Stage as a pending plan (no version assigned; not in lock queue)')
         .requiredOption('--title <title>', 'Stage title written into the ROADMAP Stage Overview table')
         .requiredOption('--focus <focus>', 'Stage focus summary written into the ROADMAP Stage Overview table')
@@ -121,7 +121,7 @@ function planCommand() {
     });
     (0, approval_1.registerApprovalCommands)(cmd, 'plan');
     cmd.command('supersede')
-        .description('Supersede an FMN-PLAN version, DRAFT, APPROVED or LOCKED (auto-supersedes any linked non-final DEV-EXEC)')
+        .description('Supersede a PLAN version, DRAFT, APPROVED or LOCKED (auto-supersedes any linked non-final EXEC)')
         .requiredOption('--v <version>', 'Version to supersede (e.g. v1.2)', chain_1.normalizeVersionArg)
         .requiredOption('--reason <reason>', 'Reason for superseding')
         .action((opts) => {
@@ -168,8 +168,8 @@ function planCommand() {
         }
     });
     cmd.command('check')
-        .description('Validate an FMN-PLAN structure and markers')
-        .option('--v <version>', 'Check a specific FMN-PLAN version. Required when more than one DRAFT/APPROVED contract is open.', chain_1.normalizeVersionArg)
+        .description('Validate a PLAN structure and markers')
+        .option('--v <version>', 'Check a specific PLAN version. Required when more than one DRAFT/APPROVED contract is open.', chain_1.normalizeVersionArg)
         .option('--sources', 'Show quoted INTENT sources, certification facts and advisory readiness')
         .action((opts) => {
         try {
@@ -196,7 +196,7 @@ function planCommand() {
         }
     });
     cmd.command('status')
-        .description('Show FMN-PLAN chain state: open DRAFTs, APPROVED and LOCKED plans with exec pairing, pending plans, Gate 2')
+        .description('Show PLAN chain state: open DRAFTs, APPROVED and LOCKED plans with exec pairing, pending plans, Gate 2')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -262,7 +262,7 @@ function planCommand() {
         }
     });
     cmd.command('update')
-        .description('Update title and/or focus for an existing FMN-PLAN stage in the active ROADMAP')
+        .description('Update title and/or focus for an existing PLAN stage in the active ROADMAP')
         .requiredOption('--v <version>', 'Plan version to update (e.g. v1.15)', chain_1.normalizeVersionArg)
         .option('--title <title>', 'New stage title')
         .option('--focus <focus>', 'New stage focus summary')
@@ -299,7 +299,7 @@ function planCommand() {
         }
     });
     cmd.command('list')
-        .description('List all FMN-PLAN versions')
+        .description('List all PLAN versions')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();

@@ -1,7 +1,7 @@
 {
   "name": "sigma-fmn",
   "version": "1.0.0",
-  "description": "Sigma Foreman role — draft FMN-PLAN (work order + test contract) after INTENT locked",
+  "description": "Sigma Foreman role — draft PLAN (work order + test contract) after INTENT ratified",
   "author": {
     "name": "Sigma"
   },

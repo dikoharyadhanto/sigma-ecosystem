@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+### F18 — Consistency of Protocol, Constitution, README and shipped assets (2026-10-15)
+
+- `SIGMA_CONSTITUTION.md`: Amendments 003 to 005. `INTENT` is the single name for the Director's intent document, "ad hoc instruction" and "session" are defined, Article IV orders normative authority only (RUNTIME_STATE and DEV output are execution records), Article II separates the Director's reserved authority from taking part in every decision, Article V forbids independent redefinition and permits quotation with the source identified, Article X states what happens to authority when runtime state cannot be trusted, and the Temporary Experimental Authorization is defined once, in Article VIII.
+- `SIGMA_PROTOCOL.md` is rewritten as v1.0 and describes Sigma v2 as implemented: lifecycle models, APPROVED and LOCKED, gates including Gate 3.5, PLAN revisions and notices, INTENT amendments through Git, per-INTENT mailbox and memo, notes, audit packs and decisions, DEV workspace, product changelog, version stamp, and the MCP servers. The Sovereign/Operationalization tiers, section-number tables, and the "heavier process" promotion section are removed.
+- `README.md` is rewritten for the same state. ROADMAP is described as mandatory, Gate 3.5 is listed, artifact names follow the unprefixed convention, and the command reference covers `plan revise`, `exec acknowledge-plan`, `dev`, `control`, `scan`, the clone commands, and the doctor modes.
+- `SIGMA-OPERATION-REGISTRY.json` registers 11 operations that existed in the CLI and replaces the single `intent_baseline` entry with `intent_baseline_check` and `intent_baseline_adopt`. Eleven operations are classified in the MCP policy table.
+- The CLI banner and `package.json` description no longer say "Lightweight". Command descriptions use `INTENT`, `PLAN`, `EXEC`, and `CLOSE`.
+- Skills for ARC, FMN, DEV, AUD, REPORT, and HUMANIZE on all five targets, the bridge files, the Antigravity plugin descriptions, and the CLOSE template cross-references use the unprefixed names and the APPROVED lifecycle wording.
+
 ### F12 — Sigma version stamp and "outdated" warning (2026-10-15)
 
 - `sigma setup install|update` record `cli_version`, `assets_hash` and `synced_at` in `~/.sigma/sigma.config.json`. `sigma project start`, `register` and `sync --confirm` record `sigma_applied` (`sigma_version`, `assets_hash`, `synced_at`) in `.sigma-identity.json`. A stamp is written only when every managed file on that layer matches its source; a rejected or partial sync leaves the previous stamp unchanged.

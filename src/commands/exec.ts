@@ -40,10 +40,10 @@ function assertExecCheckUnambiguous(chain: ChainState, explicit: string | undefi
 
 export function execCommand(): Command {
   const cmd = new Command('exec');
-  cmd.description('Manage DEV-EXEC artifact');
+  cmd.description('Manage EXEC artifact');
 
   cmd.command('new')
-    .description('Create a new DEV-EXEC draft (requires an eligible APPROVED PLAN, or legacy LOCKED PLAN, with no open exec)')
+    .description('Create a new EXEC draft (requires an eligible APPROVED PLAN, or legacy LOCKED PLAN, with no open exec)')
     .option('--plan <version>', 'Explicit eligible PLAN target (required when multiple unexecuted contracts exist)', normalizeVersionArg)
     .action((opts: { plan?: string }) => {
       try {
@@ -70,8 +70,8 @@ export function execCommand(): Command {
   registerApprovalCommands(cmd, 'exec');
 
   cmd.command('check')
-    .description('Validate a DEV-EXEC structure and markers')
-    .option('--v <version>', 'Check a specific DEV-EXEC version. Required when more than one DRAFT is open.', normalizeVersionArg)
+    .description('Validate a EXEC structure and markers')
+    .option('--v <version>', 'Check a specific EXEC version. Required when more than one DRAFT is open.', normalizeVersionArg)
     .action((opts: { v?: string }) => {
       try {
         const projectRoot = findProjectRoot();
@@ -89,7 +89,7 @@ export function execCommand(): Command {
     });
 
   cmd.command('status')
-    .description('Show DEV-EXEC chain state: open DRAFTs with plan pairing, LOCKED execs, Gate 3')
+    .description('Show EXEC chain state: open DRAFTs with plan pairing, LOCKED execs, Gate 3')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
@@ -136,7 +136,7 @@ export function execCommand(): Command {
     });
 
   cmd.command('list')
-    .description('List all DEV-EXEC versions')
+    .description('List all EXEC versions')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();

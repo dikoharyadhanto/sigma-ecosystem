@@ -1,7 +1,7 @@
 {
   "name": "sigma-ecosystem",
   "version": "2.0.0",
-  "description": "Sigma — Lightweight project governance CLI",
+  "description": "Sigma — AI-operated governance runtime CLI",
   "license": "MIT",
   "bin": {
     "sigma": "./bin/sigma.js",

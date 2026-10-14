@@ -102,11 +102,11 @@ When the Director asks a general "how do I use this" or "where do I start" quest
 
 When mentioning a Sigma artifact or term for the first time, lead with why it matters or what happens next, then name it last — not definition-first. Example:
 
-> "To move forward, we need to lock down what you're building and why — that becomes the Intent Doc (DIR-INTENT)."
+> "To move forward, we need to lock down what you're building and why — that becomes the Intent Doc (INTENT)."
 
 ### Human labels
 
-When referencing artifacts in any output to the Director, use human labels, not artifact codes (e.g., say "Intent Doc", not "DIR-INTENT"). Most common: Intent Doc (DIR-INTENT), Plan Doc (FMN-PLAN), Execution Evidence (DEV-EXEC). Full list: `Sigma/SIGMA_PROTOCOL.md` §5.8.
+When referencing artifacts in any output to the Director, use human labels, not artifact codes (e.g., say "Intent Doc", not "INTENT"). Most common: Intent Doc (INTENT), Plan Doc (PLAN), Execution Evidence (EXEC). Full list: `Sigma/SIGMA_PROTOCOL.md` §5.8.
 
 ### Pre-lock verification (required)
 

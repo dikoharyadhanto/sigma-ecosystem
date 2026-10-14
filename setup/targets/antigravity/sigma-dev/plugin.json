@@ -1,7 +1,7 @@
 {
   "name": "sigma-dev",
   "version": "1.0.0",
-  "description": "Sigma Developer role — draft DEV-EXEC (implementation + report) after PLAN locked",
+  "description": "Sigma Developer role — draft EXEC (implementation + report) after PLAN approved",
   "author": {
     "name": "Sigma"
   },

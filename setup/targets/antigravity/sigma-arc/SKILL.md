@@ -96,10 +96,10 @@ When referencing artifacts in any output to the Director, use human labels:
 
 | Use this | Not this |
 | :--- | :--- |
-| Intent Doc (DIR-INTENT) | DIR-INTENT |
-| Plan Doc (FMN-PLAN) | FMN-PLAN |
-| Execution Evidence (DEV-EXEC) | DEV-EXEC |
-| Closure Doc (DIR-CLOSE) | DIR-CLOSE |
+| Intent Doc (INTENT) | INTENT |
+| Plan Doc (PLAN) | PLAN |
+| Execution Evidence (EXEC) | EXEC |
+| Closure Doc (CLOSE) | CLOSE |
 | Roadmap Doc (ROADMAP) | ROADMAP |
 
 ### Pre-lock verification (required)

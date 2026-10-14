@@ -45,10 +45,10 @@ function intentDocPath(projectRoot, chain) {
 }
 function intentCommand() {
     const cmd = new commander_1.Command('intent');
-    cmd.description('Manage DIR-INTENT artifact');
+    cmd.description('Manage INTENT artifact');
     cmd.addCommand((0, f08_1.cloneCommand)('intent'));
     cmd.command('new')
-        .description('Create a new DIR-INTENT draft (auto-creates and auto-activates a new chain)')
+        .description('Create a new INTENT draft (auto-creates and auto-activates a new chain)')
         .requiredOption('--title <title>', 'Intent title written into Sigma/design/intent-history.md')
         .requiredOption('--focus <focus>', 'Intent focus summary written into Sigma/design/intent-history.md')
         .option('--yes', 'Skip interactive APPROVE prompt when reopening a CLOSED project')
@@ -113,7 +113,7 @@ function intentCommand() {
         }
     });
     cmd.command('ratify')
-        .description('Ratify active DIR-INTENT (opens Gate 1, lifecycle → BUILD)')
+        .description('Ratify active INTENT (opens Gate 1, lifecycle → BUILD)')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -160,7 +160,7 @@ function intentCommand() {
     // Options are validated manually: Commander checks an ancestor's mandatory
     // options even when a subcommand (`preview`) runs.
     const amendment = cmd.command('amendment')
-        .description('Record a Director-approved amendment of a RATIFIED DIR-INTENT from a Git commit; `amendment preview` is read-only')
+        .description('Record a Director-approved amendment of a RATIFIED INTENT from a Git commit; `amendment preview` is read-only')
         .option('--change <change>', 'Single-line summary of the change, commit-message style')
         .option('--purpose-changed <yes|no>', 'Director-reviewed declaration whether the purpose or core outcome changes (informational, never a gate)')
         .option('--commit <ref>', 'Commit that holds exactly the reviewed and approved INTENT content')
@@ -287,7 +287,7 @@ function intentCommand() {
         }
     });
     cmd.command('score <n>')
-        .description('Record ARC Satisfaction Score for a RATIFIED DIR-INTENT (Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`)')
+        .description('Record ARC Satisfaction Score for a RATIFIED INTENT (Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`)')
         .requiredOption('--notes <notes>', 'Rationale for the score')
         .option('--v <version>', 'Chain version to score instead of the active one', chain_1.normalizeVersionArg)
         .action((n, opts) => {
@@ -306,7 +306,7 @@ function intentCommand() {
         }
     });
     cmd.command('supersede')
-        .description('Supersede a RATIFIED DIR-INTENT chain — cascades SUPERSEDED to its Roadmap/Plan/Exec/Close (requires --director-confirm)')
+        .description('Supersede a RATIFIED INTENT chain — cascades SUPERSEDED to its Roadmap/Plan/Exec/Close (requires --director-confirm)')
         .requiredOption('--v <version>', 'Chain version to supersede (e.g. v1) — need not be the active chain', chain_1.normalizeVersionArg)
         .requiredOption('--reason <reason>', 'Reason for superseding')
         .option('--director-confirm', 'Required. Explicit Director authorization to execute the supersede.')
@@ -375,7 +375,7 @@ function intentCommand() {
         }
     });
     cmd.command('check')
-        .description('Validate a DIR-INTENT structure and markers')
+        .description('Validate a INTENT structure and markers')
         .option('--v <version>', 'Check a specific chain instead of the active one', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
@@ -397,7 +397,7 @@ function intentCommand() {
         }
     });
     cmd.command('status')
-        .description('Show active DIR-INTENT status')
+        .description('Show active INTENT status')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();

@@ -56,11 +56,11 @@ The role may use any reasonable read-only source to compose the report:
 - `sigma project status` — lifecycle phase and gate status, if available
 - `sigma git evidence` — Git branch, working tree state, and changed files, if available
 - `Sigma/progress-v<N>.json` — lifecycle phase and gate status
-- `Sigma/charter/` — active DIR-INTENT version and state
+- `Sigma/charter/` — active INTENT version and state
 - `Sigma/roadmap/` — ROADMAP version and state
-- `Sigma/contract/` — FMN-PLAN versions and states
-- `Sigma/evidence/` — DEV-EXEC versions and states
-- `Sigma/close/` — DIR-CLOSE state if applicable
+- `Sigma/contract/` — PLAN versions and states
+- `Sigma/evidence/` — EXEC versions and states
+- `Sigma/close/` — CLOSE state if applicable
 - Any artifact file currently in session context
 - Current conversation context
 
@@ -81,7 +81,7 @@ Date: {date}
 
 **Current State**
 - Lifecycle: {phase name in plain English}
-- Locked evidence chain: {human labels + artifact codes, e.g. "Intent Doc (DIR-INTENT v1) → Plan Doc (FMN-PLAN v1)"}
+- Locked evidence chain: {human labels + artifact codes, e.g. "Intent Doc (INTENT v1) → Plan Doc (PLAN v1)"}
 - Open blockers: {none / list}
 
 **What this means**

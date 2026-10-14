@@ -31,7 +31,7 @@ const assetConsistency_1 = require("./services/assetConsistency");
 const program = new commander_1.Command();
 program
     .name('sigma')
-    .description('Sigma — Lightweight project governance CLI')
+    .description('Sigma — AI-operated governance runtime CLI')
     .version(config_1.SIGMA_VERSION);
 program.addCommand((0, setup_1.setupCommand)());
 program.addCommand((0, project_1.projectCommand)());

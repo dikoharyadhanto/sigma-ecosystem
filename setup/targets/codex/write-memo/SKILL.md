@@ -19,7 +19,7 @@ Reference: `PLAN-IMPL-SIGMA-MEMO-OPERATIONAL-BRIEF-20260902.md` and `Sigma/templ
 
 > A memo is an operational brief — short, dense, to the point. It is not a supplement to, or a replacement for, any Sigma artifact.
 
-- A memo holds **operational instructions and pointers**, not copies of artifact content. Correct: "read exec-evidence §1.2 before continuing." Wrong: retyping a decision that already lives in a DEV-EXEC.
+- A memo holds **operational instructions and pointers**, not copies of artifact content. Correct: "read exec-evidence §1.2 before continuing." Wrong: retyping a decision that already lives in a EXEC.
 - A memo does not go stale, because it points rather than snapshots. "Read section X" always resolves to that artifact's current version.
 - A memo must never become a shadow artifact. A substantive conclusion that has not yet been persisted anywhere may appear only paired with an instruction to formalize it: `Conclusion: <X>. → formalize into exec-evidence §1.2 before proceeding.` A decision must not live only in a memo across more than one session hop.
 
@@ -31,7 +31,7 @@ A memo must stay brief — a few dense sentences per section, not a report. If a
 
 Instead:
 
-1. Check whether something already covers it — a DEV-EXEC, another Sigma artifact, or an existing registered note (`sigma notes list --search <keyword>`). If so, point to that from "Reorientation — Read" instead of writing anything new.
+1. Check whether something already covers it — a EXEC, another Sigma artifact, or an existing registered note (`sigma notes list --search <keyword>`). If so, point to that from "Reorientation — Read" instead of writing anything new.
 2. If nothing existing covers it, create the note **only** with `sigma notes new --title "<title>" --role <your role>`, then write the detailed explanation into the file it prints. **Never create a `.md` file directly under `Sigma/notes/`**: a file that was not created by `sigma notes new` is not registered, does not appear in `note-list.md`, and `sigma notes update` moves it to `unregistered-notes/`, which breaks the memo's pointer.
 3. Point to the note from "Reorientation — Read" by its ID (for example `N07`) and the path that `sigma notes new` printed. Creating a note this way does not require Director approval — it is a normal AI-operational action, exactly like writing the memo itself.
 

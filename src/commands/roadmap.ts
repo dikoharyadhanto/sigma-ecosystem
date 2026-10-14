@@ -35,7 +35,7 @@ export function roadmapCommand(): Command {
   cmd.description('Manage ROADMAP artifact');
 
   cmd.command('new')
-    .description('Create the ROADMAP for the active chain (requires ratified DIR-INTENT; one per chain)')
+    .description('Create the ROADMAP for the active chain (requires ratified INTENT; one per chain)')
     .action(() => {
       try {
         const projectRoot = findProjectRoot();

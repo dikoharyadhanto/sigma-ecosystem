@@ -25,7 +25,7 @@ Scope is broader than Sigma governance documents: a Discussion note, an email, a
 
 ## Out Of Scope: Sigma Artifact Files Themselves
 
-This skill never applies directly to `DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, `ROADMAP`, or `DIR-CLOSE` files — the artifact itself, not a document derived from it. These files must stay detailed and formally structured because the AI and the Sigma CLI read them directly: structural markers, checklists, and full technical detail are load-bearing, not incidental. This applies even to `DIR-CLOSE`, whose prose already reads close to human-friendly — the file still carries structural markers and lock state the CLI validates, so it is never edited in place either. Rewriting one of these files with this skill would corrupt the structure Sigma depends on.
+This skill never applies directly to `INTENT`, `PLAN`, `EXEC`, `ROADMAP`, or `CLOSE` files, including files created earlier under the names `DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, and `DIR-CLOSE` — the artifact itself, not a document derived from it. These files must stay detailed and formally structured because the AI and the Sigma CLI read them directly: structural markers, checklists, and full technical detail are load-bearing, not incidental. This applies even to `CLOSE`, whose prose already reads close to human-friendly — the file still carries structural markers and lock state the CLI validates, so it is never edited in place either. Rewriting one of these files with this skill would corrupt the structure Sigma depends on.
 
 ## Activation
 
@@ -157,9 +157,9 @@ This applies regardless of what the source document is — a Sigma artifact, a D
 
 | Sigma term | Do not write | Write instead |
 | :--- | :--- | :--- |
-| `DIR-INTENT` | "the DIR-INTENT" | "the project brief" / "the goals" |
-| `FMN-PLAN` | "the FMN-PLAN" | "the plan" |
-| `DEV-EXEC` | "the DEV-EXEC" | "the execution report" / "the delivery" |
+| `INTENT` / `DIR-INTENT` | "the INTENT" | "the project brief" / "the goals" |
+| `PLAN` / `FMN-PLAN` | "the PLAN" | "the plan" |
+| `EXEC` / `DEV-EXEC` | "the EXEC" | "the execution report" / "the delivery" |
 | `RATIFIED` / `LOCKED` | "once ratified/locked" | "once approved" / "once finalized" |
 | `DRAFT` | "still a DRAFT" | "still in progress" |
 | `Gate 1` / `Gate 2` / `Gate 3` | any gate reference | omit — state the actual status instead |

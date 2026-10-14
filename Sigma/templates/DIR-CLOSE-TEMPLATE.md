@@ -89,16 +89,16 @@ High / Medium / Low
 Summarize how the delivered output satisfies the locked Director Intent.
 
 > Desired Outcome and Success Criteria are assessed separately on purpose:
-> Success Criteria (3.1) is supposed to be the falsifiable operationalization
-> of Desired Outcome (1.4), but if it quietly narrowed during drafting, this
-> is where that gap becomes visible — do not assume satisfying 3.1
-> automatically means 1.4 was delivered.
+> the Success Criteria are supposed to be the falsifiable operationalization
+> of the Desired Outcome, but if they quietly narrowed during drafting, this
+> is where that gap becomes visible — do not assume satisfying the Success
+> Criteria automatically means the Desired Outcome was delivered.
 
 | Intent Element          | Closure Assessment                              | Evidence / Note |
 | :---                    | :---                                            | :---            |
 | Primary objective       | Satisfied / Partially / Not satisfied           | [...]           |
-| Desired Outcome (1.4)   | Satisfied / Partially / Not satisfied           | [...]           |
-| Success criteria (3.1)  | Satisfied / Partially / Not satisfied           | [...]           |
+| Desired Outcome         | Satisfied / Partially / Not satisfied           | [...]           |
+| Success criteria        | Satisfied / Partially / Not satisfied           | [...]           |
 | Scope boundary          | Respected / Deviated / Expanded                 | [...]           |
 | Trade-off               | Preserved / Changed / Not applicable            | [...]           |
 | Primary failure concern | Addressed / Partially addressed / Not addressed | [...]           |
@@ -114,15 +114,15 @@ Summarize how the delivered output satisfies the locked Director Intent.
 
 > This section proves closure at a human-readable level. Put detailed artifact lists, test matrices, and screenshots in the appendix.
 >
-> At minimum, DIR-CLOSE must reference the locked FMN-PLAN and DEV-EXEC versions that support the closure claim.
+> At minimum, the CLOSE must reference the locked PLAN and EXEC versions that support the closure claim.
 
 ### Primary Evidence
 
 | Evidence Type        | Reference | What It Proves                             |
 | :---                 | :---      | :---                                       |
-| DIR-INTENT           | [...]     | Original destination and scope             |
-| FMN-PLAN             | [...]     | Build/test contract used                   |
-| DEV-EXEC             | [...]     | Implementation and walkthrough evidence    |
+| INTENT               | [...]     | Original destination and scope             |
+| PLAN                 | [...]     | Build/test contract used                   |
+| EXEC                 | [...]     | Implementation and walkthrough evidence    |
 | Test Result          | [...]     | Verification against test contract         |
 | Git Diff Evidence    | [...]     | Physical code/change trace                 |
 | Director Observation | [...]     | Manual testing signal / accepted follow-up |
@@ -160,11 +160,11 @@ Reason:
 
 | Deviation | Source                           | Impact | Resolution |
 | :---      | :---                             | :---   | :---       |
-| [...]     | DIR-INTENT / FMN-PLAN / DEV-EXEC | [...]  | Accepted / Deferred / Needs New Plan |
+| [...]     | INTENT / PLAN / EXEC | [...]  | Accepted / Deferred / Needs New Plan |
 
 If none, write:
 
-> No material deviation from ratified DIR-INTENT or locked FMN-PLAN.
+> No material deviation from the ratified INTENT or the locked PLAN.
 
 ### Superseded or Corrected Paths
 

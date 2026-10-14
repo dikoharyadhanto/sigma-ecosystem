@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_at": "2026-08-19T10:02:21.533Z",
-  "description": "Sigma Document Registry \u2014 permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (DIR-INTENT, FMN-PLAN, DEV-EXEC, DIR-CLOSE) are tracked in progress-v<N>.json, not here.",
+  "description": "Sigma Document Registry \u2014 permanent governance documents with authority tiers, owners, lifecycles, and mandatory-when triggers. Project-specific artifacts (INTENT, PLAN, EXEC, CLOSE) are tracked in progress-v<N>.json, not here.",
   "total_documents": 20,
   "authority_model": {
     "description": "Two separate, non-conflatable authority axes.",
@@ -114,7 +114,7 @@
         "session_bootstrap_arc_role",
         "role_boundary_violation"
       ],
-      "description": "ARC role rule file. Defines ARC responsibilities, permissions, boundaries, and activation protocol. ARC role: interview Director, draft DIR-INTENT. Created in Phase 2.",
+      "description": "ARC role rule file. Defines ARC responsibilities, permissions, boundaries, and activation protocol. ARC role: interview Director, draft INTENT. Created in Phase 2.",
       "tolerate_missing": true,
       "missing_behavior": "Warn on session_bootstrap when ARC role active; do not error on read-only operations."
     },
@@ -144,7 +144,7 @@
         "session_bootstrap_fmn_role",
         "role_boundary_violation"
       ],
-      "description": "FMN role rule file. Defines FMN responsibilities, permissions, and activation protocol. FMN role: work order + test contract (FMN-PLAN), evaluation of DEV results. Created in Phase 2.",
+      "description": "FMN role rule file. Defines FMN responsibilities, permissions, and activation protocol. FMN role: work order + test contract (PLAN), evaluation of DEV results. Created in Phase 2.",
       "tolerate_missing": true,
       "missing_behavior": "Warn on session_bootstrap when FMN role active; do not error on read-only operations."
     },
@@ -159,7 +159,7 @@
         "session_bootstrap_dev_role",
         "role_boundary_violation"
       ],
-      "description": "DEV role rule file. Defines DEV responsibilities, permissions, and activation protocol. DEV role: implementation plan + report (DEV-EXEC), code execution. Created in Phase 2.",
+      "description": "DEV role rule file. Defines DEV responsibilities, permissions, and activation protocol. DEV role: implementation plan + report (EXEC), code execution. Created in Phase 2.",
       "tolerate_missing": true,
       "missing_behavior": "Warn on session_bootstrap when DEV role active; do not error on read-only operations."
     },
@@ -309,12 +309,12 @@
       "location": "Sigma/",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "project-wide, cumulative \u2014 created once by sigma project start; never versioned per DIR-INTENT",
+      "lifecycle": "project-wide, cumulative \u2014 created once by sigma project start; never versioned per INTENT",
       "mandatory_when": [
         "comprehensive_research_needed",
         "artifact_creation"
       ],
-      "description": "Project-wide source index for DIR-INTENT's Comprehensive Research section. Three tables (Local Artifact, Website Link, Online Source Data), each row carrying an ID (LA/WL/OS + sequential number) that DIR-INTENT cites by ID only. Local Artifact rows are synced from Sigma/reference/data/ via sigma reference update, which also auto-assigns the next LA id; Website Link and Online Source Data rows are always manual. Not tracked in progress-v<N>.json \u2014 no lifecycle state, no lock, no gate.",
+      "description": "Project-wide source index for INTENT's Comprehensive Research section. Three tables (Local Artifact, Website Link, Online Source Data), each row carrying an ID (LA/WL/OS + sequential number) that INTENT cites by ID only. Local Artifact rows are synced from Sigma/reference/data/ via sigma reference update, which also auto-assigns the next LA id; Website Link and Online Source Data rows are always manual. Not tracked in progress-v<N>.json \u2014 no lifecycle state, no lock, no gate.",
       "tolerate_missing": true,
       "missing_behavior": "sigma reference update self-heals a missing file by scaffolding it from REFERENCE-LIST-TEMPLATE.md before syncing."
     },
@@ -324,7 +324,7 @@
       "location": "Sigma/",
       "authority_tier": "agent_config",
       "owner": "Director",
-      "lifecycle": "project-wide, cumulative \u2014 written only by sigma notes new / update; never versioned per DIR-INTENT. Source of truth for which Markdown files are registered notes (ID, file name, title, path, creation time). Do not edit by hand.",
+      "lifecycle": "project-wide, cumulative \u2014 written only by sigma notes new / update; never versioned per INTENT. Source of truth for which Markdown files are registered notes (ID, file name, title, path, creation time). Do not edit by hand.",
       "mandatory_when": [],
       "description": "Registry of free-form notes created through sigma notes new. Identity of a note is its registry entry, not its position or content hash. Lives outside Sigma/notes/ because that folder is Markdown-only. Not tracked in progress-v<N>.json \u2014 no lifecycle state, no lock, no gate.",
       "tolerate_missing": true,

@@ -1,4 +1,4 @@
 interface:
   display_name: "Sigma FMN"
-  short_description: "Activate Sigma Foreman — draft FMN-PLAN after DIR-INTENT is locked"
+  short_description: "Activate Sigma Foreman — draft PLAN after INTENT is ratified"
   default_prompt: "Use #fmn to activate the Sigma FMN (Foreman) role."

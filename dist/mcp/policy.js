@@ -44,6 +44,9 @@ exports.OPERATION_TIERS = Object.freeze({
     audit_show: 'Q', decisions_list: 'Q', decisions_target: 'Q',
     intent_clone: 'W1', plan_clone: 'W1', audit_new: 'W1', audit_record: 'W1',
     decisions_add: 'W1', decisions_assess: 'W1', decisions_resolve: 'W3',
+    intent_amendment_preview: 'Q', intent_baseline_check: 'Q', // F05 — read-only
+    inbox_clear: 'W1', memo_clear: 'W1', // F03 — age READ to OUTDATED, files retained
+    intent_lock: 'NA', // removed; tombstone like plan_lock
     // ── W1 (13) ───────────────────────────────────────────────────────────────
     intent_new: 'W1', plan_new: 'W1', exec_new: 'W1', plan_update: 'W1',
     send: 'W1', memo_write: 'W1', memo_read: 'W1', inbox_read: 'W1',
@@ -59,7 +62,10 @@ exports.OPERATION_TIERS = Object.freeze({
     project_start: 'W3', project_sync: 'W3', project_register: 'W3',
     setup_install: 'W3', setup_update: 'W3', setup_uninstall: 'W3',
     override: 'W3', config: 'W3', dev_create_workspace: 'W3',
-    intent_baseline: 'W3', // F05 — CLI only, Director-confirm; not admissible through MCP
+    intent_baseline_adopt: 'W3', // F05 — CLI only, Director-confirm; not admissible through MCP
+    // F18 — registered after the registry caught up with the CLI.
+    config_set_mailbox_outdate_keep: 'W3', config_set_memo_limit: 'W3', // project configuration, CLI only
+    control_show: 'W3', control_approve: 'W3', control_reject: 'W3', // trusted local Director surface, never MCP
 });
 /** Owner role per matrix §3. Derived, NOT ratified — advisory only. */
 exports.OPERATION_OWNER = Object.freeze({

@@ -1,4 +1,4 @@
 interface:
   display_name: "Sigma ARC"
-  short_description: "Activate Sigma Architect — interview Director and draft DIR-INTENT"
+  short_description: "Activate Sigma Architect — interview Director and draft INTENT"
   default_prompt: "Use #arc to activate the Sigma ARC (Architect) role."

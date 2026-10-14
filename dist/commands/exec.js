@@ -35,9 +35,9 @@ function assertExecCheckUnambiguous(chain, explicit) {
 }
 function execCommand() {
     const cmd = new commander_1.Command('exec');
-    cmd.description('Manage DEV-EXEC artifact');
+    cmd.description('Manage EXEC artifact');
     cmd.command('new')
-        .description('Create a new DEV-EXEC draft (requires an eligible APPROVED PLAN, or legacy LOCKED PLAN, with no open exec)')
+        .description('Create a new EXEC draft (requires an eligible APPROVED PLAN, or legacy LOCKED PLAN, with no open exec)')
         .option('--plan <version>', 'Explicit eligible PLAN target (required when multiple unexecuted contracts exist)', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
@@ -64,8 +64,8 @@ function execCommand() {
     });
     (0, approval_1.registerApprovalCommands)(cmd, 'exec');
     cmd.command('check')
-        .description('Validate a DEV-EXEC structure and markers')
-        .option('--v <version>', 'Check a specific DEV-EXEC version. Required when more than one DRAFT is open.', chain_1.normalizeVersionArg)
+        .description('Validate a EXEC structure and markers')
+        .option('--v <version>', 'Check a specific EXEC version. Required when more than one DRAFT is open.', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -84,7 +84,7 @@ function execCommand() {
         }
     });
     cmd.command('status')
-        .description('Show DEV-EXEC chain state: open DRAFTs with plan pairing, LOCKED execs, Gate 3')
+        .description('Show EXEC chain state: open DRAFTs with plan pairing, LOCKED execs, Gate 3')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
@@ -129,7 +129,7 @@ function execCommand() {
         }
     });
     cmd.command('list')
-        .description('List all DEV-EXEC versions')
+        .description('List all EXEC versions')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
