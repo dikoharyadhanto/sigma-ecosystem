@@ -110,15 +110,15 @@ describe('sigma exec new — EXEC version always equals PLAN version (CLI end-to
     // highestExecMinor at 2 here.
     const first = runCli('exec new --plan v1.2', env.projectDir, env.homeDir);
     expect(first.exitCode).toBe(0);
-    expect(first.stdout).toMatch(/DEV-EXEC-v1\.2/);
+    expect(first.stdout).toMatch(/EXEC-v1\.2/);
 
     // Now execute the older plan. Under the old algorithm this produced
     // v1.3 (highestExecMinor=2, +1). Under the new identity rule it must be
     // v1.1 — matching PLAN v1.1 exactly.
     const second = runCli('exec new --plan v1.1', env.projectDir, env.homeDir);
     expect(second.exitCode).toBe(0);
-    expect(second.stdout).toMatch(/DEV-EXEC-v1\.1/);
-    expect(second.stdout).not.toMatch(/DEV-EXEC-v1\.3/);
+    expect(second.stdout).toMatch(/EXEC-v1\.1/);
+    expect(second.stdout).not.toMatch(/EXEC-v1\.3/);
 
     const data = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, unknown>;
     const exec = data.exec as Record<string, unknown>;
@@ -165,7 +165,7 @@ describe('sigma exec new — EXEC version always equals PLAN version (CLI end-to
 
     // Satisfy the AUD verdict gate, then lock it.
     fs.writeFileSync(
-      path.join(env.projectDir, 'Sigma', 'contract', `FMN-PLAN-${newPlanVersion}.md`),
+      path.join(env.projectDir, 'Sigma', 'contract', `PLAN-${newPlanVersion}.md`),
       validPlanDoc(newPlanVersion)
     );
     stubProjectIdentity(env);

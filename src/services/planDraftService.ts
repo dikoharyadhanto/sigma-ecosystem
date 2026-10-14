@@ -16,7 +16,6 @@
 // and stays CLI-only for now (not part of the Stage E W1 primitive list).
 
 import path from 'path';
-import fs from 'fs-extra';
 import { writeChainMetadata } from '../engine/numbering';
 import {
   ChainState,
@@ -32,6 +31,7 @@ import { toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { renderRoadmapFile } from '../utils/roadmap';
 import { controlTestFailpoint } from '../engine/controlStore';
+import { artifactFileName, existingArtifactNames } from '../engine/artifactNames';
 
 export class PlanDraftError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -101,7 +101,7 @@ export function createPlanDraftTransactionFiles(projectRoot: string): string[] {
   const intentVersionRef = chain.intent.version;
   const version = nextPlanVersion(chain, intentVersionRef);
   const files = [
-    path.join(projectRoot, 'Sigma', 'contract', `FMN-PLAN-${version}.md`),
+    path.join(projectRoot, 'Sigma', 'contract', artifactFileName('plan', version)),
     chainFilePath(projectRoot, chainVersion),
   ];
   const roadmapAbsPath = getRoadmapPathIfEligible(projectRoot, chain);
@@ -118,9 +118,11 @@ export function createPlanDraft(input: CreatePlanDraftInput): CreatePlanDraftRes
   const intentVersionRef = assertGatesOpen(projectRoot, chain);
 
   const version = nextPlanVersion(chain, intentVersionRef);
-  const relPath = toPosix(path.join('Sigma', 'contract', `FMN-PLAN-${version}.md`));
+  const relPath = toPosix(path.join('Sigma', 'contract', artifactFileName('plan', version)));
   const absPath = path.join(projectRoot, relPath);
-  if (fs.existsSync(absPath)) throw new PlanDraftError('INVALID_OPERATION', `PLAN FILE CONFLICT: ${relPath} already exists. Refusing to overwrite.`);
+  // Either name form counts (F10): never put a second file beside an existing one.
+  const [existingPlan] = existingArtifactNames(projectRoot, 'plan', 'contract', version);
+  if (existingPlan) throw new PlanDraftError('INVALID_OPERATION', `PLAN FILE CONFLICT: Sigma/contract/${existingPlan} already exists. Refusing to overwrite.`);
 
   // Artifact write first, chain last — same order intentDraftService uses,
   // same rationale (a half-written artifact with no chain entry is an

@@ -19,6 +19,7 @@ const path_1 = __importDefault(require("path"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const chain_1 = require("../engine/chain");
 const roadmap_1 = require("../utils/roadmap");
+const artifactNames_1 = require("../engine/artifactNames");
 class PlanSupersedeError extends Error {
     constructor(code, message) {
         super(message);
@@ -41,7 +42,7 @@ function planDocPath(projectRoot, chain, version) {
     const entry = chain.plan.versions.find(v => v.version === version);
     if (!entry)
         throw new PlanSupersedeError('INVALID_OPERATION', `FMN-PLAN ${version} not found.`);
-    return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'contract', `FMN-PLAN-${entry.version}.md`));
+    return path_1.default.join(projectRoot, entry.file ?? (0, artifactNames_1.defaultArtifactRel)(projectRoot, 'plan', 'contract', entry.version));
 }
 function describePlanSupersedeCascadeEffects(chain, version) {
     const target = chain.plan.versions.find(v => v.version === version);

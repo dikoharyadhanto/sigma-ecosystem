@@ -14,6 +14,7 @@ import {
   assertChainCanMutate,
 } from '../engine/chain';
 import { validateSigmaDocFile, ensureSigmaDocEligible, SigmaDocCheckReport } from '../utils/docCheck';
+import { defaultArtifactRel } from '../engine/artifactNames';
 
 export class ExecLockError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -25,7 +26,7 @@ export class ExecLockError extends Error {
 function execDocPath(projectRoot: string, chain: ChainState, version: string): string {
   const entry = chain.exec.versions.find(v => v.version === version);
   if (!entry) throw new ExecLockError('INVALID_OPERATION', `DEV-EXEC ${version} not found.`);
-  return path.join(projectRoot, entry.file ?? path.join('Sigma', 'evidence', `DEV-EXEC-${entry.version}.md`));
+  return path.join(projectRoot, entry.file ?? defaultArtifactRel(projectRoot, 'exec', 'evidence', entry.version));
 }
 
 /**

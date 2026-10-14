@@ -19,6 +19,7 @@ import {
   chainFilePath,
 } from '../engine/chain';
 import { validateSigmaDocFile, ensureSigmaDocEligible, SigmaDocCheckReport } from '../utils/docCheck';
+import { defaultArtifactRel } from '../engine/artifactNames';
 
 export class CloseLockError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -29,7 +30,7 @@ export class CloseLockError extends Error {
 
 export function closeDocPath(projectRoot: string, chain: ChainState): string {
   if (!chain.close) throw new CloseLockError('INVALID_OPERATION', 'No active DIR-CLOSE found. Run: sigma close new');
-  return path.join(projectRoot, chain.close.file ?? path.join('Sigma', 'close', `DIR-CLOSE-${chain.close.version}.md`));
+  return path.join(projectRoot, chain.close.file ?? defaultArtifactRel(projectRoot, 'close', 'close', chain.close.version));
 }
 
 export interface LockCloseResult {

@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { readChainMetadata, resolveVersioningScheme } from './numbering';
 import { ChainState, ArtifactVersion, readActiveChain, writeChain, chainFilePath, hasCleanGate2Chain, hasCleanGate3Chain, readProjectIdentity } from './chain';
 import { resolveLifecycleModel } from './lifecycle';
+import { candidateFileNames } from './artifactNames';
 import { journaledWrite, assertNoTransactionSymlink, readTicket, readApproval, markTicketConsumed, markApprovalConsumed, OperationTicket, generateId, writeTicket, TICKET_TTL_MS } from './controlStore';
 import { computeStateRevision } from '../mcp/contract';
 import { validateSigmaDocFile, ensureSigmaDocEligible } from '../utils/docCheck';
@@ -40,10 +41,12 @@ export function boundedPath(root: string, relative: string): string {
 }
 export function artifactFile(root: string, chain: ChainState, type: 'intent' | 'plan' | 'exec', version: string): string {
     const entry = type === 'intent' ? chain.intent : chain[type].versions.find(e => e.version === version);
-    const prefixes = { intent: 'DIR-INTENT', plan: 'FMN-PLAN', exec: 'DEV-EXEC' };
     const directories = { intent: ['charter', 'design'], plan: ['contract', 'design'], exec: ['evidence', 'build'] };
     const rel = entry?.file?.replace(/\\/g, '/');
-    if (!rel || !directories[type].some(dir => rel === 'Sigma/' + dir + '/' + prefixes[type] + '-' + version + '.md'))
+    // Directory and version must match the identity; the file name may be the
+    // current form (PLAN-v1.1.md) or the pre-F10 one (FMN-PLAN-v1.1.md).
+    const names = candidateFileNames(type, version);
+    if (!rel || !directories[type].some(dir => names.some(name => rel === 'Sigma/' + dir + '/' + name)))
         throw new Error('Unregistered/cross-identity artifact path: ' + type + ' ' + version);
     const file=boundedPath(root,rel);
     if(fs.existsSync(file)){const metadata=readChainMetadata(file,root);if(metadata&&(metadata.intent!==chain.intent.version || metadata.versioning_scheme!==resolveVersioningScheme(chain) || (type==='exec'?metadata.plan!==version:metadata.plan!==undefined)))throw new Error('SIGMA:CHAIN metadata conflicts with owning artifact identity.');}

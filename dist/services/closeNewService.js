@@ -25,6 +25,7 @@ const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const docCheck_1 = require("../utils/docCheck");
+const artifactNames_1 = require("../engine/artifactNames");
 class CloseNewError extends Error {
     constructor(code, message) {
         super(message);
@@ -34,7 +35,7 @@ class CloseNewError extends Error {
 }
 exports.CloseNewError = CloseNewError;
 function closeDraftRelPath(chain) {
-    return (0, fs_1.toPosix)(path_1.default.join('Sigma', 'close', `DIR-CLOSE-${chain.chain_version}.md`));
+    return (0, fs_1.toPosix)(path_1.default.join('Sigma', 'close', (0, artifactNames_1.artifactFileName)('close', chain.chain_version)));
 }
 /** Re-runs every close_new precondition against a live chain, without
  *  writing anything — used by both prepare (freeze the ticket only if this
@@ -76,6 +77,10 @@ function createCloseDraftUseCase(projectRoot) {
     const version = chain.chain_version;
     const relPath = closeDraftRelPath(chain);
     const absPath = path_1.default.join(projectRoot, relPath);
+    // Either name form counts (F10): never put a second file beside an existing one.
+    const [existingClose] = (0, artifactNames_1.existingArtifactNames)(projectRoot, 'close', 'close', version);
+    if (existingClose)
+        throw new CloseNewError('INVALID_OPERATION', `CLOSE FILE CONFLICT: Sigma/close/${existingClose} already exists.`);
     (0, artifacts_1.copyTemplateToArtifact)('DIR-CLOSE-TEMPLATE.md', absPath);
     try {
         (0, chain_1.registerCloseDraft)(chain, relPath);

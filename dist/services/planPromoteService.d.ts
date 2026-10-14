@@ -6,7 +6,7 @@ export declare class PlanPromoteError extends Error {
 }
 /**
  * Re-derives the one location a pending plan `id` may occupy
- * (`Sigma/pending/FMN-PLAN-<id>.md`) and verifies `trackerFile` both
+ * (`Sigma/pending/PLAN-<id>.md`, or `FMN-PLAN-<id>.md` before F10) and verifies `trackerFile` both
  * declares that exact path and still resolves there after symlinks/
  * junctions are followed — the same posture assertCanonicalLocation() uses
  * for versioned artifacts, applied to the one fixed pending-plan path.

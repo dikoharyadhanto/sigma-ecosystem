@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+### F10 — artifact file names without a role prefix (2026-10-14)
+
+- `intent new`, `plan new`, `exec new`, `close new`, `plan new --pending`, plan promote and F08 clone create `INTENT-vN.md`, `PLAN-vN.M.md`, `EXEC-vN.M.md`, `CLOSE-vN.md` and `pending/PLAN-<id>.md`. ROADMAP names are unchanged.
+- Files created before this change (`DIR-INTENT-`, `FMN-PLAN-`, `DEV-EXEC-`, `DIR-CLOSE-`) keep their names and are never renamed. Reconstruct, MCP artifact reads, chain identity checks, approval, `sigma scan` and mailbox references accept both forms in one place (`src/engine/artifactNames.ts`).
+- A version that exists under both names in the same folder is reported by reconstruct and refused by every create path instead of being resolved silently.
+- `sigma scan` recognizes artifact files by folder as well as name, so `Sigma/revisions/staging/PLAN-v1.1.md`-style names elsewhere are still scanned.
+- Template file names, document type markers and the type names shown in command output are unchanged.
+
 ### F17 — product changelog from the EXEC (2026-10-14)
 
 - DEV-EXEC template schema 4 adds a required `Changelog` section (a flat list, or exactly `No product changes.`). Schemas 3 and earlier validate unchanged and have no changelog to record.

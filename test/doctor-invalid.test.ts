@@ -122,7 +122,7 @@ describe('Sigma doctor and INVALID recovery mode', () => {
     const result = runCli('exec new', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/Created: Sigma[\\/]evidence[\\/]DEV-EXEC-v1\.1\.md/);
+    expect(result.stdout).toMatch(/Created: Sigma[\\/]evidence[\\/]EXEC-v1\.1\.md/);
     const updated = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
     expect(updated.exec.versions).toHaveLength(1);
   });

@@ -23,6 +23,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
 const config_1 = require("../config");
+const artifactNames_1 = require("../engine/artifactNames");
 const binding_1 = require("./binding");
 const contract_1 = require("./contract");
 const errors_1 = require("./errors");
@@ -60,7 +61,7 @@ function candidatesFor(data, type) {
  * read from the tracker — so a rewritten tracker cannot widen it.
  */
 function allowedRelPaths(type, version) {
-    const { dirs, prefix, versionSource } = config_1.ARTIFACT_LAYOUT[type];
+    const { versionSource } = config_1.ARTIFACT_LAYOUT[type];
     // Per-type version shape, matching the engine: v1 for intent/roadmap/close,
     // v1.1 for plan/exec. Anything path-shaped fails here, before it can be
     // pasted into a filename.
@@ -69,8 +70,10 @@ function allowedRelPaths(type, version) {
     }
     // New folder name first, pre-rename name second — both are legitimate
     // locations for the same artifact, and which one a project uses depends only
-    // on when it was created.
-    return dirs.map((dir) => `${config_1.PROJECT_SIGMA_DIR}/${dir}/${prefix}-${version}.md`);
+    // on when it was created. The same holds for the file name (F10): the form
+    // without a role prefix first, the pre-F10 form second.
+    const names = (0, artifactNames_1.candidateFileNames)(type, version);
+    return (0, artifactNames_1.artifactDirs)(type).flatMap((dir) => names.map((name) => `${config_1.PROJECT_SIGMA_DIR}/${dir}/${name}`));
 }
 /**
  * Checks the tracker's own `file` value against the derived path, then checks
@@ -171,7 +174,7 @@ function readCanonicalArtifactFile(root, type, version, trackerFile) {
 /**
  * A pending plan (`sigma plan new --pending`) is not a versioned tracker
  * artifact — it has no ArtifactType/version, only an `id` and a fixed
- * location (`Sigma/pending/FMN-PLAN-<id>.md`, written exclusively by
+ * location (`Sigma/pending/PLAN-<id>.md`, or `FMN-PLAN-<id>.md` before F10, written exclusively by
  * registerPendingPlan()). Used by plan_promote to freeze/verify its content
  * hash with the same boundary posture as readCanonicalArtifactFile(), one
  * fixed path instead of a multi-directory allowlist.
@@ -180,9 +183,10 @@ function assertCanonicalPendingPlanLocation(root, id, trackerFile) {
     if (!/^[a-z0-9]+$/.test(id)) {
         throw new errors_1.McpQueryError(contract_1.ERROR_CODES.INVALID_OPERATION, 'Pending plan id is not a valid token.');
     }
-    const expected = `${config_1.PROJECT_SIGMA_DIR}/pending/FMN-PLAN-${id}.md`;
+    // `PLAN-<id>.md` for pending plans created since F10, `FMN-PLAN-<id>.md` before.
+    const allowed = (0, artifactNames_1.pendingPlanRelCandidates)(id);
     const declared = trackerFile.split('\\').join('/');
-    if (declared !== expected) {
+    if (!allowed.includes(declared)) {
         throw new errors_1.McpQueryError(contract_1.ERROR_CODES.BOUNDARY_VIOLATION, 'Tracker entry does not point at the canonical location for this pending plan id.');
     }
     const abs = path_1.default.resolve(root, declared);

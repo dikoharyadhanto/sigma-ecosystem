@@ -104,7 +104,7 @@ Artifacts are **governance documents** that preserve decisions, evidence, and au
 | `DEV-EXEC` | Execution Evidence | Implementation report and proof |
 | `DIR-CLOSE` | Closure Doc | Final closure decision |
 
-Artifact versions (e.g. `FMN-PLAN-v0.2`) are governance identifiers, not product release versions.
+Artifact versions (e.g. `PLAN-v0.2`) are governance identifiers, not product release versions.
 
 ### Gates
 

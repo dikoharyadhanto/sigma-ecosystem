@@ -5,14 +5,22 @@ import chalk from 'chalk';
 import { findProjectRoot, toPosix } from '../utils/fs';
 import { scanForSigmaTerminology, loadTerminologyList } from '../engine/terminologyScanner';
 import { PROJECT_SIGMA_DIR } from '../config';
+import { classifyArtifactRel } from '../engine/artifactNames';
 
 // Standalone, top-level command: checks source code or any document for
 // Sigma terminology before it's shared outside Sigma. Read-only, never
 // touches gate/lock/chain state.
-const SIGMA_ARTIFACT_PATTERNS = [/^DIR-INTENT-/, /^FMN-PLAN-/, /^DEV-EXEC-/, /^ROADMAP-/, /^DIR-CLOSE-/];
+// Pre-F10 names are specific enough to recognize by name anywhere, as before.
+const LEGACY_ARTIFACT_NAME = /^(?:DIR-INTENT|FMN-PLAN|DEV-EXEC|DIR-CLOSE)-/;
 
-function isSigmaArtifactFile(filename: string): boolean {
-  return SIGMA_ARTIFACT_PATTERNS.some(p => p.test(filename));
+// Names without a role prefix (PLAN-v1.1.md) are generic, and
+// `Sigma/revisions/staging/PLAN-v1.1.md` shares a basename with a real plan, so
+// they are recognized by where they live as well as what they are called (F10).
+function isSigmaArtifactFile(projectRoot: string, absolutePath: string): boolean {
+  if (LEGACY_ARTIFACT_NAME.test(path.basename(absolutePath)) || /^ROADMAP-/.test(path.basename(absolutePath))) return true;
+  const rel = toPosix(path.relative(projectRoot, absolutePath));
+  if (rel.startsWith('..') || path.isAbsolute(rel)) return false;
+  return classifyArtifactRel(rel) !== null;
 }
 
 function timestampSlug(date: Date): string {
@@ -39,11 +47,11 @@ export function scanCommand(): Command {
         }
 
         const filename = path.basename(targetPath);
-        if (isSigmaArtifactFile(filename)) {
+        if (isSigmaArtifactFile(projectRoot, targetPath)) {
           console.log(
             `Skipped: ${filename} is a Sigma artifact file — it is expected to contain Sigma\n` +
-            'terminology by design. `sigma scan` does not apply to DIR-INTENT/FMN-PLAN/DEV-EXEC/\n' +
-            'ROADMAP/DIR-CLOSE source artifacts.'
+            'terminology by design. `sigma scan` does not apply to INTENT/ROADMAP/PLAN/EXEC/CLOSE\n' +
+            'source artifacts (including their pre-F10 DIR-INTENT/FMN-PLAN/DEV-EXEC/DIR-CLOSE names).'
           );
           return;
         }

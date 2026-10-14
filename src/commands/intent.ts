@@ -29,6 +29,7 @@ import { withGovernanceTransaction } from '../engine/governanceTransaction';
 import { inspectIntentGit, previewIntentAmendment, intentGitDrift, IntentGitReport } from '../engine/intentGit';
 import { recordArcScoreUseCase } from '../services/intentScoreService';
 import { supersedeIntentUseCase } from '../services/intentSupersedeService';
+import { defaultArtifactRel } from '../engine/artifactNames';
 
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
 // onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
@@ -53,7 +54,7 @@ function printGitReport(report: IntentGitReport): void {
 }
 
 function intentDocPath(projectRoot: string, chain: ChainState): string {
-  return path.join(projectRoot, chain.intent.file ?? path.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`));
+  return path.join(projectRoot, chain.intent.file ?? defaultArtifactRel(projectRoot, 'intent', 'charter', chain.intent.version));
 }
 
 export function intentCommand(): Command {

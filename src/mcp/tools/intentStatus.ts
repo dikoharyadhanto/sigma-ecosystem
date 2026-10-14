@@ -10,9 +10,10 @@ import path from 'path';
 import { readActiveChain, listChainVersions, isIntentDocUncertified, ChainState } from '../../engine/chain';
 import { SOURCE_ENGINE, noProject } from '../shared';
 import { respond } from '../contract';
+import { defaultArtifactRel } from '../../engine/artifactNames';
 
 function intentDocPath(root: string, chain: ChainState): string {
-  return path.join(root, chain.intent.file ?? path.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`));
+  return path.join(root, chain.intent.file ?? defaultArtifactRel(root, 'intent', 'charter', chain.intent.version));
 }
 
 export function computeIntentStatus(root: string | null): unknown {

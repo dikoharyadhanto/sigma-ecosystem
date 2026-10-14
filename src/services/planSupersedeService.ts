@@ -16,6 +16,7 @@ import {
   chainFilePath,
 } from '../engine/chain';
 import { renderRoadmapFile } from '../utils/roadmap';
+import { defaultArtifactRel } from '../engine/artifactNames';
 
 export class PlanSupersedeError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -39,7 +40,7 @@ export function assertValidPlanSupersedeReason(reason: string): void {
 export function planDocPath(projectRoot: string, chain: ChainState, version: string): string {
   const entry = chain.plan.versions.find(v => v.version === version);
   if (!entry) throw new PlanSupersedeError('INVALID_OPERATION', `FMN-PLAN ${version} not found.`);
-  return path.join(projectRoot, entry.file ?? path.join('Sigma', 'contract', `FMN-PLAN-${entry.version}.md`));
+  return path.join(projectRoot, entry.file ?? defaultArtifactRel(projectRoot, 'plan', 'contract', entry.version));
 }
 
 export function describePlanSupersedeCascadeEffects(chain: ChainState, version: string): string[] {

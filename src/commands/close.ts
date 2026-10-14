@@ -16,6 +16,7 @@ import {
 } from '../utils/docCheck';
 import { createCloseDraftUseCase } from '../services/closeNewService';
 import { lockCloseUseCase } from '../services/closeLockService';
+import { defaultArtifactRel } from '../engine/artifactNames';
 
 // PLAN-EVAL-01 Fase 3 — `close lock` already auto-locks the chain's roadmap
 // as a side effect *before* this migration (see `lockActiveRoadmap` call
@@ -35,7 +36,7 @@ function promptApprove(message: string): Promise<boolean> {
 
 function closeDocPath(projectRoot: string, chain: ChainState): string {
   if (!chain.close) throw new Error('No active DIR-CLOSE found. Run: sigma close new');
-  return path.join(projectRoot, chain.close.file ?? path.join('Sigma', 'close', `DIR-CLOSE-${chain.close.version}.md`));
+  return path.join(projectRoot, chain.close.file ?? defaultArtifactRel(projectRoot, 'close', 'close', chain.close.version));
 }
 
 export function closeCommand(): Command {

@@ -63,7 +63,7 @@ export declare function readCanonicalArtifactFile(root: string, type: ArtifactTy
 /**
  * A pending plan (`sigma plan new --pending`) is not a versioned tracker
  * artifact — it has no ArtifactType/version, only an `id` and a fixed
- * location (`Sigma/pending/FMN-PLAN-<id>.md`, written exclusively by
+ * location (`Sigma/pending/PLAN-<id>.md`, or `FMN-PLAN-<id>.md` before F10, written exclusively by
  * registerPendingPlan()). Used by plan_promote to freeze/verify its content
  * hash with the same boundary posture as readCanonicalArtifactFile(), one
  * fixed path instead of a multi-directory allowlist.

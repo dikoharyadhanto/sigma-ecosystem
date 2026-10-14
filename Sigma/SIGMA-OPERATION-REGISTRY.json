@@ -265,12 +265,12 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create a DIR-INTENT DRAFT from the template. No gate — DIR-INTENT is the first artifact in the Sigma lifecycle. Auto-names the file using the naming convention: design/DIR-INTENT-v{next_version}.md. Sets intent.state = DRAFT in the new chain's progress-v<N>.json.",
+      "description": "Create a DIR-INTENT DRAFT from the template. No gate — DIR-INTENT is the first artifact in the Sigma lifecycle. Auto-names the file using the naming convention: charter/INTENT-v{next_version}.md (before F10: DIR-INTENT-v{next_version}.md). Sets intent.state = DRAFT in the new chain's progress-v<N>.json.",
       "inputs": [],
       "outputs": [
         {
           "type": "file",
-          "description": "Sigma/charter/DIR-INTENT-v{version}.md (DRAFT)"
+          "description": "Sigma/charter/INTENT-v{version}.md (DRAFT)"
         },
         {
           "type": "state_change",
@@ -533,7 +533,7 @@
       "outputs": [
         {
           "type": "file",
-          "description": "Sigma/contract/FMN-PLAN-v{version}.md (DRAFT)"
+          "description": "Sigma/contract/PLAN-v{version}.md (DRAFT)"
         },
         {
           "type": "state_change",
@@ -700,7 +700,7 @@
       "outputs": [
         {
           "type": "file",
-          "description": "Sigma/evidence/DEV-EXEC-{plan_version}.md (DRAFT)"
+          "description": "Sigma/evidence/EXEC-{plan_version}.md (DRAFT)"
         },
         {
           "type": "state_change",
@@ -818,7 +818,7 @@
       "outputs": [
         {
           "type": "file",
-          "description": "Sigma/close/DIR-CLOSE-v{version}.md (DRAFT)"
+          "description": "Sigma/close/CLOSE-v{version}.md (DRAFT)"
         },
         {
           "type": "state_change",
@@ -1528,7 +1528,7 @@
           "name": "--related-artifact",
           "type": "string",
           "required": false,
-          "description": "Artifact this message relates to (e.g. FMN-PLAN-v2, DEV-EXEC-v1; default: N/A)"
+          "description": "Artifact this message relates to (e.g. PLAN-v2, EXEC-v1; default: N/A)"
         },
         {
           "name": "--revision-id",

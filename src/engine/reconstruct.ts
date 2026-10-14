@@ -1,7 +1,8 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { hasCleanGate2Chain, hasCleanGate3Chain } from './chain';
-import { PROJECT_SIGMA_DIR, ARTIFACT_LAYOUT } from '../config';
+import { PROJECT_SIGMA_DIR } from '../config';
+import { artifactDirs, matchArtifactName } from './artifactNames';
 import { toPosix } from '../utils/fs';
 import { ChainMetadata, VersioningScheme, readChainMetadata, resolveVersioningScheme, planMajorForChain } from './numbering';
 import {
@@ -32,7 +33,7 @@ import {
 // this way is left DRAFT and flagged INVALID rather than guessed, matching
 // the existing INVALID-recovery philosophy already used by `sigma doctor`.
 //
-// Each major version found on disk (one DIR-INTENT-vN.md) is evaluated
+// Each major version found on disk (one INTENT-vN.md or DIR-INTENT-vN.md) is evaluated
 // independently — there is no "highest version wins" demotion anymore
 // (unlike the pre-PLAN-EVAL-05 single-ProgressJson algorithm). Under Opsi C,
 // `intent new` may be run at any time regardless of whether the previous
@@ -74,17 +75,9 @@ const DOC_TYPES: Record<Domain, string> = {
   close: 'DIR_CLOSE',
 };
 
-const PATTERNS: Record<Domain, { dirs: string[]; regex: RegExp; docType: string }> = (
-  Object.keys(DOC_TYPES) as Domain[]
-).reduce((acc, domain) => {
-  const { dirs, prefix, versionSource } = ARTIFACT_LAYOUT[domain];
-  acc[domain] = {
-    dirs: [...dirs],
-    regex: new RegExp(`^${prefix}-(${versionSource})\\.md$`),
-    docType: DOC_TYPES[domain],
-  };
-  return acc;
-}, {} as Record<Domain, { dirs: string[]; regex: RegExp; docType: string }>);
+// File names are recognized in both forms (INTENT-v1.md and the pre-F10
+// DIR-INTENT-v1.md) by artifactNames.ts; folders come from ARTIFACT_LAYOUT.
+const DOMAINS = Object.keys(DOC_TYPES) as Domain[];
 
 function readDocType(absPath: string): string | null {
   const head = fs.readFileSync(absPath, 'utf8').slice(0, 200);
@@ -95,25 +88,35 @@ function readDocType(absPath: string): string | null {
 export function discoverArtifacts(projectRoot: string): DiscoveredArtifacts {
   const found: DiscoveredArtifacts = { intent: [], roadmap: [], plan: [], exec: [], close: [], skipped: [] };
 
-  for (const domain of Object.keys(PATTERNS) as Domain[]) {
-    const { dirs, regex, docType } = PATTERNS[domain];
-    for (const dir of dirs) {
+  for (const domain of DOMAINS) {
+    const docType = DOC_TYPES[domain];
+    for (const dir of artifactDirs(domain)) {
       const absDir = path.join(projectRoot, PROJECT_SIGMA_DIR, dir);
       if (!fs.existsSync(absDir)) continue;
 
+      // version → file names, so one version present in both name forms is
+      // reported instead of silently picking either (F10).
+      const byVersion = new Map<string, string[]>();
       for (const filename of fs.readdirSync(absDir)) {
-        const match = filename.match(regex);
+        const match = matchArtifactName(domain, filename);
         if (!match) continue;
+        byVersion.set(match.version, [...(byVersion.get(match.version) ?? []), filename]);
+      }
 
+      for (const [version, filenames] of byVersion) {
+        if (filenames.length > 1) {
+          const files = filenames.map(f => toPosix(path.join(PROJECT_SIGMA_DIR, dir, f)));
+          found.skipped.push(`${files.join(' and ')} (the same version exists under two file names; keep one and remove or rename the other)`);
+          continue;
+        }
+        const filename = filenames[0];
         const relFile = toPosix(path.join(PROJECT_SIGMA_DIR, dir, filename));
-        const absFile = path.join(absDir, filename);
-        const actualType = readDocType(absFile);
+        const actualType = readDocType(path.join(absDir, filename));
         if (actualType !== docType) {
           found.skipped.push(`${relFile} (expected SIGMA:DOC type=${docType}, found "${actualType ?? 'none'}")`);
           continue;
         }
-
-        found[domain].push({ version: match[1], file: relFile });
+        found[domain].push({ version, file: relFile });
       }
     }
   }

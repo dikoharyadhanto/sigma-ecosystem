@@ -50,7 +50,7 @@ const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const roadmap_1 = require("../utils/roadmap");
 const docCheck_1 = require("../utils/docCheck");
-const config_1 = require("../config");
+const artifactNames_1 = require("../engine/artifactNames");
 class PlanPromoteError extends Error {
     constructor(code, message) {
         super(message);
@@ -74,7 +74,7 @@ function canonicalize(p) {
 }
 /**
  * Re-derives the one location a pending plan `id` may occupy
- * (`Sigma/pending/FMN-PLAN-<id>.md`) and verifies `trackerFile` both
+ * (`Sigma/pending/PLAN-<id>.md`, or `FMN-PLAN-<id>.md` before F10) and verifies `trackerFile` both
  * declares that exact path and still resolves there after symlinks/
  * junctions are followed — the same posture assertCanonicalLocation() uses
  * for versioned artifacts, applied to the one fixed pending-plan path.
@@ -82,9 +82,8 @@ function canonicalize(p) {
  * operation it guards (open or move) — see header.
  */
 function assertPendingPlanCanonicalPath(projectRoot, id, trackerFile) {
-    const expected = `${config_1.PROJECT_SIGMA_DIR}/pending/FMN-PLAN-${id}.md`;
     const declared = trackerFile.split('\\').join('/');
-    if (declared !== expected) {
+    if (!(0, artifactNames_1.pendingPlanRelCandidates)(id).includes(declared)) {
         throw new PlanPromoteError('BOUNDARY_VIOLATION', 'Pending plan tracker entry does not point at the canonical location for this id.');
     }
     const abs = path_1.default.resolve(projectRoot, declared);
@@ -156,7 +155,7 @@ function planPromoteTransactionFiles(projectRoot, id) {
     // mutating anything.
     if (pending) {
         const newVersion = (0, chain_1.nextPlanVersion)(chain, chain.intent.version);
-        files.push(path_1.default.join(projectRoot, 'Sigma', 'contract', `FMN-PLAN-${newVersion}.md`));
+        files.push(path_1.default.join(projectRoot, 'Sigma', 'contract', (0, artifactNames_1.artifactFileName)('plan', newVersion)));
     }
     return files;
 }
@@ -186,11 +185,13 @@ function promotePlanUseCase(projectRoot, id, title, focus) {
     const newVersion = (0, chain_1.nextPlanVersion)(chain, chain.intent.version);
     // Re-verified immediately before the move — see header (R-02).
     const oldAbsPath = assertPendingPlanCanonicalPath(projectRoot, id, pending.file);
-    const newRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'contract', `FMN-PLAN-${newVersion}.md`));
+    const newRelPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'contract', (0, artifactNames_1.artifactFileName)('plan', newVersion)));
     const newAbsPath = path_1.default.join(projectRoot, newRelPath);
     (0, chain_1.validatePlanNumbering)(chain, newVersion, chain.intent.version);
-    if (fs_extra_1.default.existsSync(newAbsPath))
-        throw new PlanPromoteError('INVALID_OPERATION', `PLAN FILE CONFLICT: ${newRelPath} already exists.`);
+    // Either name form counts (F10): never put a second file beside an existing one.
+    const [existingPlan] = (0, artifactNames_1.existingArtifactNames)(projectRoot, 'plan', 'contract', newVersion);
+    if (existingPlan)
+        throw new PlanPromoteError('INVALID_OPERATION', `PLAN FILE CONFLICT: Sigma/contract/${existingPlan} already exists.`);
     const promotedContent = (0, numbering_1.withChainMetadata)(fs_extra_1.default.readFileSync(oldAbsPath, 'utf8'), {
         intent: chain.intent.version, versioning_scheme: (0, numbering_1.resolveVersioningScheme)(chain),
     });

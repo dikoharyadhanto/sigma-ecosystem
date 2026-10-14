@@ -85,7 +85,7 @@ describe('control mutation duration versus filesystem lease heartbeat', () => {
     });
     expect(create.isError, JSON.stringify(create.payload)).not.toBe(true);
 
-    const artifactPath = path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v1.md');
+    const artifactPath = path.join(env.projectDir, 'Sigma', 'charter', 'INTENT-v1.md');
     const original = fs.readFileSync(artifactPath);
     const update = await s.call('sigma_update_artifact_draft', {
       type: 'intent', version: 'v1', content: validIntentDoc('v1'),

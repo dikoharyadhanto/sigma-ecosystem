@@ -15,6 +15,7 @@ import { computeStateRevision, ERROR_CODES } from '../../contract';
 import { McpQueryError } from '../../errors';
 import { getBinding } from '../../shared';
 import { respondControlWrite, stableHash } from '../shared';
+import { artifactFileName } from '../../../engine/artifactNames';
 
 export function registerPrepareCloseNewTool(server: McpServer): void {
   server.registerTool(
@@ -68,7 +69,7 @@ export function registerPrepareCloseNewTool(server: McpServer): void {
             target: null,
             expected_state_revision: revision,
             effects: [
-              `Creates Sigma/close/DIR-CLOSE-${chain.chain_version}.md (DRAFT)`,
+              `Creates Sigma/close/${artifactFileName('close', chain.chain_version)} (DRAFT)`,
               'lifecycle_state: BUILD -> CLOSE',
             ],
             authority: 'director',

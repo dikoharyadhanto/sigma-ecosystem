@@ -121,7 +121,7 @@ describe('Path portability — commands persist forward-slash paths on every OS'
     expect(result.exitCode).toBe(0);
 
     const chain = fs.readJsonSync(chainPath(env, 'v1')) as Record<string, any>;
-    expect(chain.intent.file).toBe('Sigma/charter/DIR-INTENT-v1.md');
+    expect(chain.intent.file).toBe('Sigma/charter/INTENT-v1.md');
     expect(chain.intent.file).not.toContain('\\');
   });
 

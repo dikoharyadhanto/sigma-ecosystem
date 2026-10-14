@@ -11,7 +11,6 @@
 // src/commands/exec.ts verbatim, not simplified.
 
 import path from 'path';
-import fs from 'fs-extra';
 import { writeChainMetadata } from '../engine/numbering';
 import {
   ChainState,
@@ -28,6 +27,7 @@ import { assertPlanCertified, assertAllNotices } from '../engine/revisions';
 import { toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { controlTestFailpoint } from '../engine/controlStore';
+import { artifactFileName, existingArtifactNames } from '../engine/artifactNames';
 
 export class ExecDraftError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -86,7 +86,7 @@ function resolveTargetPlan(chain: ChainState, requestedPlanVersion?: string): st
         'INVALID_OPERATION',
         `EXEC CONFLICT: FMN-PLAN ${requestedPlanVersion} already has DEV-EXEC ${openExecForPlan.version} in ${openExecForPlan.state} state.\n` +
         'A plan has at most one execution — continue that DEV-EXEC instead of creating a new one:\n' +
-        `  ${openExecForPlan.file ?? `Sigma/build/DEV-EXEC-${openExecForPlan.version}.md`}\n` +
+        `  ${openExecForPlan.file ?? `Sigma/evidence/${artifactFileName('exec', openExecForPlan.version)}`}\n` +
         `  sigma exec check --v ${openExecForPlan.version}\n` +
         'To abandon it instead, supersede its plan and open a new plan version:\n' +
         `  sigma plan supersede --v ${requestedPlanVersion} --reason "..."`
@@ -124,7 +124,7 @@ export function createExecDraftTransactionFiles(projectRoot: string, planVersion
   const planVersionRef = resolveTargetPlan(chain, planVersion);
   const version = nextExecVersion(chain, planVersionRef);
   return [
-    path.join(projectRoot, 'Sigma', 'evidence', `DEV-EXEC-${version}.md`),
+    path.join(projectRoot, 'Sigma', 'evidence', artifactFileName('exec', version)),
     chainFilePath(projectRoot, chainVersion),
   ];
 }
@@ -139,7 +139,7 @@ export function createExecDraft(input: CreateExecDraftInput): CreateExecDraftRes
 
   if (resolveLifecycleModel(chain) === 'paired_approval') assertAllNotices(projectRoot,assertPlanCertified(projectRoot,chain,planVersionRef));
   const version = nextExecVersion(chain, planVersionRef);
-  const relPath = toPosix(path.join('Sigma', 'evidence', `DEV-EXEC-${version}.md`));
+  const relPath = toPosix(path.join('Sigma', 'evidence', artifactFileName('exec', version)));
   const absPath = path.join(projectRoot, relPath);
 
   // Defensive checks ported from the CLI command — registerExecDraft() would
@@ -149,8 +149,10 @@ export function createExecDraft(input: CreateExecDraftInput): CreateExecDraftRes
   if (chain.exec.versions.some(v => v.version === version)) {
     throw new ExecDraftError('INVALID_OPERATION', `EXEC CONFLICT: DEV-EXEC ${version} already exists in progress-${chainVersion}.json`);
   }
-  if (fs.existsSync(absPath)) {
-    throw new ExecDraftError('INVALID_OPERATION', `EXEC FILE CONFLICT: ${relPath} already exists. Refusing to overwrite existing DEV-EXEC artifact.`);
+  // Either name form counts (F10): never put a second file beside an existing one.
+  const [existingExec] = existingArtifactNames(projectRoot, 'exec', 'evidence', version);
+  if (existingExec) {
+    throw new ExecDraftError('INVALID_OPERATION', `EXEC FILE CONFLICT: Sigma/evidence/${existingExec} already exists. Refusing to overwrite existing DEV-EXEC artifact.`);
   }
 
   copyTemplateToArtifact('DEV-EXEC-TEMPLATE.md', absPath);

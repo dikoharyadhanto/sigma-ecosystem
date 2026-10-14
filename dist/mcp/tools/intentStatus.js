@@ -15,8 +15,9 @@ const path_1 = __importDefault(require("path"));
 const chain_1 = require("../../engine/chain");
 const shared_1 = require("../shared");
 const contract_1 = require("../contract");
+const artifactNames_1 = require("../../engine/artifactNames");
 function intentDocPath(root, chain) {
-    return path_1.default.join(root, chain.intent.file ?? path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`));
+    return path_1.default.join(root, chain.intent.file ?? (0, artifactNames_1.defaultArtifactRel)(root, 'intent', 'charter', chain.intent.version));
 }
 function computeIntentStatus(root) {
     if (!root)

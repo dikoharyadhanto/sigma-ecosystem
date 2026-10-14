@@ -1,7 +1,8 @@
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
-import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, OVERRIDES_FILE, SCHEMA_VERSION, ARTIFACT_LAYOUT } from '../config';
+import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, OVERRIDES_FILE, SCHEMA_VERSION } from '../config';
+import { matchArtifactRel } from './artifactNames';
 import { journaledWriteIfActive } from './controlStore';
 import { LifecycleModel, resolveLifecycleModel, approvedPlanCurrent, assertKnownLifecycle } from './lifecycle';
 import { atomicReplaceFileSync } from '../utils/fs';
@@ -560,11 +561,11 @@ export function readChain(projectRoot: string, chainVersion: string): ChainState
   ];
   for (const { domain, entry } of artifacts) {
     if (!entry.file || !fs.existsSync(path.join(projectRoot, entry.file))) continue;
-    const layout = ARTIFACT_LAYOUT[domain];
     const declared = entry.file.replace(/\\/g, '/');
     // Do not open arbitrary tracker paths before the caller's artifact-boundary
-    // validation. Metadata is inspected only at a recognized artifact location.
-    if (!layout.dirs.some(dir => new RegExp(`^${PROJECT_SIGMA_DIR}/${dir}/${layout.prefix}-${layout.versionSource}\\.md$`).test(declared))) continue;
+    // validation. Metadata is inspected only at a recognized artifact location,
+    // under either file name form (F10).
+    if (matchArtifactRel(domain, declared) === null) continue;
     const metadata = readChainMetadata(path.join(projectRoot, entry.file), projectRoot);
     if (metadata && (metadata.intent !== chain.intent.version || metadata.versioning_scheme !== scheme ||
       ('plan_version_ref' in entry && metadata.plan !== entry.plan_version_ref))) {

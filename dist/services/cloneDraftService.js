@@ -19,6 +19,7 @@ const docCheck_1 = require("../utils/docCheck");
 const contract_1 = require("../mcp/contract");
 const sourceReviewService_1 = require("./sourceReviewService");
 const f08Store_1 = require("./f08Store");
+const artifactNames_1 = require("../engine/artifactNames");
 const CONTRACT_SECTIONS = {
     intent: new Set(['PURPOSE_AND_PROBLEM', 'DESIRED_OUTCOME_AND_MEASUREMENT', 'SCOPE', 'QUALITY_STANDARDS',
         'PRIORITIES_AND_CONSTRAINTS', 'ASSUMPTIONS_AND_RISKS', 'FUNCTIONAL_REQUIREMENTS', 'RESEARCH']),
@@ -79,8 +80,10 @@ function previewClone(input) {
         content = content.replace('INTENT-v{X}', 'INTENT-' + active.data.intent.version);
     content = (0, numbering_1.withChainMetadata)(content, { intent: targetChain,
         versioning_scheme: type === 'intent' ? 'intent_aligned' : (0, numbering_1.resolveVersioningScheme)(active.data) });
-    const targetPath = 'Sigma/' + (type === 'intent' ? 'charter/DIR-INTENT-' : 'contract/FMN-PLAN-') + targetVersion + '.md';
-    if (fs_extra_1.default.existsSync(path_1.default.join(root, targetPath)))
+    const targetDir = type === 'intent' ? 'charter' : 'contract';
+    const targetPath = 'Sigma/' + targetDir + '/' + (0, artifactNames_1.artifactFileName)(type, targetVersion);
+    // Either name form counts (F10).
+    if (fs_extra_1.default.existsSync(path_1.default.join(root, targetPath)) || (0, artifactNames_1.existingArtifactNames)(root, type, targetDir, targetVersion).length > 0)
         throw new Error('Clone destination already exists.');
     const reset = templateSections.filter(s => !allowed.has(s.id)).map(s => s.id);
     const binding = {

@@ -554,7 +554,7 @@ describe('sigma_prepare_close_new / sigma_commit_close_new', () => {
     const chainAfter = readChain(env.projectDir, 'v1');
     expect(chainAfter.close?.state).toBe('DRAFT');
     expect(chainAfter.lifecycle_state).toBe('CLOSE');
-    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md'))).toBe(true);
+    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'close', 'CLOSE-v1.md'))).toBe(true);
     await s.close();
     env.cleanup();
   });

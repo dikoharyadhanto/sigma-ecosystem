@@ -34,6 +34,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const numbering_1 = require("./numbering");
 const chain_1 = require("./chain");
 const lifecycle_1 = require("./lifecycle");
+const artifactNames_1 = require("./artifactNames");
 const controlStore_1 = require("./controlStore");
 const contract_1 = require("../mcp/contract");
 const docCheck_1 = require("../utils/docCheck");
@@ -70,10 +71,12 @@ function boundedPath(root, relative) {
 }
 function artifactFile(root, chain, type, version) {
     const entry = type === 'intent' ? chain.intent : chain[type].versions.find(e => e.version === version);
-    const prefixes = { intent: 'DIR-INTENT', plan: 'FMN-PLAN', exec: 'DEV-EXEC' };
     const directories = { intent: ['charter', 'design'], plan: ['contract', 'design'], exec: ['evidence', 'build'] };
     const rel = entry?.file?.replace(/\\/g, '/');
-    if (!rel || !directories[type].some(dir => rel === 'Sigma/' + dir + '/' + prefixes[type] + '-' + version + '.md'))
+    // Directory and version must match the identity; the file name may be the
+    // current form (PLAN-v1.1.md) or the pre-F10 one (FMN-PLAN-v1.1.md).
+    const names = (0, artifactNames_1.candidateFileNames)(type, version);
+    if (!rel || !directories[type].some(dir => names.some(name => rel === 'Sigma/' + dir + '/' + name)))
         throw new Error('Unregistered/cross-identity artifact path: ' + type + ' ' + version);
     const file = boundedPath(root, rel);
     if (fs_extra_1.default.existsSync(file)) {

@@ -19,6 +19,7 @@ const lifecycle_1 = require("../engine/lifecycle");
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const docCheck_1 = require("../utils/docCheck");
+const artifactNames_1 = require("../engine/artifactNames");
 class CloseLockError extends Error {
     constructor(code, message) {
         super(message);
@@ -30,7 +31,7 @@ exports.CloseLockError = CloseLockError;
 function closeDocPath(projectRoot, chain) {
     if (!chain.close)
         throw new CloseLockError('INVALID_OPERATION', 'No active DIR-CLOSE found. Run: sigma close new');
-    return path_1.default.join(projectRoot, chain.close.file ?? path_1.default.join('Sigma', 'close', `DIR-CLOSE-${chain.close.version}.md`));
+    return path_1.default.join(projectRoot, chain.close.file ?? (0, artifactNames_1.defaultArtifactRel)(projectRoot, 'close', 'close', chain.close.version));
 }
 function closeLockTransactionFiles(projectRoot) {
     const { chainVersion } = (0, chain_1.readActiveChain)(projectRoot);

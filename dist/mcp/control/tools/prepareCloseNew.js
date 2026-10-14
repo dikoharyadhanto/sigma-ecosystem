@@ -16,6 +16,7 @@ const contract_1 = require("../../contract");
 const errors_1 = require("../../errors");
 const shared_1 = require("../../shared");
 const shared_2 = require("../shared");
+const artifactNames_1 = require("../../../engine/artifactNames");
 function registerPrepareCloseNewTool(server) {
     server.registerTool('sigma_prepare_close_new', {
         title: 'Prepare a close-new operation ticket',
@@ -60,7 +61,7 @@ function registerPrepareCloseNewTool(server) {
                 target: null,
                 expected_state_revision: revision,
                 effects: [
-                    `Creates Sigma/close/DIR-CLOSE-${chain.chain_version}.md (DRAFT)`,
+                    `Creates Sigma/close/${(0, artifactNames_1.artifactFileName)('close', chain.chain_version)} (DRAFT)`,
                     'lifecycle_state: BUILD -> CLOSE',
                 ],
                 authority: 'director',

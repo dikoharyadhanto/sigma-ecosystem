@@ -127,14 +127,14 @@ describe('Folder rename — new projects use the new folder names by default', (
     expect(fs.existsSync(path.join(env.sigmaDir, 'build'))).toBe(false);
   });
 
-  it('intent new writes DIR-INTENT under Sigma/charter/, not Sigma/design/', () => {
+  it('intent new writes INTENT under Sigma/charter/, not Sigma/design/', () => {
     env = setupTestEnv();
     fs.removeSync(env.sigmaDir);
     runCli('project start --id RENAMETEST --name "Rename Test" --confirm', env.projectDir, env.homeDir);
 
     const result = runCli('intent new --title "T" --focus "F"', env.projectDir, env.homeDir);
 
-    expect(result.stdout).toMatch(/Created: Sigma[/\\]charter[/\\]DIR-INTENT-v1\.md/);
-    expect(fs.existsSync(path.join(env.sigmaDir, 'charter', 'DIR-INTENT-v1.md'))).toBe(true);
+    expect(result.stdout).toMatch(/Created: Sigma[/\\]charter[/\\]INTENT-v1\.md/);
+    expect(fs.existsSync(path.join(env.sigmaDir, 'charter', 'INTENT-v1.md'))).toBe(true);
   });
 });

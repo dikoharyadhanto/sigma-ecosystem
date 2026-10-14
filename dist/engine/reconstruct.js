@@ -11,6 +11,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("./chain");
 const config_1 = require("../config");
+const artifactNames_1 = require("./artifactNames");
 const fs_1 = require("../utils/fs");
 const numbering_1 = require("./numbering");
 const chain_2 = require("./chain");
@@ -31,15 +32,9 @@ const DOC_TYPES = {
     exec: 'DEV_EXEC',
     close: 'DIR_CLOSE',
 };
-const PATTERNS = Object.keys(DOC_TYPES).reduce((acc, domain) => {
-    const { dirs, prefix, versionSource } = config_1.ARTIFACT_LAYOUT[domain];
-    acc[domain] = {
-        dirs: [...dirs],
-        regex: new RegExp(`^${prefix}-(${versionSource})\\.md$`),
-        docType: DOC_TYPES[domain],
-    };
-    return acc;
-}, {});
+// File names are recognized in both forms (INTENT-v1.md and the pre-F10
+// DIR-INTENT-v1.md) by artifactNames.ts; folders come from ARTIFACT_LAYOUT.
+const DOMAINS = Object.keys(DOC_TYPES);
 function readDocType(absPath) {
     const head = fs_extra_1.default.readFileSync(absPath, 'utf8').slice(0, 200);
     const match = head.match(/<!--\s*SIGMA:DOC\s+type=(\S+)/);
@@ -47,24 +42,35 @@ function readDocType(absPath) {
 }
 function discoverArtifacts(projectRoot) {
     const found = { intent: [], roadmap: [], plan: [], exec: [], close: [], skipped: [] };
-    for (const domain of Object.keys(PATTERNS)) {
-        const { dirs, regex, docType } = PATTERNS[domain];
-        for (const dir of dirs) {
+    for (const domain of DOMAINS) {
+        const docType = DOC_TYPES[domain];
+        for (const dir of (0, artifactNames_1.artifactDirs)(domain)) {
             const absDir = path_1.default.join(projectRoot, config_1.PROJECT_SIGMA_DIR, dir);
             if (!fs_extra_1.default.existsSync(absDir))
                 continue;
+            // version → file names, so one version present in both name forms is
+            // reported instead of silently picking either (F10).
+            const byVersion = new Map();
             for (const filename of fs_extra_1.default.readdirSync(absDir)) {
-                const match = filename.match(regex);
+                const match = (0, artifactNames_1.matchArtifactName)(domain, filename);
                 if (!match)
                     continue;
+                byVersion.set(match.version, [...(byVersion.get(match.version) ?? []), filename]);
+            }
+            for (const [version, filenames] of byVersion) {
+                if (filenames.length > 1) {
+                    const files = filenames.map(f => (0, fs_1.toPosix)(path_1.default.join(config_1.PROJECT_SIGMA_DIR, dir, f)));
+                    found.skipped.push(`${files.join(' and ')} (the same version exists under two file names; keep one and remove or rename the other)`);
+                    continue;
+                }
+                const filename = filenames[0];
                 const relFile = (0, fs_1.toPosix)(path_1.default.join(config_1.PROJECT_SIGMA_DIR, dir, filename));
-                const absFile = path_1.default.join(absDir, filename);
-                const actualType = readDocType(absFile);
+                const actualType = readDocType(path_1.default.join(absDir, filename));
                 if (actualType !== docType) {
                     found.skipped.push(`${relFile} (expected SIGMA:DOC type=${docType}, found "${actualType ?? 'none'}")`);
                     continue;
                 }
-                found[domain].push({ version: match[1], file: relFile });
+                found[domain].push({ version, file: relFile });
             }
         }
     }

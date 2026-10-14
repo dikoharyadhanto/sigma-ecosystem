@@ -31,6 +31,12 @@ export declare const SUBFOLDERS: string[];
  * entry.file (reviewer finding R-10). CLI and MCP disagreeing about what a
  * project *is* trips the stop criterion in plan §22, so both now read this.
  *
+ * F10 — `prefix` is the name given to every NEW artifact file (no role prefix:
+ * INTENT-v1.md, PLAN-v1.1.md, EXEC-v1.1.md, CLOSE-v1.md). `legacyPrefix` is the
+ * pre-F10 name; files with it are never renamed and must keep being accepted.
+ * Nothing should read `prefix` directly: use src/engine/artifactNames.ts, which
+ * builds new names and recognizes both forms in one place.
+ *
  * `versionSource` is regex source, not a RegExp, because consumers embed it
  * differently: reconstruct captures the version out of a filename, the MCP
  * reader validates a version token it was handed. Sharing a mutable RegExp
@@ -39,27 +45,32 @@ export declare const SUBFOLDERS: string[];
 export declare const ARTIFACT_LAYOUT: {
     readonly intent: {
         readonly dirs: readonly ["charter", "design"];
-        readonly prefix: "DIR-INTENT";
+        readonly prefix: "INTENT";
+        readonly legacyPrefix: "DIR-INTENT";
         readonly versionSource: "v\\d+";
     };
     readonly roadmap: {
         readonly dirs: readonly ["roadmap", "build"];
         readonly prefix: "ROADMAP";
+        readonly legacyPrefix: "ROADMAP";
         readonly versionSource: "v\\d+";
     };
     readonly plan: {
         readonly dirs: readonly ["contract", "build"];
-        readonly prefix: "FMN-PLAN";
+        readonly prefix: "PLAN";
+        readonly legacyPrefix: "FMN-PLAN";
         readonly versionSource: "v\\d+\\.\\d+";
     };
     readonly exec: {
         readonly dirs: readonly ["evidence", "build"];
-        readonly prefix: "DEV-EXEC";
+        readonly prefix: "EXEC";
+        readonly legacyPrefix: "DEV-EXEC";
         readonly versionSource: "v\\d+\\.\\d+";
     };
     readonly close: {
         readonly dirs: readonly ["close"];
-        readonly prefix: "DIR-CLOSE";
+        readonly prefix: "CLOSE";
+        readonly legacyPrefix: "DIR-CLOSE";
         readonly versionSource: "v\\d+";
     };
 };

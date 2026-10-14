@@ -12,13 +12,14 @@ const fs_1 = require("../utils/fs");
 const docCheck_1 = require("../utils/docCheck");
 const execDraftService_1 = require("../services/execDraftService");
 const approval_1 = require("./approval");
+const artifactNames_1 = require("../engine/artifactNames");
 function execDocPath(projectRoot, chain, version) {
     const entry = version
         ? chain.exec.versions.find(v => v.version === version)
         : chain.exec.versions.find(v => v.version === chain.exec.active_version);
     if (!entry)
         throw new Error(version ? `DEV-EXEC ${version} not found.` : 'No active DEV-EXEC found. Run: sigma exec new');
-    return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'evidence', `DEV-EXEC-${entry.version}.md`));
+    return path_1.default.join(projectRoot, entry.file ?? (0, artifactNames_1.defaultArtifactRel)(projectRoot, 'exec', 'evidence', entry.version));
 }
 // PLAN-IMPL-MULTIDRAFT-LOCK §8.3 (Director directive 2026-08-12) — same
 // ambiguity rule as plan.ts's assertPlanCheckUnambiguous(): `check` defaults

@@ -74,17 +74,23 @@ exports.SUBFOLDERS = ['charter', 'contract', 'roadmap', 'evidence', 'close', 'no
  * entry.file (reviewer finding R-10). CLI and MCP disagreeing about what a
  * project *is* trips the stop criterion in plan §22, so both now read this.
  *
+ * F10 — `prefix` is the name given to every NEW artifact file (no role prefix:
+ * INTENT-v1.md, PLAN-v1.1.md, EXEC-v1.1.md, CLOSE-v1.md). `legacyPrefix` is the
+ * pre-F10 name; files with it are never renamed and must keep being accepted.
+ * Nothing should read `prefix` directly: use src/engine/artifactNames.ts, which
+ * builds new names and recognizes both forms in one place.
+ *
  * `versionSource` is regex source, not a RegExp, because consumers embed it
  * differently: reconstruct captures the version out of a filename, the MCP
  * reader validates a version token it was handed. Sharing a mutable RegExp
  * would also share its lastIndex.
  */
 exports.ARTIFACT_LAYOUT = {
-    intent: { dirs: ['charter', 'design'], prefix: 'DIR-INTENT', versionSource: 'v\\d+' },
-    roadmap: { dirs: ['roadmap', 'build'], prefix: 'ROADMAP', versionSource: 'v\\d+' },
-    plan: { dirs: ['contract', 'build'], prefix: 'FMN-PLAN', versionSource: 'v\\d+\\.\\d+' },
-    exec: { dirs: ['evidence', 'build'], prefix: 'DEV-EXEC', versionSource: 'v\\d+\\.\\d+' },
-    close: { dirs: ['close'], prefix: 'DIR-CLOSE', versionSource: 'v\\d+' },
+    intent: { dirs: ['charter', 'design'], prefix: 'INTENT', legacyPrefix: 'DIR-INTENT', versionSource: 'v\\d+' },
+    roadmap: { dirs: ['roadmap', 'build'], prefix: 'ROADMAP', legacyPrefix: 'ROADMAP', versionSource: 'v\\d+' },
+    plan: { dirs: ['contract', 'build'], prefix: 'PLAN', legacyPrefix: 'FMN-PLAN', versionSource: 'v\\d+\\.\\d+' },
+    exec: { dirs: ['evidence', 'build'], prefix: 'EXEC', legacyPrefix: 'DEV-EXEC', versionSource: 'v\\d+\\.\\d+' },
+    close: { dirs: ['close'], prefix: 'CLOSE', legacyPrefix: 'DIR-CLOSE', versionSource: 'v\\d+' },
 };
 exports.MESSAGES_DIR = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'messages');
 exports.MESSAGES_INDEX_FILE = path_1.default.join(exports.MESSAGES_DIR, 'index.json');

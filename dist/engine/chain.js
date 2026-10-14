@@ -65,6 +65,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
 const config_1 = require("../config");
+const artifactNames_1 = require("./artifactNames");
 const controlStore_1 = require("./controlStore");
 const lifecycle_1 = require("./lifecycle");
 const fs_1 = require("../utils/fs");
@@ -330,11 +331,11 @@ function readChain(projectRoot, chainVersion) {
     for (const { domain, entry } of artifacts) {
         if (!entry.file || !fs_extra_1.default.existsSync(path_1.default.join(projectRoot, entry.file)))
             continue;
-        const layout = config_1.ARTIFACT_LAYOUT[domain];
         const declared = entry.file.replace(/\\/g, '/');
         // Do not open arbitrary tracker paths before the caller's artifact-boundary
-        // validation. Metadata is inspected only at a recognized artifact location.
-        if (!layout.dirs.some(dir => new RegExp(`^${config_1.PROJECT_SIGMA_DIR}/${dir}/${layout.prefix}-${layout.versionSource}\\.md$`).test(declared)))
+        // validation. Metadata is inspected only at a recognized artifact location,
+        // under either file name form (F10).
+        if ((0, artifactNames_1.matchArtifactRel)(domain, declared) === null)
             continue;
         const metadata = (0, numbering_1.readChainMetadata)(path_1.default.join(projectRoot, entry.file), projectRoot);
         if (metadata && (metadata.intent !== chain.intent.version || metadata.versioning_scheme !== scheme ||

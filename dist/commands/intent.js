@@ -20,6 +20,7 @@ const governanceTransaction_1 = require("../engine/governanceTransaction");
 const intentGit_1 = require("../engine/intentGit");
 const intentScoreService_1 = require("../services/intentScoreService");
 const intentSupersedeService_1 = require("../services/intentSupersedeService");
+const artifactNames_1 = require("../engine/artifactNames");
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
 // onto chain.ts. `--v <version>` on `check`/`supersede` now selects a CHAIN
 // (a different progress-v<N>.json), not an array entry within one file —
@@ -40,7 +41,7 @@ function printGitReport(report) {
     }
 }
 function intentDocPath(projectRoot, chain) {
-    return path_1.default.join(projectRoot, chain.intent.file ?? path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`));
+    return path_1.default.join(projectRoot, chain.intent.file ?? (0, artifactNames_1.defaultArtifactRel)(projectRoot, 'intent', 'charter', chain.intent.version));
 }
 function intentCommand() {
     const cmd = new commander_1.Command('intent');

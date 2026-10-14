@@ -463,15 +463,17 @@ Gate 3.5 is deliberately narrower than Gate 1/1.5/2/3: it gates only `close new`
 
 | Folder | Phase | Artifacts |
 | :--- | :--- | :--- |
-| `Sigma/charter/` | DESIGN | `DIR-INTENT-v{VER}.md` |
-| `Sigma/contract/` | BUILD | `FMN-PLAN-v{VER}.md` |
+| `Sigma/charter/` | DESIGN | `INTENT-v{VER}.md` (before F10: `DIR-INTENT-v{VER}.md`) |
+| `Sigma/contract/` | BUILD | `PLAN-v{VER}.md` (before F10: `FMN-PLAN-v{VER}.md`) |
 | `Sigma/roadmap/` | BUILD | `ROADMAP-v{VER}.md` |
-| `Sigma/evidence/` | BUILD | `DEV-EXEC-v{VER}.md` |
-| `Sigma/close/` | CLOSE | `DIR-CLOSE-v{VER}.md` |
+| `Sigma/evidence/` | BUILD | `EXEC-v{VER}.md` (before F10: `DEV-EXEC-v{VER}.md`) |
+| `Sigma/close/` | CLOSE | `CLOSE-v{VER}.md` (before F10: `DIR-CLOSE-v{VER}.md`) |
 | `Sigma/notes/` | Any phase | Free-form notes |
 | `Sigma/rules/` | All phases (reference) | `ARC-RULE.md`, `AUD-RULE.md`, `FMN-RULE.md`, `DEV-RULE.md` |
 | `Sigma/logs/` | Any phase | Progress backups, migration logs |
 | `Sigma/reference/` | Any phase (project-wide, cumulative) | `reference-list.md`, `data/` (local research artifacts) |
+
+New artifacts are created without a role prefix (`INTENT-`, `PLAN-`, `EXEC-`, `CLOSE-`). Artifacts created earlier keep their names and are never renamed; every Sigma operation accepts both forms. A version must not exist under both names in the same folder.
 
 Existing projects created before this mapping keep working unchanged: every command resolves stored `entry.file` paths first, falling back to folder-derived defaults only when unset — old projects are never force-migrated to the new folder names.
 

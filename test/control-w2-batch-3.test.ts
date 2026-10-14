@@ -177,7 +177,7 @@ describe('sigma_prepare_plan_promote / sigma_commit_plan_promote', () => {
     const chainAfter = readChain(env.projectDir, 'v1');
     expect(chainAfter.plan.pending).toHaveLength(0);
     expect(chainAfter.plan.versions).toHaveLength(1);
-    const promotedFile = `Sigma/contract/FMN-PLAN-${expectedVersion}.md`;
+    const promotedFile = `Sigma/contract/PLAN-${expectedVersion}.md`;
     expect(chainAfter.plan.versions[0]).toMatchObject({ version: expectedVersion, state: 'DRAFT', file: promotedFile });
     expect(parseChainMetadata(fs.readFileSync(path.join(env.projectDir, promotedFile), 'utf8'))).toEqual({ intent: 'v1', versioning_scheme: scheme });
     expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'pending', 'FMN-PLAN-ab12.md'))).toBe(false);
@@ -331,7 +331,7 @@ describe('sigma_commit_plan_promote — rollback proves the rename itself is rev
     projectWithPendingPlan(env);
     setControlBinding(env.projectDir, 'FMN');
     const pendingPath = path.join(env.projectDir, 'Sigma', 'pending', 'FMN-PLAN-ab12.md');
-    const destPath = path.join(env.projectDir, 'Sigma', 'contract', 'FMN-PLAN-v0.1.md');
+    const destPath = path.join(env.projectDir, 'Sigma', 'contract', 'PLAN-v0.1.md');
     const originalContent = fs.readFileSync(pendingPath, 'utf8');
 
     const crashingOpts = {

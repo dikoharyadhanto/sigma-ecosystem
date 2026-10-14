@@ -14,6 +14,7 @@ exports.lockExecDraftUseCase = lockExecDraftUseCase;
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const docCheck_1 = require("../utils/docCheck");
+const artifactNames_1 = require("../engine/artifactNames");
 class ExecLockError extends Error {
     constructor(code, message) {
         super(message);
@@ -26,7 +27,7 @@ function execDocPath(projectRoot, chain, version) {
     const entry = chain.exec.versions.find(v => v.version === version);
     if (!entry)
         throw new ExecLockError('INVALID_OPERATION', `DEV-EXEC ${version} not found.`);
-    return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'evidence', `DEV-EXEC-${entry.version}.md`));
+    return path_1.default.join(projectRoot, entry.file ?? (0, artifactNames_1.defaultArtifactRel)(projectRoot, 'exec', 'evidence', entry.version));
 }
 /**
  * Resolves which DRAFT DEV-EXEC version a lock should target, mirroring the

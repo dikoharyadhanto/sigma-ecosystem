@@ -17,6 +17,7 @@ import {
 import { validateSigmaDocFile, ensureSigmaDocEligible, SigmaDocCheckReport } from '../utils/docCheck';
 import { intentHistoryPath, renderIntentHistoryFile } from '../utils/intentHistory';
 import { controlTestFailpoint } from '../engine/controlStore';
+import { defaultArtifactRel } from '../engine/artifactNames';
 
 export class IntentRatifyError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -26,7 +27,7 @@ export class IntentRatifyError extends Error {
 }
 
 function intentDocPath(projectRoot: string, chain: ChainState): string {
-  return path.join(projectRoot, chain.intent.file ?? path.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`));
+  return path.join(projectRoot, chain.intent.file ?? defaultArtifactRel(projectRoot, 'intent', 'charter', chain.intent.version));
 }
 
 export interface RatifyIntentDraftResult {

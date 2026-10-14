@@ -19,6 +19,7 @@ const planDraftService_1 = require("../services/planDraftService");
 const approval_1 = require("./approval");
 const planSupersedeService_1 = require("../services/planSupersedeService");
 const planPromoteService_1 = require("../services/planPromoteService");
+const artifactNames_1 = require("../engine/artifactNames");
 function generatePendingId() {
     return Math.random().toString(36).slice(2, 6).toLowerCase();
 }
@@ -49,7 +50,7 @@ function planDocPath(projectRoot, chain, version) {
             : chain.plan.versions.find(v => v.version === chain.plan.active_version);
     if (!entry)
         throw new Error(version ? `FMN-PLAN ${version} not found.` : 'No active FMN-PLAN found. Run: sigma plan new');
-    return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'contract', `FMN-PLAN-${entry.version}.md`));
+    return path_1.default.join(projectRoot, entry.file ?? (0, artifactNames_1.defaultArtifactRel)(projectRoot, 'plan', 'contract', entry.version));
 }
 // Check selects the sole DRAFT/APPROVED contract; multiple open contracts require --v.
 function assertPlanCheckUnambiguous(chain, explicit) {
@@ -79,7 +80,7 @@ function planCommand() {
             if (opts.pending) {
                 // Pending plan: no gate requirement, no version
                 const id = generatePendingId();
-                const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'pending', `FMN-PLAN-${id}.md`));
+                const relPath = (0, artifactNames_1.pendingPlanRel)(id);
                 const absPath = path_1.default.join(projectRoot, relPath);
                 fs_extra_1.default.ensureDirSync(path_1.default.dirname(absPath));
                 (0, artifacts_1.copyTemplateToArtifact)('FMN-PLAN-TEMPLATE.md', absPath);

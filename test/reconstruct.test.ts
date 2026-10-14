@@ -111,7 +111,7 @@ describe('sigma doctor --reconstruct', () => {
     const result = runCli('doctor --reconstruct --v v1', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/No DIR-INTENT-v1\.md found on disk/);
+    expect(result.stderr).toMatch(/No INTENT-v1\.md \(or DIR-INTENT-v1\.md\) found on disk/);
   });
 
   it('--all-versions reconstructs every major version found on disk in one run', () => {

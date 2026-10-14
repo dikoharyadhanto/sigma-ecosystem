@@ -23,13 +23,13 @@ exports.PlanDraftError = void 0;
 exports.createPlanDraftTransactionFiles = createPlanDraftTransactionFiles;
 exports.createPlanDraft = createPlanDraft;
 const path_1 = __importDefault(require("path"));
-const fs_extra_1 = __importDefault(require("fs-extra"));
 const numbering_1 = require("../engine/numbering");
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const roadmap_1 = require("../utils/roadmap");
 const controlStore_1 = require("../engine/controlStore");
+const artifactNames_1 = require("../engine/artifactNames");
 class PlanDraftError extends Error {
     constructor(code, message) {
         super(message);
@@ -81,7 +81,7 @@ function createPlanDraftTransactionFiles(projectRoot) {
     const intentVersionRef = chain.intent.version;
     const version = (0, chain_1.nextPlanVersion)(chain, intentVersionRef);
     const files = [
-        path_1.default.join(projectRoot, 'Sigma', 'contract', `FMN-PLAN-${version}.md`),
+        path_1.default.join(projectRoot, 'Sigma', 'contract', (0, artifactNames_1.artifactFileName)('plan', version)),
         (0, chain_1.chainFilePath)(projectRoot, chainVersion),
     ];
     const roadmapAbsPath = getRoadmapPathIfEligible(projectRoot, chain);
@@ -96,10 +96,12 @@ function createPlanDraft(input) {
     (0, chain_1.assertChainCanMutate)(chain);
     const intentVersionRef = assertGatesOpen(projectRoot, chain);
     const version = (0, chain_1.nextPlanVersion)(chain, intentVersionRef);
-    const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'contract', `FMN-PLAN-${version}.md`));
+    const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'contract', (0, artifactNames_1.artifactFileName)('plan', version)));
     const absPath = path_1.default.join(projectRoot, relPath);
-    if (fs_extra_1.default.existsSync(absPath))
-        throw new PlanDraftError('INVALID_OPERATION', `PLAN FILE CONFLICT: ${relPath} already exists. Refusing to overwrite.`);
+    // Either name form counts (F10): never put a second file beside an existing one.
+    const [existingPlan] = (0, artifactNames_1.existingArtifactNames)(projectRoot, 'plan', 'contract', version);
+    if (existingPlan)
+        throw new PlanDraftError('INVALID_OPERATION', `PLAN FILE CONFLICT: Sigma/contract/${existingPlan} already exists. Refusing to overwrite.`);
     // Artifact write first, chain last — same order intentDraftService uses,
     // same rationale (a half-written artifact with no chain entry is an
     // orphan file, recoverable; a chain entry pointing at a missing artifact

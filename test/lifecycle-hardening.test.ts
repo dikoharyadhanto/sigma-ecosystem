@@ -81,8 +81,8 @@ describe('Lifecycle hardening coverage', () => {
     const result = runCli('close new', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/Created: Sigma[\\/]close[\\/]DIR-CLOSE-v1\.md/);
-    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'close', 'DIR-CLOSE-v1.md'))).toBe(true);
+    expect(result.stdout).toMatch(/Created: Sigma[\\/]close[\\/]CLOSE-v1\.md/);
+    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'close', 'CLOSE-v1.md'))).toBe(true);
   });
 
   it('sigma close new rejects a second draft for a chain that already has a non-superseded DIR-CLOSE', () => {
@@ -177,7 +177,7 @@ describe('Lifecycle hardening coverage', () => {
     const result = runCli('exec new', env.projectDir, env.homeDir);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/Created: Sigma[\\/]evidence[\\/]DEV-EXEC-v1\.35\.md/);
+    expect(result.stdout).toMatch(/Created: Sigma[\\/]evidence[\\/]EXEC-v1\.35\.md/);
     const updated = fs.readJsonSync(chainPath(env, 'v2')) as Record<string, any>;
     expect(updated.exec.versions.filter((v: Record<string, unknown>) => v.version === 'v1.34')).toHaveLength(1);
     expect(updated.exec.versions.some((v: Record<string, unknown>) => v.version === 'v1.35' && v.plan_version_ref === 'v1.35')).toBe(true);

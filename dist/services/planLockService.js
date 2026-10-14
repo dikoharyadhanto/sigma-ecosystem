@@ -14,6 +14,7 @@ exports.lockPlanDraftUseCase = lockPlanDraftUseCase;
 const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const docCheck_1 = require("../utils/docCheck");
+const artifactNames_1 = require("../engine/artifactNames");
 class PlanLockError extends Error {
     constructor(code, message) {
         super(message);
@@ -26,7 +27,7 @@ function planDocPath(projectRoot, chain, version) {
     const entry = chain.plan.versions.find(v => v.version === version);
     if (!entry)
         throw new PlanLockError('INVALID_OPERATION', `FMN-PLAN ${version} not found.`);
-    return path_1.default.join(projectRoot, entry.file ?? path_1.default.join('Sigma', 'contract', `FMN-PLAN-${entry.version}.md`));
+    return path_1.default.join(projectRoot, entry.file ?? (0, artifactNames_1.defaultArtifactRel)(projectRoot, 'plan', 'contract', entry.version));
 }
 /**
  * Resolves which DRAFT FMN-PLAN version a lock should target, mirroring the

@@ -211,7 +211,7 @@ describe('intent ratify regression — no auto-supersede, no auto-cascade', () =
     expect(reopened.exitCode).toBe(0);
 
     fs.writeFileSync(
-      path.join(env.projectDir, 'Sigma', 'charter', 'DIR-INTENT-v2.md'),
+      path.join(env.projectDir, 'Sigma', 'charter', 'INTENT-v2.md'),
       validIntentDoc('v2')
     );
 

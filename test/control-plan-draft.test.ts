@@ -413,7 +413,7 @@ describe('sigma-control — sigma_create_plan_draft through a real in-process MC
     const payload = JSON.parse(text) as Payload;
     const expectedVersion = scheme === 'legacy_offset' ? 'v0.1' : 'v1.1';
     expect(payload.version).toBe(expectedVersion);
-    const content = fs.readFileSync(path.join(env.sigmaDir, 'contract', `FMN-PLAN-${expectedVersion}.md`), 'utf8');
+    const content = fs.readFileSync(path.join(env.sigmaDir, 'contract', `PLAN-${expectedVersion}.md`), 'utf8');
     expect(parseChainMetadata(content)).toEqual({ intent: 'v1', versioning_scheme: scheme });
     expect(payload.contract_version).toBe('1.0');
     expect(res.structuredContent).toEqual(payload);

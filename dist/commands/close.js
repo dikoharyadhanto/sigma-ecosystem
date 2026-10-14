@@ -12,6 +12,7 @@ const fs_1 = require("../utils/fs");
 const docCheck_1 = require("../utils/docCheck");
 const closeNewService_1 = require("../services/closeNewService");
 const closeLockService_1 = require("../services/closeLockService");
+const artifactNames_1 = require("../engine/artifactNames");
 // PLAN-EVAL-01 Fase 3 — `close lock` already auto-locks the chain's roadmap
 // as a side effect *before* this migration (see `lockActiveRoadmap` call
 // below) — this is existing behavior being preserved under the new storage,
@@ -29,7 +30,7 @@ function promptApprove(message) {
 function closeDocPath(projectRoot, chain) {
     if (!chain.close)
         throw new Error('No active DIR-CLOSE found. Run: sigma close new');
-    return path_1.default.join(projectRoot, chain.close.file ?? path_1.default.join('Sigma', 'close', `DIR-CLOSE-${chain.close.version}.md`));
+    return path_1.default.join(projectRoot, chain.close.file ?? (0, artifactNames_1.defaultArtifactRel)(projectRoot, 'close', 'close', chain.close.version));
 }
 function closeCommand() {
     const cmd = new commander_1.Command('close');

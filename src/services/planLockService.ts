@@ -14,6 +14,7 @@ import {
   assertChainCanMutate,
 } from '../engine/chain';
 import { validateSigmaDocFile, ensureSigmaDocEligible, SigmaDocCheckReport } from '../utils/docCheck';
+import { defaultArtifactRel } from '../engine/artifactNames';
 
 export class PlanLockError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -25,7 +26,7 @@ export class PlanLockError extends Error {
 function planDocPath(projectRoot: string, chain: ChainState, version: string): string {
   const entry = chain.plan.versions.find(v => v.version === version);
   if (!entry) throw new PlanLockError('INVALID_OPERATION', `FMN-PLAN ${version} not found.`);
-  return path.join(projectRoot, entry.file ?? path.join('Sigma', 'contract', `FMN-PLAN-${entry.version}.md`));
+  return path.join(projectRoot, entry.file ?? defaultArtifactRel(projectRoot, 'plan', 'contract', entry.version));
 }
 
 /**

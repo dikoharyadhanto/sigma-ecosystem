@@ -227,7 +227,7 @@ function resolveReconstructTargets(
     const conflicts = result.conflicts.filter(c => c.major === major);
     if (conflicts.length) throw new Error(`Chain ${opts.v} identity conflict: ${conflicts.map(c => c.reason).join('; ')}. No chain file written.`);
     if (!result.chains.has(major)) {
-      throw new Error(`No DIR-INTENT-${opts.v}.md found on disk — nothing to reconstruct for chain ${opts.v}.`);
+      throw new Error(`No INTENT-${opts.v}.md (or DIR-INTENT-${opts.v}.md) found on disk — nothing to reconstruct for chain ${opts.v}.`);
     }
     return [major];
   }
@@ -252,7 +252,7 @@ function resolveReconstructTargets(
   const conflicts = result.conflicts.filter(c => c.major === major);
   if (conflicts.length) throw new Error(`Chain ${activeVersion} identity conflict: ${conflicts.map(c => c.reason).join('; ')}. No chain file written.`);
   if (!result.chains.has(major)) {
-    throw new Error(`No DIR-INTENT-${activeVersion}.md found on disk for the active chain (${activeVersion}) — nothing to reconstruct.`);
+    throw new Error(`No INTENT-${activeVersion}.md (or DIR-INTENT-${activeVersion}.md) found on disk for the active chain (${activeVersion}) — nothing to reconstruct.`);
   }
   return [major];
 }
@@ -307,7 +307,7 @@ function runReconstruct(opts: { v?: string; allVersions?: boolean }): void {
       console.log(`  - v${group.major}: ${group.artifacts.join(', ')}`);
     }
     console.log(
-      '\nThese cannot be reconstructed without a DIR-INTENT-v<N>.md — restore it from git history if this ' +
+      '\nThese cannot be reconstructed without an INTENT-v<N>.md (or DIR-INTENT-v<N>.md) — restore it from git history if this ' +
       'chain should exist, or ignore if these are stray artifacts.'
     );
   }

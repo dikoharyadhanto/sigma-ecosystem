@@ -11,6 +11,7 @@ import { validateSigmaDocFile } from '../utils/docCheck';
 import { computeStateRevision } from '../mcp/contract';
 import { captureArtifact, reviewChain, sectionsOf, targetOnly } from './sourceReviewService';
 import { digest, readF08Store, writeF08Store, f08StorePath } from './f08Store';
+import { artifactFileName, existingArtifactNames } from '../engine/artifactNames';
 
 export interface CloneInput {
   projectRoot: string; type: 'intent' | 'plan'; sourceChain: string; sourceVersion: string;
@@ -67,8 +68,10 @@ export function previewClone(input: CloneInput) {
   if (type === 'plan') content = content.replace('INTENT-v{X}', 'INTENT-' + active.data.intent.version);
   content = withChainMetadata(content, { intent: targetChain,
     versioning_scheme: type === 'intent' ? 'intent_aligned' : resolveVersioningScheme(active.data) });
-  const targetPath = 'Sigma/' + (type === 'intent' ? 'charter/DIR-INTENT-' : 'contract/FMN-PLAN-') + targetVersion + '.md';
-  if (fs.existsSync(path.join(root, targetPath))) throw new Error('Clone destination already exists.');
+  const targetDir = type === 'intent' ? 'charter' : 'contract';
+  const targetPath = 'Sigma/' + targetDir + '/' + artifactFileName(type, targetVersion);
+  // Either name form counts (F10).
+  if (fs.existsSync(path.join(root, targetPath)) || existingArtifactNames(root, type, targetDir, targetVersion).length > 0) throw new Error('Clone destination already exists.');
   const reset = templateSections.filter(s => !allowed.has(s.id)).map(s => s.id);
   const binding = {
     type, source: targetOnly(source), title: input.title, focus: input.focus,

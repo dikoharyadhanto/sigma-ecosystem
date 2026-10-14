@@ -7,7 +7,6 @@
 // it does not obtain it.
 
 import path from 'path';
-import fs from 'fs-extra';
 import { writeChainMetadata } from '../engine/numbering';
 import {
   ChainState,
@@ -23,6 +22,7 @@ import { toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { intentHistoryPath, renderIntentHistoryFile } from '../utils/intentHistory';
 import { controlTestFailpoint } from '../engine/controlStore';
+import { artifactFileName, existingArtifactNames } from '../engine/artifactNames';
 
 export class IntentDraftError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -51,7 +51,7 @@ export interface CreateIntentDraftResult {
 export function createIntentDraftTransactionFiles(projectRoot: string): string[] {
   const chainVersion = nextChainVersion(projectRoot);
   return [
-    path.join(projectRoot, 'Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`),
+    path.join(projectRoot, 'Sigma', 'charter', artifactFileName('intent', chainVersion)),
     chainFilePath(projectRoot, chainVersion),
     activateStatusPath(projectRoot),
     intentHistoryPath(projectRoot),
@@ -95,9 +95,11 @@ export function createIntentDraft(input: CreateIntentDraftInput): CreateIntentDr
   }
 
   const chainVersion = nextChainVersion(projectRoot);
-  const relPath = toPosix(path.join('Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`));
+  const relPath = toPosix(path.join('Sigma', 'charter', artifactFileName('intent', chainVersion)));
   const absPath = path.join(projectRoot, relPath);
-  if (fs.existsSync(absPath)) throw new IntentDraftError('INVALID_OPERATION', `INTENT FILE CONFLICT: ${relPath} already exists.`);
+  // Either name form counts (F10): never put a second file beside an existing one.
+  const [existingIntent] = existingArtifactNames(projectRoot, 'intent', 'charter', chainVersion);
+  if (existingIntent) throw new IntentDraftError('INVALID_OPERATION', `INTENT FILE CONFLICT: Sigma/charter/${existingIntent} already exists.`);
   const chain = createInitialChain(chainVersion, relPath, title, focus, 'intent_aligned');
   copyTemplateToArtifact('DIR-INTENT-TEMPLATE.md', absPath, projectRoot);
   writeChainMetadata(absPath, chain, undefined, projectRoot);

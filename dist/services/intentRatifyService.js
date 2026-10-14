@@ -16,6 +16,7 @@ const chain_1 = require("../engine/chain");
 const docCheck_1 = require("../utils/docCheck");
 const intentHistory_1 = require("../utils/intentHistory");
 const controlStore_1 = require("../engine/controlStore");
+const artifactNames_1 = require("../engine/artifactNames");
 class IntentRatifyError extends Error {
     constructor(code, message) {
         super(message);
@@ -25,7 +26,7 @@ class IntentRatifyError extends Error {
 }
 exports.IntentRatifyError = IntentRatifyError;
 function intentDocPath(projectRoot, chain) {
-    return path_1.default.join(projectRoot, chain.intent.file ?? path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chain.intent.version}.md`));
+    return path_1.default.join(projectRoot, chain.intent.file ?? (0, artifactNames_1.defaultArtifactRel)(projectRoot, 'intent', 'charter', chain.intent.version));
 }
 function ratifyIntentDraftTransactionFiles(projectRoot) {
     const { chainVersion } = (0, chain_1.readActiveChain)(projectRoot);

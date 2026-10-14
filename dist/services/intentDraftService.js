@@ -14,13 +14,13 @@ exports.IntentDraftError = void 0;
 exports.createIntentDraftTransactionFiles = createIntentDraftTransactionFiles;
 exports.createIntentDraft = createIntentDraft;
 const path_1 = __importDefault(require("path"));
-const fs_extra_1 = __importDefault(require("fs-extra"));
 const numbering_1 = require("../engine/numbering");
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const artifacts_1 = require("../utils/artifacts");
 const intentHistory_1 = require("../utils/intentHistory");
 const controlStore_1 = require("../engine/controlStore");
+const artifactNames_1 = require("../engine/artifactNames");
 class IntentDraftError extends Error {
     constructor(code, message) {
         super(message);
@@ -32,7 +32,7 @@ exports.IntentDraftError = IntentDraftError;
 function createIntentDraftTransactionFiles(projectRoot) {
     const chainVersion = (0, chain_1.nextChainVersion)(projectRoot);
     return [
-        path_1.default.join(projectRoot, 'Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`),
+        path_1.default.join(projectRoot, 'Sigma', 'charter', (0, artifactNames_1.artifactFileName)('intent', chainVersion)),
         (0, chain_1.chainFilePath)(projectRoot, chainVersion),
         (0, chain_1.activateStatusPath)(projectRoot),
         (0, intentHistory_1.intentHistoryPath)(projectRoot),
@@ -71,10 +71,12 @@ function createIntentDraft(input) {
             'activate it — the CLOSED chain is left untouched. Confirm reopening before retrying.');
     }
     const chainVersion = (0, chain_1.nextChainVersion)(projectRoot);
-    const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'charter', `DIR-INTENT-${chainVersion}.md`));
+    const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'charter', (0, artifactNames_1.artifactFileName)('intent', chainVersion)));
     const absPath = path_1.default.join(projectRoot, relPath);
-    if (fs_extra_1.default.existsSync(absPath))
-        throw new IntentDraftError('INVALID_OPERATION', `INTENT FILE CONFLICT: ${relPath} already exists.`);
+    // Either name form counts (F10): never put a second file beside an existing one.
+    const [existingIntent] = (0, artifactNames_1.existingArtifactNames)(projectRoot, 'intent', 'charter', chainVersion);
+    if (existingIntent)
+        throw new IntentDraftError('INVALID_OPERATION', `INTENT FILE CONFLICT: Sigma/charter/${existingIntent} already exists.`);
     const chain = (0, chain_1.createInitialChain)(chainVersion, relPath, title, focus, 'intent_aligned');
     (0, artifacts_1.copyTemplateToArtifact)('DIR-INTENT-TEMPLATE.md', absPath, projectRoot);
     (0, numbering_1.writeChainMetadata)(absPath, chain, undefined, projectRoot);

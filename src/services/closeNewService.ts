@@ -28,6 +28,7 @@ import {
 import { toPosix } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { validateSigmaDocFile, SigmaDocCheckReport } from '../utils/docCheck';
+import { artifactFileName, existingArtifactNames } from '../engine/artifactNames';
 
 export class CloseNewError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -37,7 +38,7 @@ export class CloseNewError extends Error {
 }
 
 function closeDraftRelPath(chain: ChainState): string {
-  return toPosix(path.join('Sigma', 'close', `DIR-CLOSE-${chain.chain_version}.md`));
+  return toPosix(path.join('Sigma', 'close', artifactFileName('close', chain.chain_version)));
 }
 
 /** Re-runs every close_new precondition against a live chain, without
@@ -98,6 +99,9 @@ export function createCloseDraftUseCase(projectRoot: string): CreateCloseDraftRe
   const version = chain.chain_version;
   const relPath = closeDraftRelPath(chain);
   const absPath = path.join(projectRoot, relPath);
+  // Either name form counts (F10): never put a second file beside an existing one.
+  const [existingClose] = existingArtifactNames(projectRoot, 'close', 'close', version);
+  if (existingClose) throw new CloseNewError('INVALID_OPERATION', `CLOSE FILE CONFLICT: Sigma/close/${existingClose} already exists.`);
   copyTemplateToArtifact('DIR-CLOSE-TEMPLATE.md', absPath);
 
   try {

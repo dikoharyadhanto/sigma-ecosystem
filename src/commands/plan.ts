@@ -14,7 +14,7 @@ import {
   assertChainCanMutate,
   normalizeVersionArg,
 } from '../engine/chain';
-import { findProjectRoot, toPosix } from '../utils/fs';
+import { findProjectRoot } from '../utils/fs';
 import { copyTemplateToArtifact } from '../utils/artifacts';
 import { renderRoadmapFile } from '../utils/roadmap';
 import {
@@ -25,6 +25,7 @@ import { createPlanDraft, PlanDraftError } from '../services/planDraftService';
 import { registerApprovalCommands } from './approval';
 import { supersedePlanUseCase } from '../services/planSupersedeService';
 import { promotePlanUseCase } from '../services/planPromoteService';
+import { defaultArtifactRel, pendingPlanRel } from '../engine/artifactNames';
 
 function generatePendingId(): string {
   return Math.random().toString(36).slice(2, 6).toLowerCase();
@@ -56,7 +57,7 @@ function planDocPath(projectRoot: string, chain: ChainState, version?: string): 
       ? chain.plan.versions.find(v => v.state === 'DRAFT' || v.state === 'APPROVED')
       : chain.plan.versions.find(v => v.version === chain.plan.active_version);
   if (!entry) throw new Error(version ? `FMN-PLAN ${version} not found.` : 'No active FMN-PLAN found. Run: sigma plan new');
-  return path.join(projectRoot, entry.file ?? path.join('Sigma', 'contract', `FMN-PLAN-${entry.version}.md`));
+  return path.join(projectRoot, entry.file ?? defaultArtifactRel(projectRoot, 'plan', 'contract', entry.version));
 }
 
 // Check selects the sole DRAFT/APPROVED contract; multiple open contracts require --v.
@@ -91,7 +92,7 @@ export function planCommand(): Command {
         if (opts.pending) {
           // Pending plan: no gate requirement, no version
           const id = generatePendingId();
-          const relPath = toPosix(path.join('Sigma', 'pending', `FMN-PLAN-${id}.md`));
+          const relPath = pendingPlanRel(id);
           const absPath = path.join(projectRoot, relPath);
           fs.ensureDirSync(path.dirname(absPath));
           copyTemplateToArtifact('FMN-PLAN-TEMPLATE.md', absPath);
