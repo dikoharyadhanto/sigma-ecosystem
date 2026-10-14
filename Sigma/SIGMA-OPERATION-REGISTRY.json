@@ -1601,6 +1601,12 @@
           "type": "flag",
           "required": false,
           "description": "Explicit Director authorization for lifecycle migration"
+        },
+        {
+          "name": "--adopt-orphans",
+          "type": "flag",
+          "required": false,
+          "description": "With --migrate-mailbox: register legacy message files missing from the index as READ entries before migrating. Preview with --dry-run; the real run needs --director-confirm. Files whose metadata does not parse completely are refused."
         }
       ],
       "outputs": [

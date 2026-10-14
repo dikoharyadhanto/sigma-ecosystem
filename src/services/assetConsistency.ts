@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import {
+  BRIDGE_STUBS,
   GLOBAL_BRIDGE_DIR,
   GLOBAL_CONFIG_FILE,
   GLOBAL_GOVERNANCE_DIR,
@@ -132,8 +133,22 @@ export function inspectAsset(pair: AssetPair, safeRoot?: string): AssetDifferenc
   return { ...pair, status: 'DIFF', sourceHash, targetHash, acceptanceToken };
 }
 
+// F09 — bridge files (CLAUDE.md, AGENTS.md, ...) live in the project root and
+// are seeded from the global bridge templates. They are part of what
+// `project sync` replaces, each behind its own acceptance token, but not of the
+// version stamp: a project is not "outdated" because it kept its own bridge text.
+function projectBridgePairs(projectRoot: string): AssetPair[] {
+  const source = fs.existsSync(GLOBAL_BRIDGE_DIR) ? GLOBAL_BRIDGE_DIR : BUNDLE_BRIDGE;
+  return treePairs('bridge', source, projectRoot)
+    .filter(pair => path.dirname(pair.target) === projectRoot && (BRIDGE_STUBS as readonly string[]).includes(path.basename(pair.target)));
+}
+
+export function syncableProjectAssets(projectRoot: string): AssetPair[] {
+  return [...managedProjectAssets(projectRoot), ...projectBridgePairs(projectRoot)];
+}
+
 export function inspectProjectAssets(projectRoot: string): AssetDifference[] {
-  return managedProjectAssets(projectRoot).map(pair => inspectAsset(pair, projectRoot));
+  return syncableProjectAssets(projectRoot).map(pair => inspectAsset(pair, projectRoot));
 }
 
 export function formatAssetDifference(item: AssetDifference, includeAcceptanceToken = true): string {

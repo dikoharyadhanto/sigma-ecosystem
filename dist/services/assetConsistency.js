@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sha256File = sha256File;
 exports.managedProjectAssets = managedProjectAssets;
 exports.inspectAsset = inspectAsset;
+exports.syncableProjectAssets = syncableProjectAssets;
 exports.inspectProjectAssets = inspectProjectAssets;
 exports.formatAssetDifference = formatAssetDifference;
 exports.syncManagedAssets = syncManagedAssets;
@@ -126,8 +127,20 @@ function inspectAsset(pair, safeRoot) {
         .digest('hex');
     return { ...pair, status: 'DIFF', sourceHash, targetHash, acceptanceToken };
 }
+// F09 — bridge files (CLAUDE.md, AGENTS.md, ...) live in the project root and
+// are seeded from the global bridge templates. They are part of what
+// `project sync` replaces, each behind its own acceptance token, but not of the
+// version stamp: a project is not "outdated" because it kept its own bridge text.
+function projectBridgePairs(projectRoot) {
+    const source = fs_extra_1.default.existsSync(config_1.GLOBAL_BRIDGE_DIR) ? config_1.GLOBAL_BRIDGE_DIR : BUNDLE_BRIDGE;
+    return treePairs('bridge', source, projectRoot)
+        .filter(pair => path_1.default.dirname(pair.target) === projectRoot && config_1.BRIDGE_STUBS.includes(path_1.default.basename(pair.target)));
+}
+function syncableProjectAssets(projectRoot) {
+    return [...managedProjectAssets(projectRoot), ...projectBridgePairs(projectRoot)];
+}
 function inspectProjectAssets(projectRoot) {
-    return managedProjectAssets(projectRoot).map(pair => inspectAsset(pair, projectRoot));
+    return syncableProjectAssets(projectRoot).map(pair => inspectAsset(pair, projectRoot));
 }
 function formatAssetDifference(item, includeAcceptanceToken = true) {
     const hashes = 'source sha256:' + item.sourceHash +

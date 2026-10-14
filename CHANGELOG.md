@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-15
+
+### F09 — distribution support (2026-10-15)
+
+- `sigma doctor --migrate-mailbox --adopt-orphans` registers legacy message files that are missing from the index as READ entries, then migrates them with the rest. A file is adopted only when its metadata parses completely (message ID, type, from, to, created time, and a directory that matches the recipient). The earliest format is read through its field names (`From Role`, `To Role`, `Ref Message`); its retired types `REPLY` and `REQUEST` are indexed as `NOTE` with the original type kept in the log; an attachment that is a path under `Sigma/messages/attachments/` must exist and is registered, and free text in that cell is left in the message file. Any file that does not parse, or a duplicate ID, refuses the whole run and changes nothing. `--dry-run` previews and the real run needs `--director-confirm`. The adopted files are recorded in `Sigma/messages/migrations/v2/adopted-orphans.json`.
+- `sigma setup install` and `sigma setup update` remove assets Sigma no longer ships: the four HUMAN templates in `~/.sigma/templates` and the retired `cso` and `checkpoint` skills on every target. A skill is removed only when its content identifies it as the Sigma skill. Other files in the global directories that the package does not contain are listed and kept.
+- `sigma project sync` includes the project's bridge files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `DEEPSEEK.md`, `REASONIX.md`), each behind its own acceptance token. They are not part of the version stamp.
+- Version 2.1.0. The previous `Unreleased` entries are part of this release.
+
 ### F18 — Consistency of Protocol, Constitution, README and shipped assets (2026-10-15)
 
 - `SIGMA_CONSTITUTION.md`: Amendments 003 to 005. `INTENT` is the single name for the Director's intent document, "ad hoc instruction" and "session" are defined, Article IV orders normative authority only (RUNTIME_STATE and DEV output are execution records), Article II separates the Director's reserved authority from taking part in every decision, Article V forbids independent redefinition and permits quotation with the source identified, Article X states what happens to authority when runtime state cannot be trusted, and the Temporary Experimental Authorization is defined once, in Article VIII.
@@ -12,6 +21,8 @@ All notable changes to this project are documented in this file. The format loos
 - `SIGMA-OPERATION-REGISTRY.json` registers 11 operations that existed in the CLI and replaces the single `intent_baseline` entry with `intent_baseline_check` and `intent_baseline_adopt`. Eleven operations are classified in the MCP policy table.
 - The CLI banner and `package.json` description no longer say "Lightweight". Command descriptions use `INTENT`, `PLAN`, `EXEC`, and `CLOSE`.
 - Skills for ARC, FMN, DEV, AUD, REPORT, and HUMANIZE on all five targets, the bridge files, the Antigravity plugin descriptions, and the CLOSE template cross-references use the unprefixed names and the APPROVED lifecycle wording.
+- A Temporary Experimental Authorization is recorded as a registered note titled `TEA: <article> — <scope>` after the role restates the declared fields to the Director. Sigma still has no command for it (Protocol, constitutional instruments).
+- `test/registry-sync.test.ts` fails when a CLI operation is missing from the operation registry, when the registry lists one the CLI no longer has, or when an entry is still marked `NEEDS_REVIEW`.
 
 ### F12 — Sigma version stamp and "outdated" warning (2026-10-15)
 

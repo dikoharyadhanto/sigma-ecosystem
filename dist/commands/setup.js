@@ -135,6 +135,7 @@ async function runInstall(opts) {
         }, { spaces: 2 });
     }
     reportHostStamp();
+    cleanupRetiredAssets();
     // Detect tools
     const detected = (0, detect_1.detectTools)();
     const detectedPlatforms = Object.entries(detected)
@@ -334,6 +335,80 @@ function sigmaLegacyCursorRulesPath() {
         return null;
     }
 }
+// F09 — assets Sigma shipped earlier and no longer ships. `setup update` copies
+// over existing files and never deletes, so these stay behind and, for the
+// templates, get copied into projects by `project sync`. The list is explicit on
+// purpose: a file is removed only when it is named here and, for skills, only
+// when its content identifies it as the Sigma skill, so a user's own command
+// that happens to be called "checkpoint" is left alone.
+const RETIRED_TEMPLATES = [
+    'DIR-INTENT-HUMAN-TEMPLATE.md', 'DIR-CLOSE-HUMAN-TEMPLATE.md',
+    'PLAN-EXEC-HUMAN-TEMPLATE.md', 'HUMAN-FIDELITY-LEDGER-TEMPLATE.md',
+];
+const RETIRED_SKILLS = [
+    { name: 'cso', marker: /Sigma CSO Handler/ },
+    { name: 'checkpoint', marker: /Sigma CHECKPOINT/ },
+];
+function retiredSkillLocations(skill) {
+    const t = (0, detect_1.targetPaths)();
+    return [
+        { target: 'claude', file: path_1.default.join(t.claudeCommands, skill + '.md'), remove: path_1.default.join(t.claudeCommands, skill + '.md') },
+        { target: 'codex', file: path_1.default.join(t.codexSkills, skill, 'SKILL.md'), remove: path_1.default.join(t.codexSkills, skill) },
+        { target: 'reasonix', file: path_1.default.join(t.reasonixSkills, skill + '.md'), remove: path_1.default.join(t.reasonixSkills, skill + '.md') },
+        { target: 'antigravity', file: path_1.default.join(t.antigravitySkills, 'sigma-' + skill, 'SKILL.md'), remove: path_1.default.join(t.antigravitySkills, 'sigma-' + skill) },
+        { target: 'opencode', file: path_1.default.join(t.opencodeCommands, skill + '.md'), remove: path_1.default.join(t.opencodeCommands, skill + '.md') },
+    ];
+}
+function cleanupRetiredAssets() {
+    for (const name of RETIRED_TEMPLATES) {
+        const file = path_1.default.join(config_1.GLOBAL_TEMPLATES_DIR, name);
+        if (!(0, fs_1.fileExists)(file))
+            continue;
+        fs_extra_1.default.removeSync(file);
+        console.log(`  Removed: retired template ${file}`);
+    }
+    for (const skill of RETIRED_SKILLS) {
+        for (const loc of retiredSkillLocations(skill.name)) {
+            if (!(0, fs_1.fileExists)(loc.file))
+                continue;
+            let text = '';
+            try {
+                text = fs_extra_1.default.readFileSync(loc.file, 'utf8');
+            }
+            catch {
+                continue;
+            }
+            if (!skill.marker.test(text)) {
+                console.log(`  Kept: ${loc.file} is not the retired Sigma ${skill.name} skill.`);
+                continue;
+            }
+            fs_extra_1.default.removeSync(loc.remove);
+            console.log(`  Removed: retired ${skill.name} skill ${loc.remove}`);
+        }
+    }
+}
+// Files in the global directories that the bundle does not contain and that are
+// not retired. They are kept (a Director may add templates there); listing them
+// makes it visible that `project sync` copies them into projects.
+function reportHostExtras() {
+    const pairs = [
+        [BUNDLE_TEMPLATES, config_1.GLOBAL_TEMPLATES_DIR], [BUNDLE_RULES, config_1.GLOBAL_RULES_DIR], [BUNDLE_BRIDGE_DIR, config_1.GLOBAL_BRIDGE_DIR],
+    ];
+    const extras = [];
+    for (const [bundle, host] of pairs) {
+        if (!(0, fs_1.fileExists)(host) || !(0, fs_1.fileExists)(bundle))
+            continue;
+        for (const name of fs_extra_1.default.readdirSync(host)) {
+            if (!fs_extra_1.default.existsSync(path_1.default.join(bundle, name)))
+                extras.push(path_1.default.join(host, name));
+        }
+    }
+    if (extras.length) {
+        console.log('  Not in the package bundle (kept; `sigma project sync` copies template and rule files into projects):');
+        for (const file of extras)
+            console.log(`    ${file}`);
+    }
+}
 function cleanupLegacyCursorRules() {
     const dst = sigmaLegacyCursorRulesPath();
     if (!dst)
@@ -470,6 +545,8 @@ async function runUpdate() {
         await deploySkillsAndHook(detectedPlatforms);
     }
     cleanupLegacyCursorRules();
+    cleanupRetiredAssets();
+    reportHostExtras();
     (0, output_1.success)('Sigma updated successfully.');
     console.log(`  Backup saved to: ${backupBase}`);
     console.log('  Note: existing project Sigma/ folders were NOT touched.');

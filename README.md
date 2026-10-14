@@ -595,7 +595,8 @@ Most users do not need these commands. AI roles run operational commands after r
 | doctor | `sigma doctor --check-assets` | Compare master, installed, and project assets, and report version status, without writing |
 | doctor | `sigma doctor --reconstruct [--v <ver>]` | Rebuild `progress-v<N>.json` from artifact files when missing or corrupted |
 | doctor | `sigma doctor --migrate-lifecycle --director-confirm` | Convert one chain from the legacy lock model to paired approval (`--dry-run` previews) |
-| doctor | `sigma doctor --migrate-mailbox [--dry-run]` | Move legacy messages and memos to the `LEGACY` context |
+| doctor | `sigma doctor --migrate-mailbox [--dry-run]` | Move legacy messages and memos to the `LEGACY` context; refuses when a message file is missing from the index |
+| doctor | `sigma doctor --migrate-mailbox --adopt-orphans [--dry-run] [--director-confirm]` | First register such files as READ entries when their metadata parses fully, then migrate; the real run needs `--director-confirm` |
 | doctor | `sigma doctor --repair-workspace` | Recreate a missing DEV workspace folder or marker |
 | setup | `sigma setup install` | Install Sigma globally to `~/.sigma/` and deploy skill files and the hook |
 | setup | `sigma setup update` | Update global templates and governance, and redeploy skill files and the hook |

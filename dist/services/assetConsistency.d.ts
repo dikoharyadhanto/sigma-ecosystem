@@ -12,6 +12,7 @@ export interface AssetDifference extends AssetPair {
 export declare function sha256File(file: string): string;
 export declare function managedProjectAssets(projectRoot: string): AssetPair[];
 export declare function inspectAsset(pair: AssetPair, safeRoot?: string): AssetDifference;
+export declare function syncableProjectAssets(projectRoot: string): AssetPair[];
 export declare function inspectProjectAssets(projectRoot: string): AssetDifference[];
 export declare function formatAssetDifference(item: AssetDifference, includeAcceptanceToken?: boolean): string;
 export interface SyncResult {

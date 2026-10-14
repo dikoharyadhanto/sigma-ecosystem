@@ -54,7 +54,9 @@ The Constitution delegates three instruments to this protocol.
 
 **Director Override.** `sigma override --reason "<text>" --director-confirm [--v <version>] [--dry-run]` bypasses the current lifecycle gate under Director authority and is recorded in `Sigma/memory/overrides.jsonl`. It applies to Protocol-level conflicts and below. It does not apply to constitutional conflicts. It does not replace hash, identity, notice, or approval evidence that another operation requires.
 
-**Temporary Experimental Authorization.** Defined in Article VIII of the Constitution: the Director declares the article deviated from, the scope, the duration or termination condition, and the acknowledgment that it creates no precedent. Sigma has no CLI command for it. An AI role that detects a conflict between a request and the Constitution does not comply silently. It names the article in conflict and asks whether the Director intends an amendment, a Temporary Experimental Authorization, or a reinterpretation.
+**Temporary Experimental Authorization.** Defined in Article VIII of the Constitution: the Director declares the article deviated from, the scope, the duration or termination condition, and the acknowledgment that it creates no precedent. An AI role that detects a conflict between a request and the Constitution does not comply silently. It names the article in conflict and asks whether the Director intends an amendment, a Temporary Experimental Authorization, or a reinterpretation.
+
+Sigma has no CLI command for it. The declaration is recorded as a registered note created with `sigma notes new`, titled `TEA: <article> — <scope>`. Before creating the note, the role restates the four declared fields to the Director and waits for confirmation. The note holds those fields and the termination condition, and the artifact or message the deviation concerns refers to it. The note is evidence of the declaration. The authority is the Director's declaration, and the note carries none. A role finds earlier declarations with `sigma notes list --search "TEA:"`. A second declaration of the same deviation for the same scenario is flagged to the Director, as Article VIII requires.
 
 **Governance-conflicted documents.** A subordinate document found inconsistent with the Constitution is not an authoritative source until the Director acknowledges its reconciliation. The role that detects the conflict reports it to the Director and does not reconcile it alone.
 
@@ -549,7 +551,7 @@ Formal role-to-role messages go through `sigma send`. The valid messaging roles 
 - **Sender gate.** A role cannot send a new message while it has unread incoming messages in the target INTENT context or in `GENERAL`. It reads them with `sigma inbox read <id>` first.
 - **Status.** A message is `UNREAD`, `READ`, `ARCHIVED`, or `OUTDATED`. Aging a surplus of `READ` messages to `OUTDATED` never deletes, moves, or renames the file.
 - **Types.** Including `CONTRACT_CHANGE` and `CONTRACT_CHANGE_REQUEST` (section 7.3). A message is never Director approval; authority needs explicit Director instruction under section 12.
-- **Migration.** `sigma doctor --migrate-mailbox` moves legacy messages to `LEGACY`; `--dry-run` previews it.
+- **Migration.** `sigma doctor --migrate-mailbox` moves legacy messages to `LEGACY`; `--dry-run` previews it. A message file that is missing from the index blocks the migration. `--adopt-orphans` registers such files as READ entries first, only when their metadata parses completely, with a preview and the Director's confirmation, and records them in `Sigma/messages/migrations/v2/adopted-orphans.json`.
 
 ### 15.2 Self-addressed memo
 

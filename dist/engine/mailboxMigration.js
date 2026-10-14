@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.withMailboxLock = void 0;
+exports.inspectOrphans = inspectOrphans;
 exports.mailboxMigrationDiagnosis = mailboxMigrationDiagnosis;
 exports.migrateMailbox = migrateMailbox;
 const fs_extra_1 = __importDefault(require("fs-extra"));
@@ -17,6 +18,112 @@ const config_1 = require("../config");
 const JOURNAL = 'Sigma/messages/migrations/v2/journal.json';
 const INDEX = 'Sigma/messages/index.json';
 const hash = (content) => crypto_1.default.createHash('sha256').update(content).digest('hex');
+// ── Orphan adoption ──────────────────────────────────────────────────────────
+//
+// A legacy message file that exists on disk but has no index entry blocks the
+// migration (F03). Adoption registers such files as ordinary legacy entries
+// first, so the existing transactional migration then moves them like any
+// other. Only files whose metadata parses completely are adopted; anything
+// else is reported and the migration still refuses. An adopted entry is READ:
+// no recipient ever saw it through the index, so it must not raise a sender gate.
+const ORPHAN_LOG = 'Sigma/messages/migrations/v2/adopted-orphans.json';
+const ORPHAN_PATH = /^Sigma\/messages\/(ARC|FMN|DEV|AUD)\/[^/]+\.md$/;
+// Message files written by the earliest Sigma format name two fields differently
+// and use two message types that no longer exist. The field names map one to
+// one. The two retired types are indexed as NOTE, the neutral type; the file is
+// untouched and the original type is kept in the adoption log.
+const LEGACY_FIELD_ALIASES = { 'From Role': 'From', 'To Role': 'To', 'Ref Message': 'In Reply To' };
+const RETIRED_TYPES = new Set(['REPLY', 'REQUEST']);
+function legacyMetadata(markdown) {
+    const out = {};
+    let inside = false;
+    for (const line of markdown.split(/\r?\n/)) {
+        if (/^##\s+Metadata\s*$/.test(line)) {
+            inside = true;
+            continue;
+        }
+        if (!inside)
+            continue;
+        if (/^---\s*$/.test(line))
+            break;
+        const m = /^\|\s*([^|]+?)\s*\|\s*(.*?)\s*\|\s*$/.exec(line);
+        if (!m || m[1] === 'Field' || /^:?-+:?$/.test(m[1]))
+            continue;
+        out[m[1]] = m[2];
+    }
+    for (const [alias, canonical] of Object.entries(LEGACY_FIELD_ALIASES)) {
+        if (alias in out && !(canonical in out))
+            out[canonical] = out[alias];
+    }
+    return out;
+}
+function parseOrphan(root, file, takenIds) {
+    const reject = (error) => ({ file, error });
+    const match = ORPHAN_PATH.exec(file);
+    if (!match)
+        return reject('not a role message file under Sigma/messages/<ROLE>/');
+    const markdown = fs_extra_1.default.readFileSync((0, mailboxContext_1.assertMailboxPath)(root, file, true), 'utf8');
+    const meta = legacyMetadata(markdown);
+    const id = meta['Message ID'], type = meta['Type'], from = meta['From'], to = meta['To'], created = meta['Created At'];
+    if (!id || !/^MSG-[A-Za-z0-9-]+$/.test(id))
+        return reject('missing or malformed Message ID');
+    if (takenIds.has(id))
+        return reject(`duplicate Message ID ${id}`);
+    const retired = RETIRED_TYPES.has(type ?? '');
+    if (!retired && !config_1.VALID_MESSAGE_TYPES.includes(type ?? ''))
+        return reject(`unknown type "${type}"`);
+    if (!config_1.MESSAGING_ROLES.includes(from ?? '') || !config_1.MESSAGING_ROLES.includes(to ?? ''))
+        return reject('From or To is not a messaging role');
+    if (type === 'MEMO' && from !== to)
+        return reject('MEMO whose From and To differ');
+    const indexedType = (retired ? 'NOTE' : type);
+    if (to !== match[1])
+        return reject(`stored under ${match[1]} but addressed to ${to}`);
+    if (!created || Number.isNaN(Date.parse(created)))
+        return reject('missing or invalid Created At');
+    const attachmentCell = meta['Attachments'] ?? '';
+    const attachments = [];
+    if (!/^[—–-]*$/.test(attachmentCell)) {
+        for (const raw of attachmentCell.split(/[;,]/).map(a => a.trim()).filter(Boolean)) {
+            const rel = raw.replace(/\\/g, '/');
+            // The earliest format used this cell for free text as well. A value that is
+            // not a Sigma path is a description and stays in the message file only.
+            if (!rel.startsWith('Sigma/'))
+                continue;
+            if (!/^Sigma\/messages\/attachments\/[^/]+$/.test(rel) || rel.includes('..'))
+                return reject(`attachment outside Sigma/messages/attachments/: ${raw}`);
+            try {
+                (0, mailboxContext_1.assertMailboxPath)(root, rel, true);
+            }
+            catch {
+                return reject(`attachment does not exist: ${raw}`);
+            }
+            attachments.push(rel);
+        }
+    }
+    const checked = /^\s*-\s*\[[xX]\]\s*(FYI|RESPOND|REVIEW|UNBLOCK|OTHER)\b/m.exec(markdown);
+    const action = (checked ? checked[1] : 'FYI');
+    if (!config_1.VALID_ACTIONS.includes(action))
+        return reject('invalid action');
+    const entry = {
+        id, from: from, to: to, type: indexedType,
+        subject: meta['Subject'] || path_1.default.basename(file, '.md'), file, status: 'READ', created_at: created,
+        attachments, action,
+    };
+    const reply = meta['In Reply To'];
+    if (reply && /^MSG-[A-Za-z0-9-]+$/.test(reply))
+        entry.reply_to = reply;
+    const related = meta['Related Artifact'];
+    if (related && !/^[—–-]+$/.test(related))
+        entry.related_artifact = related;
+    takenIds.add(id);
+    return retired ? { file, entry, original_type: type } : { file, entry };
+}
+function inspectOrphans(root, index) {
+    const indexed = new Set(index.messages.map(m => m.file));
+    const ids = new Set(index.messages.map(m => m.id));
+    return (0, mailboxContext_1.mailboxDiskFiles)(root).filter(file => !indexed.has(file)).sort().map(file => parseOrphan(root, file, ids));
+}
 function readJournal(root) {
     const file = (0, mailboxContext_1.assertMailboxPath)(root, JOURNAL);
     if (!fs_extra_1.default.existsSync(file))
@@ -139,9 +246,17 @@ function mailboxMigrationDiagnosis(root) {
 }
 var mailboxLock_1 = require("./mailboxLock");
 Object.defineProperty(exports, "withMailboxLock", { enumerable: true, get: function () { return mailboxLock_1.withMailboxLock; } });
-async function migrateMailbox(root, dryRun = false) {
-    if (dryRun)
-        return { ...mailboxMigrationDiagnosis(root), applied: false };
+async function migrateMailbox(root, dryRun = false, adoptOrphans = false) {
+    if (dryRun) {
+        const base = { ...mailboxMigrationDiagnosis(root), applied: false };
+        if (!adoptOrphans)
+            return base;
+        const candidates = inspectOrphans(root, (0, mailbox_1.readIndex)(root));
+        return { ...base, adopt_orphans: {
+                adoptable: candidates.filter(c => c.entry).length,
+                rejected: candidates.filter(c => c.error).map(c => ({ file: c.file, reason: c.error })),
+            } };
+    }
     const lock = await (0, controlStore_1.acquireProjectLock)(root);
     try {
         lock.assertOwned();
@@ -151,6 +266,33 @@ async function migrateMailbox(root, dryRun = false) {
         const index = (0, mailbox_1.readIndex)(root);
         if (index.mailbox_format === 2)
             return { applied: false, moved: 0, reset_unread: 0, recovered: !!interrupted && interrupted.stage !== 'prepared' };
+        let adopted = [];
+        if (adoptOrphans) {
+            const pre = (0, mailbox_1.checkMailboxIntegrity)(root);
+            if (pre.findings.missing_files.length || pre.findings.invalid_fields.length)
+                throw new Error('Mailbox migration preflight failed: missing source or invalid metadata. Nothing moved.');
+            const candidates = inspectOrphans(root, index);
+            const rejected = candidates.filter(c => c.error);
+            if (rejected.length)
+                throw new Error(`Orphan adoption refused: ${rejected.length} file(s) cannot be adopted. Nothing changed.\n` + rejected.slice(0, 10).map(c => `  ${c.file}: ${c.error}`).join('\n'));
+            const entries = candidates.map(c => c.entry);
+            if (entries.length) {
+                const originalTypes = new Map(candidates.filter(c => c.original_type).map(c => [c.entry.id, c.original_type]));
+                const record = entries.map(e => ({
+                    id: e.id, file: e.file, sha256: hash(fs_extra_1.default.readFileSync((0, mailboxContext_1.assertMailboxPath)(root, e.file, true))),
+                    ...(originalTypes.has(e.id) ? { original_type: originalTypes.get(e.id), indexed_type: e.type } : {}),
+                }));
+                const logFile = (0, mailboxContext_1.assertMailboxPath)(root, ORPHAN_LOG);
+                fs_extra_1.default.ensureDirSync(path_1.default.dirname(logFile));
+                const tmp = `${logFile}.${process.pid}.tmp`;
+                fs_extra_1.default.writeJsonSync(tmp, { adopted_at: new Date().toISOString(), files: record }, { spaces: 2 });
+                (0, fs_1.atomicReplaceFileSync)(tmp, logFile);
+                lock.assertOwned();
+                index.messages.push(...entries);
+                (0, mailbox_1.writeIndex)(root, index);
+                adopted = entries.map(e => e.id);
+            }
+        }
         const integrity = (0, mailbox_1.checkMailboxIntegrity)(root);
         if (integrity.findings.missing_files.length || integrity.findings.orphan_files.length || integrity.findings.invalid_fields.length)
             throw new Error('Mailbox migration preflight failed: missing source, orphan file, or invalid metadata. Nothing moved.');
@@ -202,7 +344,7 @@ async function migrateMailbox(root, dryRun = false) {
         failpoint('after_commit');
         await recover(root, journal, lock.assertOwned);
         failpoint('after_cleanup');
-        return { applied: true, moved: moves.length, reset_unread: reset, warnings: integrity.findings.missing_attachments };
+        return { applied: true, moved: moves.length, reset_unread: reset, adopted_orphans: adopted.length, warnings: integrity.findings.missing_attachments };
     }
     finally {
         await lock.release();

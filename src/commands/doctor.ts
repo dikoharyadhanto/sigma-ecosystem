@@ -377,29 +377,32 @@ export function doctorCommand(): Command {
     .option('--reconstruct', 'Rebuild chain file(s) from artifact files on disk (use when a progress-v<N>.json is missing or corrupted)')
     .option('--v <version>', 'With --reconstruct, target one specific chain instead of the active one (e.g. v2)', normalizeVersionArg)
     .option('--migrate-lifecycle', 'Opt-in one-chain lifecycle conversion; no automatic baseline certification')
-    .option('--director-confirm', 'Explicit Director authorization for lifecycle migration')
+    .option('--director-confirm', 'Explicit Director authorization for lifecycle migration or for --adopt-orphans')
     .option('--migrate-mailbox', 'Move legacy messages/memos to LEGACY and reset legacy UNREAD to READ')
+    .option('--adopt-orphans', 'With --migrate-mailbox: register legacy message files that are missing from the index, as READ, before migrating (preview with --dry-run; needs --director-confirm)')
     .option('--dry-run', 'With --migrate-mailbox: preview without writing')
     .option('--repair-workspace', 'Recreate a missing DEV workspace folder or marker from the project identity (does not reconcile chains)')
     .option('--check-assets', 'Compare master, installed, and project assets without writing or reconciling runtime state')
-    .action(async (opts: { recovery?: boolean; allVersions?: boolean; reconstruct?: boolean; v?: string; repairWorkspace?: boolean; migrateMailbox?: boolean; migrateLifecycle?: boolean; directorConfirm?: boolean; dryRun?: boolean; checkAssets?: boolean }) => {
+    .action(async (opts: { recovery?: boolean; allVersions?: boolean; reconstruct?: boolean; v?: string; repairWorkspace?: boolean; migrateMailbox?: boolean; adoptOrphans?: boolean; migrateLifecycle?: boolean; directorConfirm?: boolean; dryRun?: boolean; checkAssets?: boolean }) => {
       try {
         if (opts.checkAssets) {
           if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v || opts.repairWorkspace ||
-              opts.migrateMailbox || opts.migrateLifecycle || opts.directorConfirm || opts.dryRun) {
+              opts.migrateMailbox || opts.migrateLifecycle || opts.directorConfirm || opts.dryRun || opts.adoptOrphans) {
             throw new Error('--check-assets cannot be combined with other doctor modes.');
           }
           runAssetCheck();
           return;
         }
         if (opts.migrateLifecycle) {
-          if(opts.recovery||opts.allVersions||opts.reconstruct||opts.migrateMailbox||opts.repairWorkspace)throw new Error('--migrate-lifecycle cannot be combined with other doctor mutation modes.');
+          if(opts.recovery||opts.allVersions||opts.reconstruct||opts.migrateMailbox||opts.repairWorkspace||opts.adoptOrphans)throw new Error('--migrate-lifecycle cannot be combined with other doctor mutation modes.');
           console.log(JSON.stringify(await migrateLifecycle(findProjectRoot(),opts.v,!!opts.dryRun,!!opts.directorConfirm),null,2));return;
         }
-        if(opts.directorConfirm)throw new Error('--director-confirm requires --migrate-lifecycle.');
+        if(opts.directorConfirm && !(opts.migrateMailbox && opts.adoptOrphans))throw new Error('--director-confirm requires --migrate-lifecycle, or --migrate-mailbox with --adopt-orphans.');
+        if (opts.adoptOrphans && !opts.migrateMailbox) throw new Error('--adopt-orphans requires --migrate-mailbox.');
         if (opts.migrateMailbox) {
+          if (opts.adoptOrphans && !opts.dryRun && !opts.directorConfirm) throw new Error('--adopt-orphans requires --director-confirm (preview with --dry-run first).');
           if (opts.recovery || opts.allVersions || opts.reconstruct || opts.v || opts.repairWorkspace) throw new Error('--migrate-mailbox cannot be combined with chain/workspace doctor options.');
-          console.log(JSON.stringify(await migrateMailbox(findProjectRoot(), !!opts.dryRun), null, 2));
+          console.log(JSON.stringify(await migrateMailbox(findProjectRoot(), !!opts.dryRun, !!opts.adoptOrphans), null, 2));
           return;
         }
         if (opts.dryRun) throw new Error('--dry-run requires --migrate-mailbox.');
