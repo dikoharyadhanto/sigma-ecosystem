@@ -396,6 +396,7 @@ DEV MUST document implementation work in `EXEC`.
 - Build Result and Verification (What Was Implemented, How It Works, Key Output Locations, Dependency / Environment Changes, Verification, Change Evidence, DEV Status, Notes for FMN)
 - Deviations, Issues, and Limitations
 - Director Observation Report & Minor Requests (DEV transcribes it from the Director's chat report)
+- Changelog (template schema 4 and later; the last section, which DEV fills last, after FMN Post-Build Review)
 
 FMN fills the FMN Pre-Build Review and FMN Post-Build Review sections.
 
@@ -560,6 +561,24 @@ trace: changed files, the implementation scope, and verification evidence.
 DEV MUST NOT run `git commit`, `git push`, or open pull requests. Commit and push are Director actions outside DEV authority. After `EXEC` is approved and locked, DEV should remind the Director to commit and push.
 
 Git access is capability, not authorization.
+
+---
+
+### 7. Changelog
+
+DEV MUST fill the Changelog section of `EXEC` last, after FMN Post-Build Review, so it reflects the final result (template schema 4 and later). When the `EXEC` becomes LOCKED, Sigma copies the list to the project `CHANGE-RECORD.md` under its EXEC version (for example `## v1.1`). DEV does not write `CHANGE-RECORD.md` for that purpose.
+
+The Changelog is not a record of the process. Summarize only the latest product changes that were successfully implemented and stand at lock; leave out anything reverted, replaced, or cancelled during the work, and anything planned but not delivered.
+
+Write a flat list. One item per product change, each a short sentence that states the change directly.
+
+DEV MUST NOT put Sigma artifact names or versions, audit verdicts, gates, or administrative work such as commit or push in the list. Do not add sub-lists, tables, or extra headings. Sigma copies the text as written and does not shorten or reword it.
+
+If the execution changed nothing a product user would notice, replace the list with exactly: `No product changes.`
+
+Recording is best-effort and never blocks the lock. It happens only when all of these hold: the `EXEC` uses template schema 4 or later with a filled Changelog section, the `EXEC` becomes LOCKED, and a `CHANGE-RECORD.md` already exists at `<project_root>/CHANGE-RECORD.md` or `<project_root>/dev/CHANGE-RECORD.md`. Those are the only valid locations. When both exist, `dev/` is used if the DEV workspace is active, otherwise the project root.
+
+When Sigma prints that the changelog was not recorded, nothing was written. Add the entries to `CHANGE-RECORD.md` by hand first, in the existing format (`## v1.1` version headings, each followed by a flat list, most recently locked first), then resolve the stated cause; otherwise the next changelog record will fail again. While the DEV workspace is active DEV edits only `dev/CHANGE-RECORD.md`; the project-root file is outside the boundary and needs Director authorization.
 
 ---
 

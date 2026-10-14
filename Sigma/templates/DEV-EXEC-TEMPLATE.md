@@ -1,9 +1,9 @@
-<!-- SIGMA:DOC type=DEV_EXEC schema=3 -->
+<!-- SIGMA:DOC type=DEV_EXEC schema=4 -->
 # DEV-EXEC
 
 > Implementation plan, build result, and verification evidence for an APPROVED PLAN (LOCKED on legacy chains).
 > Approval and lock state are managed by Sigma CLI. Do not record them here. EXEC approval locks the same-number PLAN/EXEC pair on paired_approval chains.
-> Ownership: DEV fills Implementation Plan and Technical Research before the build, and Build Result and Verification and Deviations, Issues, and Limitations after it. FMN fills FMN Pre-Build Review and FMN Post-Build Review; DEV does not write in them. DEV transcribes Director Observation Report & Minor Requests from the Director's chat report. DEV or FMN fills Director Summary, last.
+> Ownership: DEV fills Implementation Plan and Technical Research before the build, and Build Result and Verification and Deviations, Issues, and Limitations after it. DEV fills Changelog last, after FMN Post-Build Review. FMN fills FMN Pre-Build Review and FMN Post-Build Review; DEV does not write in them. DEV transcribes Director Observation Report & Minor Requests from the Director's chat report. DEV or FMN fills Director Summary, last.
 
 ---
 
@@ -285,3 +285,14 @@ No minor requests in this execution.
 > Filled by DEV after acting on the items above. One row per item acted on, referencing its ID. To record one, replace the sentence below with a table with columns `ID | Type | What Was Done | Files Affected | Status`. Type is `Observation` or `Minor Request`. Status is `Fixed`, `Explained`, `Accepted`, or `Deferred` for an observation, and `Done` or `Deferred` for a minor request.
 
 No follow-up actions taken.
+
+---
+
+<!-- SIGMA:DEV_EXEC:SECTION:CHANGELOG -->
+## Changelog
+
+> Filled by DEV last, after FMN Post-Build Review, so the list reflects the final result. Sigma copies this list to the project CHANGE-RECORD.md when this DEV-EXEC becomes LOCKED. This is not a record of the process: summarize only the latest product changes that were successfully implemented and stand at lock, and leave out anything that was reverted, replaced, cancelled, or not delivered.
+> Write a flat list, one product change per item, each a short sentence that states the change directly. Do not name Sigma artifacts, versions, verdicts, gates, or administrative work such as commit or push. Do not add sub-lists, tables, or extra headings.
+> If nothing changed that a product user would notice, replace the list with exactly: No product changes.
+
+- [...]

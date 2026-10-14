@@ -7,6 +7,7 @@ import { computeStateRevision, ERROR_CODES } from '../../contract';
 import { McpQueryError } from '../../errors';
 import { getBinding } from '../../shared';
 import { respondControlWrite, stableHash } from '../shared';
+import { recordChangelogForLockedExec, describeChangelogOutcome } from '../../../services/changelogService';
 function readyReview(root: string, domain: ApprovalDomain, version?: string) {
     try {
         const review = approvalReview(root, domain, version);
@@ -44,6 +45,14 @@ export function registerArtifactApprovalTools(server: McpServer, domain: Approva
         let dependencies = '';
         return respondControlWrite({ tool: commit, operationId: domain + '_approve_commit', guardedWrites: true, idempotencyKey: args.idempotency_key, argumentsForHash: { operation_ticket_id: args.operation_ticket_id, approval_id: args.approval_id }, allowedRoles: [role], operationTicketId: args.operation_ticket_id, approvalId: args.approval_id,
             transactionFiles: root => [...approveArtifactTransactionFiles(root, domain, version), ticketPath(root, args.operation_ticket_id), approvalPath(root, args.approval_id)],
+            // F17: record the changelog only after the EXEC LOCKED transition is committed.
+            afterCommit: domain === 'exec' ? (root, result) => {
+                const locked = result as { state?: string; version?: string };
+                if (locked.state !== 'LOCKED' || !locked.version)
+                    return null;
+                const outcome = recordChangelogForLockedExec(root, locked.version);
+                return { changelog: { status: outcome.status, message: describeChangelogOutcome(outcome) } };
+            } : undefined,
             checkPreconditions: root => {
                 const ticket = readTicket(root, args.operation_ticket_id);
                 if (!ticket?.target || ticket.operation_id !== domain + '_approve' || ticket.target.artifact !== domain || ticket.bound_role !== role)

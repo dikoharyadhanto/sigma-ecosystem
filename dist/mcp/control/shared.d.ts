@@ -26,6 +26,13 @@ export interface ControlWriteOptions {
      * idempotency/lock/audit machinery below is written exactly once.
      */
     checkPreconditions: (root: string) => void;
+    /**
+     * Runs once, after the transaction is committed and the lease released, and
+     * only for the call that made the change (never an idempotent replay). Its
+     * return value, when an object, is merged into the result. It must not throw;
+     * a throw is swallowed so it can never turn a committed change into a failure.
+     */
+    afterCommit?: (root: string, result: unknown) => Record<string, unknown> | null;
     /** Audit correlation — Stage D's commit tool passes both; Stage C's tools
      *  pass neither (there is no ticket/approval concept for a bounded DRAFT
      *  write). */

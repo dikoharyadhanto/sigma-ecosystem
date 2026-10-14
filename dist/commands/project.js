@@ -16,6 +16,7 @@ const config_1 = require("../config");
 const roleMemory_1 = require("../engine/roleMemory");
 const reconstruct_1 = require("../engine/reconstruct");
 const artifacts_1 = require("../utils/artifacts");
+const changelogService_1 = require("../services/changelogService");
 const chain_1 = require("../engine/chain");
 const projectConfig_1 = require("../engine/projectConfig");
 const languageWizard_1 = require("../engine/languageWizard");
@@ -350,6 +351,12 @@ async function runStart(opts) {
     if (bridgeCopied > 0) {
         console.log(`  Bridge: ${bridgeCopied} file(s) written from template.`);
     }
+    // F17: product changelog destination; created only when neither valid location has one.
+    {
+        const changelog = (0, changelogService_1.ensureChangelogFile)(projectRoot);
+        if (changelog.created)
+            console.log(`  Changelog: ${changelog.rel} created (empty).`);
+    }
     (0, output_1.success)(`Sigma project initialized: ${projectName} (${projectId})`);
     console.log(`  Location: ${sigmaDir}`);
     console.log('  Next: Run `sigma session bootstrap` or `sigma project status` to confirm state.');
@@ -474,6 +481,11 @@ function runSync(opts) {
         console.log('  Review each DIFF source and target. A replacement requires --confirm and its exact --accept token.');
         console.log('  .mcp.json (sigma-mcp — upsert key sigma)');
         console.log('  opencode.jsonc / opencode.json (sigma-mcp — upsert key mcp.sigma)');
+        {
+            const plan = (0, changelogService_1.planChangelogCreation)(projectRoot);
+            if (plan.action === 'create')
+                console.log(`  ${plan.rel} (create empty product changelog; none exists in the project root or dev/)`);
+        }
         (0, output_1.warn)('Pass --confirm to apply.');
         return;
     }
@@ -483,6 +495,11 @@ function runSync(opts) {
         console.log('  Updated: ' + item);
     if (result.backupDir)
         console.log('  Previous files backed up at: ' + result.backupDir);
+    {
+        const changelog = (0, changelogService_1.ensureChangelogFile)(projectRoot);
+        if (changelog.created)
+            console.log(`  Created: ${changelog.rel} (empty product changelog).`);
+    }
     // Stage 2 & PLAN-EVAL-04 — Upsert local & global MCP config dengan explicit projectRoot
     {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeClaudeMcpConfig)(projectRoot), '.mcp.json');

@@ -9,6 +9,7 @@ const revisions_1 = require("../engine/revisions");
 const revisions_2 = require("../engine/revisions");
 const docCheck_1 = require("../utils/docCheck");
 const controlStore_1 = require("../engine/controlStore");
+const changelogService_1 = require("../services/changelogService");
 function failure(e) { console.error(e.message); process.exitCode = 1; }
 function registerApprovalCommands(cmd, domain) {
     cmd.command('lock').description('Removed: use approve; semantics follow lifecycle_model')
@@ -34,6 +35,11 @@ function registerApprovalCommands(cmd, domain) {
             });
             console.log(JSON.stringify(result, null, 2));
             console.log((domain === 'plan' ? 'FMN-PLAN' : 'DEV-EXEC') + ' ' + result.version + ' ' + result.state + ' (' + result.lifecycle_model + ')');
+            // F17: after the lock is committed; never affects the lock or the exit code.
+            if (domain === 'exec' && result.state === 'LOCKED') {
+                const outcome = (0, changelogService_1.recordChangelogForLockedExec)(root, result.version);
+                (outcome.status === 'skipped' ? console.warn : console.log)((0, changelogService_1.describeChangelogOutcome)(outcome));
+            }
         }
         catch (e) {
             failure(e);

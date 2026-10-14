@@ -228,6 +228,37 @@ const EXEC_SPEC_V3: SigmaDocSpec = {
   ],
 };
 
+// First execution-document schema with the Changelog section (F17). Same
+// layout as schema 3; the Changelog is the last section.
+// Schemas 3 and earlier keep validating unchanged and simply have no
+// changelog to record.
+const EXEC_SCHEMA_V4 = 4;
+
+const EXEC_SPEC_V4: SigmaDocSpec = {
+  ...EXEC_SPEC_V3,
+  requiredSections: [
+    'DIRECTOR_SUMMARY',
+    'IMPLEMENTATION_PLAN',
+    'FMN_PRE_BUILD_REVIEW',
+    'BUILD_RESULT_AND_VERIFICATION',
+    'DEVIATIONS_ISSUES_LIMITATIONS',
+    'FMN_POST_BUILD_REVIEW',
+    'DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS',
+    'CHANGELOG',
+  ],
+  sectionOrder: [
+    'DIRECTOR_SUMMARY',
+    'IMPLEMENTATION_PLAN',
+    'TECHNICAL_RESEARCH',
+    'FMN_PRE_BUILD_REVIEW',
+    'BUILD_RESULT_AND_VERIFICATION',
+    'DEVIATIONS_ISSUES_LIMITATIONS',
+    'FMN_POST_BUILD_REVIEW',
+    'DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS',
+    'CHANGELOG',
+  ],
+};
+
 const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
   intent: {
     heading: 'Sigma Intent Check',
@@ -385,6 +416,7 @@ function resolveDocSpec(domain: SigmaDocDomain, schema: string | null): SigmaDoc
   if (Number.isInteger(version)) {
     if (domain === 'intent' && version >= INTENT_SCHEMA_V5) return INTENT_SPEC_V5;
     if (domain === 'plan' && version >= PLAN_SCHEMA_V3) return PLAN_SPEC_V3;
+    if (domain === 'exec' && version >= EXEC_SCHEMA_V4) return EXEC_SPEC_V4;
     if (domain === 'exec' && version >= EXEC_SCHEMA_V3) return EXEC_SPEC_V3;
   }
   return DOC_SPECS[domain];
@@ -1011,7 +1043,7 @@ export function validateSigmaDocFile(
 
   if (domain === 'exec') {
     evaluateExecVerdictGate(relevantMarkers, lines, requirements, passes, warnings);
-    if (spec === EXEC_SPEC_V3) {
+    if (spec === EXEC_SPEC_V3 || spec === EXEC_SPEC_V4) {
       evaluateExecV3Gate(spec, relevantMarkers, lines, requirements, passes, warnings);
     }
   }

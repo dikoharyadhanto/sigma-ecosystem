@@ -267,7 +267,18 @@ async function respondControlWrite(opts, mutate) {
         if (replayed) {
             (0, controlStore_1.appendAuditEntry)(root, makeAuditEntry('idempotent_replay', null, revisionBefore, revisionAfter, sha256Of(result)));
         }
-        return (0, contract_1.ok)(opts.tool, root, result);
+        let finalResult = result;
+        if (!replayed && opts.afterCommit) {
+            try {
+                const extra = opts.afterCommit(root, result);
+                if (extra && typeof result === 'object' && result !== null)
+                    finalResult = { ...result, ...extra };
+            }
+            catch {
+                // Post-commit hooks are advisory.
+            }
+        }
+        return (0, contract_1.ok)(opts.tool, root, finalResult);
     }
     catch (err) {
         const code = codeOf(err);

@@ -25,6 +25,7 @@ import {
 import { getBundledRoleMemoryDir } from '../engine/roleMemory';
 import { findSigmaProjectRoot } from '../engine/reconstruct';
 import { copyTemplateToArtifact } from '../utils/artifacts';
+import { ensureChangelogFile, planChangelogCreation } from '../services/changelogService';
 import {
   readActiveChain,
   readProjectIdentity,
@@ -424,6 +425,12 @@ async function runStart(opts: {
     console.log(`  Bridge: ${bridgeCopied} file(s) written from template.`);
   }
 
+  // F17: product changelog destination; created only when neither valid location has one.
+  {
+    const changelog = ensureChangelogFile(projectRoot);
+    if (changelog.created) console.log(`  Changelog: ${changelog.rel} created (empty).`);
+  }
+
   success(`Sigma project initialized: ${projectName} (${projectId})`);
   console.log(`  Location: ${sigmaDir}`);
   console.log('  Next: Run `sigma session bootstrap` or `sigma project status` to confirm state.');
@@ -547,6 +554,10 @@ function runSync(opts: { confirm?: boolean; accept?: string[] }): void {
     console.log('  Review each DIFF source and target. A replacement requires --confirm and its exact --accept token.');
     console.log('  .mcp.json (sigma-mcp — upsert key sigma)');
     console.log('  opencode.jsonc / opencode.json (sigma-mcp — upsert key mcp.sigma)');
+    {
+      const plan = planChangelogCreation(projectRoot);
+      if (plan.action === 'create') console.log(`  ${plan.rel} (create empty product changelog; none exists in the project root or dev/)`);
+    }
     warn('Pass --confirm to apply.');
     return;
   }
@@ -555,6 +566,10 @@ function runSync(opts: { confirm?: boolean; accept?: string[] }): void {
   success('Project synced successfully.');
   for (const item of result.copied) console.log('  Updated: ' + item);
   if (result.backupDir) console.log('  Previous files backed up at: ' + result.backupDir);
+  {
+    const changelog = ensureChangelogFile(projectRoot);
+    if (changelog.created) console.log(`  Created: ${changelog.rel} (empty product changelog).`);
+  }
 
   // Stage 2 & PLAN-EVAL-04 — Upsert local & global MCP config dengan explicit projectRoot
   {

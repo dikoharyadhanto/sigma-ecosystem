@@ -705,7 +705,7 @@ sigma session bootstrap
 |:------------------------------ |:------------------------------------------------------------------------------------------ |
 | `sigma setup update`           | Updates global `~/.sigma/` templates and governance files                                  |
 | `sigma project sync`           | Previews managed files with source and target hashes; shows an acceptance token for each difference |
-| `sigma project sync --confirm` | Copies missing files and approved replacements; backs up previous bytes before replacement |
+| `sigma project sync --confirm` | Copies missing files and approved replacements; backs up previous bytes before replacement; creates an empty product `CHANGE-RECORD.md` only when neither `CHANGE-RECORD.md` nor `dev/CHANGE-RECORD.md` exists |
 | `sigma session bootstrap`      | Verifies project state after migration                                                     |
 
 > **No automatic legacy schema/ROADMAP migration.** Older projects with a pre-current `progress.json` schema (legacy `BUILDING`/`TESTING`/`COMPLETED` exec states, a leftover root-level `cso` array) or a freeform ROADMAP (no H2 stage convention) no longer have a CLI migration path — `sigma sync progress`/`sigma sync roadmap` were removed as trivial/redundant. This is an accepted risk; such projects require manual schema/document adjustment.

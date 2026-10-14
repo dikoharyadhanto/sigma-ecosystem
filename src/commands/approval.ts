@@ -7,6 +7,7 @@ import { revisionPaths, boundedPath, ChangeDeclaration, preparePlanRevision, che
 import { artifactFile } from '../engine/revisions';
 import { validateSigmaDocFile, printSigmaDocReport } from '../utils/docCheck';
 import { generateId, ticketPath, approvalPath } from '../engine/controlStore';
+import { recordChangelogForLockedExec, describeChangelogOutcome } from '../services/changelogService';
 function failure(e: unknown): void { console.error((e as Error).message); process.exitCode = 1; }
 export function registerApprovalCommands(cmd: Command, domain: ApprovalDomain): void {
     cmd.command('lock').description('Removed: use approve; semantics follow lifecycle_model')
@@ -35,6 +36,11 @@ export function registerApprovalCommands(cmd: Command, domain: ApprovalDomain): 
             });
             console.log(JSON.stringify(result, null, 2));
             console.log((domain === 'plan' ? 'FMN-PLAN' : 'DEV-EXEC') + ' ' + result.version + ' ' + result.state + ' (' + result.lifecycle_model + ')');
+            // F17: after the lock is committed; never affects the lock or the exit code.
+            if (domain === 'exec' && result.state === 'LOCKED') {
+                const outcome = recordChangelogForLockedExec(root, result.version);
+                (outcome.status === 'skipped' ? console.warn : console.log)(describeChangelogOutcome(outcome));
+            }
         }
         catch (e) {
             failure(e);

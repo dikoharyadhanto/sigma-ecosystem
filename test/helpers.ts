@@ -806,6 +806,19 @@ No observations from Director manual testing.
 `;
 }
 
+// DEV_EXEC schema 4 (F17): schema 3 layout plus the Changelog section, last.
+export function validExecDocV4(
+  version: string,
+  planVersionRef: string,
+  verdict = 'READY_FOR_LOCK',
+  changelog = '- Added CSV export of results.\n- Fixed the area calculation at region borders.',
+): string {
+  return (
+    validExecDocV3(version, planVersionRef, verdict).replace('schema=3', 'schema=4').trimEnd() +
+    `\n\n<!-- SIGMA:DEV_EXEC:SECTION:CHANGELOG -->\n## Changelog\n\n> Guidance line.\n\n${changelog}\n`
+  );
+}
+
 export function validCloseDoc(version: string, verdict = 'CLOSE_ACCEPTED'): string {
   return `<!-- SIGMA:DOC type=DIR_CLOSE schema=2 -->
 # DIR-CLOSE ${version}

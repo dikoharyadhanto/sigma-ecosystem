@@ -9,6 +9,7 @@ const contract_1 = require("../../contract");
 const errors_1 = require("../../errors");
 const shared_1 = require("../../shared");
 const shared_2 = require("../shared");
+const changelogService_1 = require("../../../services/changelogService");
 function readyReview(root, domain, version) {
     try {
         const review = (0, approvalService_1.approvalReview)(root, domain, version);
@@ -39,6 +40,14 @@ function registerArtifactApprovalTools(server, domain) {
         let dependencies = '';
         return (0, shared_2.respondControlWrite)({ tool: commit, operationId: domain + '_approve_commit', guardedWrites: true, idempotencyKey: args.idempotency_key, argumentsForHash: { operation_ticket_id: args.operation_ticket_id, approval_id: args.approval_id }, allowedRoles: [role], operationTicketId: args.operation_ticket_id, approvalId: args.approval_id,
             transactionFiles: root => [...(0, approvalService_1.approveArtifactTransactionFiles)(root, domain, version), (0, controlStore_1.ticketPath)(root, args.operation_ticket_id), (0, controlStore_1.approvalPath)(root, args.approval_id)],
+            // F17: record the changelog only after the EXEC LOCKED transition is committed.
+            afterCommit: domain === 'exec' ? (root, result) => {
+                const locked = result;
+                if (locked.state !== 'LOCKED' || !locked.version)
+                    return null;
+                const outcome = (0, changelogService_1.recordChangelogForLockedExec)(root, locked.version);
+                return { changelog: { status: outcome.status, message: (0, changelogService_1.describeChangelogOutcome)(outcome) } };
+            } : undefined,
             checkPreconditions: root => {
                 const ticket = (0, controlStore_1.readTicket)(root, args.operation_ticket_id);
                 if (!ticket?.target || ticket.operation_id !== domain + '_approve' || ticket.target.artifact !== domain || ticket.bound_role !== role)

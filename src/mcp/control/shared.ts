@@ -118,6 +118,13 @@ export interface ControlWriteOptions {
    * idempotency/lock/audit machinery below is written exactly once.
    */
   checkPreconditions: (root: string) => void;
+  /**
+   * Runs once, after the transaction is committed and the lease released, and
+   * only for the call that made the change (never an idempotent replay). Its
+   * return value, when an object, is merged into the result. It must not throw;
+   * a throw is swallowed so it can never turn a committed change into a failure.
+   */
+  afterCommit?: (root: string, result: unknown) => Record<string, unknown> | null;
   /** Audit correlation — Stage D's commit tool passes both; Stage C's tools
    *  pass neither (there is no ticket/approval concept for a bounded DRAFT
    *  write). */
@@ -378,7 +385,16 @@ export async function respondControlWrite(
     if (replayed) {
       appendAuditEntry(root, makeAuditEntry('idempotent_replay', null, revisionBefore, revisionAfter, sha256Of(result)));
     }
-    return ok(opts.tool, root, result);
+    let finalResult = result;
+    if (!replayed && opts.afterCommit) {
+      try {
+        const extra = opts.afterCommit(root, result);
+        if (extra && typeof result === 'object' && result !== null) finalResult = { ...(result as object), ...extra };
+      } catch {
+        // Post-commit hooks are advisory.
+      }
+    }
+    return ok(opts.tool, root, finalResult);
   } catch (err) {
     const code = codeOf(err);
     if (!(err && typeof err === 'object' && (err as { controlTransactionRecorded?: boolean }).controlTransactionRecorded)) {

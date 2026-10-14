@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+### F17 — product changelog from the EXEC (2026-10-14)
+
+- DEV-EXEC template schema 4 adds a required `Changelog` section (a flat list, or exactly `No product changes.`). Schemas 3 and earlier validate unchanged and have no changelog to record.
+- When `sigma exec approve --director-confirm` (or the MCP commit) makes an EXEC LOCKED, the list is added to the project `CHANGE-RECORD.md` under its EXEC version (`## v1.1`, most recently locked first, no date). Recording runs after the lock is committed, happens once, and never blocks the lock. The only valid files are `<project_root>/CHANGE-RECORD.md` and `<project_root>/dev/CHANGE-RECORD.md`; with both present the DEV workspace state decides.
+- When a condition is not met or anything goes wrong, nothing is written and a message says why: `Changelog was not recorded because <reason>, so it was skipped. Update the changelog manually first, then resolve this issue; otherwise the next changelog record will fail again.`
+- `sigma project start` and `sigma project sync --confirm` create an empty `CHANGE-RECORD.md` only when neither valid location has one.
+- DEV and FMN rules and role memory describe the Changelog section.
+- The record is named `CHANGE-RECORD.md`, not `CHANGELOG.md`, so release tools and manual edits of the conventional name cannot break the recording format. A presentation copy can be made under any other name.
+
 ### F08 — source review, draft reuse, audit and decisions (2026-10-14)
 
 - Add read-only PLAN source review with quoted INTENT references and separate structural, certification and explicit advisory readiness results.

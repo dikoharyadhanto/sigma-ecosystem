@@ -58,9 +58,11 @@ describe('docCheck - DEV_EXEC schema selection', () => {
     });
 
     it('the bundled template is structurally valid but not ready to lock', () => {
+      // The bundled template moved to schema 4 (F17); schema 3 documents are
+      // covered by the filled-document test above.
       const report = validateSigmaDocFile(TEMPLATE_V3, 'exec');
 
-      expect(report.schema).toBe('3');
+      expect(report.schema).toBe('4');
       expect(report.errors).toEqual([]);
       expect(unsatisfied(report)).toEqual([
         'FMN Post-Build Advisory Verdict recorded (exactly one)',

@@ -435,6 +435,8 @@ DEV implements according to `PLAN`.
 
 FMN should review DEV's result through `EXEC`, not through assumptions.
 
+For an `EXEC` on template schema 4 or later, FMN should also check that the Changelog section states this execution's product changes as a flat list without Sigma identifiers, or states `No product changes.`, before advising approval. The list is copied to the project changelog when the `EXEC` is LOCKED.
+
 FMN should ask DEV for clarification if implementation evidence is incomplete.
 
 ---
