@@ -55,6 +55,7 @@ export function computeOrientation(root: string | null, role?: SigmaRole): unkno
     lifecycle: chain ? lifecycleView(root,chain) : null,
     numbering: view.numbering,
     compatibility_warnings: view.compatibilityWarnings,
+    version_status: view.versionStatus,
     gate_summary: gates,
     next_valid_operations: nextOps,
     stale_intent_warnings: chain ? getInvalidWarningLines(chain) : [],

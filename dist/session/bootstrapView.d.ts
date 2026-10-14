@@ -1,5 +1,6 @@
 import { ChainState, Gates, ProjectIdentity } from '../engine/chain';
 import { VersioningScheme } from '../engine/numbering';
+import { VersionStatus } from '../services/assetConsistency';
 export interface BootstrapView {
     projectRoot: string;
     identity: ProjectIdentity;
@@ -14,6 +15,7 @@ export interface BootstrapView {
         source: 'chain' | 'legacy_fallback';
     } | null;
     compatibilityWarnings: string[];
+    versionStatus: VersionStatus | null;
 }
 export declare function buildBootstrapView(projectRoot?: string): BootstrapView;
 //# sourceMappingURL=bootstrapView.d.ts.map

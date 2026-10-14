@@ -138,6 +138,10 @@ describe('creation metadata and collision guards', () => {
   });
 });
 
+// F12 adds a version warning to the same list; it depends on the machine's
+// ~/.sigma state, so these numbering tests look at the other warnings only.
+const withoutVersionWarning = (warnings: string[]): string[] => warnings.filter(w => !w.startsWith('Sigma:'));
+
 describe('bootstrap and reconstruction', () => {
   it('bootstrap CLI/MCP share active-only warning and are read-only', () => {
     const env = environment(); const legacy = chain('v1', 'legacy_offset'); delete legacy.versioning_scheme;
@@ -151,9 +155,9 @@ describe('bootstrap and reconstruction', () => {
     computeDoctor(env.projectDir);
     expect(fs.readFileSync(chainPath(env, 'v1'), 'utf8')).toBe(before);
     writeChainFixture(env, 'v2', chain('v2'));
-    expect(buildBootstrapView(env.projectDir).compatibilityWarnings).toEqual([expect.stringContaining('Legacy lifecycle')]);
+    expect(withoutVersionWarning(buildBootstrapView(env.projectDir).compatibilityWarnings)).toEqual([expect.stringContaining('Legacy lifecycle')]);
     fs.writeJsonSync(env.activateStatusPath, { active_chain: 'v1' });
-    expect(buildBootstrapView(env.projectDir).compatibilityWarnings).toHaveLength(2);
+    expect(withoutVersionWarning(buildBootstrapView(env.projectDir).compatibilityWarnings)).toHaveLength(2);
   });
   it('state revision changes when the numbering field changes', () => {
     const env = environment(); writeChainFixture(env, 'v3', chain());
@@ -164,7 +168,7 @@ describe('bootstrap and reconstruction', () => {
   it('a project without chains has no numbering or compatibility warning', () => {
     const env = environment(); fs.writeJsonSync(env.activateStatusPath, { active_chain: null });
     const view = buildBootstrapView(env.projectDir);
-    expect(view.numbering).toBeNull(); expect(view.compatibilityWarnings).toEqual([]);
+    expect(view.numbering).toBeNull(); expect(withoutVersionWarning(view.compatibilityWarnings)).toEqual([]);
   });
   it('normal transition recovers disjoint legacy/aligned majors and keeps lone aligned INTENT', () => {
     const env = environment();

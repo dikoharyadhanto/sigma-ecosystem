@@ -24,6 +24,8 @@ import { controlCommand } from './commands/control';
 import { devCommand } from './commands/dev';
 import { auditCommand, decisionsCommand } from './commands/f08';
 import { appendOperationLogEntry } from './utils/operationLog';
+import { findProjectRoot } from './utils/fs';
+import { evaluateVersionStatus } from './services/assetConsistency';
 
 const program = new Command();
 
@@ -91,6 +93,33 @@ program.hook('preAction', (_thisCommand, actionCommand) => {
   if (pendingOperation === 'plan check' && actionCommand.opts().sources ||
       ['audit show', 'decisions list', 'decisions target'].includes(pendingOperation ?? '') ||
       ['intent clone', 'plan clone'].includes(pendingOperation ?? '') && !actionCommand.opts().confirm) pendingOperation = null;
+});
+
+// ── Version warning (F12) ───────────────────────────────────────────────────
+// One line on stderr when the Sigma assets this project (or the global
+// installation) holds are behind the installed CLI. Silent outside a project.
+// `setup`, `project start|register|sync`, and `doctor` are the commands that
+// fix or diagnose the condition, and `session bootstrap` already prints the
+// same message through its compatibility warnings.
+const VERSION_WARNING_EXEMPT = new Set([
+  'project start', 'project register', 'project sync', 'session bootstrap',
+]);
+
+function exemptFromVersionWarning(operation: string): boolean {
+  const [head] = operation.split(' ');
+  return head === 'setup' || head === 'doctor' || VERSION_WARNING_EXEMPT.has(operation);
+}
+
+program.hook('preAction', (_thisCommand, actionCommand) => {
+  if (exemptFromVersionWarning(commandPath(actionCommand))) return;
+  let projectRoot: string;
+  try {
+    projectRoot = findProjectRoot();
+  } catch {
+    return;
+  }
+  const status = evaluateVersionStatus(projectRoot);
+  if (status?.message) console.error(status.message);
 });
 
 process.on('exit', (code) => {

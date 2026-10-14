@@ -10,6 +10,10 @@ exports.inspectProjectAssets = inspectProjectAssets;
 exports.formatAssetDifference = formatAssetDifference;
 exports.syncManagedAssets = syncManagedAssets;
 exports.inspectAssetDrift = inspectAssetDrift;
+exports.computeAssetsHash = computeAssetsHash;
+exports.stampProjectIfCurrent = stampProjectIfCurrent;
+exports.stampHostIfCurrent = stampHostIfCurrent;
+exports.evaluateVersionStatus = evaluateVersionStatus;
 const crypto_1 = __importDefault(require("crypto"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const os_1 = __importDefault(require("os"));
@@ -17,6 +21,7 @@ const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
 const roleMemory_1 = require("../engine/roleMemory");
 const detect_1 = require("../utils/detect");
+const fs_1 = require("../utils/fs");
 const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
 const BUNDLE_SIGMA = path_1.default.join(PACKAGE_ROOT, 'Sigma');
 const BUNDLE_BRIDGE = path_1.default.join(PACKAGE_ROOT, 'setup', 'targets', 'bridge');
@@ -254,5 +259,127 @@ function inspectAssetDrift(projectRoot) {
         }
     }
     return { differences, memoryWarnings };
+}
+// Hash over the SOURCE side of the pairs, keyed by label, so two files that
+// swap contents produce a different hash and the result does not depend on the
+// order in which pairs were listed.
+function computeAssetsHash(pairs) {
+    const lines = pairs.map(pair => pair.label + '\0' + sha256File(pair.source)).sort();
+    return 'sha256:' + crypto_1.default.createHash('sha256').update(lines.join('\n')).digest('hex');
+}
+function readJsonObject(file) {
+    try {
+        const parsed = fs_extra_1.default.readJsonSync(file);
+        if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            return parsed;
+        }
+    }
+    catch {
+        // missing or unreadable: callers decide what that means
+    }
+    return null;
+}
+function writeJsonAtomic(file, value) {
+    const tmp = file + '.' + process.pid + '.tmp';
+    fs_extra_1.default.writeJsonSync(tmp, value, { spaces: 2 });
+    (0, fs_1.atomicReplaceFileSync)(tmp, file);
+}
+function asStamp(raw, versionKey) {
+    if (raw === null || typeof raw !== 'object')
+        return null;
+    const record = raw;
+    const version = record[versionKey];
+    const hash = record.assets_hash;
+    const syncedAt = record.synced_at;
+    if (typeof version !== 'string' || typeof hash !== 'string' || typeof syncedAt !== 'string')
+        return null;
+    return { sigma_version: version, assets_hash: hash, synced_at: syncedAt };
+}
+function allSame(pairs, safeRoot) {
+    return pairs.length > 0 && pairs.every(pair => inspectAsset(pair, safeRoot).status === 'SAME');
+}
+// Records the stamp on the project identity only when every managed project
+// asset already matches its source. Never creates the identity file.
+function stampProjectIfCurrent(projectRoot) {
+    try {
+        const pairs = managedProjectAssets(projectRoot);
+        if (!allSame(pairs, projectRoot))
+            return { written: false, reason: 'managed project assets differ from their sources' };
+        const identityPath = path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE);
+        const identity = readJsonObject(identityPath);
+        if (!identity)
+            return { written: false, reason: config_1.PROJECT_IDENTITY_FILE + ' is missing or unreadable' };
+        identity.sigma_applied = {
+            sigma_version: config_1.SIGMA_VERSION,
+            assets_hash: computeAssetsHash(pairs),
+            synced_at: new Date().toISOString(),
+        };
+        writeJsonAtomic(identityPath, identity);
+        return { written: true };
+    }
+    catch (err) {
+        return { written: false, reason: err.message };
+    }
+}
+// Records the stamp on ~/.sigma/sigma.config.json only when every host asset
+// matches the master bundle. Keeps existing fields; refreshes cli_version.
+function stampHostIfCurrent() {
+    try {
+        const pairs = masterToHost();
+        if (!allSame(pairs))
+            return { written: false, reason: 'host assets differ from the master bundle' };
+        const config = readJsonObject(config_1.GLOBAL_CONFIG_FILE) ?? { schema_version: '1.0.0' };
+        config.cli_version = config_1.SIGMA_VERSION;
+        config.assets_hash = computeAssetsHash(pairs);
+        config.synced_at = new Date().toISOString();
+        fs_extra_1.default.ensureDirSync(path_1.default.dirname(config_1.GLOBAL_CONFIG_FILE));
+        writeJsonAtomic(config_1.GLOBAL_CONFIG_FILE, config);
+        return { written: true };
+    }
+    catch (err) {
+        return { written: false, reason: err.message };
+    }
+}
+const PROJECT_SYNC_STEP = 'Run: sigma project sync (review the dry run), then sigma project sync --confirm';
+// Host problems are reported before project problems: syncing a project from a
+// stale host would copy stale assets into it (F00 T-19). Returns null when the
+// status cannot be determined; callers stay silent in that case, and a version
+// check must never fail the command it is attached to.
+function evaluateVersionStatus(projectRoot) {
+    try {
+        const hostConfig = readJsonObject(config_1.GLOBAL_CONFIG_FILE);
+        const host = asStamp(hostConfig && { ...hostConfig, sigma_version: hostConfig.cli_version }, 'sigma_version');
+        const hostHash = computeAssetsHash(masterToHost());
+        const identity = readJsonObject(path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE));
+        const project = asStamp(identity?.sigma_applied, 'sigma_version');
+        const base = { installed_version: config_1.SIGMA_VERSION, host, project };
+        if (!hostConfig) {
+            return { ...base, level: 'host_unknown', command: 'sigma setup install',
+                message: 'Sigma: the global installation was not found. Run: sigma setup install' };
+        }
+        if (!host) {
+            return { ...base, level: 'host_unknown', command: 'sigma setup update',
+                message: 'Sigma: the global installation (~/.sigma) has no version stamp, so it may be outdated. Run: sigma setup update' };
+        }
+        if (host.sigma_version !== config_1.SIGMA_VERSION || host.assets_hash !== hostHash) {
+            return { ...base, level: 'host_outdated', command: 'sigma setup update',
+                message: 'Sigma: the global installation (~/.sigma, ' + host.sigma_version +
+                    ') is behind the installed CLI (' + config_1.SIGMA_VERSION + '). Run: sigma setup update' };
+        }
+        if (!project) {
+            return { ...base, level: 'project_unknown', command: 'sigma project sync',
+                message: 'Sigma: this project has no version stamp, so its Sigma assets may be outdated. ' + PROJECT_SYNC_STEP };
+        }
+        const projectHash = computeAssetsHash(managedProjectAssets(projectRoot));
+        if (project.sigma_version !== config_1.SIGMA_VERSION || project.assets_hash !== projectHash) {
+            return { ...base, level: 'project_outdated', command: 'sigma project sync',
+                message: 'Sigma: this project was last synced at ' + project.sigma_version + ' (' + project.synced_at +
+                    ') and is behind ~/.sigma (' + config_1.SIGMA_VERSION + '). ' + PROJECT_SYNC_STEP };
+        }
+        return { ...base, level: 'current', command: null, message: null };
+    }
+    catch {
+        return null;
+    }
 }
 //# sourceMappingURL=assetConsistency.js.map

@@ -1,7 +1,7 @@
 # F10 — Penamaan artefak tanpa prefix role
 
 Tanggal: 14 Oktober 2026
-Status: DIIMPLEMENTASIKAN pada master 15 Oktober 2026 (belum di-commit). O-1 sampai O-9 disetujui Director sesuai rekomendasi; otorisasi eksekusi diberikan Director. Hasil dan batas pada bagian 10. Distribusi ke perangkat/proyek tetap F09.
+Status: DIIMPLEMENTASIKAN pada master 15 Oktober 2026 (ter-commit: f223c00). O-1 sampai O-9 disetujui Director sesuai rekomendasi; otorisasi eksekusi diberikan Director. Hasil dan batas pada bagian 10. Distribusi ke perangkat/proyek tetap F09.
 Urutan: setelah F17, sebelum F12 (urutan yang diterima Director: F17 → F10 → F12 → finalisasi Protocol/keputusan review Constitution → F09).
 Basis pemeriksaan: repositori master Sigma, branch main, HEAD cf5364d (F17 ter-commit).
 
@@ -180,7 +180,7 @@ Pemisahan W2 sebelum W3 disengaja: sistem lebih dulu belajar membaca kedua bentu
 
 ## 10. Hasil eksekusi (15 Oktober 2026)
 
-Dieksekusi W0–W5 sesuai bagian 9 pada master. Belum di-commit.
+Dieksekusi W0–W5 sesuai bagian 9 pada master. Ter-commit (f223c00).
 
 | Gelombang | Hasil |
 |---|---|

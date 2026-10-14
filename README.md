@@ -703,10 +703,30 @@ sigma session bootstrap
 
 | Command                        | What it updates                                                                            |
 |:------------------------------ |:------------------------------------------------------------------------------------------ |
-| `sigma setup update`           | Updates global `~/.sigma/` templates and governance files                                  |
+| `sigma setup update`           | Updates global `~/.sigma/` templates and governance files; records the installed version in `sigma.config.json` |
 | `sigma project sync`           | Previews managed files with source and target hashes; shows an acceptance token for each difference |
-| `sigma project sync --confirm` | Copies missing files and approved replacements; backs up previous bytes before replacement; creates an empty product `CHANGE-RECORD.md` only when neither `CHANGE-RECORD.md` nor `dev/CHANGE-RECORD.md` exists |
+| `sigma project sync --confirm` | Copies missing files and approved replacements; backs up previous bytes before replacement; creates an empty product `CHANGE-RECORD.md` only when neither `CHANGE-RECORD.md` nor `dev/CHANGE-RECORD.md` exists; records the applied version in `.sigma-identity.json` when every managed file then matches its source |
 | `sigma session bootstrap`      | Verifies project state after migration                                                     |
+
+### Version stamp and the "outdated" warning
+
+Sigma records which assets each layer was last made identical to:
+
+| Layer | Where | Written by |
+|:----- |:----- |:---------- |
+| Global installation | `~/.sigma/sigma.config.json` (`cli_version`, `assets_hash`, `synced_at`) | `sigma setup install` / `sigma setup update` |
+| Project | `.sigma-identity.json` (`sigma_applied`: `sigma_version`, `assets_hash`, `synced_at`) | `sigma project start` / `register` / `sync --confirm` |
+
+A stamp is written only when every managed file on that layer matches its source, so it never claims a state that was not reached. It records the last sync; edits made afterwards are not detected by the warning. `sigma doctor --check-assets` lists them.
+
+Inside a project, every command except `setup`, `doctor`, `project start|register|sync`, and `session bootstrap` prints one line to stderr when a layer is behind:
+
+| Situation | Next step |
+|:--------- |:--------- |
+| `~/.sigma` is behind the installed CLI, or has no stamp | `sigma setup update` |
+| The project is behind `~/.sigma`, or has no stamp | `sigma project sync`, then `sigma project sync --confirm` |
+
+The global installation is reported first: syncing a project from an outdated `~/.sigma` would copy outdated files into it. `sigma session bootstrap` and the MCP `sigma_get_orientation` include the same message in their compatibility warnings; orientation also returns a structured `version_status`. A project created before this feature has no stamp; one `sigma project sync --confirm` records it once the files match.
 
 > **No automatic legacy schema/ROADMAP migration.** Older projects with a pre-current `progress.json` schema (legacy `BUILDING`/`TESTING`/`COMPLETED` exec states, a leftover root-level `cso` array) or a freeform ROADMAP (no H2 stage convention) no longer have a CLI migration path — `sigma sync progress`/`sigma sync roadmap` were removed as trivial/redundant. This is an accepted risk; such projects require manual schema/document adjustment.
 
@@ -716,7 +736,7 @@ The following are never modified by migration commands:
 
 - Locked artifacts (`DIR-INTENT`, `FMN-PLAN`, `DEV-EXEC`, `DIR-CLOSE`)
 - `Sigma/progress-v<N>.json` gate and lock decisions
-- `.sigma-identity.json` at project root (project identity — untouched by migration or `sigma setup uninstall`)
+- `.sigma-identity.json` at project root (project identity — migration only adds or refreshes its `sigma_applied` version stamp, and `sigma setup uninstall` does not touch it)
 - `Sigma/logs/` — legacy CSO handoff files (if present; CSO was removed from current Sigma)
 - All content inside `Sigma/contract/`, `Sigma/roadmap/`, `Sigma/evidence/`, `Sigma/charter/`, `Sigma/close/`
 

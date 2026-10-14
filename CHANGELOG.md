@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+### F12 — Sigma version stamp and "outdated" warning (2026-10-15)
+
+- `sigma setup install|update` record `cli_version`, `assets_hash` and `synced_at` in `~/.sigma/sigma.config.json`. `sigma project start`, `register` and `sync --confirm` record `sigma_applied` (`sigma_version`, `assets_hash`, `synced_at`) in `.sigma-identity.json`. A stamp is written only when every managed file on that layer matches its source; a rejected or partial sync leaves the previous stamp unchanged.
+- Inside a project, commands print one stderr line when `~/.sigma` is behind the installed CLI (`sigma setup update`) or the project is behind `~/.sigma` or has no stamp (`sigma project sync`). The global installation is reported first. `setup`, `doctor`, `project start|register|sync` and `session bootstrap` do not print it.
+- `session bootstrap` and `sigma_get_orientation` carry the message in their compatibility warnings; orientation also returns `version_status`. `doctor --check-assets` reports the version status read-only.
+- `SCHEMA_VERSION` is unchanged; the new fields are additive and older readers ignore them. Existing projects show the "no version stamp" line until `sigma project sync --confirm` is run once.
+
 ### F10 — artifact file names without a role prefix (2026-10-14)
 
 - `intent new`, `plan new`, `exec new`, `close new`, `plan new --pending`, plan promote and F08 clone create `INTENT-vN.md`, `PLAN-vN.M.md`, `EXEC-vN.M.md`, `CLOSE-vN.md` and `pending/PLAN-<id>.md`. ROADMAP names are unchanged.

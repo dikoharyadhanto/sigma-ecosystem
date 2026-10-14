@@ -21,6 +21,7 @@ import { effectiveLifecycleGates } from '../engine/lifecycleView';
 import { lifecycleWarnings } from '../engine/lifecycle';
 import { findProjectRoot } from '../utils/fs';
 import { VersioningScheme, resolveVersioningScheme, planMajorForChain } from '../engine/numbering';
+import { evaluateVersionStatus, VersionStatus } from '../services/assetConsistency';
 
 export interface BootstrapView {
   projectRoot: string;
@@ -31,6 +32,8 @@ export interface BootstrapView {
   nextOps: string[];
   numbering: { scheme: VersioningScheme; intent_version: string; plan_major: number; source: 'chain' | 'legacy_fallback' } | null;
   compatibilityWarnings: string[];
+  // F12 — null when the status cannot be determined.
+  versionStatus: VersionStatus | null;
 }
 
 // Pure reads only — mirrors the data-gathering prologue of runBootstrap.
@@ -56,5 +59,9 @@ export function buildBootstrapView(projectRoot: string = findProjectRoot()): Boo
     `[COMPATIBILITY] INTENT ${numbering.intent_version} uses the legacy numbering: PLAN/EXEC v${numbering.plan_major}.x (PLAN major = INTENT major - 1). This pattern is kept for compatibility with older chains. Use it for as long as you work on this chain.`,
   ] : [];
   if(chain)compatibilityWarnings.push(...lifecycleWarnings(chain));
-  return { projectRoot, identity, chainVersion, chain, gates, nextOps, numbering, compatibilityWarnings };
+  // F12 — read-only; surfaced through the same channel as the other compatibility
+  // warnings so `session bootstrap` and `sigma_get_orientation` stay identical.
+  const versionStatus = evaluateVersionStatus(projectRoot);
+  if (versionStatus?.message) compatibilityWarnings.push(versionStatus.message);
+  return { projectRoot, identity, chainVersion, chain, gates, nextOps, numbering, compatibilityWarnings, versionStatus };
 }

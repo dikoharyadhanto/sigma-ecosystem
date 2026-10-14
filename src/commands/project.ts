@@ -14,6 +14,7 @@ import {
   PROJECT_IDENTITY_FILE,
   ACTIVATE_STATUS_FILE,
   SCHEMA_VERSION,
+  SIGMA_VERSION,
   BRIDGE_STUBS,
   SUBFOLDERS,
   MESSAGES_DIR,
@@ -42,7 +43,7 @@ import { success, info, warn, error } from '../utils/output';
 import { ensureDir, fileExists, findProjectRoot } from '../utils/fs';
 import { ensureOperationsLog } from '../utils/operationLog';
 import { initNotes } from '../services/notesService';
-import { formatAssetDifference, inspectProjectAssets, syncManagedAssets } from '../services/assetConsistency';
+import { formatAssetDifference, inspectProjectAssets, stampProjectIfCurrent, syncManagedAssets } from '../services/assetConsistency';
 import { detectTools } from '../utils/detect';
 import {
   writeClaudeMcpConfig,
@@ -219,6 +220,14 @@ function readExistingIdentity(projectRoot: string): Partial<ProjectIdentity> {
     // A corrupt identity file is the case `project register` repairs; there is nothing to preserve.
     return {};
   }
+}
+
+// F12 — records the applied Sigma version on the identity, but only when every
+// managed asset matches its source. A refusal is reported, never fatal.
+function reportVersionStamp(projectRoot: string): void {
+  const result = stampProjectIfCurrent(projectRoot);
+  if (result.written) console.log(`  Version: Sigma ${SIGMA_VERSION} recorded in ${PROJECT_IDENTITY_FILE}.`);
+  else console.log(`  Version: stamp not written (${result.reason}).`);
 }
 
 // ── sigma project start ───────────────────────────────────────────────────────
@@ -431,6 +440,8 @@ async function runStart(opts: {
     if (changelog.created) console.log(`  Changelog: ${changelog.rel} created (empty).`);
   }
 
+  reportVersionStamp(projectRoot);
+
   success(`Sigma project initialized: ${projectName} (${projectId})`);
   console.log(`  Location: ${sigmaDir}`);
   console.log('  Next: Run `sigma session bootstrap` or `sigma project status` to confirm state.');
@@ -552,6 +563,7 @@ function runSync(opts: { confirm?: boolean; accept?: string[] }): void {
     if (!changed.length) console.log('  All available managed files already match their sources.');
     for (const item of changed) console.log('  ' + formatAssetDifference(item));
     console.log('  Review each DIFF source and target. A replacement requires --confirm and its exact --accept token.');
+    console.log(`  ${PROJECT_IDENTITY_FILE} (version stamp — written only when every managed file matches its source after sync)`);
     console.log('  .mcp.json (sigma-mcp — upsert key sigma)');
     console.log('  opencode.jsonc / opencode.json (sigma-mcp — upsert key mcp.sigma)');
     {
@@ -570,6 +582,7 @@ function runSync(opts: { confirm?: boolean; accept?: string[] }): void {
     const changelog = ensureChangelogFile(projectRoot);
     if (changelog.created) console.log(`  Created: ${changelog.rel} (empty product changelog).`);
   }
+  reportVersionStamp(projectRoot);
 
   // Stage 2 & PLAN-EVAL-04 — Upsert local & global MCP config dengan explicit projectRoot
   {
@@ -634,6 +647,7 @@ function runRegister(opts: { id?: string; name?: string }): void {
 
   success(`Project identity written: ${identity.name} (${identity.id})`);
   console.log(`  File: ${path.join(projectRoot, PROJECT_IDENTITY_FILE)}`);
+  reportVersionStamp(projectRoot);
 }
 
 // ── Command builder ───────────────────────────────────────────────────────────

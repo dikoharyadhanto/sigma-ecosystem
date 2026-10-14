@@ -30,6 +30,19 @@ function runAssetCheck() {
     console.log('\n=== Sigma Doctor — Asset Differences (read-only) ===\n');
     console.log('Project: ' + (projectRoot ?? 'none (master and host only)'));
     console.log('Compared: ' + report.differences.length + ' file pairs; differences: ' + changed.length);
+    if (projectRoot) {
+        // F12 — reported next to the byte-level differences; the stamp records the
+        // last sync, so edits made after it only show up as differences above.
+        const status = (0, assetConsistency_1.evaluateVersionStatus)(projectRoot);
+        if (status) {
+            console.log('Version: installed ' + status.installed_version +
+                '; host ' + (status.host ? status.host.sigma_version + ' (' + status.host.synced_at + ')' : 'no stamp') +
+                '; project ' + (status.project ? status.project.sigma_version + ' (' + status.project.synced_at + ')' : 'no stamp') +
+                '; status: ' + status.level);
+            if (status.message)
+                console.log('  ' + status.message);
+        }
+    }
     for (const item of changed)
         console.log('  [' + item.layer + '] ' + (0, assetConsistency_1.formatAssetDifference)(item, false));
     for (const warning of report.memoryWarnings)

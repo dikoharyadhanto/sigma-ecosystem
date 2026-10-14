@@ -26,4 +26,26 @@ export interface AssetDriftReport {
     memoryWarnings: string[];
 }
 export declare function inspectAssetDrift(projectRoot?: string): AssetDriftReport;
+export interface VersionStamp {
+    sigma_version: string;
+    assets_hash: string;
+    synced_at: string;
+}
+export type VersionLevel = 'current' | 'host_unknown' | 'host_outdated' | 'project_unknown' | 'project_outdated';
+export interface VersionStatus {
+    level: VersionLevel;
+    installed_version: string;
+    host: VersionStamp | null;
+    project: VersionStamp | null;
+    message: string | null;
+    command: string | null;
+}
+export interface StampResult {
+    written: boolean;
+    reason?: string;
+}
+export declare function computeAssetsHash(pairs: AssetPair[]): string;
+export declare function stampProjectIfCurrent(projectRoot: string): StampResult;
+export declare function stampHostIfCurrent(): StampResult;
+export declare function evaluateVersionStatus(projectRoot: string): VersionStatus | null;
 //# sourceMappingURL=assetConsistency.d.ts.map

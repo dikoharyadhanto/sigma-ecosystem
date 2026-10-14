@@ -14,6 +14,7 @@ import {
   BRIDGE_STUBS,
 } from '../config';
 import { success, info, warn, error } from '../utils/output';
+import { stampHostIfCurrent } from '../services/assetConsistency';
 import { ensureDir, copyDir, fileExists } from '../utils/fs';
 import { detectTools, targetPaths } from '../utils/detect';
 import {
@@ -160,6 +161,8 @@ async function runInstall(opts: { force?: boolean; yes?: boolean }): Promise<voi
       installed_at: new Date().toISOString(),
     }, { spaces: 2 });
   }
+
+  reportHostStamp();
 
   // Detect tools
   const detected = detectTools();
@@ -427,6 +430,14 @@ async function deployHook(): Promise<void> {
   }
 }
 
+// F12 — the host stamp is written only when every host asset matches the master
+// bundle, so it never claims a state that was not reached.
+function reportHostStamp(): void {
+  const result = stampHostIfCurrent();
+  if (result.written) console.log(`  Version: Sigma ${SIGMA_VERSION} recorded in sigma.config.json.`);
+  else console.log(`  Version: stamp not written (${result.reason}).`);
+}
+
 // ── sigma setup update ───────────────────────────────────────────────────────
 
 async function runUpdate(): Promise<void> {
@@ -491,6 +502,7 @@ async function runUpdate(): Promise<void> {
     fs.writeJsonSync(GLOBAL_CONFIG_FILE, cfg, { spaces: 2 });
     console.log('  Updated: sigma.config.json (cli_version)');
   }
+  reportHostStamp();
 
   // Redeploy skill files + hook to every detected AI tool directory.
   // No interactive selection here — update refreshes whatever is already

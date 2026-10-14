@@ -162,6 +162,15 @@ function readExistingIdentity(projectRoot) {
         return {};
     }
 }
+// F12 — records the applied Sigma version on the identity, but only when every
+// managed asset matches its source. A refusal is reported, never fatal.
+function reportVersionStamp(projectRoot) {
+    const result = (0, assetConsistency_1.stampProjectIfCurrent)(projectRoot);
+    if (result.written)
+        console.log(`  Version: Sigma ${config_1.SIGMA_VERSION} recorded in ${config_1.PROJECT_IDENTITY_FILE}.`);
+    else
+        console.log(`  Version: stamp not written (${result.reason}).`);
+}
 // ── sigma project start ───────────────────────────────────────────────────────
 async function runStart(opts) {
     if (!(0, fs_1.fileExists)(config_1.GLOBAL_SIGMA_DIR)) {
@@ -357,6 +366,7 @@ async function runStart(opts) {
         if (changelog.created)
             console.log(`  Changelog: ${changelog.rel} created (empty).`);
     }
+    reportVersionStamp(projectRoot);
     (0, output_1.success)(`Sigma project initialized: ${projectName} (${projectId})`);
     console.log(`  Location: ${sigmaDir}`);
     console.log('  Next: Run `sigma session bootstrap` or `sigma project status` to confirm state.');
@@ -479,6 +489,7 @@ function runSync(opts) {
         for (const item of changed)
             console.log('  ' + (0, assetConsistency_1.formatAssetDifference)(item));
         console.log('  Review each DIFF source and target. A replacement requires --confirm and its exact --accept token.');
+        console.log(`  ${config_1.PROJECT_IDENTITY_FILE} (version stamp — written only when every managed file matches its source after sync)`);
         console.log('  .mcp.json (sigma-mcp — upsert key sigma)');
         console.log('  opencode.jsonc / opencode.json (sigma-mcp — upsert key mcp.sigma)');
         {
@@ -500,6 +511,7 @@ function runSync(opts) {
         if (changelog.created)
             console.log(`  Created: ${changelog.rel} (empty product changelog).`);
     }
+    reportVersionStamp(projectRoot);
     // Stage 2 & PLAN-EVAL-04 — Upsert local & global MCP config dengan explicit projectRoot
     {
         const err = (0, mcpConfig_1.tryMcpOp)(() => (0, mcpConfig_1.writeClaudeMcpConfig)(projectRoot), '.mcp.json');
@@ -564,6 +576,7 @@ function runRegister(opts) {
     writeProjectIdentity(projectRoot, identity.id, identity.name, resolveLogsCreatedAt(projectRoot, logsReinitialized));
     (0, output_1.success)(`Project identity written: ${identity.name} (${identity.id})`);
     console.log(`  File: ${path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE)}`);
+    reportVersionStamp(projectRoot);
 }
 // ── Command builder ───────────────────────────────────────────────────────────
 function projectCommand() {

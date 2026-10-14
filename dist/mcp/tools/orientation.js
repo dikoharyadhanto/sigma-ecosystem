@@ -42,6 +42,7 @@ function computeOrientation(root, role) {
         lifecycle: chain ? (0, lifecycleView_1.lifecycleView)(root, chain) : null,
         numbering: view.numbering,
         compatibility_warnings: view.compatibilityWarnings,
+        version_status: view.versionStatus,
         gate_summary: gates,
         next_valid_operations: nextOps,
         stale_intent_warnings: chain ? (0, chain_1.getInvalidWarningLines)(chain) : [],

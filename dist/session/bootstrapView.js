@@ -14,6 +14,7 @@ const lifecycleView_1 = require("../engine/lifecycleView");
 const lifecycle_1 = require("../engine/lifecycle");
 const fs_1 = require("../utils/fs");
 const numbering_1 = require("../engine/numbering");
+const assetConsistency_1 = require("../services/assetConsistency");
 // Pure reads only — mirrors the data-gathering prologue of runBootstrap.
 // A fresh project (before the first `intent new`) has no chain yet; that is a
 // valid state, represented as chain: null / chainVersion: null, matching the
@@ -35,6 +36,11 @@ function buildBootstrapView(projectRoot = (0, fs_1.findProjectRoot)()) {
     ] : [];
     if (chain)
         compatibilityWarnings.push(...(0, lifecycle_1.lifecycleWarnings)(chain));
-    return { projectRoot, identity, chainVersion, chain, gates, nextOps, numbering, compatibilityWarnings };
+    // F12 — read-only; surfaced through the same channel as the other compatibility
+    // warnings so `session bootstrap` and `sigma_get_orientation` stay identical.
+    const versionStatus = (0, assetConsistency_1.evaluateVersionStatus)(projectRoot);
+    if (versionStatus?.message)
+        compatibilityWarnings.push(versionStatus.message);
+    return { projectRoot, identity, chainVersion, chain, gates, nextOps, numbering, compatibilityWarnings, versionStatus };
 }
 //# sourceMappingURL=bootstrapView.js.map

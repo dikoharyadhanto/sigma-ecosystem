@@ -11,6 +11,7 @@ const os_1 = __importDefault(require("os"));
 const inquirer_1 = __importDefault(require("inquirer"));
 const config_1 = require("../config");
 const output_1 = require("../utils/output");
+const assetConsistency_1 = require("../services/assetConsistency");
 const fs_1 = require("../utils/fs");
 const detect_1 = require("../utils/detect");
 const mcpConfig_1 = require("../utils/mcpConfig");
@@ -133,6 +134,7 @@ async function runInstall(opts) {
             installed_at: new Date().toISOString(),
         }, { spaces: 2 });
     }
+    reportHostStamp();
     // Detect tools
     const detected = (0, detect_1.detectTools)();
     const detectedPlatforms = Object.entries(detected)
@@ -390,6 +392,15 @@ async function deployHook() {
         console.log('  OK  Hook: protect-sigma.js already installed (no duplicate)');
     }
 }
+// F12 — the host stamp is written only when every host asset matches the master
+// bundle, so it never claims a state that was not reached.
+function reportHostStamp() {
+    const result = (0, assetConsistency_1.stampHostIfCurrent)();
+    if (result.written)
+        console.log(`  Version: Sigma ${config_1.SIGMA_VERSION} recorded in sigma.config.json.`);
+    else
+        console.log(`  Version: stamp not written (${result.reason}).`);
+}
 // ── sigma setup update ───────────────────────────────────────────────────────
 async function runUpdate() {
     if (!(0, fs_1.fileExists)(config_1.GLOBAL_SIGMA_DIR)) {
@@ -444,6 +455,7 @@ async function runUpdate() {
         fs_extra_1.default.writeJsonSync(config_1.GLOBAL_CONFIG_FILE, cfg, { spaces: 2 });
         console.log('  Updated: sigma.config.json (cli_version)');
     }
+    reportHostStamp();
     // Redeploy skill files + hook to every detected AI tool directory.
     // No interactive selection here — update refreshes whatever is already
     // present (or newly detected), it does not ask "reinstall?" like install does.
