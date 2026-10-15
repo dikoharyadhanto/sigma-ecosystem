@@ -41,7 +41,6 @@ sigma intent ratify
 sigma plan approve
 sigma exec approve
 sigma close lock
-sigma close new --ack-stale-intent
 sigma * supersede
 sigma notes update
 sigma notes update --rebuild-registry --director-confirm

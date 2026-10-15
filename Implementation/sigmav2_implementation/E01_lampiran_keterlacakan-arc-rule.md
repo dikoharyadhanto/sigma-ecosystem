@@ -4,6 +4,17 @@ Tanggal: 7 Oktober 2026
 
 Status: hasil W3 butir 9. Penyusunan ulang hanya memindahkan blok section; isi tidak diubah.
 
+> **Catatan keusangan (15 Oktober 2026).** Lampiran ini adalah catatan historis atas keadaan ARC-RULE pada commit `8d20c4b` (7 Oktober 2026; 790 baris, 28 paragraf MUST). Isi di bawah sengaja tidak diubah dan tidak lagi mencerminkan `Sigma/rules/ARC-RULE.md` saat ini (commit `61c1dce`; 758 baris, 25 paragraf MUST). Perubahan berasal dari lima commit setelah `8d20c4b`: `c16095f`, `e822ebd`, `90ef165`, `92efefc`, dan `61c1dce` (perombakan INTENT/CLOSE/PRODUCT REVIEW). Bagian yang usang:
+>
+> - **Bagian 1 (Verifikasi).** Angka 790 baris dan 28 paragraf MUST hanya berlaku untuk `8d20c4b`.
+> - **Bagian 2 (Pemetaan section).** Dari 20 section, tiga tidak ada lagi atau berganti: *Petition / Admission Review* dihapus, *ARC Satisfaction Score Methodology* dihapus, *Closure Evaluation* digantikan *Final Product Evaluation*. *Review, draft reuse, and audit records* ditambahkan setelah snapshot (`92efefc`). *Amendment Request* disusun ulang. Jumlah section kini 19.
+> - **Bagian 3 (Daftar MUST), nomor baris.** Seluruh nomor baris tidak lagi sesuai berkas hidup. Butir 22–28 sudah meleset 1 baris dari `8d20c4b` sendiri, kemungkinan karena butir Divergence warning (lihat catatan di bagian 1) [Inferensi].
+> - **Bagian 3, butir yang tidak lagi ada:** 18, 19, 20 (Petition), 22 (komitmen skor), dan 27 (Trigger 2 lama: reasesmen skor). Butir 20 bersifat berbalik: dulu ARC merekomendasikan chain baru, sekarang ARC tidak menawarkan atau merekomendasikan INTENT baru dan menyatakannya sebagai temuan (§INTENT Change Classification).
+> - **Bagian 3, butir yang berubah isi:** 3 (*measurement method* menjadi *evidence required*), 11 (pengecualian aktivasi: kini state check dan path 2/3), 21 (blok Amendment: ditambah Latest INTENT first, Review of the change, Divergence warning), 23 (`sigma intent score` dihapus, `sigma intent baseline adopt` ditambah), dan 24 (pemeriksaan `close check` pindah dari `close lock` ke `close new`; `close lock` tanpa gerbang isi).
+> - **Bagian 3, butir yang tidak tercantum:** aturan *Required Mailbox Context* (`--related-artifact` wajib, `e822ebd`) dan Trigger 2 yang baru (round PRODUCT REVIEW dengan verdict yang tidak diterima, `61c1dce`).
+> - **Masih berlaku (isi paragraf identik, hanya nomor baris bergeser):** butir 1, 2, 4–10, 12–17, 25, 26, dan 28.
+> - **Keterbatasan yang tetap:** *Final Product Evaluation* tidak memuat paragraf MUST/MUST NOT (kewajibannya ditulis deklaratif), sehingga tidak tertangkap daftar semacam ini.
+
 ## 1. Verifikasi
 
 - Jumlah baris sebelum dan sesudah: 790 dan 790. Perbandingan multiset baris: tidak ada baris yang berbeda.
