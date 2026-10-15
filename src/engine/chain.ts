@@ -257,9 +257,12 @@ export interface SingleIntentState {
   // succession would require a chain-file mutation to know about another
   // chain's file, which breaks total isolation. `intent list` (projection
   // across all chain files) is the source of truth for succession order.
-  arc_score?: number; // 0-100, raw — internal ARC reasoning number (closure-authority PLAN-EVAL-02)
-  arc_score_notes?: string; // free-text rationale, same sanitization as title/focus
-  arc_score_updated_at?: string; // ISO timestamp of last `sigma intent score`
+  // Historical only: the ARC Satisfaction Score was removed (closure is gated by
+  // PRODUCT REVIEW verdicts). Chains recorded before that keep these fields; they
+  // are neither written nor read.
+  arc_score?: number;
+  arc_score_notes?: string;
+  arc_score_updated_at?: string;
   // Amendment mechanism — all optional, chain files predating this feature
   // stay valid without migration.
   amendments?: AmendmentEntry[];       // append-only amendment history
@@ -1351,42 +1354,6 @@ export function recordIntentAmendment(chain: ChainState, change: string, git: Pa
   chain.intent.effective_amendment = entry.id;
   chain.intent.updated_at = now;
   return entry;
-}
-
-// ── ARC Satisfaction Score (Gate 3.5, closure-authority PLAN-EVAL-02) ──────
-// Scale is tiered, not additive: 0-50 is output satisfaction (must be full
-// to cross 50 at all), 50-100 is process satisfaction layered strictly on
-// top of a complete output — see ARC-RULE.md §ARC Satisfaction Score
-// Methodology for the full rationale. Band, not the raw number, is the
-// primary signal shown to Director/FMN (mitigates false precision +
-// Goodhart's Law — rationale in closure-authority-and-arc-scoring-proposal-20260720.md
-// §4, retrievable via git history, not a live path).
-
-export function arcScoreBand(score: number): 'OUTPUT_INCOMPLETE' | 'SATISFIED_NEEDS_REVIEW' | 'SATISFIED_RECOMMENDED' {
-  if (score < 50) return 'OUTPUT_INCOMPLETE';
-  if (score < 80) return 'SATISFIED_NEEDS_REVIEW';
-  return 'SATISFIED_RECOMMENDED';
-}
-
-// Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`.
-export function hasGate35Score(chain: ChainState): boolean {
-  return (chain.intent.arc_score ?? -1) >= 50;
-}
-
-export function recordArcScore(chain: ChainState, score: number, notes: string): void {
-  if (!Number.isInteger(score) || score < 0 || score > 100) {
-    throw new Error('ARC score must be an integer between 0 and 100');
-  }
-  if (/[|\n\r]/.test(notes)) {
-    throw new Error('--notes cannot contain "|" or a newline (breaks the intent-history.md table and its recovery parser)');
-  }
-  if (chain.intent.state !== 'RATIFIED') {
-    throw new Error('ARC score can only be recorded against a RATIFIED DIR-INTENT');
-  }
-  chain.intent.arc_score = score;
-  chain.intent.arc_score_notes = notes;
-  chain.intent.arc_score_updated_at = new Date().toISOString();
-  chain.updated_at = chain.intent.arc_score_updated_at;
 }
 
 export interface IntentCascadeTargets {

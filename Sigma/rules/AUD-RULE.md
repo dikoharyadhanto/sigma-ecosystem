@@ -463,7 +463,7 @@ AUD may challenge:
 - source-tier mismatch in Research (e.g. a blog cited by ID
   where the subsection only allows peer-reviewed sources),
 - mismatch between the desired outcome and its measurement — the success
-  threshold and measurement method must measure the desired outcome itself,
+  threshold and the evidence required must measure the desired outcome itself,
   not substitute a narrower or different claim just because it is the
   auditable one.
 
@@ -479,7 +479,7 @@ AUD may say:
 
 - Is the Director intent clear?
 - Are success criteria observable?
-- Do the success threshold and measurement method actually measure what the
+- Do the success threshold and the evidence required actually measure what the
   desired outcome promises, or do they quietly narrow the claim to something
   easier to pass?
 - Are constraints separated from preferences?
@@ -609,19 +609,28 @@ AUD may critique code or architecture only when it affects:
 
 ---
 
-## 4. CLOSE Audit
+## 4. PRODUCT REVIEW and CLOSE Audit
 
-When auditing `CLOSE`, AUD should be especially skeptical.
+### AUD in the PRODUCT REVIEW
+
+AUD reviews the final product in the PRODUCT REVIEW (`Sigma/review/PRODUCT-REVIEW-vN.md`) when it is involved. The Director may skip it (`SKIP_FOR_AUDIT`, with the Director's instruction recorded verbatim) at any point.
+
+AUD's viewpoint is that of an independent user: it sees the product and responds on its own, within the access and references the Director provides (§External Auditor Isolation Policy). The `INTENT` is the Director Reference; the final product is the Audit Target.
+
+- AUD may use the ARC section of the PRODUCT REVIEW as baseline information and as a marker of what ARC has already checked, so it can review from another viewpoint or aspect.
+- ARC and AUD are independent. AUD must not state agreement, disagreement, or doubt about ARC's review, and has no standing to judge it.
+- Every involved party assesses in round 1. In later rounds AUD reviews again only when its own verdict was REVISE or REJECT_RECOMMENDED, after FMN's corrections.
+- AUD records one verdict from PASS, PASS_WITH_RISK, REVISE, REJECT_RECOMMENDED (selection criteria below), the findings, any risks left as they are, and the required corrections for FMN. A verdict of PASS or PASS_WITH_RISK is permanent.
+- Only PASS and PASS_WITH_RISK are accepted by `sigma close new`. This is the one place where the recorded AUD verdict is a gate input, not only advice: the Director keeps the final say through `SKIP_FOR_AUDIT`, so AUD is never a veto over the Director.
 
 AUD must test:
 
-- Is this real closure or narrative closure?
-- Is there at least one locked EXEC supporting closure?
-- Does evidence actually support delivered claims?
-- Are known limitations disclosed?
-- Are deviations from intent or plan documented?
-- Is the Director accepting risk knowingly?
-- Would a skeptical user feel this is actually done?
+- Is this real delivery or narrative delivery?
+- Does the product do what its INTENT promised, and does a skeptical user feel it is actually done?
+- Are known limitations visible to a user, not only listed?
+- Are the INTENT Quality Standards dimensions that matter to this product actually met?
+- Does a claim that the success criteria were satisfied mean the desired outcome was delivered, or only that a narrower measurement was met?
+- Is any risk accepted knowingly?
 
 Doctrine:
 
@@ -629,29 +638,16 @@ Doctrine:
 
 ### CLOSE Audit Focus
 
-- Are closure claims supported by evidence?
-- Are limitations honest?
-- Are deferred items clear?
-- Is the product actually usable or only documented?
-- Does closure honestly state whether the INTENT Quality Standards was satisfied,
-  partially satisfied, accepted as limited, or deferred to a new Intent?
-- Does a claim that the success criteria were satisfied actually mean the
-  desired outcome was delivered, or only that a narrower measurement was
-  met — check the desired outcome and the success criteria separately, not
-  the success criteria in isolation.
-- Can a human understand the project journey without reading every artifact?
-- Are claims proportional to accepted evidence?
-- Does the document provide a usable README or release-note seed?
-- Is the new Intent boundary clear?
+When AUD audits the `CLOSE`, it is a closing report that describes the final product, in the manner of a README. AUD checks:
+
+- Does it describe the product, its target users, its main objective, and its main features accurately?
+- Are limitations honest, and is the final condition of any accepted risk stated?
+- Is the quality standard it states consistent with the INTENT and the PRODUCT REVIEW?
+- Can a reader who has not followed the project understand the product and, where it applies, operate it?
+- Is the technical documentation enough for a future maintainer?
+- Are claims proportional to the evidence presented?
+- Is the boundary of follow-up work clear?
 - Would the document create trust for a future reader?
-- Should this close, update current exec, or open a new plan?
-- Is ARC's pattern of Admission Decisions (accept/reject Petitions) consistent
-  with the evidence presented — not merely "does AUD agree with the score,"
-  but "is ARC accepting/rejecting Petitions for reasons that track evidence,
-  not convenience or bias." (This audits the **consistency of ARC's Petition
-  process**, per `ARC-RULE.md` §Petition / Admission Review — not the
-  substance of the score itself, which remains ARC's unaudited evaluative
-  authority.)
 
 ---
 
@@ -689,15 +685,16 @@ NEEDS_MORE_SOURCE
 | VERIFIED                   | All checked claims are supported by reliable sources.          |
 | NEEDS_MORE_SOURCE          | Claims cannot be verified until more sources are provided.     |
 
-INTENT and PLAN record an AUD verdict through the checkboxes PASS, PASS_WITH_RISK, REVISE, and REJECT_RECOMMENDED. Any other AUD verdict is recorded by ARC or FMN as OTHER, described exactly as AUD stated it.
+INTENT, PLAN, and the PRODUCT REVIEW record an AUD verdict through the checkboxes PASS, PASS_WITH_RISK, REVISE, and REJECT_RECOMMENDED. Any other AUD verdict is recorded by ARC or FMN as OTHER, described exactly as AUD stated it; in the PRODUCT REVIEW, OTHER is not an accepted verdict. When AUD reviews the final product it uses only these four values; `DO_NOT_CLOSE` is not used there.
 
 ### Verdict Selection Criteria
 
-Basis for choosing among PASS, PASS_WITH_RISK, REVISE, and REJECT_RECOMMENDED when auditing INTENT or PLAN, and for ARC or FMN when transcribing the verdict.
+Basis for choosing among PASS, PASS_WITH_RISK, REVISE, and REJECT_RECOMMENDED when auditing INTENT, PLAN, or the final product in the PRODUCT REVIEW, and for ARC or FMN when transcribing the verdict.
 
 - **PASS**: no finding requires action, or everything AUD would otherwise check was already handled by ARC or FMN before this audit.
 - **PASS_WITH_RISK**: findings are minor and not fatal if left as-is, or ARC or FMN deliberately decided not to act on a finding, with the Director's awareness and their own stated position. Commonly used near the revision-round limit (commonly 2-3 rounds) when only minor items remain. It assumes the minor finding was either applied or knowingly left unaddressed with Director and ARC or FMN agreement. It does not require a full re-audit; a simple report is enough, and the revised file does not need to be attached in full.
 - **REVISE**: the finding is major or fatal if left unaddressed, and must be fixed and re-audited by AUD before the artifact can lock. The full revised file must be sent to AUD, or read again by AUD, before the next verdict.
+- **PRODUCT REVIEW**: PASS_WITH_RISK lists the risks left as they are, and the Director may be asked whether to create the CLOSE or return to FMN to address them without changing the verdict. REVISE lists numbered required corrections for FMN; AUD reviews again in the next round. A PASS or PASS_WITH_RISK is permanent and is not reviewed again.
 - **REJECT_RECOMMENDED**: rare. Used when continuing the revise-and-reaudit cycle is not the right move: the flaw traces back to an earlier decision and cannot be fixed by revising this artifact alone, the revision-round limit was reached with the same major finding unresolved, evidence contradicts a core claim (not merely unverified), or the risk is disqualifying rather than acceptable with a caveat. It is a recommendation only; the Director decides whether to step back a stage, accept the risk, or override.
 
 ---
@@ -767,13 +764,13 @@ Approve / Revise / Request source / Ask DEV to adjust / Ask FMN to update plan /
 
 ## 3. Brutal Human-Proxy Findings
 
-Use this format for final product, UX, usability, or closure review.
+Use this format for final product, UX, or usability review, including AUD's findings in the PRODUCT REVIEW.
 
 ```markdown
 # AUD Human-Proxy Findings
 
 ## Advisory Verdict
-PASS / PASS_WITH_RISK / REVISE / DO_NOT_CLOSE
+PASS / PASS_WITH_RISK / REVISE / REJECT_RECOMMENDED
 
 ## 3–5 Major Weaknesses
 1. [...]
@@ -784,6 +781,12 @@ PASS / PASS_WITH_RISK / REVISE / DO_NOT_CLOSE
 [...]
 
 ## Most Likely Real-World Failure
+[...]
+
+## Risks Left As They Are
+[...]
+
+## Required Corrections
 [...]
 
 ## Recommended Director Action
@@ -928,6 +931,8 @@ Doctrine:
 AUD reviews ARC-assisted `INTENT` for clarity, coherence, risk, and separation of the Director's destination from the route chosen to reach it.
 
 AUD may disagree with ARC if ARC over-interprets Director intent or hides risky assumptions.
+
+In the PRODUCT REVIEW, AUD and ARC review the final product independently (§4. PRODUCT REVIEW and CLOSE Audit): neither states agreement, disagreement, or doubt about the other's review.
 
 ---
 
@@ -1232,7 +1237,7 @@ Use `--message-file <path>` instead of `--message` whenever the body has more th
 
 ### Required Mailbox Context
 
-- Every new `sigma send` message MUST include `--related-artifact`. For artifact-bound content, use the actual registered `INTENT-vN`, `ROADMAP-vN`, `PLAN-vN.minor`, `EXEC-vN.minor`, or `CLOSE-vN` concerned. A version in the subject or body does not select the mailbox.
+- Every new `sigma send` message MUST include `--related-artifact`. For artifact-bound content, use the actual registered `INTENT-vN`, `ROADMAP-vN`, `PLAN-vN.minor`, `EXEC-vN.minor`, `CLOSE-vN`, or `PRODUCT-REVIEW-vN` concerned. A version in the subject or body does not select the mailbox.
 - Use `--related-artifact GENERAL` explicitly only when the content is unrelated to any Sigma artifact. Operational discussion about an artifact is still artifact-bound. `LEGACY` holds migrated old messages and is never a target for new messages or memos.
 - Select the artifact from evidence available within the role's existing authority. It must belong to the active INTENT. Legacy offset PLAN/EXEC versions resolve through registered chain membership, not by matching their major number to the INTENT number.
 - A reply may use `--reply-to <message-id>` without repeating `--related-artifact` only when the verified parent reference is appropriate for the reply; the CLI inherits that context. Include the correct reference if the reply concerns another artifact in the same INTENT. Start a new message for a different INTENT or for a change between GENERAL and an artifact context.

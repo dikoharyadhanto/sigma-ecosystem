@@ -3,17 +3,13 @@
 // shape as Stage D's prepareIntentRatify.ts. No business argument — the
 // Director approval record replaces the CLI's interactive
 // promptApprove()/--yes gate entirely (see closeLockService.ts's header).
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerPrepareCloseLockTool = registerPrepareCloseLockTool;
-const path_1 = __importDefault(require("path"));
 const zod_1 = require("zod");
 const chain_1 = require("../../../engine/chain");
+const closeLockService_1 = require("../../../services/closeLockService");
 const artifactPath_1 = require("../../artifactPath");
 const controlStore_1 = require("../../../engine/controlStore");
-const docCheck_1 = require("../../../utils/docCheck");
 const contract_1 = require("../../contract");
 const errors_1 = require("../../errors");
 const shared_1 = require("../../shared");
@@ -53,17 +49,12 @@ function registerPrepareCloseLockTool(server) {
             if (!chain.close.file) {
                 throw new errors_1.McpQueryError(contract_1.ERROR_CODES.INTERNAL_ERROR, 'Active DIR-CLOSE has no registered file.');
             }
+            (0, closeLockService_1.assertCloseLockGate3)(root, chain);
             const doc = (0, artifactPath_1.readCanonicalArtifactFile)(root, 'close', chain.close.version, chain.close.file);
             if (!doc.present || !doc.sha256) {
                 throw new errors_1.McpQueryError(contract_1.ERROR_CODES.INVALID_OPERATION, 'The DRAFT DIR-CLOSE file is not present on disk.');
             }
-            const report = (0, docCheck_1.validateSigmaDocFile)(path_1.default.join(root, chain.close.file), 'close');
-            try {
-                (0, docCheck_1.ensureSigmaDocEligible)(report, 'close');
-            }
-            catch (e) {
-                throw new errors_1.McpQueryError(contract_1.ERROR_CODES.INVALID_OPERATION, e.message);
-            }
+            // No document-content gate on close lock: the gate sits before `close new`.
             const { revision } = (0, contract_1.computeStateRevision)(root);
             if (!revision) {
                 throw new errors_1.McpQueryError(contract_1.ERROR_CODES.INTERNAL_ERROR, 'Could not compute a state_revision for this project.');

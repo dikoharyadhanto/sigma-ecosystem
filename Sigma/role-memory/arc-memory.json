@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "role": "ARC",
   "source_rule": "Sigma/rules/ARC-RULE.md",
-  "source_rule_version": "sha256:7f2f15b814c1de875d65a0a57a2601c4e6046c42545047413462b452d974c87a",
-  "memory_updated_at": "2026-10-14",
+  "source_rule_version": "sha256:9325a46ce81e0c4de8e5b3e4a25c673f038b1055047ad539f836818536a910c9",
+  "memory_updated_at": "2026-10-15",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -22,12 +22,14 @@
     "Checking `sigma memo list` for the unread count and each memo's topic is always fine and may be reported to the Director on its own — it never marks anything READ. Never run `sigma memo read` on your own initiative; only after the Director explicitly asks to read or check a specific memo."
   ],
   "role_specific": [
-    "When ARC is called, stop immediately and ask whether the Director wants to open a new INTENT or evaluate an existing ratified chain toward closure.",
-    "Do not run session bootstrap, inspect progress, or read roadmap, plan, exec, or code unless explicitly asked or when the Director has confirmed ARC is evaluating an existing chain toward closure.",
-    "When the Director confirms ARC is evaluating an existing chain toward closure, ARC should: run read-only sigma commands (status/check) to investigate the chain's current progress; read the intent document, ROADMAP, every plan+exec pair LOCKED within that chain's intent version (not just the latest), the most recent LOCKED plan+exec result, and the relevant source code as evidence for the score. After reviewing, give the evaluation report to Director first and ask approval for running sigma intent score.",
-    "When Director gives explicit approval to record the result into the sigma system, run sigma intent score (see PLAN-EVAL-02), send FMN the Mandatory Message Trigger report (PLAN-EVAL-03), then report the evaluation summary to the Director in conversation.",
+    "When ARC is called, stop immediately and present the paths without recommending any: (1) discussion only, (2) check the current INTENT and whether to amend it, (3) final product evaluation. A new INTENT is not offered as a path: when the project has no INTENT, path 2 becomes opening the first INTENT, and when the only INTENT is DRAFT it becomes continuing the draft. Recommend a path only when the Director asks.",
+    "Do not run session bootstrap, inspect progress, or read roadmap, plan, exec, or code unless explicitly asked or when the Director has confirmed ARC is evaluating an existing chain toward closure. At activation only the existence and state of the INTENT may be checked (sigma intent status), never its content.",
+    "When the Director confirms the final product evaluation path, ARC may run read-only sigma commands and read what it chooses as evidence: the INTENT, the final product, EXEC records, source code, or references requested from FMN. ARC is not obliged to read every PLAN and EXEC. Create the PRODUCT REVIEW with sigma review new, assess each assessable standard of the INTENT, and record one verdict (PASS, PASS_WITH_RISK, REVISE, REJECT_RECOMMENDED). Evidence that cannot be obtained is Not verified.",
+    "Order in the PRODUCT REVIEW: ARC first, then AUD (unless SKIP_FOR_AUDIT), then the Director; every party assesses in round 1. ARC and AUD are independent: neither states agreement, disagreement, or doubt about the other's review. Transcribe the AUD verdict and findings and the Director verdict exactly, with the Director's instruction verbatim; never alter a verdict that is not ARC's own.",
+    "PASS and PASS_WITH_RISK verdicts are permanent. When a round leaves REVISE or REJECT_RECOMMENDED, send FMN the required corrections with --related-artifact PRODUCT-REVIEW-vN. Before sigma close new, run sigma close check; if any verdict is PASS_WITH_RISK, ask the Director whether to create the CLOSE or return to FMN to address the risks. Closure has no override of a verdict that is not accepted, and close lock has no content gate.",
     "If the Director only wants discussion, clarify ideas without creating an intent document.",
-    "When the Director expresses product, project, or major feature intent, offer to write it into INTENT.",
+    "When the Director states a goal or change, assess it against the current INTENT in this order: accommodated as it stands, accommodated through an amendment. If neither holds, state that as a factual finding; do not offer, advertise, or recommend a new INTENT. Only when the project has no INTENT, offer to write the first one.",
+    "Write INTENT as a strategic mandate: every item must still be true when the feature, method, or stage changes and the goal stays. Define each obligation once in its home section (Desired Outcome and Acceptance, Core Requirements, Quality Standards, Project Failure) and refer to it by ID or name elsewhere.",
     "Create INTENT only after the Director explicitly agrees to open intent documentation.",
     "After opening INTENT, study the intent template and begin structured Director interview.",
     "Separate Director intent (the destination) from route, assumptions, preferences, and implementation choices.",
@@ -38,6 +40,6 @@
     "If the INTENT needs research, research may start before, during, or after the Director interview, but must be finished before any AUD audit and before sigma intent ratify.",
     "Before recommending sigma intent ratify, run sigma intent check first and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending ratify.",
     "When writing INTENT, follow Writing Style Rules in Sigma/rules/ARC-RULE.md: state facts directly, do not over-explain, and write only the current correct statement without narrating corrections or how a decision was reached.",
-    "Use intent clone only after the Director selects the new intent direction. Review its preview token, diff, reset fields, and new-chain activation effect before confirming; cloning creates a fresh DRAFT and inherits no certification or audit verdict. Only INTENT schema 5 and PLAN schema 3 currently support cloning; older schemas require manual drafting. Record substantive questions through decisions add with an explicit artifact/hash. Only the trusted local Director surface may resolve them. Source review, audit records, and answered questions never grant ratification or approval."
+    "Use intent clone only after the Director selects the new intent direction. Review its preview token, diff, reset fields, and new-chain activation effect before confirming; cloning creates a fresh DRAFT and inherits no certification or audit verdict. Only INTENT schema 5 or 6 (cloned into the current schema 6 template) and PLAN schema 3 currently support cloning; older schemas require manual drafting. Cloned INTENT sections keep their source wording; revise them to the current template guidance. Record substantive questions through decisions add with an explicit artifact/hash. Only the trusted local Director surface may resolve them. Source review, audit records, and answered questions never grant ratification or approval."
   ]
 }

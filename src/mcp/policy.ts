@@ -44,7 +44,7 @@ export const OPERATION_TIERS: Readonly<Record<string, Tier>> = Object.freeze({
   intent_status: 'Q', plan_status: 'Q', exec_status: 'Q', close_status: 'Q',
   intent_list: 'Q', plan_list: 'Q', exec_list: 'Q', roadmap_list: 'Q',
   intent_check: 'Q', plan_check: 'Q', exec_check: 'Q', close_check: 'Q',
-  roadmap_check: 'Q', inbox: 'Q', inbox_check: 'Q', memo_list: 'Q',
+  roadmap_check: 'Q', review_check: 'Q', inbox: 'Q', inbox_check: 'Q', memo_list: 'Q',
   config_show: 'Q', report_logs: 'Q', git_evidence: 'Q', dev_status: 'Q',
   scan: 'NA', // read_only by level, inadmissible by shape — matrix §3.5
 
@@ -56,13 +56,13 @@ export const OPERATION_TIERS: Readonly<Record<string, Tier>> = Object.freeze({
   intent_lock: 'NA',                                          // removed; tombstone like plan_lock
 
   // ── W1 (13) ───────────────────────────────────────────────────────────────
-  intent_new: 'W1', plan_new: 'W1', exec_new: 'W1', plan_update: 'W1',
+  intent_new: 'W1', plan_new: 'W1', exec_new: 'W1', plan_update: 'W1', review_new: 'W1',
   send: 'W1', memo_write: 'W1', memo_read: 'W1', inbox_read: 'W1',
   inbox_archive: 'W1', roadmap_new: 'W1', roadmap_render: 'W1',
   reference_update: 'W1', config_set_language: 'W1',
 
   // ── W2 (11) ───────────────────────────────────────────────────────────────
-  intent_ratify: 'W2', intent_amendment: 'W2', intent_score: 'W2',
+  intent_ratify: 'W2', intent_amendment: 'W2',
   intent_supersede: 'W2', intent_activate: 'W2',
   plan_supersede: 'W2', plan_promote: 'W2', plan_lock: 'NA', exec_lock: 'NA',
   plan_approve: 'W2', exec_approve: 'W2', plan_revise_prepare: 'W1', plan_revise_check: 'W1', plan_revise_commit: 'W1', exec_acknowledge_plan: 'W1',
@@ -89,6 +89,7 @@ export const OPERATION_OWNER: Readonly<Record<string, string>> = Object.freeze({
   exec_new: 'DEV', exec_status: 'DEV', exec_list: 'DEV', exec_check: 'DEV',
   git_evidence: 'DEV', dev_status: 'DEV',
   close_status: 'AUD', close_check: 'AUD', report_logs: 'AUD',
+  review_new: 'ARC', review_check: 'ARC',
 });
 
 /**

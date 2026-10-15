@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
   "generated_at": "2026-10-14T18:05:35.000Z",
-  "description": "Sigma Operation Registry — all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 88,
+  "description": "Sigma Operation Registry \u2014 all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
+  "total_operations": 89,
   "domains": [
     "audit",
     "close",
@@ -23,6 +23,7 @@
     "project",
     "reference",
     "report",
+    "review",
     "roadmap",
     "scan",
     "send",
@@ -32,12 +33,12 @@
   ],
   "level_definitions": {
     "semantic": "Mutates project artifacts or runtime state (progress-v<N>.json, Sigma/ files).",
-    "read_only": "Reads existing state only — no writes to progress-v<N>.json or artifact files.",
-    "system": "Install-level operation — affects global ~/.sigma/ or host system, not project-specific state."
+    "read_only": "Reads existing state only \u2014 no writes to progress-v<N>.json or artifact files.",
+    "system": "Install-level operation \u2014 affects global ~/.sigma/ or host system, not project-specific state."
   },
   "role_definitions": {
     "any": "Any user may invoke this operation.",
-    "director": "Director-only. CLI enforces this by convention — Sigma has no auth layer; governance relies on role discipline."
+    "director": "Director-only. CLI enforces this by convention \u2014 Sigma has no auth layer; governance relies on role discipline."
   },
   "operations": [
     {
@@ -59,7 +60,7 @@
         },
         {
           "type": "file",
-          "description": ".sigma-identity.json at project root (project_id, project_name, registered) — fallback identity source for sigma doctor --reconstruct if progress-v<N>.json is ever lost or corrupted"
+          "description": ".sigma-identity.json at project root (project_id, project_name, registered) \u2014 fallback identity source for sigma doctor --reconstruct if progress-v<N>.json is ever lost or corrupted"
         },
         {
           "type": "file",
@@ -76,7 +77,7 @@
       ],
       "constraints": [],
       "gating": {
-        "pre_condition": "none — project_start has no gate",
+        "pre_condition": "none \u2014 project_start has no gate",
         "post_condition": "progress.lifecycle_state == 'DESIGN'; Sigma/ folder structure exists"
       },
       "error_messages": {}
@@ -168,7 +169,7 @@
       "action": "register",
       "level": "semantic",
       "role": "any",
-      "description": "Repair/harvest tool for .sigma-identity.json at project root — not a cross-project registry operation. project_start already writes this file once; this command exists to restore it if it is missing or corrupted, or to backfill it into a project created before the file existed. --id and --name are both required; there is no fallback source to read them from.",
+      "description": "Repair/harvest tool for .sigma-identity.json at project root \u2014 not a cross-project registry operation. project_start already writes this file once; this command exists to restore it if it is missing or corrupted, or to backfill it into a project created before the file existed. --id and --name are both required; there is no fallback source to read them from.",
       "inputs": [
         {
           "name": "--id",
@@ -210,18 +211,18 @@
       "action": "update",
       "level": "semantic",
       "role": "any",
-      "description": "Sync the Local Artifact table in Sigma/reference/reference-list.md from files found in Sigma/reference/data/. Top-level only — a folder in data/ is recorded as one row, not walked recursively. Auto-assigns the next sequential LA id. Never modifies existing rows (Category/Notes stay manual). Flags, but does not delete, rows whose file no longer exists on disk. Self-heals a missing reference-list.md by scaffolding it from REFERENCE-LIST-TEMPLATE.md first.",
+      "description": "Sync the Local Artifact table in Sigma/reference/reference-list.md from files found in Sigma/reference/data/. Top-level only \u2014 a folder in data/ is recorded as one row, not walked recursively. Auto-assigns the next sequential LA id. Never modifies existing rows (Category/Notes stay manual). Flags, but does not delete, rows whose file no longer exists on disk. Self-heals a missing reference-list.md by scaffolding it from REFERENCE-LIST-TEMPLATE.md first.",
       "inputs": [],
       "outputs": [
         {
           "type": "file",
-          "description": "Sigma/reference/reference-list.md — new Local Artifact rows appended, or file scaffolded from template if missing"
+          "description": "Sigma/reference/reference-list.md \u2014 new Local Artifact rows appended, or file scaffolded from template if missing"
         }
       ],
       "constraints": [
         "Only the Local Artifact table is synced; Website Link and Online Source Data rows are always manual",
-        "Category and Notes are never auto-filled — left as [...] placeholders on new rows",
-        "Not tracked in progress-v<N>.json — no gate, no lock state"
+        "Category and Notes are never auto-filled \u2014 left as [...] placeholders on new rows",
+        "Not tracked in progress-v<N>.json \u2014 no gate, no lock state"
       ],
       "gating": {
         "pre_condition": "none",
@@ -266,7 +267,7 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create a INTENT DRAFT from the template. No gate — INTENT is the first artifact in the Sigma lifecycle. Auto-names the file using the naming convention: charter/INTENT-v{next_version}.md (before F10: INTENT-v{next_version}.md). Sets intent.state = DRAFT in the new chain's progress-v<N>.json.",
+      "description": "Create a INTENT DRAFT from the template. No gate \u2014 INTENT is the first artifact in the Sigma lifecycle. Auto-names the file using the naming convention: charter/INTENT-v{next_version}.md (before F10: INTENT-v{next_version}.md). Sets intent.state = DRAFT in the new chain's progress-v<N>.json.",
       "inputs": [],
       "outputs": [
         {
@@ -275,7 +276,7 @@
         },
         {
           "type": "state_change",
-          "description": "intent.state = 'DRAFT'; intent.version/file recorded (intent is a single object per chain, not a versions[] tracker — no active_version/active_state field exists)"
+          "description": "intent.state = 'DRAFT'; intent.version/file recorded (intent is a single object per chain, not a versions[] tracker \u2014 no active_version/active_state field exists)"
         }
       ],
       "constraints": [],
@@ -291,7 +292,7 @@
       "action": "ratify",
       "level": "semantic",
       "role": "director",
-      "description": "Ratify the active INTENT. Gate: INTENT must be DRAFT. Each chain file holds exactly one intent, so there is no prior LOCKED/RATIFIED version in the same file to auto-supersede or demote — a complementary or prior intent simply lives in its own chain file, untouched (see sigma intent supersede for the only path to SUPERSEDED). Sets gate_1_open = true and transitions lifecycle_state to BUILD.",
+      "description": "Ratify the active INTENT. Gate: INTENT must be DRAFT. Each chain file holds exactly one intent, so there is no prior LOCKED/RATIFIED version in the same file to auto-supersede or demote \u2014 a complementary or prior intent simply lives in its own chain file, untouched (see sigma intent supersede for the only path to SUPERSEDED). Sets gate_1_open = true and transitions lifecycle_state to BUILD.",
       "inputs": [],
       "outputs": [
         {
@@ -419,7 +420,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show active INTENT version, state, and ratified_at timestamp. The stale_intent/STALE_INTENT mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such propagation exists.",
+      "description": "Show active INTENT version, state, and ratified_at timestamp. The stale_intent/STALE_INTENT mechanism referenced in older documentation was removed in PLAN-EVAL-01 \u2014 no such propagation exists.",
       "inputs": [],
       "outputs": [
         {
@@ -446,7 +447,7 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List every chain (one row per progress-v<N>.json): chain version, intent state, lifecycle state, and Gate 1/2/3 status, marking the currently active chain. Not a versions[] listing within one chain — intent is a single object per chain file (PLAN-EVAL-01 Opsi C), so cross-chain history is the only listing that exists.",
+      "description": "List every chain (one row per progress-v<N>.json): chain version, intent state, lifecycle state, and Gate 1/2/3 status, marking the currently active chain. Not a versions[] listing within one chain \u2014 intent is a single object per chain file (PLAN-EVAL-01 Opsi C), so cross-chain history is the only listing that exists.",
       "inputs": [],
       "outputs": [
         {
@@ -531,7 +532,7 @@
       "action": "supersede",
       "level": "semantic",
       "role": "director",
-      "description": "Explicitly supersede an PLAN version, DRAFT or LOCKED (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — DRAFT accepted since it is the only exit for a plan no longer wanted; no separate discard command). Requires --v <version> and --reason <string>. Sets the target version state to SUPERSEDED and auto-cascades any linked non-final EXEC. Recomputes gates.gate_2_open/gate_3_satisfied. Rejects a target already SUPERSEDED, to protect the original supersede_reason. Does NOT remove the file. Does NOT auto-trigger — must be explicitly called.",
+      "description": "Explicitly supersede an PLAN version, DRAFT or LOCKED (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 \u2014 DRAFT accepted since it is the only exit for a plan no longer wanted; no separate discard command). Requires --v <version> and --reason <string>. Sets the target version state to SUPERSEDED and auto-cascades any linked non-final EXEC. Recomputes gates.gate_2_open/gate_3_satisfied. Rejects a target already SUPERSEDED, to protect the original supersede_reason. Does NOT remove the file. Does NOT auto-trigger \u2014 must be explicitly called.",
       "inputs": [
         {
           "name": "--v",
@@ -579,7 +580,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show PLAN chain state: every open DRAFT, every LOCKED plan with its EXEC pairing, pending plans, and Gate 2 (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — replaces the old single active-pointer view; absorbs the removed `plan queue` command). Never reads plan.active_version as a selection authority.",
+      "description": "Show PLAN chain state: every open DRAFT, every LOCKED plan with its EXEC pairing, pending plans, and Gate 2 (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 \u2014 replaces the old single active-pointer view; absorbs the removed `plan queue` command). Never reads plan.active_version as a selection authority.",
       "inputs": [],
       "outputs": [
         {
@@ -606,7 +607,7 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List all PLAN versions with states, intent_version_refs, and created_at timestamps, plus pending plans. The stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such flag exists.",
+      "description": "List all PLAN versions with states, intent_version_refs, and created_at timestamps, plus pending plans. The stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01 \u2014 no such flag exists.",
       "inputs": [],
       "outputs": [
         {
@@ -704,7 +705,7 @@
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show EXEC chain state: every open DRAFT with its plan pairing, every LOCKED exec, and Gate 3 (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — replaces the old single active-pointer view). Never reads exec.active_version as a selection authority.",
+      "description": "Show EXEC chain state: every open DRAFT with its plan pairing, every LOCKED exec, and Gate 3 (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 \u2014 replaces the old single active-pointer view). Never reads exec.active_version as a selection authority.",
       "inputs": [],
       "outputs": [
         {
@@ -731,7 +732,7 @@
       "action": "list",
       "level": "read_only",
       "role": "any",
-      "description": "List all EXEC versions with states, plan_version_refs, and created_at timestamps. The stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01 — no such flag exists.",
+      "description": "List all EXEC versions with states, plan_version_refs, and created_at timestamps. The stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01 \u2014 no such flag exists.",
       "inputs": [],
       "outputs": [
         {
@@ -758,7 +759,7 @@
       "action": "new",
       "level": "semantic",
       "role": "director",
-      "description": "Create a CLOSE DRAFT from the template. Gate 3 (PLAN-IMPL-MULTIDRAFT-LOCK §7.1, 2026-08-12): active INTENT RATIFIED, nothing left DRAFT in either plan or exec anywhere in the chain, and every LOCKED PLAN paired with exactly one LOCKED EXEC. Also requires Gate 3.5 (ARC Satisfaction Score >= 50). No --ack-stale-intent flag exists — the stale_intent mechanism referenced in older documentation was removed in PLAN-EVAL-01; there is nothing to acknowledge. Sets lifecycle_state to CLOSE.",
+      "description": "Create a CLOSE DRAFT from the template. Gate 3 (PLAN-IMPL-MULTIDRAFT-LOCK \u00a77.1, 2026-08-12): active INTENT RATIFIED, nothing left DRAFT in either plan or exec anywhere in the chain, and every LOCKED PLAN paired with exactly one LOCKED EXEC. Also requires a PRODUCT REVIEW (Sigma/review/PRODUCT-REVIEW-v{N}.md) whose required verdicts are all PASS or PASS_WITH_RISK: ARC, AUD (unless SKIP_FOR_AUDIT is checked), and the Director. Run `sigma close check` first. Sets lifecycle_state to CLOSE.",
       "inputs": [],
       "outputs": [
         {
@@ -767,7 +768,7 @@
         },
         {
           "type": "state_change",
-          "description": "chain.close = { version, state: 'DRAFT', ... } (close is a single object per chain, not a versions[] tracker — no active_version/active_state field exists)"
+          "description": "chain.close = { version, state: 'DRAFT', ... } (close is a single object per chain, not a versions[] tracker \u2014 no active_version/active_state field exists)"
         },
         {
           "type": "state_change",
@@ -782,17 +783,23 @@
         },
         {
           "type": "gate",
-          "condition": "hasGate35Score(chain): chain.intent.arc_score recorded and >= 50",
-          "error_message": "GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. Run: sigma intent score <n> --notes \"...\""
+          "condition": "the PRODUCT REVIEW file exists for the chain",
+          "error_message": "PRODUCT REVIEW MISSING: closure cannot be created because the PRODUCT REVIEW does not exist. Create it with: sigma review new"
+        },
+        {
+          "type": "gate",
+          "condition": "PRODUCT REVIEW verdicts: ARC, AUD (unless SKIP_FOR_AUDIT with a verbatim Director instruction), and Director are each PASS or PASS_WITH_RISK",
+          "error_message": "PRODUCT REVIEW NOT ACCEPTED: closure needs every required verdict to be PASS or PASS_WITH_RISK. <specific blockers listed>"
         }
       ],
       "gating": {
-        "pre_condition": "hasCleanGate3Chain(chain) == true; hasGate35Score(chain) == true",
+        "pre_condition": "hasCleanGate3Chain(chain) == true; PRODUCT REVIEW exists and every required verdict is PASS or PASS_WITH_RISK",
         "post_condition": "chain.close.state == 'DRAFT'; lifecycle_state == 'CLOSE'"
       },
       "error_messages": {
         "gate_3_blocked": "GATE 3 BLOCKED: the chain still has open work. (message lists every specific blocking DRAFT/unpaired plan)",
-        "gate_3_5_blocked": "GATE 3.5 BLOCKED: ARC Satisfaction Score must be >= 50 before DIR-CLOSE can be created. Run: sigma intent score <n> --notes \"...\""
+        "product_review_missing": "PRODUCT REVIEW MISSING: closure cannot be created because the PRODUCT REVIEW does not exist. Create it with: sigma review new",
+        "product_review_not_accepted": "PRODUCT REVIEW NOT ACCEPTED: closure needs every required verdict to be PASS or PASS_WITH_RISK."
       }
     },
     {
@@ -801,7 +808,7 @@
       "action": "lock",
       "level": "semantic",
       "role": "director",
-      "description": "Lock the active CLOSE. Gate: chain.close.state must be DRAFT. Auto-locks the chain's ROADMAP as a side effect if it is still DRAFT (roadmap has no separate lock command — see 7 Gate rules / roadmap_new). Interactive APPROVE confirmation required unless --yes is passed. Transitions lifecycle_state to CLOSED. Does not supersede anything — there is no prior LOCKED CLOSE to supersede (registerCloseDraft's 1:1 guard already prevents a second non-superseded close from existing). No decision-harvest mechanism exists in the codebase.",
+      "description": "Lock the active CLOSE. Locking is a stamp that the mandate is finished: there is no document-content gate, because the gate sits before `close new` (Gate 3 and the PRODUCT REVIEW verdicts). Gate: chain.close.state must be DRAFT, and Gate 3 must hold (nothing left DRAFT or APPROVED; every LOCKED plan paired with one LOCKED exec) on every lifecycle model. Auto-locks the chain's ROADMAP as a side effect if it is still DRAFT (roadmap has no separate lock command \u2014 see roadmap_new). Interactive APPROVE confirmation required unless --yes is passed. Transitions lifecycle_state to CLOSED. Does not supersede anything \u2014 registerCloseDraft's 1:1 guard already prevents a second non-superseded close from existing.",
       "inputs": [
         {
           "name": "--yes",
@@ -829,10 +836,15 @@
           "type": "state",
           "condition": "chain.close.state == 'DRAFT'",
           "error_message": "Active DIR-CLOSE is not in DRAFT state. Cannot lock."
+        },
+        {
+          "type": "gate",
+          "condition": "hasCleanGate3Chain(chain) == true (and, on paired_approval chains, the contract evidence verifies)",
+          "error_message": "GATE 3 BLOCKED: the chain still has open work, so the CLOSE cannot be locked. <specific blockers listed>"
         }
       ],
       "gating": {
-        "pre_condition": "chain.close.state == 'DRAFT'",
+        "pre_condition": "chain.close.state == 'DRAFT'; hasCleanGate3Chain(chain) == true",
         "post_condition": "chain.close.state == 'LOCKED'; lifecycle_state == 'CLOSED'"
       },
       "error_messages": {
@@ -840,12 +852,81 @@
       }
     },
     {
+      "operation_id": "review_new",
+      "domain": "review",
+      "action": "new",
+      "level": "semantic",
+      "role": "any",
+      "description": "Create the PRODUCT REVIEW for the active chain from the PRODUCT REVIEW template. Operated by ARC after the Director states that the final product is ready and FMN's review request is received. One per INTENT; its version is the INTENT version. It has no chain state: it is recognized by its file, Sigma/review/PRODUCT-REVIEW-v{N}.md. `sigma close new` reads the ARC, AUD, and Director verdicts from it.",
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "file",
+          "description": "Sigma/review/PRODUCT-REVIEW-v{N}.md (from template)"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "gate",
+          "condition": "progress.intent.state == 'RATIFIED'",
+          "error_message": "PRODUCT REVIEW requires a RATIFIED INTENT. Run: sigma intent ratify"
+        },
+        {
+          "type": "state",
+          "condition": "no PRODUCT REVIEW file exists for the chain",
+          "error_message": "PRODUCT REVIEW already exists. Only one is kept per INTENT."
+        }
+      ],
+      "gating": {
+        "pre_condition": "progress.intent.state == 'RATIFIED'; no PRODUCT REVIEW file exists for the chain",
+        "post_condition": "Sigma/review/PRODUCT-REVIEW-v{N}.md exists"
+      },
+      "error_messages": {
+        "no_ratified_intent": "PRODUCT REVIEW requires a RATIFIED INTENT. Run: sigma intent ratify",
+        "review_exists": "PRODUCT REVIEW already exists. Only one is kept per INTENT."
+      }
+    },
+    {
+      "operation_id": "review_check",
+      "domain": "review",
+      "action": "check",
+      "level": "read_only",
+      "role": "any",
+      "description": "Validate a PRODUCT REVIEW document structure and markers, and report Closure readiness: whether the ARC, AUD (unless SKIP_FOR_AUDIT), and Director verdicts are each PASS or PASS_WITH_RISK. Read-only \u2014 never mutates state.",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": false,
+          "description": "Check the PRODUCT REVIEW of a specific chain instead of the active one"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "display",
+          "description": "Validation report and Closure readiness verdict for the PRODUCT REVIEW"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "state",
+          "condition": "the target chain's PRODUCT REVIEW must exist",
+          "error_message": "No PRODUCT REVIEW found for this chain. Run: sigma review new"
+        }
+      ],
+      "gating": {
+        "pre_condition": "chain PRODUCT REVIEW exists",
+        "post_condition": "none \u2014 read-only"
+      },
+      "error_messages": {}
+    },
+    {
       "operation_id": "close_status",
       "domain": "close",
       "action": "status",
       "level": "read_only",
       "role": "any",
-      "description": "Show CLOSE version, state, locked_at timestamp, and lifecycle_state (close is a single object per chain — no active_version/active_state field exists).",
+      "description": "Show CLOSE version, state, locked_at timestamp, and lifecycle_state (close is a single object per chain \u2014 no active_version/active_state field exists).",
       "inputs": [],
       "outputs": [
         {
@@ -872,7 +953,7 @@
       "action": "evidence",
       "level": "read_only",
       "role": "any",
-      "description": "Read-only Git state summary: current branch, latest commit hash and message, changed files since last commit, and diff summary. Minimal and read-only — no publish layer, no heavy evidence lifecycle.",
+      "description": "Read-only Git state summary: current branch, latest commit hash and message, changed files since last commit, and diff summary. Minimal and read-only \u2014 no publish layer, no heavy evidence lifecycle.",
       "inputs": [],
       "outputs": [
         {
@@ -943,7 +1024,7 @@
       "action": "update",
       "level": "system",
       "role": "any",
-      "description": "Safe non-destructive global update. Backs up and syncs ~/.sigma/templates/, rule files, protocol templates, and bridge file templates from the installed package version, then redeploys role skill files + the protect-sigma hook to every detected AI tool directory (no interactive selection — refreshes whatever is already present). Does NOT touch any active project's Sigma/ folder. Use sigma project sync for project-level doctrine updates.",
+      "description": "Safe non-destructive global update. Backs up and syncs ~/.sigma/templates/, rule files, protocol templates, and bridge file templates from the installed package version, then redeploys role skill files + the protect-sigma hook to every detected AI tool directory (no interactive selection \u2014 refreshes whatever is already present). Does NOT touch any active project's Sigma/ folder. Use sigma project sync for project-level doctrine updates.",
       "inputs": [],
       "outputs": [
         {
@@ -980,13 +1061,13 @@
       "action": "uninstall",
       "level": "system",
       "role": "director",
-      "description": "Remove the Sigma global installation: deletes ~/.sigma/ entirely, removes deployed role skill files from every AI tool directory (file-by-file, never removes the tool's own directory), and surgically removes only the protect-sigma.js hook entry from ~/.claude/settings.json (cleaning up any container left empty by the removal, without touching unrelated settings.json content). Global-only by construction — never resolves a project-local path, so local project folders (Sigma/, .sigma-identity.json, bridge files) are never touched regardless of current working directory. Dry-run by default; requires --confirm to apply. Idempotent — a second run reports nothing to do.",
+      "description": "Remove the Sigma global installation: deletes ~/.sigma/ entirely, removes deployed role skill files from every AI tool directory (file-by-file, never removes the tool's own directory), and surgically removes only the protect-sigma.js hook entry from ~/.claude/settings.json (cleaning up any container left empty by the removal, without touching unrelated settings.json content). Global-only by construction \u2014 never resolves a project-local path, so local project folders (Sigma/, .sigma-identity.json, bridge files) are never touched regardless of current working directory. Dry-run by default; requires --confirm to apply. Idempotent \u2014 a second run reports nothing to do.",
       "inputs": [
         {
           "name": "--confirm",
           "type": "flag",
           "required": true,
-          "description": "Required to apply — without it, prints a dry-run list of what would be removed"
+          "description": "Required to apply \u2014 without it, prints a dry-run list of what would be removed"
         }
       ],
       "outputs": [
@@ -999,11 +1080,11 @@
         {
           "type": "flag",
           "condition": "--confirm flag must be present to apply changes",
-          "error_message": "N/A — omitting --confirm runs a dry-run, not an error"
+          "error_message": "N/A \u2014 omitting --confirm runs a dry-run, not an error"
         }
       ],
       "gating": {
-        "pre_condition": "none — dry-run without --confirm; --confirm required to apply",
+        "pre_condition": "none \u2014 dry-run without --confirm; --confirm required to apply",
         "post_condition": "~/.sigma/ removed; deployed skill files removed; hook entry removed from ~/.claude/settings.json; local project folders untouched"
       },
       "error_messages": {}
@@ -1014,7 +1095,7 @@
       "action": "new",
       "level": "semantic",
       "role": "any",
-      "description": "Create the ROADMAP for the active chain from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/roadmap/ and registers it in progress-v<N>.json as DRAFT — one ROADMAP per chain. There is no standalone `sigma roadmap lock` command; ROADMAP auto-locks as a side effect of `sigma close lock` (see close_lock).",
+      "description": "Create the ROADMAP for the active chain from the ROADMAP template. Authored by FMN; Director may initiate. Initializes ROADMAP-v{N}.md in Sigma/roadmap/ and registers it in progress-v<N>.json as DRAFT \u2014 one ROADMAP per chain. There is no standalone `sigma roadmap lock` command; ROADMAP auto-locks as a side effect of `sigma close lock` (see close_lock).",
       "inputs": [],
       "outputs": [
         {
@@ -1082,7 +1163,7 @@
       "action": "set language",
       "level": "semantic",
       "role": "any",
-      "description": "Set one language preference non-interactively to a free-form language name (e.g. \"English\", \"Indonesia\") — not an ISO code. Requires exactly one target flag.",
+      "description": "Set one language preference non-interactively to a free-form language name (e.g. \"English\", \"Indonesia\") \u2014 not an ISO code. Requires exactly one target flag.",
       "inputs": [
         {
           "name": "<name>",
@@ -1144,8 +1225,8 @@
       ],
       "constraints": [],
       "gating": {
-        "pre_condition": "none — absent config falls back to defaults",
-        "post_condition": "none — read-only"
+        "pre_condition": "none \u2014 absent config falls back to defaults",
+        "post_condition": "none \u2014 read-only"
       },
       "error_messages": {}
     },
@@ -1184,8 +1265,8 @@
         }
       ],
       "gating": {
-        "pre_condition": "none — empty/missing mailbox lists nothing",
-        "post_condition": "none — read-only"
+        "pre_condition": "none \u2014 empty/missing mailbox lists nothing",
+        "post_condition": "none \u2014 read-only"
       },
       "error_messages": {}
     },
@@ -1207,7 +1288,7 @@
       "outputs": [
         {
           "type": "state_change",
-          "description": "Message status → READ in Sigma/messages/index.json and the message file; content printed"
+          "description": "Message status \u2192 READ in Sigma/messages/index.json and the message file; content printed"
         }
       ],
       "constraints": [
@@ -1241,7 +1322,7 @@
       "outputs": [
         {
           "type": "state_change",
-          "description": "Message status → ARCHIVED in Sigma/messages/index.json and the message file"
+          "description": "Message status \u2192 ARCHIVED in Sigma/messages/index.json and the message file"
         }
       ],
       "constraints": [
@@ -1268,13 +1349,13 @@
       "outputs": [
         {
           "type": "display",
-          "description": "Integrity report — index/disk mismatches, missing attachments, invalid field values"
+          "description": "Integrity report \u2014 index/disk mismatches, missing attachments, invalid field values"
         }
       ],
       "constraints": [],
       "gating": {
         "pre_condition": "none",
-        "post_condition": "none — read-only; repairs are manual by design"
+        "post_condition": "none \u2014 read-only; repairs are manual by design"
       },
       "error_messages": {}
     },
@@ -1335,7 +1416,7 @@
       "action": "promote",
       "level": "semantic",
       "role": "any",
-      "description": "Promote a pending plan into the official draft queue with an assigned version (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 — no longer FIFO; see plan_approve). Stage title/focus are written into the chain ROADMAP Stage Overview data.",
+      "description": "Promote a pending plan into the official draft queue with an assigned version (PLAN-IMPL-MULTIDRAFT-LOCK, Director directive 2026-08-12 \u2014 no longer FIFO; see plan_approve). Stage title/focus are written into the chain ROADMAP Stage Overview data.",
       "inputs": [
         {
           "name": "--id",
@@ -1370,7 +1451,7 @@
         },
         {
           "type": "state",
-          "condition": "Gate 1.5 — the chain's ROADMAP must exist and not be SUPERSEDED",
+          "condition": "Gate 1.5 \u2014 the chain's ROADMAP must exist and not be SUPERSEDED",
           "error_message": "Gate 1.5 blocked: A ROADMAP must exist for this chain to promote a plan."
         }
       ],
@@ -1386,7 +1467,7 @@
       "action": "render",
       "level": "semantic",
       "role": "any",
-      "description": "Regenerate the derived Stage Overview table in the active chain's ROADMAP document from chain state. The table has no independent data copy, so this cannot drift — it is a pure re-render.",
+      "description": "Regenerate the derived Stage Overview table in the active chain's ROADMAP document from chain state. The table has no independent data copy, so this cannot drift \u2014 it is a pure re-render.",
       "inputs": [],
       "outputs": [
         {
@@ -1413,7 +1494,7 @@
       "action": "send",
       "level": "semantic",
       "role": "any",
-      "description": "Send a message from one role to another. Message files are CLI-generated — never create or rename them manually. Unread gate: the SENDER must have no unread messages in their own inbox before sending (clear with sigma inbox read <id>). CONTRACT_CHANGE requires FMN -> DEV, active registered PLAN reference, latest unnotified revision_id and durable receipt; CONTRACT_CHANGE_REQUEST requires DEV -> FMN with justification. Both retain F03 mailbox gates.",
+      "description": "Send a message from one role to another. Message files are CLI-generated \u2014 never create or rename them manually. Unread gate: the SENDER must have no unread messages in their own inbox before sending (clear with sigma inbox read <id>). CONTRACT_CHANGE requires FMN -> DEV, active registered PLAN reference, latest unnotified revision_id and durable receipt; CONTRACT_CHANGE_REQUEST requires DEV -> FMN with justification. Both retain F03 mailbox gates.",
       "inputs": [
         {
           "name": "--from",
@@ -1512,31 +1593,31 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate a CLOSE document structure and markers, and report Lock readiness for `sigma close lock`. Read-only — never mutates state.",
+      "description": "Check whether a CLOSE can be created, before it exists: Gate 3, then that the PRODUCT REVIEW exists, then that its required verdicts are PASS or PASS_WITH_RISK. Reports which parties gave PASS_WITH_RISK so ARC can ask the Director whether to create the CLOSE or return to FMN. Read-only \u2014 never mutates state.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
           "required": false,
-          "description": "Check the CLOSE of a specific chain instead of the active one"
+          "description": "Check a specific chain instead of the active one"
         }
       ],
       "outputs": [
         {
           "type": "display",
-          "description": "Validation report and Lock readiness verdict for CLOSE"
+          "description": "Gate 3 status, PRODUCT REVIEW verdicts, PASS_WITH_RISK notes, and the closure readiness verdict"
         }
       ],
       "constraints": [
         {
           "type": "state",
-          "condition": "target chain and its DIR-CLOSE document must exist",
-          "error_message": "No DIR-CLOSE found. Run: sigma close new"
+          "condition": "the target chain must exist",
+          "error_message": "No chain found. Run: sigma intent new"
         }
       ],
       "gating": {
-        "pre_condition": "chain DIR-CLOSE exists",
-        "post_condition": "none — read-only"
+        "pre_condition": "chain exists",
+        "post_condition": "none \u2014 read-only"
       },
       "error_messages": {}
     },
@@ -1639,7 +1720,7 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate a EXEC document structure and markers, and report approval readiness for `sigma exec approve`. Read-only — never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT exec is open (PLAN-IMPL-MULTIDRAFT-LOCK §8.3, Director directive 2026-08-12 — no command may act on an implicit target under ambiguity, including read-only ones).",
+      "description": "Validate a EXEC document structure and markers, and report approval readiness for `sigma exec approve`. Read-only \u2014 never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT exec is open (PLAN-IMPL-MULTIDRAFT-LOCK \u00a78.3, Director directive 2026-08-12 \u2014 no command may act on an implicit target under ambiguity, including read-only ones).",
       "inputs": [
         {
           "name": "--v",
@@ -1663,7 +1744,7 @@
       ],
       "gating": {
         "pre_condition": "exec version exists",
-        "post_condition": "none — read-only"
+        "post_condition": "none \u2014 read-only"
       },
       "error_messages": {}
     },
@@ -1673,7 +1754,7 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate a INTENT document structure and markers, and report Lock readiness (Eligible / Eligible with warnings / Not eligible) for `sigma intent ratify`. Read-only — never mutates state.",
+      "description": "Validate a INTENT document structure and markers, and report Lock readiness (Eligible / Eligible with warnings / Not eligible) for `sigma intent ratify`. Read-only \u2014 never mutates state.",
       "inputs": [
         {
           "name": "--v",
@@ -1697,7 +1778,7 @@
       ],
       "gating": {
         "pre_condition": "chain exists",
-        "post_condition": "none — read-only"
+        "post_condition": "none \u2014 read-only"
       },
       "error_messages": {}
     },
@@ -1743,7 +1824,7 @@
       "action": "check",
       "level": "read_only",
       "role": "any",
-      "description": "Validate an PLAN document structure and markers, and report approval readiness for `sigma plan approve`. Read-only — never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT plan is open (PLAN-IMPL-MULTIDRAFT-LOCK §8.3, Director directive 2026-08-12 — no command may act on an implicit target under ambiguity, including read-only ones). Optional --sources adds read-only source review without writing operation logs or changing gates.",
+      "description": "Validate an PLAN document structure and markers, and report approval readiness for `sigma plan approve`. Read-only \u2014 never mutates state. Falls back to the active pointer only while unambiguous (0 or 1 DRAFT open); refuses without --v once more than one DRAFT plan is open (PLAN-IMPL-MULTIDRAFT-LOCK \u00a78.3, Director directive 2026-08-12 \u2014 no command may act on an implicit target under ambiguity, including read-only ones). Optional --sources adds read-only source review without writing operation logs or changing gates.",
       "inputs": [
         {
           "name": "--v",
@@ -1773,7 +1854,7 @@
       ],
       "gating": {
         "pre_condition": "plan version exists",
-        "post_condition": "none — read-only"
+        "post_condition": "none \u2014 read-only"
       },
       "error_messages": {}
     },
@@ -1853,7 +1934,7 @@
       ],
       "gating": {
         "pre_condition": "chain ROADMAP exists",
-        "post_condition": "none — read-only"
+        "post_condition": "none \u2014 read-only"
       },
       "error_messages": {}
     },
@@ -1885,74 +1966,18 @@
       "error_messages": {}
     },
     {
-      "operation_id": "intent_score",
-      "domain": "intent",
-      "action": "score",
-      "level": "semantic",
-      "role": "director",
-      "description": "Record ARC Satisfaction Score (integer 0-100) for a RATIFIED INTENT. Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`. Score and notes are stored on the chain and rendered into Sigma/charter/intent-history.md.",
-      "inputs": [
-        {
-          "name": "<n>",
-          "type": "number",
-          "required": true,
-          "description": "Score value — integer between 0 and 100"
-        },
-        {
-          "name": "--notes",
-          "type": "string",
-          "required": true,
-          "description": "Rationale for the score; must not contain \"|\" or newlines"
-        },
-        {
-          "name": "--v",
-          "type": "string",
-          "required": false,
-          "description": "Chain version to score instead of the active one"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "state_change",
-          "description": "intent.arc_score, intent.arc_score_notes, intent.arc_score_updated_at recorded on the target chain; intent-history.md re-rendered"
-        }
-      ],
-      "constraints": [
-        {
-          "type": "value",
-          "condition": "score must be an integer between 0 and 100",
-          "error_message": "ARC score must be an integer between 0 and 100"
-        },
-        {
-          "type": "state",
-          "condition": "target intent must be RATIFIED",
-          "error_message": "ARC score can only be recorded against a RATIFIED DIR-INTENT"
-        },
-        {
-          "type": "value",
-          "condition": "--notes must not contain \"|\" or newline characters",
-          "error_message": "--notes cannot contain \"|\" or a newline (breaks the intent-history.md table and its recovery parser)"
-        }
-      ],
-      "gating": {
-        "pre_condition": "target chain intent.state == RATIFIED",
-        "post_condition": "arc_score recorded — satisfies Gate 3.5 for sigma close new"
-      },
-      "error_messages": {}
-    },
-    {
       "operation_id": "intent_supersede",
       "domain": "intent",
       "action": "supersede",
       "level": "semantic",
       "role": "director",
-      "description": "Explicitly supersede a RATIFIED INTENT chain. Cascades SUPERSEDED to the chain's ROADMAP, PLAN, EXEC, and CLOSE artifacts. Requires --director-confirm — this is a Director-authority irreversible governance action.",
+      "description": "Explicitly supersede a RATIFIED INTENT chain. Cascades SUPERSEDED to the chain's ROADMAP, PLAN, EXEC, and CLOSE artifacts. Requires --director-confirm \u2014 this is a Director-authority irreversible governance action.",
       "inputs": [
         {
           "name": "--v",
           "type": "string",
           "required": true,
-          "description": "Chain version to supersede (e.g. v1) — need not be the active chain"
+          "description": "Chain version to supersede (e.g. v1) \u2014 need not be the active chain"
         },
         {
           "name": "--reason",
@@ -1987,7 +2012,7 @@
       ],
       "gating": {
         "pre_condition": "target chain intent.state == RATIFIED and --director-confirm present",
-        "post_condition": "chain and all downstream artifacts SUPERSEDED — permanently ineligible to become active"
+        "post_condition": "chain and all downstream artifacts SUPERSEDED \u2014 permanently ineligible to become active"
       },
       "error_messages": {}
     },
@@ -1997,7 +2022,7 @@
       "action": "activate",
       "level": "semantic",
       "role": "any",
-      "description": "Switch which chain is active (analog `git checkout <branch>`). No --director-confirm required — default-to-latest plus mandatory session bootstrap visibility are the compensating safety net. SUPERSEDED chains are permanently ineligible.",
+      "description": "Switch which chain is active (analog `git checkout <branch>`). No --director-confirm required \u2014 default-to-latest plus mandatory session bootstrap visibility are the compensating safety net. SUPERSEDED chains are permanently ineligible.",
       "inputs": [
         {
           "name": "--v",
@@ -2021,7 +2046,7 @@
         {
           "type": "state",
           "condition": "target intent must not be SUPERSEDED",
-          "error_message": "INTENT <version> is SUPERSEDED — permanently ineligible to become active again. Run: sigma intent list"
+          "error_message": "INTENT <version> is SUPERSEDED \u2014 permanently ineligible to become active again. Run: sigma intent list"
         }
       ],
       "gating": {
@@ -2036,7 +2061,7 @@
       "action": "logs",
       "level": "read_only",
       "role": "any",
-      "description": "View the operation history log (Sigma/logs/operations.jsonl) with optional filters. Read-only — never writes or rotates the log.",
+      "description": "View the operation history log (Sigma/logs/operations.jsonl) with optional filters. Read-only \u2014 never writes or rotates the log.",
       "inputs": [
         {
           "name": "--status",
@@ -2083,8 +2108,8 @@
       ],
       "constraints": [],
       "gating": {
-        "pre_condition": "none — missing log file reports an empty history",
-        "post_condition": "none — read-only"
+        "pre_condition": "none \u2014 missing log file reports an empty history",
+        "post_condition": "none \u2014 read-only"
       },
       "error_messages": {}
     },
@@ -2113,7 +2138,7 @@
       ],
       "gating": {
         "pre_condition": "none",
-        "post_condition": "none — informational only"
+        "post_condition": "none \u2014 informational only"
       },
       "error_messages": {}
     },
@@ -2123,7 +2148,7 @@
       "action": "write",
       "level": "semantic",
       "role": "any",
-      "description": "Write a self-to-self operational brief. Always self-addressed (from === to); --to is rejected. Excluded from the sigma send unread gate and from sigma inbox listings — has its own per-role unread quota.",
+      "description": "Write a self-to-self operational brief. Always self-addressed (from === to); --to is rejected. Excluded from the sigma send unread gate and from sigma inbox listings \u2014 has its own per-role unread quota.",
       "inputs": [
         {
           "name": "--role",
@@ -2172,12 +2197,12 @@
         {
           "type": "flag",
           "condition": "--to is not accepted",
-          "error_message": "sigma memo does not take --to — a memo is always to your own role. Use sigma send for cross-role messages."
+          "error_message": "sigma memo does not take --to \u2014 a memo is always to your own role. Use sigma send for cross-role messages."
         },
         {
           "type": "state",
           "condition": "role's unread memo count must be below the configured quota (mailbox.memo_unread_limit, default 5)",
-          "error_message": "MEMO QUOTA FULL — read existing unread memos first"
+          "error_message": "MEMO QUOTA FULL \u2014 read existing unread memos first"
         },
         {
           "type": "state",
@@ -2236,8 +2261,8 @@
         }
       ],
       "gating": {
-        "pre_condition": "none — empty/missing mailbox lists nothing",
-        "post_condition": "none — read-only"
+        "pre_condition": "none \u2014 empty/missing mailbox lists nothing",
+        "post_condition": "none \u2014 read-only"
       },
       "error_messages": {}
     },
@@ -2259,7 +2284,7 @@
       "outputs": [
         {
           "type": "state_change",
-          "description": "Memo status → READ in Sigma/messages/index.json and the memo file; content printed; older surplus READ entries for the role may age to OUTDATED"
+          "description": "Memo status \u2192 READ in Sigma/messages/index.json and the memo file; content printed; older surplus READ entries for the role may age to OUTDATED"
         }
       ],
       "constraints": [
@@ -2546,10 +2571,10 @@
         "Same title in the same minute gets a -2, -3 suffix; an existing file is never overwritten",
         "IDs are never reused, even when a registered file disappears",
         "Refuses when the registry is unreadable, or missing while note-list.md lists notes (run update --rebuild-registry)",
-        "Not tracked in progress-v<N>.json — no gate, no lock state"
+        "Not tracked in progress-v<N>.json \u2014 no gate, no lock state"
       ],
       "gating": {
-        "pre_condition": "none — no active chain required",
+        "pre_condition": "none \u2014 no active chain required",
         "post_condition": "Note file created, registered, and listed in note-list.md"
       },
       "error_messages": {
@@ -2583,7 +2608,7 @@
       ],
       "gating": {
         "pre_condition": "none",
-        "post_condition": "none — read-only"
+        "post_condition": "none \u2014 read-only"
       },
       "error_messages": {}
     },
@@ -2624,7 +2649,7 @@
         "Non-Markdown files are never moved, deleted, or converted; the run is refused until the Director removes them",
         "Files named .gitkeep, desktop.ini, Thumbs.db, and .DS_Store are ignored",
         "Safe to re-run; interrupted moves resume on the next run",
-        "Not tracked in progress-v<N>.json — no gate, no lock state"
+        "Not tracked in progress-v<N>.json \u2014 no gate, no lock state"
       ],
       "gating": {
         "pre_condition": "none",
@@ -3383,7 +3408,7 @@
         "post_condition": "none (tombstone, no mutation)"
       },
       "error_messages": {
-        "removed": "Removed — use `sigma intent ratify`"
+        "removed": "Removed \u2014 use `sigma intent ratify`"
       }
     },
     {

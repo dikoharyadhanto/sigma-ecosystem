@@ -81,11 +81,12 @@ Artifacts are governance documents that preserve decisions, evidence, and the au
 | `ROADMAP` | Roadmap Doc | Mandatory staging map for the chain |
 | `PLAN` | Plan Doc | Build contract and test contract; approved by the Director |
 | `EXEC` | Execution Evidence | Implementation report and proof |
-| `CLOSE` | Closure Doc | Final closure decision |
+| `PRODUCT REVIEW` | Product Review | Review of the final product against the `INTENT`; ARC, AUD, and Director verdicts |
+| `CLOSE` | Closing Report | Describes the final product; stamp that the mandate is finished |
 
 Artifact versions such as `PLAN-v1.2` are governance identifiers and not product release versions.
 
-New artifact files carry no role prefix: `INTENT-v1.md`, `PLAN-v1.1.md`, `EXEC-v1.1.md`, `CLOSE-v1.md`. Files created earlier as `DIR-INTENT-`, `FMN-PLAN-`, `DEV-EXEC-`, and `DIR-CLOSE-` keep their names and remain valid. Every command accepts both forms.
+New artifact files carry no role prefix: `INTENT-v1.md`, `PLAN-v1.1.md`, `EXEC-v1.1.md`, `PRODUCT-REVIEW-v1.md`, `CLOSE-v1.md`. Files created earlier as `DIR-INTENT-`, `FMN-PLAN-`, `DEV-EXEC-`, and `DIR-CLOSE-` keep their names and remain valid. Every command accepts both forms.
 
 ### Gates
 
@@ -97,7 +98,7 @@ A gate is a prerequisite that the CLI enforces before a state-advancing command 
 | Gate 1.5 | The chain's `ROADMAP` must exist and not be SUPERSEDED before a non-pending `PLAN` is created |
 | Gate 2 | An eligible `PLAN` must be APPROVED on paired lifecycle chains, or LOCKED on legacy chains, before an `EXEC` is created |
 | Gate 3 | Before a `CLOSE` is created, no `PLAN` or `EXEC` may be left in DRAFT, and every LOCKED `PLAN` needs exactly one LOCKED `EXEC` |
-| Gate 3.5 | Before a `CLOSE` is created, an ARC Satisfaction Score of at least 50 must be recorded with `sigma intent score` |
+| Gate 3.5 | Before a `CLOSE` is created, the `PRODUCT REVIEW` must exist and its ARC, AUD (unless skipped), and Director verdicts must each be `PASS` or `PASS_WITH_RISK`; `sigma close check` reports this beforehand |
 
 ### Ratify, Approve, Lock
 
@@ -145,9 +146,16 @@ Changes to an approved `PLAN` follow a controlled review and certification workf
           │ Director approves (locks the pair)
           ▼
 ┌────────────────────┐
+│ PRODUCT REVIEW     │
+│ ARC, AUD, Director │
+│ verdicts           │
+└─────────┬──────────┘
+          │ verdicts accepted (close check)
+          ▼
+┌────────────────────┐
 │ CLOSE              │
-│ Closure summary,   │
-│ proof, limitations │
+│ Closing report of  │
+│ the final product  │
 └────────────────────┘
 ```
 
@@ -157,6 +165,7 @@ AUD may be invoked as a passive external reviewer at major decision points:
 INTENT ── AUD review ──► Director decision
 PLAN   ── AUD audit  ──► Director decision
 EXEC   ── AUD audit  ──► Director decision
+PRODUCT REVIEW ── AUD review ──► Director verdict
 CLOSE  ── AUD audit  ──► Director decision
 ```
 
@@ -531,7 +540,6 @@ Most users do not need these commands. AI roles run operational commands after r
 | intent | `sigma intent status` | Show active intent version and state |
 | intent | `sigma intent list` | List intent versions |
 | intent | `sigma intent activate --v <ver>` | Switch which chain is active (analog of `git checkout <branch>`) |
-| intent | `sigma intent score <n>` | Record the ARC Satisfaction Score (0–100) for a RATIFIED intent (Gate 3.5) |
 | intent | `sigma intent supersede` | Supersede a RATIFIED chain and cascade to its artifacts (`--director-confirm`) |
 | roadmap | `sigma roadmap new` | Create the chain's `ROADMAP` draft (needs a ratified `INTENT`; one per chain) |
 | roadmap | `sigma roadmap check` | Validate the chain's `ROADMAP` structure and markers |
@@ -554,9 +562,11 @@ Most users do not need these commands. AI roles run operational commands after r
 | exec | `sigma exec check [--v <ver>]` | Validate `EXEC` structure and report approval readiness (read-only) |
 | exec | `sigma exec status` | Show open DRAFTs with plan pairing, LOCKED execs, Gate 3 |
 | exec | `sigma exec list` | List execution versions |
-| close | `sigma close new` | Create a `CLOSE` draft |
-| close | `sigma close lock` | Lock the active `CLOSE` with Director approval |
-| close | `sigma close check` | Validate `CLOSE` structure and report lock readiness (read-only) |
+| review | `sigma review new` | Create the chain's `PRODUCT REVIEW` (needs a ratified `INTENT`; one per `INTENT`) |
+| review | `sigma review check` | Validate `PRODUCT REVIEW` structure and report whether its verdicts permit closure (read-only) |
+| close | `sigma close new` | Create a `CLOSE` draft (Gate 3 and an accepted `PRODUCT REVIEW`) |
+| close | `sigma close lock` | Lock the active `CLOSE` with Director approval; a stamp with no content gate, but nothing may be left open (Gate 3) |
+| close | `sigma close check` | Report whether a `CLOSE` can be created: Gate 3 and the `PRODUCT REVIEW` verdicts (read-only) |
 | close | `sigma close status` | Show closure state |
 | dev | `sigma dev create-workspace` | Create the DEV workspace `dev/` (only on explicit Director instruction) |
 | dev | `sigma dev status` | Show whether the DEV workspace is active, degraded, or not registered (read-only) |
@@ -738,7 +748,7 @@ sigma plan clone --from-chain v1 --from v1.1 --title "Revised stage" --focus "Re
 sigma plan clone --from-chain v1 --from v1.1 --title "Revised stage" --focus "Revised output" --confirm --preview-token "<preview_token>"
 ```
 
-`sigma intent clone` follows the same preview and confirm pattern and creates and activates a new `INTENT` chain. A CLOSED chain needs `--yes` on both preview and confirmation. Sources remain unchanged. Cloning supports `INTENT` schema 5 to 5 and `PLAN` schema 3 to 3. Older or unmapped schemas are refused and need manual drafting. Summaries, source alignment, audit verdicts, approvals, revision history, and checked boxes are reset, and retained obligations still need substantive review. Superseding and approval remain separate operations.
+`sigma intent clone` follows the same preview and confirm pattern and creates and activates a new `INTENT` chain. A CLOSED chain needs `--yes` on both preview and confirmation. Sources remain unchanged. Cloning supports `INTENT` schema 5 or 6 into the current schema 6 template, and `PLAN` schema 3 to 3. Older or unmapped schemas are refused and need manual drafting. Summaries, source alignment, audit verdicts, approvals, revision history, and checked boxes are reset, and retained obligations still need substantive review. Superseding and approval remain separate operations.
 
 Audit and decision commands:
 

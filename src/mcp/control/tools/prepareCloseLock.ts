@@ -4,12 +4,11 @@
 // promptApprove()/--yes gate entirely (see closeLockService.ts's header).
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import path from 'path';
 import { z } from 'zod';
 import { readActiveChain } from '../../../engine/chain';
+import { assertCloseLockGate3 } from '../../../services/closeLockService';
 import { readCanonicalArtifactFile } from '../../artifactPath';
 import { generateId, writeTicket, ticketPath, OperationTicket, TICKET_TTL_MS } from '../../../engine/controlStore';
-import { validateSigmaDocFile, ensureSigmaDocEligible } from '../../../utils/docCheck';
 import { computeStateRevision, ERROR_CODES } from '../../contract';
 import { McpQueryError } from '../../errors';
 import { getBinding } from '../../shared';
@@ -56,18 +55,14 @@ export function registerPrepareCloseLockTool(server: McpServer): void {
           if (!chain.close.file) {
             throw new McpQueryError(ERROR_CODES.INTERNAL_ERROR, 'Active DIR-CLOSE has no registered file.');
           }
+          assertCloseLockGate3(root, chain);
 
           const doc = readCanonicalArtifactFile(root, 'close', chain.close.version, chain.close.file);
           if (!doc.present || !doc.sha256) {
             throw new McpQueryError(ERROR_CODES.INVALID_OPERATION, 'The DRAFT DIR-CLOSE file is not present on disk.');
           }
 
-          const report = validateSigmaDocFile(path.join(root, chain.close.file), 'close');
-          try {
-            ensureSigmaDocEligible(report, 'close');
-          } catch (e) {
-            throw new McpQueryError(ERROR_CODES.INVALID_OPERATION, (e as Error).message);
-          }
+          // No document-content gate on close lock: the gate sits before `close new`.
 
           const { revision } = computeStateRevision(root);
           if (!revision) {

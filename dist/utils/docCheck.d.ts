@@ -30,7 +30,29 @@ export interface SigmaDocCheckReport {
      */
     requirements: SigmaDocRequirement[];
 }
-export declare function validateSigmaDocFile(absPath: string, domain: SigmaDocDomain): SigmaDocCheckReport;
+type InternalDocDomain = SigmaDocDomain | 'review';
+export interface ReviewRiskNote {
+    party: 'ARC' | 'AUD' | 'Director';
+    notes: string[];
+}
+export interface ReviewVerdictState {
+    arc: string | null;
+    aud: string | null;
+    director: string | null;
+    audSkipped: boolean;
+    /** Human-readable reasons the verdicts do not yet permit `close new`. */
+    blockers: string[];
+    /** Parties whose verdict is PASS_WITH_RISK, with the risks they listed. */
+    riskNotes: ReviewRiskNote[];
+    accepted: boolean;
+}
+/**
+ * Reads the three verdicts of a PRODUCT REVIEW file. Used by `sigma close new`
+ * and `sigma close check`; structural problems are not this function's concern.
+ */
+export declare function evaluateProductReview(absPath: string): ReviewVerdictState;
+export declare function validateSigmaDocFile(absPath: string, domain: InternalDocDomain): SigmaDocCheckReport;
 export declare function printSigmaDocReport(report: SigmaDocCheckReport, projectRoot?: string): void;
 export declare function ensureSigmaDocEligible(report: SigmaDocCheckReport, command: string): void;
+export {};
 //# sourceMappingURL=docCheck.d.ts.map

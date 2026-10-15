@@ -1,8 +1,11 @@
-<!-- SIGMA:DOC type=DIR_INTENT schema=5 -->
+<!-- SIGMA:DOC type=DIR_INTENT schema=6 -->
 # DIR-INTENT
 
-> Director intent, constraints, and execution direction for this project. Director owns the destination; ARC, AUD, FMN, and DEV advise and interpret.
+> Strategic mandate over one main objective: what is to be produced, for whom, why, to what quality standard, and how success is recognised on the final product. It survives changes of feature, method, and stage. Director owns the destination; ARC, AUD, FMN, and DEV advise and interpret.
 > Lock state is managed by Sigma CLI. Do not record it here.
+
+> **How to fill this document.** Every item must describe a result or quality worth preserving, not a temporary way of building it. Test: if the feature, method, or stage changes and the goal stays, is this item still true?
+> The sections whose standards are assessed on the final product are Desired Outcome and Acceptance, Core Requirements, Quality Standards, and Project Failure. Define each obligation once, in its home section; refer to it from elsewhere by ID or name instead of restating it.
 
 ---
 
@@ -17,7 +20,7 @@
 
 ### Included Scenarios
 
-> Three concrete scenarios that are in scope.
+> Three concrete scenarios that are in scope. They illustrate the boundary of the mandate; they are not a feature list.
 
 - [Scenario 1]
 - [Scenario 2]
@@ -25,7 +28,7 @@
 
 ### Excluded Scenarios
 
-> Three concrete scenarios that are out of scope.
+> Three concrete scenarios that are out of scope. They illustrate the boundary of the mandate; they are not a feature list.
 
 - [Scenario 1]
 - [Scenario 2]
@@ -55,9 +58,9 @@
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:DESIRED_OUTCOME_AND_MEASUREMENT -->
-## Desired Outcome and Measurement
+## Desired Outcome and Acceptance
 
-> The outcome must be observable and falsifiable. The threshold and method must measure this outcome, not a narrower one.
+> The outcome must be observable and falsifiable. The threshold and the evidence required must measure this outcome itself, not a narrower one.
 
 ### Desired Outcome
 
@@ -65,28 +68,28 @@
 
 ### Success Threshold
 
-[Quantified or binary threshold.]
+[Quantified or binary standard the final product must meet. A standard, not a result.]
 
-### Measurement Method
+### Evidence Required
 
-[How success is verified.]
+[The kind of evidence on the final product that must exist for the outcome to be judged met. Not a test procedure; the reviewer chooses how to obtain and check it. Evidence that cannot be obtained is recorded as not verified.]
 
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:SCOPE -->
 ## Scope
 
-> Explicit enough for FMN to plan without inventing intent.
+> The boundary of the mandate, not a work list. Explicit enough for FMN to plan without inventing intent. Staging inside the mandate belongs to ROADMAP and PLAN.
 
 ### In Scope
 
-| ID | Must Deliver | Reason |
-|:-- |:------------ |:------ |
-| SC-001 | [...] | [...] |
+| ID | Mandate Coverage | Reason |
+|:-- |:---------------- |:------ |
+| SC-001 | [What the mandate covers, stated at outcome level.] | [...] |
 
 ### Out of Scope
 
-> Deferred items and non-goals.
+> What lies outside this mandate. Work that is only later in the sequence is not listed here; it belongs to ROADMAP or PLAN. A follow-up objective after the mandate is closed becomes a new INTENT.
 
 | ID | Excluded | Reason |
 |:-- |:-------- |:------ |
@@ -97,7 +100,7 @@
 <!-- SIGMA:DIR_INTENT:SECTION:QUALITY_STANDARDS -->
 ## Quality Standards
 
-> State a minimum standard for each dimension, or N/A. Each must be stated.
+> State a minimum standard for each dimension, or N/A with a reason. Add rows for dimensions specific to the product domain when they matter (for example methodological validity for an academic manuscript). Each row is assessed once, at product review.
 
 | Dimension | Minimum Standard | Must Not Happen | Evidence Required |
 |:--------- |:---------------- |:--------------- |:----------------- |
@@ -117,13 +120,15 @@
 
 - We prioritize [X] over [Y].
 
-### Constraints and Technical Direction
+### Constraints
 
-> Type: Hard Constraint, Preference, Timeline, Technical, Rejected Approach, or DEV Must Not. Binding Level: Non-negotiable, Conditional, Challengeable, or Preference.
+> A constraint belongs here only if it would still hold when the method changes: it protects the mandate, a Director boundary, or an external requirement. A technology or design choice that is only the current way of building belongs to PLAN. When a technology is a real requirement (target environment, external standard), state it here and say in Notes why it must be protected at INTENT level.
+>
+> Type: Hard Constraint, Preference, Timeline, Technical (external requirement only), Rejected Approach, or DEV Must Not. Binding Level: Non-negotiable, Conditional, Challengeable, or Preference.
 
 | ID | Type | Statement | Binding Level | Notes |
 |:-- |:---- |:--------- |:------------- |:----- |
-| CON-001 | [...] | [...] | [...] | [...] |
+| CON-001 | [...] | [...] | [...] | [Why this is protected at INTENT level] |
 
 ---
 
@@ -144,24 +149,24 @@
 
 ### Project Failure
 
+> State only the failure condition that the outcome, requirements, and quality standards do not already imply. Refer to them by ID or name instead of restating them.
+
 [The project is considered failed if ...]
 
 ---
 
 <!-- SIGMA:DIR_INTENT:SECTION:FUNCTIONAL_REQUIREMENTS -->
-## Functional Requirements
+## Core Requirements
 
-> FMN builds the task plan and test contract from these requirements.
+> Core capabilities and result qualities the final product must have, stated at outcome level. Each REQ is one obligation, defined once here; other sections refer to it by ID. Features, technology, and technical tests belong to PLAN.
 
-### REQ-001 - [Requirement Title]
+### REQ-001 - [Short name]
 
-**Priority**: Must / Should / Could
+**Required Capability**: [What the product must enable, or what quality the result must have.]
 
-**User Story**: As a [role], I want to [action], so that [benefit].
+**Acceptance Standard**:
 
-**Acceptance Criteria**:
-
-- [ ] [Measurable or binary condition]
+- [Condition verifiable on the final product, without prescribing the check method.]
 
 ---
 

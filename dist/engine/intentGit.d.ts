@@ -23,7 +23,7 @@ export type InspectMode = 'clean' | 'edited';
 export declare function intentTagName(chainVersion: string, kind: 'base' | string): string;
 export declare function intentAbsPath(root: string, chain: ChainState): string;
 /**
- * `clean`  — the INTENT must equal its certified/baseline content and be committed (before ARC starts editing, and before Petition).
+ * `clean`  — the INTENT must equal its certified/baseline content and be committed (before ARC starts editing).
  * `edited` — the INTENT is expected to differ from the baseline (preview and commit verification).
  */
 export declare function inspectIntentGit(root: string, chainVersion: string, chain: ChainState, mode: InspectMode): IntentGitReport;

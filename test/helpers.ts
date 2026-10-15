@@ -210,10 +210,10 @@ export function makeChainWithLockedPlan(version = 'v1', planVersion = 'v1.1'): o
 }
 
 // Same build depth as makeChainWithFullBuiltCycle() but no CLOSE yet —
-// chain-scoped equivalent of makeProgressWithLockedExec(). `arcScore` is
-// opt-in (undefined by default, matching every existing call site) —
-// pass it only where a test needs Gate 3.5 (arc_score >= 50) open, e.g.
-// before calling `close new`.
+// chain-scoped equivalent of makeProgressWithLockedExec(). `arcScore` writes
+// the historical arc_score fields only; the scoring system is gone and nothing
+// reads them. A test that needs `close new` to pass writes an accepted
+// PRODUCT REVIEW with writeProductReview().
 export function makeChainWithLockedExec(version = 'v1', planExecVersion = 'v1.1', arcScore?: number): object {
   const now = new Date().toISOString();
   return makeChain(version, {
@@ -966,4 +966,65 @@ export function makeProgressWithDraftIntentAfterLockedChain() {
 // Explicit legacy lifecycle for pre-F04 domain simulations; new-chain tests use the default paired model.
 export function createLegacyInitialChain(...args: Parameters<typeof createInitialChain>) {
   return createInitialChain(args[0],args[1],args[2],args[3],args[4],'legacy_lock');
+}
+
+export interface ProductReviewFixture {
+  version?: string;
+  arc?: string;
+  /** A verdict label, or SKIP_FOR_AUDIT. */
+  aud?: string;
+  director?: string;
+  directorInstruction?: string;
+  skipInstruction?: string;
+  /** Text for the "Risks left as they are" line, per party. */
+  risks?: Partial<Record<'arc' | 'aud' | 'director', string>>;
+}
+
+/**
+ * Writes Sigma/review/PRODUCT-REVIEW-<version>.md from the real template with
+ * the given verdicts ticked. Defaults: every party PASS.
+ */
+export function writeProductReview(env: TestEnv, opts: ProductReviewFixture = {}): string {
+  const version = opts.version ?? 'v1';
+  const template = fs.readFileSync(path.resolve(__dirname, '..', 'Sigma', 'templates', 'PRODUCT-REVIEW-TEMPLATE.md'), 'utf8');
+  const tick = (text: string, sectionId: string, label: string): string => {
+    const marker = `<!-- SIGMA:PRODUCT_REVIEW:SECTION:${sectionId} -->`;
+    const start = text.indexOf(marker);
+    if (start < 0) throw new Error(`section ${sectionId} missing from the template`);
+    const next = text.indexOf('<!-- SIGMA:PRODUCT_REVIEW:SECTION:', start + marker.length);
+    const end = next < 0 ? text.length : next;
+    const body = text.slice(start, end).replace(new RegExp(`- \\[ \\] ${label}(?![A-Z_])`), `- [x] ${label}`);
+    return text.slice(0, start) + body + text.slice(end);
+  };
+  const withRisk = (text: string, sectionId: string, risk: string | undefined): string => {
+    if (!risk) return text;
+    const marker = `<!-- SIGMA:PRODUCT_REVIEW:SECTION:${sectionId} -->`;
+    const start = text.indexOf(marker);
+    const next = text.indexOf('<!-- SIGMA:PRODUCT_REVIEW:SECTION:', start + marker.length);
+    const end = next < 0 ? text.length : next;
+    const body = text.slice(start, end).replace(/Risks left as they are \(for PASS_WITH_RISK[^)]*\): .*/, `Risks left as they are (for PASS_WITH_RISK): ${risk}`);
+    return text.slice(0, start) + body + text.slice(end);
+  };
+  let doc = template;
+  doc = tick(doc, 'ARC_REVIEW', opts.arc ?? 'PASS');
+  doc = tick(doc, 'AUD_REVIEW', opts.aud ?? 'PASS');
+  doc = tick(doc, 'DIRECTOR_REVIEW', opts.director ?? 'PASS');
+  doc = withRisk(doc, 'ARC_REVIEW', opts.risks?.arc);
+  doc = withRisk(doc, 'AUD_REVIEW', opts.risks?.aud);
+  doc = withRisk(doc, 'DIRECTOR_REVIEW', opts.risks?.director);
+  const verbatim = (text: string, sectionId: string, value: string): string => {
+    const marker = `<!-- SIGMA:PRODUCT_REVIEW:SECTION:${sectionId} -->`;
+    const start = text.indexOf(marker);
+    const next = text.indexOf('<!-- SIGMA:PRODUCT_REVIEW:SECTION:', start + marker.length);
+    const end = next < 0 ? text.length : next;
+    const body = text.slice(start, end).replace(/(Director Instruction \(verbatim\)[^:\n]*:)\s*\[\.\.\.\]/, `$1 ${value}`);
+    return text.slice(0, start) + body + text.slice(end);
+  };
+  doc = verbatim(doc, 'DIRECTOR_REVIEW', opts.directorInstruction ?? 'Pass.');
+  if ((opts.aud ?? 'PASS') === 'SKIP_FOR_AUDIT') doc = verbatim(doc, 'AUD_REVIEW', opts.skipInstruction ?? 'Skip the audit.');
+  const dir = path.join(env.sigmaDir, 'review');
+  fs.ensureDirSync(dir);
+  const file = path.join(dir, `PRODUCT-REVIEW-${version}.md`);
+  fs.writeFileSync(file, doc);
+  return file;
 }

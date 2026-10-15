@@ -18,7 +18,6 @@ const intentAmendmentService_1 = require("../services/intentAmendmentService");
 const intentBaselineService_1 = require("../services/intentBaselineService");
 const governanceTransaction_1 = require("../engine/governanceTransaction");
 const intentGit_1 = require("../engine/intentGit");
-const intentScoreService_1 = require("../services/intentScoreService");
 const intentSupersedeService_1 = require("../services/intentSupersedeService");
 const artifactNames_1 = require("../engine/artifactNames");
 // PLAN-EVAL-01 Fase 2 — first command migrated off progress.ts/readProgress
@@ -237,7 +236,7 @@ function intentCommand() {
     });
     const baseline = cmd.command('baseline').description('Git baseline of the certified INTENT content (F05)');
     baseline.command('check')
-        .description('Read-only: verify that the INTENT in Git is the latest certified content (before editing an amendment and before a Petition)')
+        .description('Read-only: verify that the INTENT in Git is the latest certified content (before editing an amendment)')
         .option('--v <version>', 'Chain version instead of the active one', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
@@ -280,25 +279,6 @@ function intentCommand() {
             console.log(`Baseline recorded for ${result.chainVersion}: ${result.baseline.commit} (${result.baseline.provenance}).`);
             console.log(`Tag: ${result.baseline.tag}${result.tagCreated ? ' (created, local only)' : ' (existing tag at the same commit adopted)'}`);
             console.log(`Distribution: Sigma never pushes. "git push --follow-tags" sends annotated tags, otherwise "git push origin ${result.baseline.tag}".`);
-        }
-        catch (e) {
-            console.error(e.message);
-            process.exit(1);
-        }
-    });
-    cmd.command('score <n>')
-        .description('Record ARC Satisfaction Score for a RATIFIED INTENT (Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`)')
-        .requiredOption('--notes <notes>', 'Rationale for the score')
-        .option('--v <version>', 'Chain version to score instead of the active one', chain_1.normalizeVersionArg)
-        .action((n, opts) => {
-        try {
-            const projectRoot = (0, fs_1.findProjectRoot)();
-            const score = Number(n);
-            const result = (0, intentScoreService_1.recordArcScoreUseCase)(projectRoot, score, opts.notes, opts.v);
-            const band = (0, chain_1.arcScoreBand)(result.score);
-            console.log(`ARC Score recorded: ${band} (${result.score})`);
-            console.log(`Notes: ${result.notes}`);
-            console.log(`Gate 3.5 (close new): ${result.score >= 50 ? 'OPEN' : 'BLOCKED'}`);
         }
         catch (e) {
             console.error(e.message);

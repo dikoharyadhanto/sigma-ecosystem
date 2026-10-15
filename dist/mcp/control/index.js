@@ -40,8 +40,6 @@ const archiveMessage_1 = require("./tools/archiveMessage");
 const recordEvidence_1 = require("./tools/recordEvidence");
 const prepareIntentAmendment_1 = require("./tools/prepareIntentAmendment");
 const commitIntentAmendment_1 = require("./tools/commitIntentAmendment");
-const prepareIntentScore_1 = require("./tools/prepareIntentScore");
-const commitIntentScore_1 = require("./tools/commitIntentScore");
 const acknowledgePlan_1 = require("./tools/acknowledgePlan");
 const approveArtifact_1 = require("./tools/approveArtifact");
 const preparePlanLock_1 = require("./tools/preparePlanLock");
@@ -96,8 +94,6 @@ function buildControlServer() {
     // prepare -> Director approval (trusted local CLI) -> commit shape.
     (0, prepareIntentAmendment_1.registerPrepareIntentAmendmentTool)(server);
     (0, commitIntentAmendment_1.registerCommitIntentAmendmentTool)(server);
-    (0, prepareIntentScore_1.registerPrepareIntentScoreTool)(server);
-    (0, commitIntentScore_1.registerCommitIntentScoreTool)(server);
     (0, approveArtifact_1.registerArtifactApprovalTools)(server, 'plan');
     (0, approveArtifact_1.registerArtifactApprovalTools)(server, 'exec');
     (0, acknowledgePlan_1.registerAcknowledgePlanTool)(server);

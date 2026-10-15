@@ -11,7 +11,6 @@ import {
   writeActivateStatus,
   assertChainCanMutate,
   previewIntentSupersedeCascade,
-  arcScoreBand,
   isIntentDocUncertified,
   normalizeVersionArg,
 } from '../engine/chain';
@@ -27,7 +26,6 @@ import { recordIntentAmendmentUseCase, intentAmendmentTransactionFiles } from '.
 import { adoptIntentBaselineUseCase, adoptIntentBaselineTransactionFiles } from '../services/intentBaselineService';
 import { withGovernanceTransaction } from '../engine/governanceTransaction';
 import { inspectIntentGit, previewIntentAmendment, intentGitDrift, IntentGitReport } from '../engine/intentGit';
-import { recordArcScoreUseCase } from '../services/intentScoreService';
 import { supersedeIntentUseCase } from '../services/intentSupersedeService';
 import { defaultArtifactRel } from '../engine/artifactNames';
 
@@ -256,7 +254,7 @@ export function intentCommand(): Command {
 
   const baseline = cmd.command('baseline').description('Git baseline of the certified INTENT content (F05)');
   baseline.command('check')
-    .description('Read-only: verify that the INTENT in Git is the latest certified content (before editing an amendment and before a Petition)')
+    .description('Read-only: verify that the INTENT in Git is the latest certified content (before editing an amendment)')
     .option('--v <version>', 'Chain version instead of the active one', normalizeVersionArg)
     .action((opts: { v?: string }) => {
       try {
@@ -303,26 +301,6 @@ export function intentCommand(): Command {
         console.log(`Baseline recorded for ${result.chainVersion}: ${result.baseline.commit} (${result.baseline.provenance}).`);
         console.log(`Tag: ${result.baseline.tag}${result.tagCreated ? ' (created, local only)' : ' (existing tag at the same commit adopted)'}`);
         console.log(`Distribution: Sigma never pushes. "git push --follow-tags" sends annotated tags, otherwise "git push origin ${result.baseline.tag}".`);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    });
-
-  cmd.command('score <n>')
-    .description('Record ARC Satisfaction Score for a RATIFIED INTENT (Gate 3.5 pre-condition for `sigma close new` — does not gate `close lock`)')
-    .requiredOption('--notes <notes>', 'Rationale for the score')
-    .option('--v <version>', 'Chain version to score instead of the active one', normalizeVersionArg)
-    .action((n: string, opts: { notes: string; v?: string }) => {
-      try {
-        const projectRoot = findProjectRoot();
-        const score = Number(n);
-        const result = recordArcScoreUseCase(projectRoot, score, opts.notes, opts.v);
-
-        const band = arcScoreBand(result.score);
-        console.log(`ARC Score recorded: ${band} (${result.score})`);
-        console.log(`Notes: ${result.notes}`);
-        console.log(`Gate 3.5 (close new): ${result.score >= 50 ? 'OPEN' : 'BLOCKED'}`);
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);

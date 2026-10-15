@@ -93,7 +93,7 @@ async function clear(opts: ClearOptions, memo: boolean): Promise<void> {
 function memoWrite(opts: MemoOptions): void {
   if (opts.to) throw new Error('sigma memo does not take --to — a memo is always to your own role. Use sigma send for cross-role messages.');
   const r = role(opts.role);
-  if (!opts.ref?.trim()) throw new Error('--ref is required. Use INTENT/ROADMAP/PLAN/EXEC/CLOSE-vN, or GENERAL.');
+  if (!opts.ref?.trim()) throw new Error('--ref is required. Use INTENT/ROADMAP/PLAN/EXEC/CLOSE/PRODUCT-REVIEW-vN, or GENERAL.');
   const topic = opts.topic?.trim();
   if (!topic) throw new Error('--topic is required and must not be empty.');
   const body = opts.messageFile ? fs.readFileSync(path.resolve(opts.messageFile), 'utf8').trim() : opts.message?.trim();
@@ -169,7 +169,7 @@ export function buildMemoCommand(): Command {
   const cmd = new Command('memo').description('Self-to-self operational brief; quota per owning INTENT and role, GENERAL separate');
   cmd.command('write').description('Write a memo to your own role')
     .option('--role <role>', 'Role').option('--to <role>', 'Not supported: use sigma send')
-    .option('--ref <ref>', 'INTENT/ROADMAP/PLAN/EXEC/CLOSE reference or GENERAL')
+    .option('--ref <ref>', 'INTENT/ROADMAP/PLAN/EXEC/CLOSE/PRODUCT-REVIEW reference or GENERAL')
     .option('--topic <sentence>', 'Required topic').option('--subject <subject>', 'Defaults to topic')
     .option('--message <body>', 'Body').option('--message-file <path>', 'Body file')
     .action(safe(async (opts: MemoOptions) => withMailboxLock(findProjectRoot(), () => memoWrite(opts))));

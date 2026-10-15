@@ -36,8 +36,6 @@ import { registerArchiveMessageTool } from './tools/archiveMessage';
 import { registerRecordEvidenceTool } from './tools/recordEvidence';
 import { registerPrepareIntentAmendmentTool } from './tools/prepareIntentAmendment';
 import { registerCommitIntentAmendmentTool } from './tools/commitIntentAmendment';
-import { registerPrepareIntentScoreTool } from './tools/prepareIntentScore';
-import { registerCommitIntentScoreTool } from './tools/commitIntentScore';
 import { registerAcknowledgePlanTool } from './tools/acknowledgePlan';
 import { registerArtifactApprovalTools } from './tools/approveArtifact';
 import { registerPreparePlanLockTool } from './tools/preparePlanLock';
@@ -93,8 +91,6 @@ export function buildControlServer(): McpServer {
   // prepare -> Director approval (trusted local CLI) -> commit shape.
   registerPrepareIntentAmendmentTool(server);
   registerCommitIntentAmendmentTool(server);
-  registerPrepareIntentScoreTool(server);
-  registerCommitIntentScoreTool(server);
   registerArtifactApprovalTools(server, 'plan');
   registerArtifactApprovalTools(server, 'exec');
   registerAcknowledgePlanTool(server);

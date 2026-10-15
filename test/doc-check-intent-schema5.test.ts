@@ -81,6 +81,13 @@ describe('docCheck — DIR_INTENT schema selection', () => {
       expect(report.requirements).toHaveLength(7);
     });
 
+    it('validates a schema 6 document against the same structure contract as schema 5', () => {
+      const report = check(validIntentDocV5('v1').replace('schema=5', 'schema=6'));
+
+      expect(report.errors).toEqual([]);
+      expect(report.requirements).toHaveLength(7);
+    });
+
     it('the bundled template is structurally valid but not ready to ratify', () => {
       const report = validateSigmaDocFile(TEMPLATE_V5, 'intent');
 

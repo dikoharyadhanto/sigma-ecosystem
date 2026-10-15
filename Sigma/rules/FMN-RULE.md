@@ -350,7 +350,7 @@ FMN declares Requirement before approval. DEV reads Requirement and does not wri
 
 Status vocabulary:
 
-- `NOTED`: the default. It records the deviation and its rationale. It does not mean FMN has determined the deviation is harmless to the `INTENT`; ARC's Periodic Re-evaluation makes that determination by reading accumulated `NOTED` entries across the chain as evidence of cumulative drift. FMN records a fact and does not close the question of intent impact by choosing this status.
+- `NOTED`: the default. It records the deviation and its rationale. It does not mean FMN has determined the deviation is harmless to the `INTENT`; ARC may read accumulated `NOTED` entries across the chain as evidence of cumulative drift when it reviews the final product. FMN records a fact and does not close the question of intent impact by choosing this status.
 - `AMENDMENT_REQUESTED`: escalated through `Sigma/rules/ARC-RULE.md` §Amendment Request; the outcome is not final as of this `PLAN`'s lock.
 - `AMENDMENT_RATIFIED`: a real `AMD-NNN` already covers this item before PLAN approval; FMN cites the ID in Notes.
 
@@ -413,9 +413,17 @@ If strategic ambiguity prevents build planning, FMN must escalate to ARC or Dire
 
 FMN must not create strategic intent itself.
 
-Closure (`sigma close check`/`new`/`lock`) is ARC's CLI responsibility, not FMN's — FMN does not run and should not expect Director authorization for these commands. FMN's locked PLAN/EXEC history remains the evidence ARC evaluates against `INTENT` at closure.
+Closure (`sigma close check`/`new`/`lock`) and the PRODUCT REVIEW CLI (`sigma review new`/`check`) are ARC's CLI responsibility, not FMN's — FMN does not run and should not expect Director authorization for these commands. FMN's locked PLAN/EXEC history may be read by ARC as evidence when it reviews the final product.
 
-If FMN disagrees with a recorded ARC Satisfaction Score, the path is a Petition (`ARC-RULE.md` §Petition / Admission Review) — not repeating the argument in free-form messages hoping ARC changes its mind without new evidence.
+### Recommending a final product review
+
+FMN may recommend to the Director that the final product be reviewed by ARC in a PRODUCT REVIEW. FMN does not recommend closure: closure follows from the verdicts, and an open Gate 3 only means no work is left open, not that a reviewable final product exists.
+
+- A recommendation needs a justification: that the final product exists in a form that can be reviewed, what makes it so, and why now is the right time. An open Gate 3 alone is not a justification.
+- The decision is the Director's. FMN sends the request to ARC only after the Director approves it.
+- The request is an ordinary message: `sigma send --from fmn --to arc --subject "Product review request: <topic>" --message-file <path> --related-artifact "INTENT-v{X}"`. The body states the justification, the basis for the review (the LOCKED PLAN and EXEC pairs and evidence), the standards FMN believes are met by ID or name, and the known gaps and limitations. These are FMN's claims; ARC, AUD, and the Director assess the product independently.
+- After a round that leaves REVISE or REJECT_RECOMMENDED, ARC sends FMN the required corrections (`ARC-RULE.md` §Mandatory Message Triggers, Trigger 2). FMN reads them in the PRODUCT REVIEW, makes the contract for them through ordinary PLAN and EXEC, and answers with a message (`--related-artifact "PRODUCT-REVIEW-v{X}"`) stating the corrections made, item by item, with PLAN and EXEC references. A verdict of PASS or PASS_WITH_RISK is not reviewed again.
+- FMN's recommendation and replies are not verdicts and do not change one.
 
 ---
 
@@ -534,7 +542,7 @@ Use `--message-file <path>` instead of `--message` whenever the body has more th
 
 ### Required Mailbox Context
 
-- Every new `sigma send` message MUST include `--related-artifact`. For artifact-bound content, use the actual registered `INTENT-vN`, `ROADMAP-vN`, `PLAN-vN.minor`, `EXEC-vN.minor`, or `CLOSE-vN` concerned. A version in the subject or body does not select the mailbox.
+- Every new `sigma send` message MUST include `--related-artifact`. For artifact-bound content, use the actual registered `INTENT-vN`, `ROADMAP-vN`, `PLAN-vN.minor`, `EXEC-vN.minor`, `CLOSE-vN`, or `PRODUCT-REVIEW-vN` concerned. A version in the subject or body does not select the mailbox.
 - Use `--related-artifact GENERAL` explicitly only when the content is unrelated to any Sigma artifact. Operational discussion about an artifact is still artifact-bound. `LEGACY` holds migrated old messages and is never a target for new messages or memos.
 - Select the artifact from evidence available within the role's existing authority. It must belong to the active INTENT. Legacy offset PLAN/EXEC versions resolve through registered chain membership, not by matching their major number to the INTENT number.
 - A reply may use `--reply-to <message-id>` without repeating `--related-artifact` only when the verified parent reference is appropriate for the reply; the CLI inherits that context. Include the correct reference if the reply concerns another artifact in the same INTENT. Start a new message for a different INTENT or for a change between GENERAL and an artifact context.
@@ -626,7 +634,7 @@ FMN MUST escalate when:
 - DEV implementation deviates from plan,
 - Director observation suggests intent mismatch,
 - a bug requires plan-level change,
-- evidence is too weak to support closure.
+- evidence is too weak to support a final product review.
 
 When escalating, FMN SHOULD provide:
 
@@ -636,8 +644,6 @@ When escalating, FMN SHOULD provide:
 4. options,
 5. recommended path,
 6. specific question for Director.
-
-Disagreement with a recorded ARC Satisfaction Score is not escalated through this generic path — it goes through Petition (`ARC-RULE.md` §Petition / Admission Review), a distinct, evidence-gated mechanism.
 
 ---
 

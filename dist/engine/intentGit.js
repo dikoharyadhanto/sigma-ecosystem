@@ -60,7 +60,7 @@ function intentAbsPath(root, chain) {
     return (0, revisions_1.artifactFile)(root, chain, 'intent', chain.intent.version);
 }
 /**
- * `clean`  — the INTENT must equal its certified/baseline content and be committed (before ARC starts editing, and before Petition).
+ * `clean`  — the INTENT must equal its certified/baseline content and be committed (before ARC starts editing).
  * `edited` — the INTENT is expected to differ from the baseline (preview and commit verification).
  */
 function inspectIntentGit(root, chainVersion, chain, mode) {

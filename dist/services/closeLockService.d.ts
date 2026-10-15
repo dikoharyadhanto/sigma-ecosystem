@@ -5,6 +5,14 @@ export declare class CloseLockError extends Error {
     constructor(code: string, message: string);
 }
 export declare function closeDocPath(projectRoot: string, chain: ChainState): string;
+/**
+ * A CLOSE does not stop new work, but it can only be locked once nothing is
+ * left open: every LOCKED PLAN paired with exactly one LOCKED EXEC and nothing
+ * in DRAFT or APPROVED. Applies to every lifecycle model; the paired lifecycle
+ * also needs its contract evidence to verify. Shared by the CLI, the use case,
+ * and the MCP prepare step so they cannot disagree.
+ */
+export declare function assertCloseLockGate3(projectRoot: string, chain: ChainState): void;
 export interface LockCloseResult {
     chainVersion: string;
     version: string;

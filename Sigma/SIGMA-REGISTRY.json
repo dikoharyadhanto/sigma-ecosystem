@@ -285,7 +285,7 @@
       "mandatory_when": [
         "artifact_creation"
       ],
-      "description": "Canonical Markdown templates for all Sigma artifacts, MSG, MEMO, and the Reference List. Eight files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, ROADMAP-TEMPLATE.md, MSG-TEMPLATE.md, MEMO-TEMPLATE.md, REFERENCE-LIST-TEMPLATE.md. CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma close new, sigma roadmap new, sigma send, sigma memo write, and the one-time sigma project start / sigma reference update scaffolding of reference-list.md.",
+      "description": "Canonical Markdown templates for all Sigma artifacts, MSG, MEMO, and the Reference List. Nine files: DIR-INTENT-TEMPLATE.md, FMN-PLAN-TEMPLATE.md, DEV-EXEC-TEMPLATE.md, PRODUCT-REVIEW-TEMPLATE.md, DIR-CLOSE-TEMPLATE.md, ROADMAP-TEMPLATE.md, MSG-TEMPLATE.md, MEMO-TEMPLATE.md, REFERENCE-LIST-TEMPLATE.md. CLI reads these when generating new artifact documents via sigma intent new, sigma plan new, sigma exec new, sigma review new, sigma close new, sigma roadmap new, sigma send, sigma memo write, and the one-time sigma project start / sigma reference update scaffolding of reference-list.md.",
       "tolerate_missing": true,
       "missing_behavior": "Warn on artifact creation commands; CLI may fall back to inline templates if folder is missing."
     },

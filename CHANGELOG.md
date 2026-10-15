@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+### Closure redesign — INTENT as a mandate, PRODUCT REVIEW, no scoring (2026-10-15)
+
+- `INTENT` is a strategic mandate over one main objective. Template schema 6 (section IDs and order are unchanged, so the validator is unchanged): `Core Requirements` replaces the feature-style requirements (`Required Capability` and `Acceptance Standard`; Priority, User Story, and checkboxes are gone), `Evidence Required` replaces `Measurement Method`, Scope is the boundary of the mandate, Constraints keep only what survives a change of method, and domain-specific quality dimensions are allowed. `sigma intent clone` accepts schema 5 or 6 sources into the schema 6 template.
+- ARC activation offers three paths: discussion only, check the current `INTENT` (and amend or not), final product evaluation. A new `INTENT` is not offered as a path except for the project's first. ARC gives no recommendation unless asked. `ARC-RULE.md` gains §INTENT Change Classification (T1, T2, T3).
+- New artifact `PRODUCT REVIEW` (`Sigma/review/PRODUCT-REVIEW-vN.md`, `sigma review new` and `sigma review check`): FMN's review request, then ARC, AUD (unless `SKIP_FOR_AUDIT`), and Director verdicts (`PASS`, `PASS_WITH_RISK`, `REVISE`, `REJECT_RECOMMENDED`). Only `PASS` and `PASS_WITH_RISK` are accepted, and they are permanent. ARC and AUD review independently.
+- `sigma close new` now needs Gate 3 and an accepted PRODUCT REVIEW. `sigma close check` reports that before the CLOSE exists and lists the `PASS_WITH_RISK` parties. `sigma close lock` has no content gate and, on every lifecycle model, needs Gate 3 (nothing left open); a CLOSE does not prevent new PLANs, before or after it is locked (work within the same mandate may continue; a new objective is a new INTENT). The CLOSE template is schema 3, a closing report of the final product; schema 2 documents keep validating.
+- Removed: `sigma intent score`, the ARC Satisfaction Score, Gate 3.5 as a score gate, the score columns of `intent-history.md`, ARC's score-driven Trigger 2, and the Petition / Admission Review mechanism. Recorded `arc_score` fields on existing chains are kept and no longer read.
+- FMN may recommend a final product review (never closure) and sends the request only after the Director approves.
+
 ## [2.1.0] - 2026-10-15
 
 ### F09 — distribution support (2026-10-15)

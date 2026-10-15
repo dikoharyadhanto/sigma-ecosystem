@@ -1,5 +1,5 @@
 // Stage F — W2 governance transition batch (5 of 10 operations; see
-// SIGMA-MCP-OPERATION-CAPABILITY-MATRIX §3.3): intent_amendment, intent_score,
+// SIGMA-MCP-OPERATION-CAPABILITY-MATRIX §3.3): intent_amendment,
 // plan_lock, exec_lock, close_new. Each follows Stage D's prepare -> Director
 // approval (trusted local CLI) -> commit shape (see prepareIntentRatify.ts /
 // commitIntentRatify.ts). This file focuses on what's specific to each
@@ -38,6 +38,7 @@ import {
   makeChainWithLockedPlan,
   makeChainWithDraftExec,
   makeChainWithLockedExec,
+  writeProductReview,
   validIntentDoc,
   validPlanDoc,
   validExecDoc,
@@ -305,70 +306,6 @@ describe('sigma_prepare_intent_amendment / sigma_commit_intent_amendment (F05 Gi
   });
 });
 
-describe('sigma_prepare_intent_score / sigma_commit_intent_score', () => {
-  it('prepare requires ARC role', async () => {
-    const env = setupTestEnv();
-    projectWithRatifiedIntent(env);
-    const s = await session(env, 'AUD');
-    const res = await s.call('sigma_prepare_intent_score', { score: 80, notes: 'good', idempotency_key: 'p1' });
-    expect(res.isError).toBe(true);
-    expect((res.payload.error as Payload).code).toBe('ROLE_NOT_AUTHORIZED');
-    await s.close();
-    env.cleanup();
-  });
-
-  it('prepare refuses notes containing a pipe (breaks the intent-history.md table)', async () => {
-    const env = setupTestEnv();
-    projectWithRatifiedIntent(env);
-    const s = await session(env, 'ARC');
-    const res = await s.call('sigma_prepare_intent_score', { score: 80, notes: 'bad | notes', idempotency_key: 'p1' });
-    expect(res.isError).toBe(true);
-    expect((res.payload.error as Payload).code).toBe('INVALID_OPERATION');
-    await s.close();
-    env.cleanup();
-  });
-
-  it('end-to-end: records the ARC score and opens Gate 3.5', async () => {
-    const env = setupTestEnv();
-    projectWithRatifiedIntent(env);
-    const s = await session(env, 'ARC');
-    const prep = await s.call('sigma_prepare_intent_score', { score: 80, notes: 'Meets acceptance criteria', idempotency_key: 'p1' });
-    expect(prep.isError, JSON.stringify(prep.payload)).not.toBe(true);
-    const approval = directorDecide(env.projectDir, prep.payload.operation_ticket_id as string, 'approve');
-    const commit = await s.call('sigma_commit_intent_score', {
-      operation_ticket_id: prep.payload.operation_ticket_id,
-      approval_id: approval.approval_id,
-      score: 80,
-      notes: 'Meets acceptance criteria',
-      idempotency_key: 'c1',
-    });
-    expect(commit.isError, JSON.stringify(commit.payload)).not.toBe(true);
-    const chainAfter = readChain(env.projectDir, 'v1');
-    expect(chainAfter.intent.arc_score).toBe(80);
-    await s.close();
-    env.cleanup();
-  });
-
-  it('commit rejects a score that does not hash-match what the ticket was prepared with', async () => {
-    const env = setupTestEnv();
-    projectWithRatifiedIntent(env);
-    const s = await session(env, 'ARC');
-    const prep = await s.call('sigma_prepare_intent_score', { score: 80, notes: 'original', idempotency_key: 'p1' });
-    const approval = directorDecide(env.projectDir, prep.payload.operation_ticket_id as string, 'approve');
-    const commit = await s.call('sigma_commit_intent_score', {
-      operation_ticket_id: prep.payload.operation_ticket_id,
-      approval_id: approval.approval_id,
-      score: 40,
-      notes: 'original',
-      idempotency_key: 'c1',
-    });
-    expect(commit.isError).toBe(true);
-    expect((commit.payload.error as Payload).code).toBe('INVALID_OPERATION');
-    await s.close();
-    env.cleanup();
-  });
-});
-
 describe('sigma_prepare_plan_approve / sigma_commit_plan_approve', () => {
   it('prepare requires FMN role', async () => {
     const env = setupTestEnv();
@@ -500,7 +437,8 @@ describe('sigma_prepare_close_new / sigma_commit_close_new', () => {
   it('prepare requires AUD role', async () => {
     const env = setupTestEnv();
     stubProjectIdentity(env);
-    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1', 80));
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1'));
+    writeProductReview(env);
     const s = await session(env, 'FMN');
     const res = await s.call('sigma_prepare_close_new', { idempotency_key: 'p1' });
     expect(res.isError).toBe(true);
@@ -521,10 +459,10 @@ describe('sigma_prepare_close_new / sigma_commit_close_new', () => {
     env.cleanup();
   });
 
-  it('prepare refuses when Gate 3.5 is blocked (no ARC score yet)', async () => {
+  it('prepare refuses when the PRODUCT REVIEW does not exist', async () => {
     const env = setupTestEnv();
     stubProjectIdentity(env);
-    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1')); // arcScore omitted
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1')); // no PRODUCT REVIEW written
     const s = await session(env, 'AUD');
     const res = await s.call('sigma_prepare_close_new', { idempotency_key: 'p1' });
     expect(res.isError).toBe(true);
@@ -536,7 +474,8 @@ describe('sigma_prepare_close_new / sigma_commit_close_new', () => {
   it('end-to-end: creates the DIR-CLOSE draft and moves lifecycle_state to CLOSE', async () => {
     const env = setupTestEnv();
     stubProjectIdentity(env);
-    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1', 80));
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1'));
+    writeProductReview(env);
 
     const s = await session(env, 'AUD');
     const prep = await s.call('sigma_prepare_close_new', { idempotency_key: 'p1' });
@@ -562,7 +501,8 @@ describe('sigma_prepare_close_new / sigma_commit_close_new', () => {
   it('commit rejects a reused (already-consumed) approval', async () => {
     const env = setupTestEnv();
     stubProjectIdentity(env);
-    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1', 80));
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1'));
+    writeProductReview(env);
     const s = await session(env, 'AUD');
     const prep = await s.call('sigma_prepare_close_new', { idempotency_key: 'p1' });
     const approval = directorDecide(env.projectDir, prep.payload.operation_ticket_id as string, 'approve');

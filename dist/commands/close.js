@@ -36,15 +36,15 @@ function closeCommand() {
     const cmd = new commander_1.Command('close');
     cmd.description('Manage CLOSE artifact');
     cmd.command('new')
-        .description('Create a new CLOSE draft (requires INTENT RATIFIED and PLAN → EXEC chain all LOCKED)')
+        .description('Create a new CLOSE draft (requires Gate 3 and an accepted PRODUCT REVIEW; run `sigma close check` first)')
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const result = (0, closeNewService_1.createCloseDraftUseCase)(projectRoot);
             console.log(`Created: ${result.relPath}`);
-            if (result.arcScoreBand === 'SATISFIED_NEEDS_REVIEW') {
-                console.log(`Note: ARC Satisfaction Score is SATISFIED_NEEDS_REVIEW (${result.arcScore}) — ARC does not ` +
-                    'yet recommend closure. Director may still proceed via close lock through explicit authorization.\n');
+            if (result.riskNotes.length > 0) {
+                console.log(`Note: PASS_WITH_RISK was recorded by ${result.riskNotes.map(n => n.party).join(', ')}. ` +
+                    'State the final condition of those risks under Limitations in the CLOSE.\n');
             }
             console.log('Running automatic validation...\n');
             (0, docCheck_1.printSigmaDocReport)(result.docReport, projectRoot);
@@ -65,15 +65,17 @@ function closeCommand() {
             if (!chain.close || chain.close.state !== 'DRAFT') {
                 throw new Error('Active DIR-CLOSE is not in DRAFT state. Cannot lock.');
             }
+            (0, closeLockService_1.assertCloseLockGate3)(projectRoot, chain);
             const closeVersion = chain.close.version;
             // Only a still-DRAFT roadmap gets swept into the cascade — one
             // already LOCKED (e.g. a retried close lock) or SUPERSEDED is left
             // alone, mirroring the pre-migration ACTIVE-only condition.
             const roadmapToLock = chain.roadmap && chain.roadmap.state === 'DRAFT' ? chain.roadmap : null;
             const absPath = closeDocPath(projectRoot, chain);
+            // Locking is a stamp that the mandate is finished. The gate sits before
+            // `close new`, so the document report below is informational only.
             const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'close');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
-            (0, docCheck_1.ensureSigmaDocEligible)(report, 'close');
             console.log('\nClose Lock Preflight\n');
             console.log(`Artifact to lock:  DIR-CLOSE ${closeVersion}`);
             if (roadmapToLock) {
@@ -81,7 +83,7 @@ function closeCommand() {
                 console.log('\nSide effects:');
                 console.log(`  - DIR-CLOSE ${closeVersion} will become LOCKED`);
                 console.log(`  - ROADMAP ${roadmapToLock.version} will become LOCKED`);
-                console.log('  - No more plans can be added to this ROADMAP');
+                console.log('  - New PLANs are not prevented: work that stays within this mandate may continue after the lock');
                 console.log('  - Project lifecycle will be considered CLOSED\n');
             }
             else {
@@ -109,17 +111,38 @@ function closeCommand() {
         }
     });
     cmd.command('check')
-        .description('Validate a CLOSE structure and markers')
-        .option('--v <version>', 'Check the CLOSE of a specific chain instead of the active one', chain_1.normalizeVersionArg)
+        .description('Check whether a CLOSE can be created: Gate 3 and the PRODUCT REVIEW verdicts (read-only)')
+        .option('--v <version>', 'Check a specific chain instead of the active one', chain_1.normalizeVersionArg)
         .action((opts) => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
             const chain = opts.v ? (0, chain_1.readChain)(projectRoot, opts.v) : (0, chain_1.readActiveChain)(projectRoot).data;
-            const absPath = closeDocPath(projectRoot, chain);
-            const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'close');
-            (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
-            if (!report.ok)
+            const result = (0, closeNewService_1.assessCloseNewEligibility)(chain, projectRoot);
+            console.log('\n=== Sigma Close Check ===\n');
+            console.log(`Gate 3:          ${result.gate3Satisfied ? 'satisfied' : 'BLOCKED'}`);
+            console.log(`PRODUCT REVIEW:  ${result.reviewFile ?? 'MISSING'}`);
+            if (result.review) {
+                const { arc, aud, director, audSkipped } = result.review;
+                console.log(`  ARC:      ${arc ?? 'not recorded'}`);
+                console.log(`  AUD:      ${audSkipped ? 'SKIP_FOR_AUDIT' : aud ?? 'not recorded'}`);
+                console.log(`  Director: ${director ?? 'not recorded'}`);
+            }
+            if (!result.eligible) {
+                console.log('');
+                for (const blocker of result.blockers)
+                    console.log(blocker.message + '\n');
+                console.log('Closure readiness: Not eligible');
                 process.exit(1);
+            }
+            const risks = result.review?.riskNotes ?? [];
+            if (risks.length > 0) {
+                console.log('\nPASS_WITH_RISK is present. Before `sigma close new`, ARC asks the Director whether to');
+                console.log('create the CLOSE or to return to FMN to address the risks. The PRODUCT REVIEW is not changed either way.\n');
+                for (const risk of risks) {
+                    console.log(`  ${risk.party}: ${risk.notes.length > 0 ? risk.notes.join(' | ') : '(no risk listed)'}`);
+                }
+            }
+            console.log(`\nClosure readiness: ${risks.length > 0 ? 'Eligible with PASS_WITH_RISK' : 'Eligible'}`);
         }
         catch (e) {
             console.error(e.message);

@@ -244,9 +244,6 @@ export declare function certifyIntentDoc(chain: ChainState, absDocPath: string):
 export declare function isIntentDocUncertified(chain: ChainState, absDocPath: string): boolean;
 export declare function nextAmendmentId(chain: ChainState): string;
 export declare function recordIntentAmendment(chain: ChainState, change: string, git?: Partial<AmendmentEntry>): AmendmentEntry;
-export declare function arcScoreBand(score: number): 'OUTPUT_INCOMPLETE' | 'SATISFIED_NEEDS_REVIEW' | 'SATISFIED_RECOMMENDED';
-export declare function hasGate35Score(chain: ChainState): boolean;
-export declare function recordArcScore(chain: ChainState, score: number, notes: string): void;
 export interface IntentCascadeTargets {
     roadmap: SingleRoadmapState | null;
     plan: ArtifactVersion[];

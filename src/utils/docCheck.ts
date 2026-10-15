@@ -69,7 +69,7 @@ export interface SigmaDocCheckReport {
   requirements: SigmaDocRequirement[];
 }
 
-const VERDICT_SECTION_ID: Partial<Record<SigmaDocDomain, string>> = {
+const VERDICT_SECTION_ID: Partial<Record<SigmaDocDomain | 'review', string>> = {
   intent: 'AUD_FINDINGS_ADVISORY_ONLY',
   plan: 'AUD_FINDINGS',
 };
@@ -259,7 +259,56 @@ const EXEC_SPEC_V4: SigmaDocSpec = {
   ],
 };
 
-const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
+// First DIR_CLOSE schema version that is a closing report of the final product
+// (README-like). Documents on an earlier schema keep validating against
+// DOC_SPECS.close, including its closure-decision lock requirements.
+const CLOSE_SCHEMA_V3 = 3;
+
+const CLOSE_SPEC_V3: SigmaDocSpec = {
+  heading: 'Sigma Close Check',
+  expectedType: 'DIR_CLOSE',
+  fallbackPath: path.join('Sigma', 'close', 'DIR-CLOSE.md'),
+  requiredSections: [
+    'PRODUCT_OVERVIEW',
+    'MAIN_FEATURES',
+    'LIMITATIONS',
+    'QUALITY_STANDARDS',
+    'TECHNICAL_DOCUMENTATION',
+    'REFERENCES',
+    'CLOSING_STATEMENT',
+  ],
+  // The gate sits before `close new`; locking is a stamp, so no lock requirements.
+  optionalSections: ['HOW_TO_OPERATE', 'FOLLOW_UP'],
+  sectionOrder: [
+    'PRODUCT_OVERVIEW',
+    'MAIN_FEATURES',
+    'LIMITATIONS',
+    'QUALITY_STANDARDS',
+    'HOW_TO_OPERATE',
+    'TECHNICAL_DOCUMENTATION',
+    'REFERENCES',
+    'FOLLOW_UP',
+    'CLOSING_STATEMENT',
+  ],
+};
+
+// PRODUCT_REVIEW is internal to this module's callers that need it: the public
+// SigmaDocDomain union (shared with the MCP document-check tool) is unchanged.
+type InternalDocDomain = SigmaDocDomain | 'review';
+
+const DOC_SPECS: Record<InternalDocDomain, SigmaDocSpec> = {
+  review: {
+    heading: 'Sigma Review Check',
+    expectedType: 'PRODUCT_REVIEW',
+    fallbackPath: path.join('Sigma', 'review', 'PRODUCT-REVIEW.md'),
+    requiredSections: [
+      'PRODUCT_UNDER_REVIEW',
+      'REVIEW_REQUEST',
+      'ARC_REVIEW',
+      'AUD_REVIEW',
+      'DIRECTOR_REVIEW',
+    ],
+  },
   intent: {
     heading: 'Sigma Intent Check',
     expectedType: 'DIR_INTENT',
@@ -411,9 +460,10 @@ const DOC_SPECS: Record<SigmaDocDomain, SigmaDocSpec> = {
   },
 };
 
-function resolveDocSpec(domain: SigmaDocDomain, schema: string | null): SigmaDocSpec {
+function resolveDocSpec(domain: InternalDocDomain, schema: string | null): SigmaDocSpec {
   const version = schema === null ? NaN : Number(schema);
   if (Number.isInteger(version)) {
+    if (domain === 'close' && version >= CLOSE_SCHEMA_V3) return CLOSE_SPEC_V3;
     if (domain === 'intent' && version >= INTENT_SCHEMA_V5) return INTENT_SPEC_V5;
     if (domain === 'plan' && version >= PLAN_SCHEMA_V3) return PLAN_SPEC_V3;
     if (domain === 'exec' && version >= EXEC_SCHEMA_V4) return EXEC_SPEC_V4;
@@ -895,9 +945,159 @@ function evaluateFinalDirectorDecisionGate(
   }
 }
 
+// ── PRODUCT REVIEW verdicts ────────────────────────────────────────────────
+// The gate of `sigma close new` reads three verdict blocks (ARC, AUD unless
+// SKIP_FOR_AUDIT is checked, and the Director). Only PASS and PASS_WITH_RISK
+// are accepted. See the closure design discussion of 15 October 2026.
+
+const REVIEW_ARC_SECTION_ID = 'ARC_REVIEW';
+const REVIEW_AUD_SECTION_ID = 'AUD_REVIEW';
+const REVIEW_DIRECTOR_SECTION_ID = 'DIRECTOR_REVIEW';
+const REVIEW_PLAIN_VERDICT_LABELS = new Set(['PASS', 'PASS_WITH_RISK', 'REVISE', 'REJECT_RECOMMENDED']);
+const REVIEW_ACCEPTED_LABELS = new Set(['PASS', 'PASS_WITH_RISK']);
+
+export interface ReviewRiskNote {
+  party: 'ARC' | 'AUD' | 'Director';
+  notes: string[];
+}
+
+export interface ReviewVerdictState {
+  arc: string | null;
+  aud: string | null;
+  director: string | null;
+  audSkipped: boolean;
+  /** Human-readable reasons the verdicts do not yet permit `close new`. */
+  blockers: string[];
+  /** Parties whose verdict is PASS_WITH_RISK, with the risks they listed. */
+  riskNotes: ReviewRiskNote[];
+  accepted: boolean;
+}
+
+function isEmptyVerbatim(value: string | null): boolean {
+  return !value || value.length === 0 || value === '[...]';
+}
+
+function readReviewVerdicts(relevantMarkers: SectionMarker[], lines: string[]): ReviewVerdictState {
+  const blockers: string[] = [];
+  const riskNotes: ReviewRiskNote[] = [];
+
+  const readParty = (party: 'ARC' | 'AUD' | 'Director', sectionId: string, labels: Set<string>) => {
+    const marker = relevantMarkers.find(m => m.sectionId === sectionId);
+    if (!marker) {
+      blockers.push(`${party}: section ${sectionId} is missing`);
+      return { value: null as string | null, verbatim: null as string | null, notes: [] as string[] };
+    }
+    const end = sectionEndLine(relevantMarkers, marker, lines.length);
+    const ticked = scanTickedLabels(lines, marker.line, end, labels);
+    let verbatim: string | null = null;
+    const notes: string[] = [];
+    for (let i = marker.line; i < end; i += 1) {
+      const verbatimMatch = lines[i].match(/Director Instruction \(verbatim\)[^:]*:\s*(.*)$/);
+      if (verbatimMatch) verbatim = verbatimMatch[1].trim();
+      const riskMatch = lines[i].match(/^Risks left as they are[^:]*:\s*(.*)$/);
+      if (riskMatch) {
+        const text = riskMatch[1].trim();
+        if (text && !/^\[.*\]$/.test(text) && !/^none\.?$/i.test(text)) notes.push(text);
+      }
+    }
+    if (ticked.length === 0) blockers.push(`${party}: no verdict is recorded`);
+    else if (ticked.length > 1) blockers.push(`${party}: more than one verdict is checked (${ticked.join(', ')})`);
+    return { value: ticked.length === 1 ? ticked[0] : null, verbatim, notes };
+  };
+
+  const arc = readParty('ARC', REVIEW_ARC_SECTION_ID, REVIEW_PLAIN_VERDICT_LABELS);
+  const aud = readParty('AUD', REVIEW_AUD_SECTION_ID, VERDICT_CHECKBOX_LABELS);
+  const director = readParty('Director', REVIEW_DIRECTOR_SECTION_ID, REVIEW_PLAIN_VERDICT_LABELS);
+
+  const audSkipped = aud.value === 'SKIP_FOR_AUDIT';
+
+  if (arc.value !== null && !REVIEW_ACCEPTED_LABELS.has(arc.value)) {
+    blockers.push(`ARC: verdict is ${arc.value}; only PASS or PASS_WITH_RISK is accepted`);
+  }
+  if (audSkipped) {
+    if (isEmptyVerbatim(aud.verbatim)) {
+      blockers.push('AUD: SKIP_FOR_AUDIT is checked but "Director Instruction (verbatim)" is empty');
+    }
+  } else if (aud.value !== null && !REVIEW_ACCEPTED_LABELS.has(aud.value)) {
+    blockers.push(`AUD: verdict is ${aud.value}; only PASS or PASS_WITH_RISK is accepted`);
+  }
+  if (director.value !== null && !REVIEW_ACCEPTED_LABELS.has(director.value)) {
+    blockers.push(`Director: verdict is ${director.value}; only PASS or PASS_WITH_RISK is accepted`);
+  }
+  if (isEmptyVerbatim(director.verbatim)) {
+    blockers.push('Director: "Director Instruction (verbatim)" is not recorded');
+  }
+
+  if (arc.value === 'PASS_WITH_RISK') riskNotes.push({ party: 'ARC', notes: arc.notes });
+  if (aud.value === 'PASS_WITH_RISK') riskNotes.push({ party: 'AUD', notes: aud.notes });
+  if (director.value === 'PASS_WITH_RISK') riskNotes.push({ party: 'Director', notes: director.notes });
+
+  return {
+    arc: arc.value,
+    aud: aud.value,
+    director: director.value,
+    audSkipped,
+    blockers,
+    riskNotes,
+    accepted: blockers.length === 0,
+  };
+}
+
+/**
+ * Reads the three verdicts of a PRODUCT REVIEW file. Used by `sigma close new`
+ * and `sigma close check`; structural problems are not this function's concern.
+ */
+export function evaluateProductReview(absPath: string): ReviewVerdictState {
+  const lines = fs.readFileSync(absPath, 'utf8').split(/\r?\n/);
+  const markers: SectionMarker[] = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const marker = parseSectionMarker(lines[i]);
+    if (marker && marker.artifactType === 'PRODUCT_REVIEW') {
+      markers.push({ artifactType: marker.artifactType, sectionId: marker.sectionId, line: i + 1, headingLine: null, headingText: null });
+    }
+  }
+  return readReviewVerdicts(markers, lines);
+}
+
+function evaluateReviewGates(
+  relevantMarkers: SectionMarker[],
+  lines: string[],
+  requirements: SigmaDocRequirement[],
+  passes: string[],
+  warnings: string[],
+): void {
+  const state = readReviewVerdicts(relevantMarkers, lines);
+  const accepted = (value: string | null) => value !== null && REVIEW_ACCEPTED_LABELS.has(value);
+
+  requirements.push({ label: 'ARC verdict recorded (exactly one)', satisfied: state.arc !== null, scope: 'lock' });
+  requirements.push({ label: 'ARC verdict accepted (PASS or PASS_WITH_RISK)', satisfied: accepted(state.arc), scope: 'lock' });
+
+  if (state.audSkipped) {
+    const verbatimOk = !state.blockers.some(b => b.startsWith('AUD: SKIP_FOR_AUDIT'));
+    requirements.push({ label: 'SKIP_FOR_AUDIT: Director Instruction (verbatim) recorded', satisfied: verbatimOk, scope: 'conditional' });
+  } else {
+    requirements.push({ label: 'AUD verdict recorded (exactly one)', satisfied: state.aud !== null, scope: 'lock' });
+    requirements.push({ label: 'AUD verdict accepted (PASS or PASS_WITH_RISK)', satisfied: accepted(state.aud), scope: 'lock' });
+  }
+
+  requirements.push({ label: 'Director verdict recorded (exactly one)', satisfied: state.director !== null, scope: 'lock' });
+  requirements.push({ label: 'Director verdict accepted (PASS or PASS_WITH_RISK)', satisfied: accepted(state.director), scope: 'lock' });
+  requirements.push({
+    label: 'Director Instruction (verbatim) recorded',
+    satisfied: !state.blockers.some(b => b.startsWith('Director: "Director Instruction')),
+    scope: 'lock',
+  });
+
+  if (state.accepted) {
+    passes.push('Product Review: all required verdicts are accepted');
+  } else {
+    for (const blocker of state.blockers) warnings.push(`Product Review: ${blocker}`);
+  }
+}
+
 export function validateSigmaDocFile(
   absPath: string,
-  domain: SigmaDocDomain,
+  domain: InternalDocDomain,
 ): SigmaDocCheckReport {
   const content = fs.readFileSync(absPath, 'utf8');
   const lines = content.split(/\r?\n/);
@@ -1048,9 +1248,13 @@ export function validateSigmaDocFile(
     }
   }
 
-  if (domain === 'close') {
+  if (domain === 'close' && spec !== CLOSE_SPEC_V3) {
     evaluateCloseVerdictGate(relevantMarkers, lines, requirements, passes, warnings);
     evaluateFinalDirectorDecisionGate(relevantMarkers, lines, requirements, passes, warnings);
+  }
+
+  if (domain === 'review') {
+    evaluateReviewGates(relevantMarkers, lines, requirements, passes, warnings);
   }
 
   return {
@@ -1068,7 +1272,8 @@ export function validateSigmaDocFile(
 
 export function printSigmaDocReport(report: SigmaDocCheckReport, projectRoot?: string): void {
   const approvalDocument = report.documentType === 'FMN_PLAN' || report.documentType === 'DEV_EXEC';
-  const readiness = approvalDocument ? 'Approval' : 'Lock';
+  const reviewDocument = report.documentType === 'PRODUCT_REVIEW';
+  const readiness = approvalDocument ? 'Approval' : reviewDocument ? 'Closure' : 'Lock';
   const displayPath = projectRoot ? path.relative(projectRoot, report.file) || report.file : report.file;
   console.log(report.heading);
   console.log(`File: ${displayPath}`);
@@ -1104,7 +1309,7 @@ export function printSigmaDocReport(report: SigmaDocCheckReport, projectRoot?: s
     console.log(
       unsatisfied.length === 0
         ? 'Document is structurally valid and all ' + readiness + ' Requirements are satisfied.'
-        : `Document is ${report.ok ? 'structurally valid but' : 'NOT structurally valid and'} NOT READY FOR ${approvalDocument ? 'APPROVAL' : 'LOCK'} (${unsatisfied.length} requirement(s) unsatisfied).`
+        : `Document is ${report.ok ? 'structurally valid but' : 'NOT structurally valid and'} NOT READY FOR ${approvalDocument ? 'APPROVAL' : reviewDocument ? 'CLOSURE' : 'LOCK'} (${unsatisfied.length} requirement(s) unsatisfied).`
     );
   }
 

@@ -73,6 +73,12 @@ export declare const ARTIFACT_LAYOUT: {
         readonly legacyPrefix: "DIR-CLOSE";
         readonly versionSource: "v\\d+";
     };
+    readonly review: {
+        readonly dirs: readonly ["review"];
+        readonly prefix: "PRODUCT-REVIEW";
+        readonly legacyPrefix: "PRODUCT-REVIEW";
+        readonly versionSource: "v\\d+";
+    };
 };
 export type ArtifactDomainKey = keyof typeof ARTIFACT_LAYOUT;
 export declare const MESSAGES_DIR: string;

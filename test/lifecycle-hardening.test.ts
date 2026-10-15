@@ -11,6 +11,7 @@ import {
   makeChain,
   makeChainWithLockedPlan,
   makeChainWithLockedExec,
+  writeProductReview,
   chainPath,
   TestEnv,
 } from './helpers';
@@ -76,7 +77,8 @@ describe('Lifecycle hardening coverage', () => {
   it('sigma close new creates a close draft for a clean locked chain', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
-    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1', 80));
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1'));
+    writeProductReview(env);
 
     const result = runCli('close new', env.projectDir, env.homeDir);
 
@@ -85,10 +87,51 @@ describe('Lifecycle hardening coverage', () => {
     expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'close', 'CLOSE-v1.md'))).toBe(true);
   });
 
+  it('sigma close new is refused while the PRODUCT REVIEW does not exist', () => {
+    env = setupTestEnv();
+    stubProjectRootAnchor(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1'));
+
+    const check = runCli('close check', env.projectDir, env.homeDir);
+    expect(check.exitCode).toBe(1);
+    expect(check.stdout).toMatch(/PRODUCT REVIEW MISSING/);
+    expect(check.stdout).toMatch(/Closure readiness: Not eligible/);
+
+    const result = runCli('close new', env.projectDir, env.homeDir);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/PRODUCT REVIEW MISSING/);
+    expect(fs.existsSync(path.join(env.projectDir, 'Sigma', 'close', 'CLOSE-v1.md'))).toBe(false);
+  });
+
+  it('sigma close new accepts only PASS or PASS_WITH_RISK from every required party', () => {
+    env = setupTestEnv();
+    stubProjectRootAnchor(env);
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1'));
+    writeProductReview(env, { arc: 'PASS', aud: 'REVISE', director: 'PASS' });
+
+    const refused = runCli('close new', env.projectDir, env.homeDir);
+    expect(refused.exitCode).toBe(1);
+    expect(refused.stderr).toMatch(/PRODUCT REVIEW NOT ACCEPTED/);
+    expect(refused.stderr).toMatch(/AUD: verdict is REVISE/);
+
+    // AUD skipped with the Director's verbatim instruction: ARC and Director are enough.
+    writeProductReview(env, { arc: 'PASS', aud: 'SKIP_FOR_AUDIT', director: 'PASS_WITH_RISK', risks: { director: 'Operator training is not covered.' } });
+    const check = runCli('close check', env.projectDir, env.homeDir);
+    expect(check.exitCode).toBe(0);
+    expect(check.stdout).toMatch(/AUD:\s+SKIP_FOR_AUDIT/);
+    expect(check.stdout).toMatch(/PASS_WITH_RISK is present/);
+    expect(check.stdout).toMatch(/Operator training is not covered\./);
+    expect(check.stdout).toMatch(/Closure readiness: Eligible with PASS_WITH_RISK/);
+
+    const created = runCli('close new', env.projectDir, env.homeDir);
+    expect(created.exitCode).toBe(0);
+  });
+
   it('sigma close new rejects a second draft for a chain that already has a non-superseded DIR-CLOSE', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
-    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1', 80));
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1'));
+    writeProductReview(env);
 
     const first = runCli('close new', env.projectDir, env.homeDir);
     expect(first.exitCode).toBe(0);

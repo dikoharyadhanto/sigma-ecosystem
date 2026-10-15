@@ -37,13 +37,16 @@ export function previewClone(input: CloneInput) {
   if (!input.title.trim() || !input.focus.trim() || /[|\r\n]/.test(input.title + input.focus))
     throw new Error('Clone title/focus must be non-empty single-line table-safe values.');
   const source = captureArtifact(root, input.sourceChain, type, input.sourceVersion);
-  const docType = type === 'intent' ? 'DIR_INTENT' : 'FMN_PLAN', expectedSchema = type === 'intent' ? '5' : '3';
+  // INTENT schema 5 and 6 share the section IDs and order, so a schema 5 source
+  // is cloned into the schema 6 template; its sections keep their source wording.
+  const docType = type === 'intent' ? 'DIR_INTENT' : 'FMN_PLAN';
+  const sourceSchemas = type === 'intent' ? ['5', '6'] : ['3'], destinationExpected = type === 'intent' ? '6' : '3';
   const template = fs.readFileSync(resolveTemplate(type === 'intent' ? 'DIR-INTENT-TEMPLATE.md' : 'FMN-PLAN-TEMPLATE.md'), 'utf8');
   const schemaOf = (text: string) => text.match(/<!--\s*SIGMA:DOC type=([A-Z_]+) schema=(\d+)\s*-->/);
   const sourceSchema = schemaOf(source.content), destinationSchema = schemaOf(template);
   if (sourceSchema?.[1] !== docType || destinationSchema?.[1] !== docType ||
-      sourceSchema[2] !== expectedSchema || destinationSchema[2] !== expectedSchema)
-    throw new Error('Unsupported clone schema mapping. Supported: INTENT 5→5, PLAN 3→3. Review older schemas manually; host templates may require F09.');
+      !sourceSchemas.includes(sourceSchema[2]) || destinationSchema[2] !== destinationExpected)
+    throw new Error('Unsupported clone schema mapping. Supported: INTENT 5→6 and 6→6, PLAN 3→3. Review older schemas manually; host templates may require F09.');
   const structure = validateSigmaDocFile(path.join(root, source.path), type);
   if (!structure.ok) throw new Error('Source structure invalid: ' + structure.errors.join('; '));
   const sourceSections = sectionsOf(source.content, docType), templateSections = sectionsOf(template, docType);

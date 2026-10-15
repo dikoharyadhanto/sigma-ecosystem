@@ -12,6 +12,7 @@ import {
   writeChainFixture,
   chainPath,
   makeChainWithLockedExec,
+  writeProductReview,
   runCli,
   TestEnv,
 } from './helpers';
@@ -37,7 +38,8 @@ describe('F14 — legacy data still works', () => {
   it('close new is not blocked by a legacy notion_humanize_gate.enabled key', () => {
     env = setupTestEnv();
     stubProjectIdentity(env);
-    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1', 80));
+    writeChainFixture(env, 'v1', makeChainWithLockedExec('v1', 'v1.1'));
+    writeProductReview(env);
     fs.writeJsonSync(path.join(env.sigmaDir, 'project.config.json'), LEGACY_GATE_CONFIG);
 
     expect(() => createCloseDraftUseCase(env.projectDir)).not.toThrow();
@@ -145,12 +147,12 @@ describe('F14 — project start', () => {
 });
 
 describe('F14 — registries', () => {
-  it('the operation registry has 88 entries and none for notion or humanize', () => {
+  it('the operation registry has 89 entries and none for notion or humanize', () => {
     const registry = fs.readJsonSync(path.resolve(__dirname, '..', 'Sigma', 'SIGMA-OPERATION-REGISTRY.json'));
     const ids: string[] = registry.operations.map((o: { operation_id: string }) => o.operation_id);
 
-    expect(registry.total_operations).toBe(88);
-    expect(ids).toHaveLength(88);
+    expect(registry.total_operations).toBe(89);
+    expect(ids).toHaveLength(89);
     expect(ids.filter((id) => /notion|humanize/.test(id))).toEqual([]);
   });
 
@@ -158,6 +160,6 @@ describe('F14 — registries', () => {
     const dir = path.resolve(__dirname, '..', 'Sigma', 'templates');
     const names = fs.readdirSync(dir);
     expect(names.filter((n) => /HUMAN/.test(n))).toEqual([]);
-    expect(names).toHaveLength(8);
+    expect(names).toHaveLength(9);
   });
 });

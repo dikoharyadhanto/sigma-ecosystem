@@ -30,8 +30,8 @@ function bootstrap(scheme: 'legacy_offset' | 'intent_aligned' = 'intent_aligned'
   chain.roadmap = { version: 'v1', state: 'DRAFT', file: 'Sigma/roadmap/ROADMAP-v1.md', created_at: chain.created_at, updated_at: chain.created_at };
   writeChainFixture(env, 'v1', chain);
   const intent = fs.readFileSync(path.join(REPO, 'Sigma/templates/DIR-INTENT-TEMPLATE.md'), 'utf8')
-    .replace('### REQ-001 - [Requirement Title]', '### REQ-001 - Keep every source record')
-    .replace('**User Story**: As a [role], I want to [action], so that [benefit].', '**User Story**: Preserve all rows.\n\n#### Details\n\nNo silent filtering.');
+    .replace('### REQ-001 - [Short name]', '### REQ-001 - Keep every source record')
+    .replace('**Required Capability**: [What the product must enable, or what quality the result must have.]', '**Required Capability**: Preserve all rows.\n\n#### Details\n\nNo silent filtering.');
   fs.writeFileSync(path.join(env.sigmaDir, 'charter/DIR-INTENT-v1.md'), intent);
   fs.copySync(path.join(REPO, 'Sigma/templates/ROADMAP-TEMPLATE.md'), path.join(env.sigmaDir, 'roadmap/ROADMAP-v1.md'));
   const created = createPlanDraft({ projectRoot: env.projectDir, title: 'Stage', focus: 'Output' });
@@ -145,6 +145,19 @@ describe('F08b safe draft cloning', () => {
     const entry = type === 'intent' ? chain.intent : chain.plan.versions.find(p => p.version === 'v1.2')!;
     expect(entry.state).toBe('DRAFT'); expect(entry.certified_doc_sha256).toBeUndefined();
     if (type === 'intent') expect(JSON.parse(fs.readFileSync(env.activateStatusPath, 'utf8')).active_chain).toBe('v2');
+  });
+  it('clones an INTENT schema 5 source into the schema 6 template and still refuses schema 4', async () => {
+    const env = bootstrap(), input = cloneInput(env, 'intent'), source = captureArtifact(env.projectDir, 'v1', 'intent', input.sourceVersion);
+    const p = path.join(env.projectDir, source.path);
+    fs.writeFileSync(p, source.content.replace('schema=6', 'schema=5').replace('[What this project creates or changes.]', 'Schema five contract survives'));
+    const preview = previewClone(input);
+    const created = await localTransaction(env.projectDir, 'clone', 'ARC', () => cloneTransactionFiles(input), () => cloneDraft(input, preview.preview_token));
+    const content = fs.readFileSync(path.join(env.projectDir, created.relPath), 'utf8');
+    expect(content).toContain('schema=6');
+    expect(content).not.toContain('schema=5');
+    expect(content).toContain('Schema five contract survives');
+    fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('schema=5', 'schema=4'));
+    expect(() => previewClone(input)).toThrow(/Unsupported clone schema/);
   });
   it('rejects stale preview, unsupported schemas and arbitrary chain selectors before creating a draft', async () => {
     const env = bootstrap(), input = cloneInput(env), preview = previewClone(input);

@@ -51,7 +51,7 @@ export function registerPrepareCloseNewTool(server: McpServer): void {
         },
         (root) => {
           const { data: chain } = readActiveChain(root);
-          assertCloseNewEligible(chain,root);
+          assertCloseNewEligible(chain, root);
 
           const { revision } = computeStateRevision(root);
           if (!revision) {

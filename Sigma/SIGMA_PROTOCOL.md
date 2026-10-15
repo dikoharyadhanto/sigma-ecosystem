@@ -82,7 +82,7 @@ START → DESIGN → BUILD → CLOSE
 
 BUILD is iterative: several PLAN and EXEC pairs are permitted under the same ROADMAP. EXEC does not begin before its PLAN is approved.
 
-**CLOSE**: The Director authors the CLOSE, referencing the PLAN and EXEC versions that support the closure claim. It requires the BUILD evidence defined by Gate 3 and the satisfaction score defined by Gate 3.5. The project is complete when the CLOSE is LOCKED.
+**CLOSE**: The Director authors the CLOSE, a closing report that describes the final product and references the PLAN and EXEC versions that support the closure. It requires the BUILD evidence defined by Gate 3 and a PRODUCT REVIEW whose required verdicts are accepted (section 5.6). The project is complete when the CLOSE is LOCKED; locking is a stamp with no content gate and only needs that no work is left open.
 
 ---
 
@@ -116,7 +116,7 @@ All Sigma AI roles share these principles. This is the canonical source; role ru
 | Authors | INTENT (draft) |
 | Approval authority | None — Director only |
 
-ARC interviews the Director to surface and structure intent and drafts the INTENT. Its active drafting work ends when the INTENT is RATIFIED. At CLOSE, when the Director confirms it, ARC evaluates whether BUILD delivered against that INTENT and records the satisfaction score. ARC may operate the `sigma close` lifecycle commands; CLOSE content authorship remains exclusively the Director's.
+ARC interviews the Director to surface and structure intent and drafts the INTENT. Its active drafting work ends when the INTENT is RATIFIED. At CLOSE, when the Director confirms it, ARC reviews the final product against that INTENT in the PRODUCT REVIEW and records its verdict. ARC may operate the `sigma review` and `sigma close` lifecycle commands; CLOSE content authorship remains exclusively the Director's.
 
 When the INTENT's research status is NEEDED, ARC investigates in a bounded Research Mode and records sources in `Sigma/reference/reference-list.md`. The research is reviewed by AUD and completed before `sigma intent ratify`.
 
@@ -175,7 +175,7 @@ AUD is activated explicitly and is optional by default (section 11). It does not
 
 ## 5. Artifact Definitions
 
-Sigma uses five governance artifacts, one supporting index, and two free-form or operational record types.
+Sigma uses six governance artifacts, one supporting index, and two free-form or operational record types.
 
 | Artifact | Owner | Authored by | Phase | Storage |
 | :--- | :--- | :--- | :--- | :--- |
@@ -183,17 +183,18 @@ Sigma uses five governance artifacts, one supporting index, and two free-form or
 | ROADMAP | FMN | FMN | BUILD | `Sigma/roadmap/` |
 | PLAN | FMN | FMN | BUILD | `Sigma/contract/` |
 | EXEC | DEV | DEV, with FMN review and Director observations | BUILD | `Sigma/evidence/` |
+| PRODUCT REVIEW | Director | ARC (writes and transcribes) | CLOSE | `Sigma/review/` |
 | CLOSE | Director | Director | CLOSE | `Sigma/close/` |
 | Reference List | Director | ARC | Any | `Sigma/reference/` |
 | Notes | Any role | Any role | Any | `Sigma/notes/` |
 
-**Naming.** New artifact files are created without a role prefix: `INTENT-vN.md`, `PLAN-vN.M.md`, `EXEC-vN.M.md`, `CLOSE-vN.md`, `ROADMAP-vN.md`. Files created before this convention (`DIR-INTENT-`, `FMN-PLAN-`, `DEV-EXEC-`, `DIR-CLOSE-`) keep their names and are never renamed; every Sigma operation accepts both forms. A version must not exist under both names in the same folder. Template file names in `Sigma/templates/` are unchanged.
+**Naming.** New artifact files are created without a role prefix: `INTENT-vN.md`, `PLAN-vN.M.md`, `EXEC-vN.M.md`, `CLOSE-vN.md`, `ROADMAP-vN.md`, `PRODUCT-REVIEW-vN.md`. Files created before this convention (`DIR-INTENT-`, `FMN-PLAN-`, `DEV-EXEC-`, `DIR-CLOSE-`) keep their names and are never renamed; every Sigma operation accepts both forms. A version must not exist under both names in the same folder. Template file names in `Sigma/templates/` are unchanged.
 
 **Structure.** The template for each artifact is authoritative for its sections, markers, and checklists. This protocol defines ownership and lifecycle only.
 
 ### 5.1 INTENT
 
-The Director's formal statement of purpose, desired outcome, scope, quality standards, constraints, assumptions, risk, and requirements.
+The Director's strategic mandate over one main objective: what is to be produced, for whom, why, to what quality standard, and how success is recognised on the final product. It states the purpose, desired outcome, scope, quality standards, constraints, assumptions, risk, and core requirements of that mandate, and it survives changes of feature, method, and stage. Features, methods, and stages belong to ROADMAP and PLAN.
 
 | State | Meaning |
 | :--- | :--- |
@@ -225,13 +226,21 @@ State machine: `DRAFT → LOCKED`. At most one non-final EXEC exists for a PLAN,
 
 ### 5.5 CLOSE
 
-The Director's closure document. It must reference the PLAN and EXEC versions that support the closure claim. There is one non-superseded CLOSE per INTENT; a second draft for the same INTENT is rejected. A CLOSE is `SUPERSEDED` only as a cascade from `sigma intent supersede`. A revision is a new version.
+The Director's closing report. It describes the final product — what it is, for whom, its main objective and features, its limitations and accepted risks as of closure, the quality standard it meets, how to operate it when that applies, and how it works — and references the INTENT, the PRODUCT REVIEW, and the PLAN and EXEC versions that support the closure. It holds no test results. There is one non-superseded CLOSE per INTENT; a second draft for the same INTENT is rejected. A CLOSE is `SUPERSEDED` only as a cascade from `sigma intent supersede`. A revision is a new version.
 
-### 5.6 Reference List
+States: `DRAFT`, `LOCKED`, `SUPERSEDED`. `sigma close new` is gated (Gate 3 and the PRODUCT REVIEW); `sigma close lock` has no content gate: it is the Director's stamp that the mandate is finished. It only needs that nothing is left open (Gate 3: every LOCKED PLAN paired with one LOCKED EXEC, nothing in DRAFT or APPROVED). A CLOSE does not prevent new PLAN work, before or after it is locked: such work must be finished or superseded before the CLOSE can be locked, and a PLAN created after the lock continues the same mandate (for example corrections after release). A new objective is a new INTENT.
+
+### 5.6 PRODUCT REVIEW
+
+The review of the final product against the standards of the RATIFIED INTENT. One per INTENT; its version is the INTENT version; it has no state of its own and is recognized by its file `Sigma/review/PRODUCT-REVIEW-vN.md`. It is created by ARC (`sigma review new`) after the Director states that the final product is ready and FMN's review request is received.
+
+It holds FMN's Review Request (claims, not evidence) and three verdicts: ARC's, AUD's (unless `SKIP_FOR_AUDIT` is checked with the Director's instruction verbatim), and the Director's. Each verdict is one of `PASS`, `PASS_WITH_RISK`, `REVISE`, `REJECT_RECOMMENDED`. Only `PASS` and `PASS_WITH_RISK` are accepted. A `PASS` or `PASS_WITH_RISK` is permanent; a party whose verdict is not accepted reviews again in the next round, after FMN's corrections, and only that party. Findings are append-only. ARC and AUD review independently and do not state agreement, disagreement, or doubt about each other's review.
+
+### 5.7 Reference List
 
 A project-wide source index supporting the INTENT's research section. Not versioned and not tracked in the chain file. Three tables: local artifacts (synced from `Sigma/reference/data/` by `sigma reference update`), website links, and online source data. An INTENT cites sources by ID only.
 
-### 5.7 Notes
+### 5.8 Notes
 
 Notes are free-form Markdown files with no governance authority. They live under `Sigma/notes/`:
 
@@ -241,7 +250,7 @@ Notes are free-form Markdown files with no governance authority. They live under
 
 `sigma notes update` moves unregistered Markdown to `unregistered-notes/`, refuses non-Markdown files, and regenerates the catalog. A note does not replace or amend an artifact.
 
-### 5.8 Director-Facing Labels
+### 5.9 Director-Facing Labels
 
 | Label | Artifact | Purpose |
 | :--- | :--- | :--- |
@@ -355,14 +364,14 @@ The summary Gate 2 is open when at least one PLAN is eligible. The target PLAN m
 
 `SUPERSEDED` artifacts are excluded. Abandoning a PLAN with `sigma plan supersede` never blocks Gate 3.
 
-### Gate 3.5 — ARC Satisfaction Score
+### Gate 3.5 — PRODUCT REVIEW Accepted
 
 | Property | Value |
 | :--- | :--- |
 | Blocks | `sigma close new` |
-| Pre-condition | An ARC score of at least 50 is recorded with `sigma intent score <n> --notes "..."` |
+| Pre-condition | The chain's PRODUCT REVIEW exists, and its ARC verdict, its AUD verdict (unless `SKIP_FOR_AUDIT` is checked with the Director's instruction verbatim), and its Director verdict are each `PASS` or `PASS_WITH_RISK` |
 
-Gate 3.5 gates `close new`, never `close lock`; the CLOSE verdict stays the Director's sole closure authority. There is no override below 50. A chain may stay unclosed indefinitely. From 50 to 79 the gate is open but ARC does not recommend closure, and the Director may still run `close lock` on explicit authorization. The scale and evaluation doctrine are in `Sigma/rules/ARC-RULE.md`.
+Gate 3.5 gates `close new`, never `close lock`. `sigma close check`, run before `close new`, reports Gate 3 and Gate 3.5 and lists the parties that gave `PASS_WITH_RISK`; ARC then asks the Director whether to create the CLOSE or to return to FMN to address the risks. There is no override of a verdict that is not accepted. A chain may stay unclosed indefinitely. The ARC satisfaction score and its gate no longer exist.
 
 ### Readiness is separate from validity
 
@@ -378,11 +387,12 @@ Gate 3.5 gates `close new`, never `close lock`; the CLOSE verdict stays the Dire
 | `Sigma/roadmap/` | BUILD | `ROADMAP-vN.md` |
 | `Sigma/contract/` | BUILD | `PLAN-vN.M.md` (earlier: `FMN-PLAN-vN.M.md`), `pending/` |
 | `Sigma/evidence/` | BUILD | `EXEC-vN.M.md` (earlier: `DEV-EXEC-vN.M.md`) |
+| `Sigma/review/` | CLOSE | `PRODUCT-REVIEW-vN.md` |
 | `Sigma/close/` | CLOSE | `CLOSE-vN.md` (earlier: `DIR-CLOSE-vN.md`) |
 | `Sigma/revisions/` | BUILD | PLAN revision snapshots and staging copies |
 | `Sigma/messages/` | Any | Messages by role and context, with `index.json` and `attachments/` |
 | `Sigma/memo/` | Any | Self-addressed memos by role and context |
-| `Sigma/notes/` | Any | Notes (section 5.7) |
+| `Sigma/notes/` | Any | Notes (section 5.8) |
 | `Sigma/reference/` | Any | `reference-list.md`, `data/` |
 | `Sigma/rules/`, `Sigma/templates/`, `Sigma/role-memory/` | All | Governance assets copied from the global installation |
 | `Sigma/logs/`, `Sigma/memory/` | Any | Operation log, F08 records, overrides |
@@ -471,15 +481,14 @@ Sigma is operated primarily by AI roles under Director authority. The Director i
 | Class | Examples | AI may execute? | Director instruction needed? |
 | :--- | :--- | :---: | :---: |
 | Read-only | `status`, `list`, `check`, `session bootstrap`, `git evidence`, `intent baseline check`, `intent amendment preview`, `notes list`, `audit show`, `decisions list`, `dev status`, `doctor --check-assets`, `scan` | Yes | No |
-| Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `close new`, `plan revise prepare`, `exec acknowledge-plan`, `reference update`, `notes new`, `send`, `inbox`, `memo`, `audit new`, `decisions add` | Yes, within role boundary | Usually no |
-| Approval | `intent ratify`, `plan approve`, `exec approve`, `close lock`, `intent score`, `intent amendment`, `intent baseline adopt`, loosening `plan revise commit`, `dev create-workspace` | Only after Director approval | Yes |
+| Draft / Operational | `intent new`, `roadmap new`, `plan new`, `exec new`, `review new`, `close new`, `plan revise prepare`, `exec acknowledge-plan`, `reference update`, `notes new`, `send`, `inbox`, `memo`, `audit new`, `decisions add` | Yes, within role boundary | Usually no |
+| Approval | `intent ratify`, `plan approve`, `exec approve`, `close lock`, `intent amendment`, `intent baseline adopt`, loosening `plan revise commit`, `dev create-workspace` | Only after Director approval | Yes |
 | Risk / Supersession | `intent supersede`, `plan supersede`, `override`, `doctor --migrate-lifecycle`, `doctor --migrate-mailbox`, destructive or reset operations | Only after Director approval | Yes |
 
 `sigma control approve`, `sigma control reject`, and `sigma decisions resolve` are the Director's own commands on the trusted local CLI. AI roles do not run them and the MCP servers do not expose them.
 
-Two Approval commands have a narrower scope:
+One Approval command has a narrower scope:
 
-- `intent score`: what the Director approves is committing the score to the chain file, not its content, which ARC has already reasoned through in conversation. Authorization uses distinct commit language ("record the score"), not "do you agree with this score".
 - `intent amendment`: what the Director authorizes is recording an amendment whose content the Director has already reviewed in the preview.
 
 ### 12.3 Explicit approval

@@ -114,6 +114,8 @@ function owns(chain: ChainState, type: string | undefined, version: string): boo
   if ((!type || type === 'INTENT') && chain.intent.version === version) return true;
   if ((!type || type === 'ROADMAP') && chain.roadmap?.version === version) return true;
   if ((!type || type === 'CLOSE') && chain.close?.version === version) return true;
+  // PRODUCT REVIEW has no chain state; its version is the chain's INTENT version.
+  if (type === 'PRODUCT-REVIEW' && chain.intent.version === version) return true;
   if ((!type || type === 'PLAN') && chain.plan.versions.some(p => p.version === version)) return true;
   return (!type || type === 'EXEC') && chain.exec.versions.some(e => e.version === version);
 }
@@ -121,8 +123,8 @@ function owns(chain: ChainState, type: string | undefined, version: string): boo
 export function resolveMailboxReference(root: string, reference: string | undefined): MailboxContext & { warning?: string } {
   const ref = reference?.trim() || 'N/A';
   if (/^(GENERAL|N\/A)$/.test(ref)) return { intent_version: null, context: 'GENERAL' };
-  const parsed = /^(?:(?:(?:DIR|FMN|DEV)-)?(INTENT|ROADMAP|PLAN|EXEC|CLOSE)-)?(v\d+(?:\.\d+)?)$/.exec(ref);
-  if (!parsed) throw new Error(`Invalid artifact reference "${ref}". Use INTENT/ROADMAP/PLAN/EXEC/CLOSE-vN, an artifact version, or GENERAL.`);
+  const parsed = /^(?:(?:(?:DIR|FMN|DEV)-)?(INTENT|ROADMAP|PLAN|EXEC|CLOSE|PRODUCT-REVIEW)-)?(v\d+(?:\.\d+)?)$/.exec(ref);
+  if (!parsed) throw new Error(`Invalid artifact reference "${ref}". Use INTENT/ROADMAP/PLAN/EXEC/CLOSE/PRODUCT-REVIEW-vN, an artifact version, or GENERAL.`);
   const [, type, version] = parsed;
   const chains = listChainVersions(root).map(v => { const chain = readChain(root, v); validateChainNumbering(chain); return chain; });
   const owners = chains.filter(c => owns(c, type, version));
@@ -147,7 +149,7 @@ export function validateEntryMembership(root: string, entry: MessageEntry, cache
   } else if (c.context !== chain.intent.version) throw new Error(`Mailbox chain membership mismatch: ${entry.id}`);
   const ref = entry.related_artifact;
   if (ref && !/^(GENERAL|N\/A)$/.test(ref)) {
-    const parsed = /^(?:(?:(?:DIR|FMN|DEV)-)?(INTENT|ROADMAP|PLAN|EXEC|CLOSE)-)?(v\d+(?:\.\d+)?)$/.exec(ref);
+    const parsed = /^(?:(?:(?:DIR|FMN|DEV)-)?(INTENT|ROADMAP|PLAN|EXEC|CLOSE|PRODUCT-REVIEW)-)?(v\d+(?:\.\d+)?)$/.exec(ref);
     if (!parsed || parsed[2] !== c.context || !owns(chain, parsed[1], parsed[2])) throw new Error(`Mailbox artifact reference mismatch: ${entry.id}`);
   }
 }

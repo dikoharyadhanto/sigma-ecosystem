@@ -1,296 +1,133 @@
-<!-- SIGMA:DOC type=DIR_CLOSE schema=2 -->
+<!-- SIGMA:DOC type=DIR_CLOSE schema=3 -->
 # DIR-CLOSE
 
-> Human-readable project closure document.
+> Closing report of one mandate. It describes the final product as it stands at closure, in the manner of a README: what the product is, for whom, what it does, where its limits are, and how it works. It holds no test results and no project history; those live in PRODUCT REVIEW, PLAN, and EXEC.
 >
-> Main body: story, decision, and evidence map for human readers.
-> Appendix: detailed evidence register for audit and traceability.
->
-> **Lock State**: Managed by Sigma CLI via `progress-v<N>.json`. Do not edit lock state here.
-> **Gate Rule**: Requires INTENT RATIFIED and PLAN -> EXEC chain all LOCKED before `sigma close new`.
-> **Audience**: Director, future project owner, operator, and human reviewer.
+> **Audience**: Director, future project owner, operator, and any reader who has not followed the project.
+> **Author**: Director. ARC operates the CLI commands.
+> **Lock State**: Managed by Sigma CLI via `progress-v<N>.json`. Do not record it here. Locking is a stamp that the mandate is finished; it has no content gate and only needs that no PLAN or EXEC is left open.
+> **Creation**: `sigma close new` after `sigma close check` reports that the chain is eligible: Gate 3 is satisfied and the PRODUCT REVIEW verdicts are accepted.
 
 ---
 
-<!-- SIGMA:DIR_CLOSE:SECTION:CLOSURE_DECISION -->
-## 1. Closure Decision
+<!-- SIGMA:DIR_CLOSE:SECTION:PRODUCT_OVERVIEW -->
+## Product Overview
 
-### Decision
+### What It Is
 
-> Pick one. Do not edit or add options. If none fit, tick OTHER and describe.
+[One short paragraph: what this product is and what it does, readable without any other document.]
 
-- [ ] CLOSE_ACCEPTED
-- [ ] CLOSE_ACCEPTED_WITH_LIMITATIONS
-- [ ] DO_NOT_CLOSE
-- [ ] OPEN_NEW_PLAN
-- [ ] UPDATE_CURRENT_EXEC
-- [ ] OTHER: [describe]
+### Target Users
 
-### Closure Confidence
+[Who uses the product and who benefits from it.]
 
-High / Medium / Low
+### Main Objective
 
-### One-Paragraph Closure Statement
-
-[State whether the project or phase is accepted for closure and why. Mention the delivered outcome, main evidence basis, accepted limitations, and whether future work must move to a new Intent.]
+[The primary objective of the mandate, in the terms of the INTENT.]
 
 ---
 
-<!-- SIGMA:DIR_CLOSE:SECTION:HUMAN_PROJECT_STORY -->
-## 2. Human Project Story
+<!-- SIGMA:DIR_CLOSE:SECTION:MAIN_FEATURES -->
+## Main Features
 
-> Explain the project journey without listing every artifact. Keep the story readable for a human who has not read the full evidence chain.
+> The main capabilities of the final product as they exist at closure. State capabilities, not tasks or history.
 
-### Where This Project Started
-
-[Describe the original Director Intent in plain language. What problem was this project created to solve?]
-
-### How The Project Evolved
-
-[Summarize the major phases of the project. Group work into meaningful capability or maturity stages instead of listing every PLAN, EXEC, or stage.]
-
-### Where The Project Ended
-
-[Describe the final delivered state. What can the product, system, or team now do that it could not do before?]
-
-### Why Closure Is Reasonable Now
-
-[Explain why this is the right stopping point. Closure does not require perfection; it requires a satisfied intent, sufficient evidence, and clear boundaries for remaining work.]
+- [Capability]
+- [Capability]
 
 ---
 
-<!-- SIGMA:DIR_CLOSE:SECTION:DELIVERED_STATE -->
-## 3. Delivered State
+<!-- SIGMA:DIR_CLOSE:SECTION:LIMITATIONS -->
+## Limitations
 
-### Primary User / Beneficiary
+> The limitations and accepted risks of the final product as of closure, with their present state. Include risks accepted at product review (PASS_WITH_RISK) and whether they were corrected afterwards. This section may correct a risk note in PRODUCT REVIEW, because PRODUCT REVIEW is not edited after its verdicts.
 
-[Who uses or benefits from the delivered output.]
+| Limitation or Risk | Impact | Workaround or Follow-Up | State at Closure |
+| :--- | :--- | :--- | :--- |
+| [...] | [...] | [...] | Open / Corrected / Accepted |
 
-### Primary Value Delivered
+If there is none, write:
 
-[The concrete value this project now provides.]
-
-### Delivered Capability Map
-
-| Capability Area | Delivered Outcome | Evidence Level | Notes |
-| :---            | :---              | :---           | :---  |
-| [...]           | [...]             | Strong / Adequate / Partial / Not Delivered | [...] |
-
-### Most Important Delivered Outcomes
-
-- [...]
-- [...]
+> No known limitation.
 
 ---
 
-<!-- SIGMA:DIR_CLOSE:SECTION:INTENT_SATISFACTION -->
-## 4. Intent Satisfaction
+<!-- SIGMA:DIR_CLOSE:SECTION:QUALITY_STANDARDS -->
+## Quality Standards
 
-Summarize how the delivered output satisfies the locked Director Intent.
+> The standard the final product meets, by dimension, in the terms of the INTENT. The assessment itself is in PRODUCT REVIEW and is not repeated here. Add rows for domain-specific dimensions. A dimension that does not apply says so.
 
-> Desired Outcome and Success Criteria are assessed separately on purpose:
-> the Success Criteria are supposed to be the falsifiable operationalization
-> of the Desired Outcome, but if they quietly narrowed during drafting, this
-> is where that gap becomes visible — do not assume satisfying the Success
-> Criteria automatically means the Desired Outcome was delivered.
-
-| Intent Element          | Closure Assessment                              | Evidence / Note |
-| :---                    | :---                                            | :---            |
-| Primary objective       | Satisfied / Partially / Not satisfied           | [...]           |
-| Desired Outcome         | Satisfied / Partially / Not satisfied           | [...]           |
-| Success criteria        | Satisfied / Partially / Not satisfied           | [...]           |
-| Scope boundary          | Respected / Deviated / Expanded                 | [...]           |
-| Trade-off               | Preserved / Changed / Not applicable            | [...]           |
-| Primary failure concern | Addressed / Partially addressed / Not addressed | [...]           |
-
-### Plain-Language Satisfaction Statement
-
-[Explain in 3-6 sentences whether the intent was met and why.]
+| Dimension | Standard the Product Meets | Main Content |
+| :--- | :--- | :--- |
+| Security | [...] | [What the product concretely does or provides for this dimension.] |
+| UX Trust | [...] | [What the product concretely does or provides for this dimension.] |
+| UI / Product Packaging | [...] | [What the product concretely does or provides for this dimension.] |
+| Performance / Cost | [...] | [What the product concretely does or provides for this dimension.] |
 
 ---
 
-<!-- SIGMA:DIR_CLOSE:SECTION:EVIDENCE_MAP -->
-## 5. Evidence Map
+<!-- SIGMA:DIR_CLOSE:SECTION:HOW_TO_OPERATE -->
+## How to Operate
 
-> This section proves closure at a human-readable level. Put detailed artifact lists, test matrices, and screenshots in the appendix.
->
-> At minimum, the CLOSE must reference the locked PLAN and EXEC versions that support the closure claim.
-
-### Primary Evidence
-
-| Evidence Type        | Reference | What It Proves                             |
-| :---                 | :---      | :---                                       |
-| INTENT               | [...]     | Original destination and scope             |
-| PLAN                 | [...]     | Build/test contract used                   |
-| EXEC                 | [...]     | Implementation and walkthrough evidence    |
-| Test Result          | [...]     | Verification against test contract         |
-| Git Diff Evidence    | [...]     | Physical code/change trace                 |
-| Director Observation | [...]     | Manual testing signal / accepted follow-up |
-
-### Evidence Clusters
-
-Use this when the project has many artifacts. Keep the body at cluster level.
-
-| Evidence Cluster | Artifact Range / References | What This Cluster Proves |
-| :---             | :---                        | :---                     |
-| [...]            | [...]                       | [...]                    |
-
-### Evidence Quality Assessment
-
-Strong / Adequate / Mixed / Weak
-
-Reason:
-
-[...]
-
----
-
-<!-- SIGMA:DIR_CLOSE:SECTION:LIMITATIONS_DEVIATIONS_CORRECTIONS -->
-## 6. Limitations, Deviations, and Corrections
-
-> Closure is stronger when accepted limitations, material deviations, and corrected paths are stated plainly.
-
-### Known Limitations and Accepted Risks
-
-| Limitation / Risk | User Impact | Operational Impact | Workaround / Follow-Up | Accepted? |
-| :---              | :---        | :---               | :---                   | :---      |
-| [...]             | [...]       | [...]              | [...]                  | Yes / No / Conditional |
-
-### Deviations From Intent / Plan
-
-| Deviation | Source                           | Impact | Resolution |
-| :---      | :---                             | :---   | :---       |
-| [...]     | INTENT / PLAN / EXEC | [...]  | Accepted / Deferred / Needs New Plan |
-
-If none, write:
-
-> No material deviation from the ratified INTENT or the locked PLAN.
-
-### Superseded or Corrected Paths
-
-[State whether any plans, assumptions, or implementation paths were superseded, corrected, or absorbed into later work.]
-
-If none, write:
-
-> No material superseded path affected closure.
-
----
-
-<!-- SIGMA:DIR_CLOSE:SECTION:OPERATIONAL_HANDOFF_NOTES -->
-## 7. Operational Handoff
-
-### How to Run / Use
+> Optional. Include when the product needs guidance or operating steps; otherwise write "Not applicable."
 
 - Setup:
-- Run command:
+- Run or use:
 - Required configuration:
-- Important dependency:
+- Important dependencies:
 - Environment:
-
-### Maintenance Notes
-
-- Known operational risks:
-- Debug path:
-- Monitoring needed:
-- Backup / restore notes:
-- Follow-up owner:
-
-### Security / Access Notes
-
-- Sensitive credentials:
-- Access boundaries:
-- Admin-only operations:
-- User-facing restrictions:
+- Access and security notes:
 
 ---
 
-<!-- SIGMA:DIR_CLOSE:SECTION:NEW_INTENT_BOUNDARY -->
-## 8. New Intent Boundary
+<!-- SIGMA:DIR_CLOSE:SECTION:TECHNICAL_DOCUMENTATION -->
+## Technical Documentation
 
-> This section prevents future work from being mistaken as a closure failure.
+> How the product works, for a future maintainer. Give a summary with pointers; do not copy PLAN or EXEC.
 
-### Delivered In This Closure
+### Structure and Components
 
-- [...]
-- [...]
+[The main parts of the product and what each one does.]
 
-### Not Delivered / Deferred
+### How It Works
 
-- [...]
-- [...]
+[The main flow of data and control, and the important design decisions with their reasons.]
 
-### Explicit Non-Scope Preserved
+### Where to Find More
 
-- [...]
-- [...]
-
-### Work That Must Move To A New Intent
-
-- [...]
-- [...]
-
-### Why This Is New Intent Work
-
-[Explain why these items expand the product, change the destination, introduce new risk, or require new success criteria.]
-
-### Do Not Carry Forward As Hidden Debt
-
-- [...]
-- [...]
+[Where the source, configuration, and further documentation live.]
 
 ---
 
-<!-- SIGMA:DIR_CLOSE:SECTION:FINAL_DIRECTOR_DECISION -->
-## 9. Final Director Decision
+<!-- SIGMA:DIR_CLOSE:SECTION:REFERENCES -->
+## References
 
-> Director-only closure notes. Runtime lock state is managed by Sigma CLI, not by this section.
+> At minimum, reference the INTENT, the PRODUCT REVIEW, and the locked PLAN and EXEC versions that support the closure.
 
-### Reason
+| Artifact | Reference | Main Content |
+| :--- | :--- | :--- |
+| INTENT | [version and revision] | [The mandate it states, in one sentence.] |
+| PRODUCT REVIEW | [version] | ARC: [verdict]; AUD: [verdict or skipped]; Director: [verdict]. [What the review established.] |
+| PLAN and EXEC | [locked pairs] | [What the locked pairs built, in one sentence.] |
 
-[State the final reason for closure, non-closure, new plan, or current exec update.]
+---
 
-### Accepted Limitations
+<!-- SIGMA:DIR_CLOSE:SECTION:FOLLOW_UP -->
+## Follow-Up
+
+> Optional. Objectives that continue the product after this mandate belong to a new INTENT. List them so they are not mistaken for gaps in this closure.
 
 - [...]
 
-### Required Follow-Up
+If there is none, write:
 
-- [...]
-
-### Closure Sentence
-
-[Write one final sentence that can be read independently.]
-
-Example:
-
-> Director accepts closure of [Project/Phase] as [closure type], with [limitations], and directs all further expansion to begin from a new Intent.
+> No follow-up is planned.
 
 ---
 
-## Appendix A - Detailed Evidence Register
+<!-- SIGMA:DIR_CLOSE:SECTION:CLOSING_STATEMENT -->
+## Closing Statement
 
-> Optional. Use this appendix when the project has many artifacts. Keep the main closure document readable.
+> One sentence that can be read on its own. The Director's own words.
 
-| Artifact | Type | Status | Purpose | Notes |
-| :---     | :--- | :---   | :---    | :---  |
-| [...]    | INTENT / PLAN / EXEC / AUDIT / TEST / DOC | LOCKED / SUPERSEDED / DRAFT / ACCEPTED | [...] | [...] |
-
----
-
-## Appendix B - Detailed Test Matrix
-
-> Optional. Use this appendix when closure depends on many tests.
-
-| Test / Evidence | Result | What It Proves | Limitation |
-| :---            | :---   | :---           | :---       |
-| [...]           | PASS / FAIL / PARTIAL | [...] | [...] |
-
----
-
-## Appendix C - Residual Risk Register
-
-> Optional. Use this appendix when closure is accepted with limitations.
-
-| Risk | Severity | Why Accepted | Required Future Action |
-| :--- | :---     | :---         | :---                   |
-| [...] | Low / Medium / High | [...] | [...] |
+[...]

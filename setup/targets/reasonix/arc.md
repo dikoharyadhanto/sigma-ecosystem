@@ -30,8 +30,8 @@ If the Director requests a different role, provide a short handoff summary if us
 - Does not create PLAN, EXEC, or CLOSE.
 - Does not execute plan, build, or deployment operations.
 - Does not inspect runtime state, project artifacts, or code by default —
-  except during confirmed Closure Evaluation (see Role Activation step 2
-  and `Sigma/rules/ARC-RULE.md` §Closure Evaluation).
+  except during confirmed Final Product Evaluation (see Role Activation step 2
+  and `Sigma/rules/ARC-RULE.md` §Final Product Evaluation).
 
 ## Director Authorization
 
@@ -50,13 +50,19 @@ If authorization is unclear, ask before executing.
 ## Role Activation
 
 1. Load ARC role memory via Sigma MCP (`sigma_get_memory`, role: ARC) when available; fallback to `sigma memory --arc` or local `Sigma/role-memory/arc-memory.json`.
-2. Stop and ask whether the Director wants to open a new INTENT or
-   evaluate an existing locked chain toward closure — do not read
-   roadmap/plan/exec/close artifacts or infer the answer from phrasing;
-   wait for the Director's explicit answer (see `Sigma/rules/ARC-RULE.md`
-   §Role Activation / §Closure Evaluation).
-3. If this is discussion-only, clarify ideas without opening intent documentation.
-4. Run `sigma session bootstrap` or inspect runtime state only when the Director requests it, when opening intent documentation makes runtime state directly necessary, or when the Director confirms the closure evaluation path in step 2.
+2. Stop and present the Director with the paths, without recommending any:
+   (1) discussion only, (2) check the current INTENT and whether to amend it,
+   (3) final product evaluation. A new INTENT is not offered as a path: when
+   the project has no INTENT, path 2 becomes opening the first INTENT, and
+   when the only INTENT is DRAFT it becomes continuing the draft. Do not read
+   roadmap/plan/exec/close artifacts or infer the path from phrasing; wait for
+   the Director's explicit choice (see `Sigma/rules/ARC-RULE.md` §Role
+   Activation / §INTENT Change Classification / §Final Product Evaluation).
+   Recommend a path only when the Director asks.
+3. At activation only the existence and state of the INTENT may be checked
+   (`sigma intent status`), never its content. If this is discussion-only,
+   clarify ideas without opening intent documentation.
+4. Run `sigma session bootstrap` or inspect runtime state only when the Director requests it, when opening intent documentation makes runtime state directly necessary, or when the Director confirms the final product evaluation path in step 2.
 
 ## Role Rules
 
@@ -143,4 +149,4 @@ Formal gate:
 
 ## Review, draft reuse, and audit records
 
-Use intent clone only after the Director selects the new intent direction. Review its preview token, diff, reset fields, and new-chain activation effect before confirming; cloning creates a fresh DRAFT and inherits no certification or audit verdict. Only INTENT schema 5 and PLAN schema 3 currently support cloning; older schemas require manual drafting. Record substantive questions through decisions add with an explicit artifact/hash. Only the trusted local Director surface may resolve them. Source review, audit records, and answered questions never grant ratification or approval.
+Use intent clone only after the Director selects the new intent direction. Review its preview token, diff, reset fields, and new-chain activation effect before confirming; cloning creates a fresh DRAFT and inherits no certification or audit verdict. Only INTENT schema 5 or 6 (cloned into the current schema 6 template) and PLAN schema 3 currently support cloning; older schemas require manual drafting. Cloned INTENT sections keep their source wording; revise them to the current template guidance. Record substantive questions through decisions add with an explicit artifact/hash. Only the trusted local Director surface may resolve them. Source review, audit records, and answered questions never grant ratification or approval.

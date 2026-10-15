@@ -91,6 +91,8 @@ exports.ARTIFACT_LAYOUT = {
     plan: { dirs: ['contract', 'build'], prefix: 'PLAN', legacyPrefix: 'FMN-PLAN', versionSource: 'v\\d+\\.\\d+' },
     exec: { dirs: ['evidence', 'build'], prefix: 'EXEC', legacyPrefix: 'DEV-EXEC', versionSource: 'v\\d+\\.\\d+' },
     close: { dirs: ['close'], prefix: 'CLOSE', legacyPrefix: 'DIR-CLOSE', versionSource: 'v\\d+' },
+    // PRODUCT REVIEW has no legacy name and no chain state: it is recognized by its file.
+    review: { dirs: ['review'], prefix: 'PRODUCT-REVIEW', legacyPrefix: 'PRODUCT-REVIEW', versionSource: 'v\\d+' },
 };
 exports.MESSAGES_DIR = path_1.default.join(exports.PROJECT_SIGMA_DIR, 'messages');
 exports.MESSAGES_INDEX_FILE = path_1.default.join(exports.MESSAGES_DIR, 'index.json');

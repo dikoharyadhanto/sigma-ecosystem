@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CloseLockError = void 0;
 exports.closeDocPath = closeDocPath;
+exports.assertCloseLockGate3 = assertCloseLockGate3;
 exports.closeLockTransactionFiles = closeLockTransactionFiles;
 exports.lockCloseUseCase = lockCloseUseCase;
 const lifecycleView_1 = require("../engine/lifecycleView");
@@ -33,6 +34,24 @@ function closeDocPath(projectRoot, chain) {
         throw new CloseLockError('INVALID_OPERATION', 'No active DIR-CLOSE found. Run: sigma close new');
     return path_1.default.join(projectRoot, chain.close.file ?? (0, artifactNames_1.defaultArtifactRel)(projectRoot, 'close', 'close', chain.close.version));
 }
+/**
+ * A CLOSE does not stop new work, but it can only be locked once nothing is
+ * left open: every LOCKED PLAN paired with exactly one LOCKED EXEC and nothing
+ * in DRAFT or APPROVED. Applies to every lifecycle model; the paired lifecycle
+ * also needs its contract evidence to verify. Shared by the CLI, the use case,
+ * and the MCP prepare step so they cannot disagree.
+ */
+function assertCloseLockGate3(projectRoot, chain) {
+    const paired = (0, lifecycle_1.resolveLifecycleModel)(chain) === 'paired_approval';
+    const clean = (0, chain_1.hasCleanGate3Chain)(chain) && (!paired || (0, lifecycleView_1.effectiveLifecycleGates)(projectRoot, chain).gate_3_satisfied);
+    if (clean)
+        return;
+    const open = (0, chain_1.describeGate3Blockers)(chain);
+    const lines = ['GATE 3 BLOCKED: the chain still has open work, so the CLOSE cannot be locked.', ...open.map(r => `  ${r}`)];
+    lines.push('Every locked plan needs exactly one locked exec with valid contract evidence, and nothing may be left in DRAFT/APPROVED.');
+    lines.push('A CLOSE does not prevent new work: finish it, or abandon what is no longer wanted (sigma plan supersede), then lock.');
+    throw new CloseLockError('GATE_BLOCKED', lines.join('\n'));
+}
 function closeLockTransactionFiles(projectRoot) {
     const { chainVersion } = (0, chain_1.readActiveChain)(projectRoot);
     return [(0, chain_1.chainFilePath)(projectRoot, chainVersion)];
@@ -46,21 +65,17 @@ function closeLockTransactionFiles(projectRoot) {
 function lockCloseUseCase(projectRoot) {
     const { chainVersion, data: chain } = (0, chain_1.readActiveChain)(projectRoot);
     (0, chain_1.assertChainCanMutate)(chain);
-    if ((0, lifecycle_1.resolveLifecycleModel)(chain) === 'paired_approval' && !(0, lifecycleView_1.effectiveLifecycleGates)(projectRoot, chain).gate_3_satisfied)
-        throw new CloseLockError('GATE_BLOCKED', 'GATE 3 BLOCKED: open work or invalid completed contract evidence.');
+    assertCloseLockGate3(projectRoot, chain);
     if (!chain.close || chain.close.state !== 'DRAFT') {
         throw new CloseLockError('INVALID_OPERATION', 'Active DIR-CLOSE is not in DRAFT state. Cannot lock.');
     }
     const closeVersion = chain.close.version;
     const roadmapToLock = chain.roadmap && chain.roadmap.state === 'DRAFT' ? chain.roadmap.version : null;
+    // Locking is a stamp that the mandate is finished. The gate sits before
+    // `close new` (Gate 3 and the PRODUCT REVIEW verdicts), so the document report
+    // is returned for information and never blocks the lock.
     const absPath = closeDocPath(projectRoot, chain);
     const report = (0, docCheck_1.validateSigmaDocFile)(absPath, 'close');
-    try {
-        (0, docCheck_1.ensureSigmaDocEligible)(report, 'close');
-    }
-    catch (e) {
-        throw new CloseLockError('INVALID_OPERATION', e.message);
-    }
     if (roadmapToLock) {
         (0, chain_1.lockActiveRoadmap)(chain);
     }
