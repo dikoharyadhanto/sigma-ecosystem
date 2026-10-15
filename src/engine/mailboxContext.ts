@@ -12,6 +12,21 @@ export interface MailboxScope {
   allIntents?: boolean;
   includeGeneral?: boolean;
 }
+// Migrated v1 mail. Sigma v2 behaves as if it did not exist: it is never read,
+// validated, counted, reported, or mutated by a v2 operation, and its being
+// absent or damaged never stops one. Only the isolation step (migration)
+// produces it; old mail is read by opening the file directly.
+const LEGACY_PATH = /^Sigma\/(?:messages|memo)\/[A-Z]+\/LEGACY\//;
+
+export function isLegacyPath(file: unknown): boolean {
+  return typeof file === 'string' && LEGACY_PATH.test(file);
+}
+
+/** True for an entry that belongs to the isolated area. Identified by its recorded context OR by living under a LEGACY folder, so a damaged entry stays isolated. */
+export function isIsolatedLegacy(entry: { context?: unknown; file?: unknown }): boolean {
+  return entry.context === 'LEGACY' || isLegacyPath(entry.file);
+}
+
 export interface MailboxSelector { intent?: string; context?: string; allIntents?: boolean }
 export const MIGRATION_REQUIRED = 'Mailbox migration required. Run: sigma doctor --migrate-mailbox --dry-run, then sigma doctor --migrate-mailbox';
 
@@ -23,8 +38,8 @@ export function activeMailboxIntent(root: string): string | null {
 export function mailboxScope(root: string, opts: MailboxSelector = {}): MailboxScope {
   if (opts.allIntents && (opts.intent || opts.context)) throw new Error('--all-intents cannot be combined with --intent or --context.');
   if (opts.intent && !/^v\d+$/.test(opts.intent)) throw new Error('--intent must be an INTENT major version, e.g. v3.');
-  if (opts.context && !/^(GENERAL|LEGACY|v\d+(?:\.\d+)?)$/.test(opts.context)) throw new Error('Invalid --context. Use GENERAL, LEGACY, or an artifact version.');
-  if (opts.intent && /^(GENERAL|LEGACY)$/.test(opts.context ?? '')) throw new Error('--intent cannot be combined with GENERAL or LEGACY.');
+  if (opts.context && !/^(GENERAL|v\d+(?:\.\d+)?)$/.test(opts.context)) throw new Error('Invalid --context. Use GENERAL or an artifact version.');
+  if (opts.intent && opts.context === 'GENERAL') throw new Error('--intent cannot be combined with GENERAL.');
   if (opts.intent) readChain(root, opts.intent);
   if (opts.allIntents) return { allIntents: true };
   if (opts.intent || opts.context) return { ...(opts.intent ? { intent: opts.intent } : {}), ...(opts.context ? { context: opts.context } : {}) };
@@ -37,12 +52,13 @@ export function entryContext(entry: MessageEntry): MailboxContext {
 }
 
 export function matchesMailboxScope(entry: MessageEntry, scope?: MailboxScope): boolean {
+  if (isIsolatedLegacy(entry)) return false;
   if (!scope || scope.allIntents) return true;
   const identity = entryContext(entry);
   if (scope.context && identity.context !== scope.context) return false;
   if ('intent' in scope) {
     if (scope.intent === null && scope.includeGeneral) return identity.context === 'GENERAL';
-    if (identity.intent_version === scope.intent && identity.context !== 'LEGACY' && identity.context !== 'GENERAL') return true;
+    if (identity.intent_version === scope.intent && identity.context !== 'GENERAL') return true;
     return !!scope.includeGeneral && identity.context === 'GENERAL' && entry.status === 'UNREAD';
   }
   return true;
@@ -102,8 +118,8 @@ export function validateMailboxContext(entry: MessageEntry, format?: number): vo
   }
   if (!hasMetadata || !Object.prototype.hasOwnProperty.call(entry, 'intent_version')) throw new Error(`Missing mailbox context metadata: ${entry.id}`);
   const c = entry.context;
-  if (typeof c !== 'string' || !/^(GENERAL|LEGACY|v\d+(?:\.\d+)?)$/.test(c)) throw new Error(`Invalid mailbox context: ${entry.id}`);
-  if (/^(GENERAL|LEGACY)$/.test(c) ? entry.intent_version !== null : typeof entry.intent_version !== 'string' || !/^v\d+$/.test(entry.intent_version)) throw new Error(`Invalid mailbox intent identity: ${entry.id}`);
+  if (typeof c !== 'string' || !/^(GENERAL|v\d+(?:\.\d+)?)$/.test(c)) throw new Error(`Invalid mailbox context: ${entry.id}`);
+  if (c === 'GENERAL' ? entry.intent_version !== null : typeof entry.intent_version !== 'string' || !/^v\d+$/.test(entry.intent_version)) throw new Error(`Invalid mailbox intent identity: ${entry.id}`);
   if (!(MESSAGING_ROLES as readonly string[]).includes(entry.to) || !(MESSAGING_ROLES as readonly string[]).includes(entry.from)) throw new Error(`Invalid mailbox role: ${entry.id}`);
   if (entry.type === 'MEMO' && entry.from !== entry.to) throw new Error(`MEMO must be self-addressed: ${entry.id}`);
   const base = entry.type === 'MEMO' ? 'memo' : 'messages';
@@ -163,6 +179,7 @@ export function assertMailboxMutable(root: string, index: MessageIndex): void {
   }
   const cache = new Map<string, ChainState>();
   for (const entry of index.messages) {
+    if (isIsolatedLegacy(entry)) continue;
     validateMailboxContext(entry, 2);
     assertMailboxPath(root, entry.file);
     validateEntryMembership(root, entry, cache);

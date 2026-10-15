@@ -28,8 +28,8 @@ function role(value) {
 }
 function selectors(cmd) {
     return cmd.option('--intent <version>', 'Select the owning INTENT major (including legacy numbering)')
-        .option('--context <context>', 'Select storage context: GENERAL, LEGACY, or an artifact version')
-        .option('--all-intents', 'Select all intent contexts, GENERAL and LEGACY');
+        .option('--context <context>', 'Select storage context: GENERAL or an artifact version')
+        .option('--all-intents', 'Select all intent contexts, including GENERAL');
 }
 function printEntry(e, i) {
     const c = (0, mailboxContext_1.entryContext)(e);
@@ -70,8 +70,6 @@ async function read(id, memo) {
     const root = (0, fs_1.findProjectRoot)();
     await (0, mailboxMigration_1.withMailboxLock)(root, () => {
         const result = (0, mailboxService_1.readMailboxEntry)(root, id, memo);
-        if (result.entry.context === 'LEGACY')
-            console.log('[LEGACY] Status comes from the index; migration reset UNREAD to READ administratively, not as evidence of recipient understanding.');
         console.log('\n' + result.content);
         console.log(`[Marked as ${result.entry.status}: ${id}]`);
         if (result.outdated)

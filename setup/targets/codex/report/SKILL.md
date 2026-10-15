@@ -54,7 +54,7 @@ The role may use any reasonable read-only source to compose the report:
 
 - `sigma session bootstrap` — current state summary, if available
 - `sigma project status` — lifecycle phase and gate status, if available
-- `sigma git evidence` — Git branch, working tree state, and changed files, if available
+- `sigma git evidence` — required Git branch, latest commit, working tree state, and changed files when a Git repository is available
 - `Sigma/progress-v<N>.json` — lifecycle phase and gate status
 - `Sigma/charter/` — active INTENT version and state
 - `Sigma/roadmap/` — ROADMAP version and state
@@ -65,6 +65,22 @@ The role may use any reasonable read-only source to compose the report:
 - Current conversation context
 
 If information is missing or inaccessible, the report must say so briefly.
+
+## Git Progress Evidence
+
+When a Git repository is available, collect both committed and local progress before composing the report:
+
+1. Run `sigma git evidence` when available.
+2. If direct Git inspection is needed or Sigma is not active, use only:
+   - `git --no-optional-locks status --short --branch`;
+   - `git --no-optional-locks log -1 --format='%h|%cI|%an|%s'`.
+3. Never run `git fetch`; ahead/behind reflects the locally available tracking ref and may be stale.
+4. Interpret the evidence precisely:
+   - the latest commit is the last work recorded in Git;
+   - staged, unstaged, and untracked files are local work not fully recorded in that commit;
+   - a clean worktree proves only that no local delta exists against the current commit;
+   - Git state alone does not prove that tests, acceptance criteria, or lifecycle work are complete.
+5. Report a non-Git directory or a branch without commits as `N/A`, not as a fatal error.
 
 ## Output Format
 
@@ -82,6 +98,7 @@ Date: {date}
 **Current State**
 - Lifecycle: {phase name in plain English}
 - Locked evidence chain: {human labels + artifact codes, e.g. "Intent Doc (INTENT v1) → Plan Doc (PLAN v1)"}
+- Git progress: {branch; latest commit hash/date/author/subject; clean or staged/unstaged/untracked summary}
 - Open blockers: {none / list}
 
 **What this means**
@@ -105,15 +122,12 @@ Options are supporting context, not a decision menu. Maximum 3 options.
 
 ## Forbidden Operations
 
-During or after `#report` execution, the following are forbidden:
+During the `#report` invocation, including side effects triggered by it, the following are forbidden:
 
-- `sigma intent ratify`, `sigma plan approve`, `sigma exec approve`, `sigma close lock`
-- `sigma plan supersede`, `sigma exec supersede`, `sigma project reset`
-- Any stale-intent acknowledgment command
-- Any artifact creation command
-- Any state advance command
-- Any command that writes to `Sigma/progress-v<N>.json`
-- Any Git write operation (`git add`, `git commit`, `git reset`, `git checkout`)
+- Any artifact, message, memo, configuration, lifecycle, or control-plane write
+- Any role or project activation, registration, migration, repair, approval, or state advance
+- Any command that writes an operation log or other project/global state
+- Any Git mutation or network operation, including add, commit, tag, push, fetch, reset, checkout, switch, merge, rebase, or clean
 - Any file modification
 
 ## Perspective Follows Active Role

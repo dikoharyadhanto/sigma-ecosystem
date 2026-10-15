@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { journaledWriteIfActive } from './controlStore';
 import { assertMailboxLease } from './mailboxLock';
 import { atomicReplaceFileSync } from '../utils/fs';
-import { MailboxScope, matchesMailboxScope, validateMailboxContext, assertMailboxPath, mailboxDiskFiles, validateEntryMembership } from './mailboxContext';
+import { MailboxScope, matchesMailboxScope, validateMailboxContext, assertMailboxPath, mailboxDiskFiles, validateEntryMembership, isIsolatedLegacy, isLegacyPath } from './mailboxContext';
 import { VALID_ROLES, VALID_MESSAGE_TYPES } from '../config';
 import {
   MESSAGES_INDEX_FILE,
@@ -94,6 +94,8 @@ export function validateMailboxIndexData(data: unknown): MessageIndex {
       throw corruptionError(`entry at index ${i} is not an object`);
     }
     const entry = m as Record<string, unknown>;
+    // Isolated legacy mail is outside v2: whatever state it is in cannot invalidate the index.
+    if (d.mailbox_format === 2 && isIsolatedLegacy(entry)) continue;
     for (const field of REQUIRED_ENTRY_FIELDS) {
       if (typeof entry[field] !== 'string' || (entry[field] as string).length === 0) {
         throw corruptionError(`entry at index ${i} has missing or invalid field "${field}"`);
@@ -203,7 +205,7 @@ export function buildMessageMarkdown(entry: MessageEntry, body: string): string 
 | Status         | ${entry.status} |
 | Created At     | ${entry.created_at} |
 ${replyToRow}| Related Artifact | ${relatedArtifact} |
-| Mailbox Context | ${entry.context ?? 'LEGACY'} |
+| Mailbox Context | ${entry.context ?? 'GENERAL'} |
 | Owning INTENT | ${entry.intent_version ?? '—'} |
 | Attachments    | ${attachmentCell} |
 ${entry.contract_change ? "| Revision ID | " + entry.contract_change.revision_id + " |\n| Contract SHA256 | " + entry.contract_change.contract_sha256 + " |" : ""}
@@ -277,7 +279,7 @@ export function updateMessageStatus(
   id: string,
   status: 'READ' | 'ARCHIVED' | 'OUTDATED'
 ): MessageEntry {
-  const entry = index.messages.find(m => m.id === id);
+  const entry = index.messages.find(m => m.id === id && !isIsolatedLegacy(m));
   if (!entry) throw new Error(`Message not found: ${id}`);
   entry.status = status;
   return entry;
@@ -287,14 +289,20 @@ export function resolveInboxDir(projectRoot: string, role: SigmaRole, context = 
   return assertMailboxPath(projectRoot, `Sigma/${memo ? 'memo' : 'messages'}/${role}/${context}`);
 }
 
+// Only a format-2 mailbox is eligible for the legacy exclusion: in format 1 every
+// entry lacks context metadata, and treating those as isolated would blind the
+// pre-migration preflight to real missing files.
 export function checkMailboxIntegrity(root: string) {
   const index = readIndex(root);
+  const excludeLegacy = index.mailbox_format === 2;
+  const isLegacyEntry = (entry: MessageEntry): boolean => excludeLegacy && isIsolatedLegacy(entry);
   const missingFiles: Array<{ id: string; file: string }> = [];
   const missingAttachments: Array<{ id: string; path: string }> = [];
   const invalidFields: Array<{ id: string; field: string; value: string }> = [];
   let passes = 0;
   const membershipCache = new Map();
   for (const entry of index.messages) {
+    if (isLegacyEntry(entry)) continue;
     try { assertMailboxPath(root, entry.file, true); passes++; }
     catch { missingFiles.push({ id: entry.id, file: entry.file }); }
     for (const att of entry.attachments) {
@@ -308,6 +316,7 @@ export function checkMailboxIntegrity(root: string) {
   }
   const indexed = new Set(index.messages.map(m => m.file));
   const orphanFiles = mailboxDiskFiles(root).filter(file => {
+    if (excludeLegacy && isLegacyPath(file)) return false;
     if (indexed.has(file)) { passes++; return false; }
     return true;
   });

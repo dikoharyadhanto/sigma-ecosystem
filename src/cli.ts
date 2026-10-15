@@ -24,7 +24,7 @@ import { scanCommand } from './commands/scan';
 import { controlCommand } from './commands/control';
 import { devCommand } from './commands/dev';
 import { auditCommand, decisionsCommand } from './commands/f08';
-import { appendOperationLogEntry } from './utils/operationLog';
+import { appendOperationLogEntry, isRegisteredReadOnlyOperation } from './utils/operationLog';
 import { findProjectRoot } from './utils/fs';
 import { evaluateVersionStatus } from './services/assetConsistency';
 
@@ -68,14 +68,10 @@ program.on('command:*', (operands: string[]) => {
 });
 
 // ── Operation history log ───────────────────────────────────────────────────
-// Every command handler catches its own errors and calls process.exit(1)
-// directly (never throws out to commander), so a postAction hook would never
-// see failed operations — the process is already dead by the time it would
-// fire. process.on('exit') always runs immediately before the process
-// actually terminates regardless of cause, so pairing it with preAction (to
-// capture which command is about to run) is the only combination that
-// guarantees every operation is recorded, success or failure, without
-// touching any individual command handler.
+// Mutating and governance-significant operations are recorded on process exit,
+// including failures inside handlers. Operations classified `read_only` in
+// the registry are deliberately excluded: diagnostics must not change the
+// project merely by observing it.
 
 let pendingOperation: string | null = null;
 
@@ -91,6 +87,7 @@ function commandPath(cmd: Command): string {
 
 program.hook('preAction', (_thisCommand, actionCommand) => {
   pendingOperation = commandPath(actionCommand);
+  if (isRegisteredReadOnlyOperation(pendingOperation)) pendingOperation = null;
   if (pendingOperation === 'doctor' && actionCommand.opts().checkAssets) pendingOperation = null;
   if (pendingOperation === 'plan check' && actionCommand.opts().sources ||
       ['audit show', 'decisions list', 'decisions target'].includes(pendingOperation ?? '') ||

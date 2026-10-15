@@ -3,6 +3,34 @@ import path from 'path';
 import { OPERATIONS_LOG_FILE } from '../config';
 import { findProjectRoot } from './fs';
 
+interface RegistryOperation {
+  operation_id: string;
+  level?: string;
+}
+
+let registryLevels: Map<string, string> | null = null;
+
+function operationLevels(): Map<string, string> {
+  if (registryLevels) return registryLevels;
+  const registryPath = path.resolve(__dirname, '..', '..', 'Sigma', 'SIGMA-OPERATION-REGISTRY.json');
+  try {
+    const registry = fs.readJsonSync(registryPath) as { operations?: RegistryOperation[] };
+    registryLevels = new Map((registry.operations ?? []).map(operation => [operation.operation_id, operation.level ?? '']));
+  } catch {
+    // Fail closed: an unreadable registry must never suppress an audit entry.
+    registryLevels = new Map();
+  }
+  return registryLevels;
+}
+
+export function operationIdForCommandPath(commandPath: string): string {
+  return commandPath.trim().replace(/[\s-]+/g, '_');
+}
+
+export function isRegisteredReadOnlyOperation(commandPath: string): boolean {
+  return operationLevels().get(operationIdForCommandPath(commandPath)) === 'read_only';
+}
+
 export interface OperationLogEntry {
   operation: string;
   timestamp: string;
@@ -10,8 +38,10 @@ export interface OperationLogEntry {
   exit_code: number;
 }
 
-// Appends one JSONL line to Sigma/logs/operations.jsonl for the operation
-// that just finished. No-ops outside a Sigma project (nothing to log to).
+// Appends one JSONL line to Sigma/logs/operations.jsonl for a mutating or
+// governance-significant operation that just finished. Read-only operations
+// are filtered by the CLI before this function is called so observation does
+// not change the project it is inspecting. No-ops outside a Sigma project.
 export function appendOperationLogEntry(operation: string, exitCode: number): void {
   let projectRoot: string;
   try {

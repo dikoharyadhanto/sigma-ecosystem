@@ -1,5 +1,5 @@
 import { MessageIndex, readIndex, getUnreadForRole, countUnreadMemos } from '../engine/mailbox';
-import { mailboxScope, MailboxScope, validateEntryMembership } from '../engine/mailboxContext';
+import { mailboxScope, MailboxScope, validateEntryMembership, isIsolatedLegacy } from '../engine/mailboxContext';
 import { mailboxMigrationDiagnosis } from '../engine/mailboxMigration';
 import { MESSAGING_ROLES, SigmaRole } from '../config';
 
@@ -12,7 +12,7 @@ export function buildMailboxView(root: string, role?: SigmaRole) {
     scope = mailboxScope(root);
     const diagnosis = mailboxMigrationDiagnosis(root);
     const membershipCache = new Map();
-    if (index.mailbox_format === 2) for (const e of index.messages) validateEntryMembership(root, e, membershipCache);
+    if (index.mailbox_format === 2) for (const e of index.messages) if (!isIsolatedLegacy(e)) validateEntryMembership(root, e, membershipCache);
     for (const r of role ? [role] : MESSAGING_ROLES) {
       if (!(MESSAGING_ROLES as readonly string[]).includes(r)) continue;
       const unread = getUnreadForRole(index, r, { excludeMemo: true, scope }).length;

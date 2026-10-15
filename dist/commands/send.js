@@ -72,7 +72,7 @@ function runSend(opts) {
     // Resolve identity and validate reply before any file or attachment write.
     const existingIndex = (0, mailbox_1.readIndex)(projectRoot);
     (0, mailboxContext_1.assertMailboxMutable)(projectRoot, existingIndex);
-    const parent = opts.replyTo ? existingIndex.messages.find(m => m.id === opts.replyTo) : undefined;
+    const parent = opts.replyTo ? existingIndex.messages.find(m => m.id === opts.replyTo && !(0, mailboxContext_1.isIsolatedLegacy)(m)) : undefined;
     if (opts.replyTo && !parent)
         throw new Error(`Reply parent not found: ${opts.replyTo}`);
     if (parent && parent.type === 'MEMO')
@@ -84,7 +84,7 @@ function runSend(opts) {
         throw new Error('Reply INTENT identity mismatch.');
     if (parent) {
         const parentContext = (0, mailboxContext_1.entryContext)(parent);
-        if (parentContext.context === 'LEGACY' || parentContext.intent_version !== context.intent_version || (parentContext.context === 'GENERAL') !== (context.context === 'GENERAL'))
+        if (parentContext.intent_version !== context.intent_version || (parentContext.context === 'GENERAL') !== (context.context === 'GENERAL'))
             throw new Error('Reply context mismatch; activate the parent INTENT or send a new message with an ID pointer.');
     }
     if ('warning' in context && context.warning)
@@ -104,7 +104,7 @@ function runSend(opts) {
         const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
         const match = /^(?:FMN-)?PLAN-(v\d+\.[1-9]\d*)$/.exec(relatedArtifact);
         if (!match || context.intent_version !== chain.intent.version || context.context !== match[1])
-            throw new Error('Contract messages require an explicit registered PLAN in the active INTENT; GENERAL/LEGACY forbidden.');
+            throw new Error('Contract messages require an explicit registered PLAN in the active INTENT; GENERAL forbidden.');
         const plan = chain.plan.versions.find(p => p.version === match[1]);
         if (!plan || plan.state !== 'APPROVED')
             throw new Error('Contract messages require an APPROVED PLAN.');
@@ -227,6 +227,13 @@ function runSend(opts) {
     if (attachmentPaths.length > 0) {
         console.log(`  Attach   : ${attachmentPaths[0]}`);
     }
+    // Creating a message is a local filesystem mutation only. Say what changed
+    // and what did not, so "message created" is never read as "published".
+    const written = ['message file', 'mailbox index', ...(attachmentPaths.length > 0 ? ['attachment'] : [])];
+    if (contractChange)
+        written.push('PLAN revision ledger', 'chain progress (pending notice)');
+    console.log(`  Local    : wrote ${written.join(', ')}`);
+    console.log('  Git      : nothing staged, committed, tagged, or pushed; publishing is a separate Director action.');
     console.log('');
 }
 function sendCommand() {

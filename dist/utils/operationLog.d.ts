@@ -1,3 +1,5 @@
+export declare function operationIdForCommandPath(commandPath: string): string;
+export declare function isRegisteredReadOnlyOperation(commandPath: string): boolean;
 export interface OperationLogEntry {
     operation: string;
     timestamp: string;

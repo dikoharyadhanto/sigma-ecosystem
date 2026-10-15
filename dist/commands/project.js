@@ -317,7 +317,7 @@ async function runStart(opts) {
     const indexPath = path_1.default.join(projectRoot, config_1.MESSAGES_INDEX_FILE);
     fs_extra_1.default.writeJsonSync(indexPath, { mailbox_format: 2, messages: [] }, { spaces: 2 });
     for (const role of config_1.MESSAGING_ROLES)
-        for (const context of ['GENERAL', 'LEGACY']) {
+        for (const context of ['GENERAL']) {
             fs_extra_1.default.ensureDirSync(path_1.default.join(messagesDir, role, context));
             fs_extra_1.default.ensureDirSync(path_1.default.join(projectRoot, 'Sigma', 'memo', role, context));
         }

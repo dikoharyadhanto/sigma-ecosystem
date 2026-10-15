@@ -2117,7 +2117,7 @@
       "operation_id": "scan",
       "domain": "scan",
       "action": "scan",
-      "level": "read_only",
+      "level": "semantic",
       "role": "any",
       "description": "Scan an arbitrary file for Sigma terminology before it is shared externally. Top-level command, independent of any other pipeline. Skips INTENT/PLAN/EXEC/ROADMAP/CLOSE source artifacts by filename pattern (expected to contain this vocabulary by design). Terminal output is a count only; full findings (line numbers, matched terms) are written to Sigma/logs/<timestamp>_terminology-scan.log.",
       "inputs": [
@@ -2134,7 +2134,8 @@
       ],
       "constraints": [
         "Never mutates progress-v<N>.json, gates, or any artifact file.",
-        "Skips Sigma artifact source files by filename pattern instead of scanning them."
+        "Skips Sigma artifact source files by filename pattern instead of scanning them.",
+        "Classified semantic, not read_only: when terms are found it writes a findings log under Sigma/logs/, so it is recorded in the operation log and excluded from read-only diagnostics."
       ],
       "gating": {
         "pre_condition": "none",

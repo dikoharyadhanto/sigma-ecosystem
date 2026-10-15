@@ -75,7 +75,10 @@ describe('F03 mailbox identity and scopes', () => {
     expect(getUnreadForRole(readIndex(e.projectDir), 'DEV', { scope: mailboxScope(e.projectDir) }).map(m => m.id)).toEqual(['m1', 'm4']);
     expect(fs.readFileSync(path.join(e.sigmaDir, 'messages/index.json')).equals(before)).toBe(true);
     expect(cli(e, 'inbox --role dev --intent v4 --all').stdout).toContain('m3');
-    expect(cli(e, 'inbox --role dev --context LEGACY --all').stdout).toContain('m5');
+    // LEGACY is not a v2 context: it is neither listed nor named.
+    const legacyCtx = cli(e, 'inbox --role dev --context LEGACY --all');
+    expect(legacyCtx.exitCode).not.toBe(0);
+    expect(legacyCtx.stdout).not.toContain('m5');
   });
   it('GENERAL is available without a chain and has its own quota', () => {
     const e = project();
@@ -185,6 +188,36 @@ describe('F03 replies, retention and integrity', () => {
     fs.writeJsonSync(path.join(e.sigmaDir, 'messages/index.json'), idx);
     expect(() => readIndex(e.projectDir)).toThrow();
   });
+  it('format 2: LEGACY entries and folders are not checked, yet everything else still is', () => {
+    const e = project();
+    const kept = entry(e, 'g1', null, 'GENERAL');
+    const old = entry(e, 'old1', null, 'LEGACY', 'NOTE', 'READ');
+    fs.removeSync(path.join(e.projectDir, old.file));                       // git-ignored: absent on this machine
+    fs.outputFileSync(path.join(e.sigmaDir, 'messages/DEV/LEGACY/dropped-by-hand.md'), 'manual');
+    fs.outputFileSync(path.join(e.sigmaDir, 'memo/DEV/LEGACY/also-by-hand.md'), 'manual');
+    seed(e, [kept, old]);
+
+    const clean = checkMailboxIntegrity(e.projectDir);
+    expect(clean).toMatchObject({ ok: true, warnings: 0, failures: 0 });
+    expect(JSON.stringify(clean)).not.toMatch(/legacy/i);                    // nothing about LEGACY is reported
+    expect(cli(e, 'inbox check').stdout).not.toMatch(/legacy/i);
+
+    // The exclusion is scoped to LEGACY: a missing GENERAL file and a stray GENERAL file still count.
+    fs.removeSync(path.join(e.projectDir, kept.file));
+    fs.outputFileSync(path.join(e.sigmaDir, 'messages/DEV/GENERAL/stray.md'), 'stray');
+    const report = checkMailboxIntegrity(e.projectDir);
+    expect(report.findings.missing_files.map(f => f.id)).toEqual(['g1']);
+    expect(report.findings.orphan_files).toEqual(['Sigma/messages/DEV/GENERAL/stray.md']);
+    expect(report.findings.orphan_files.some(f => f.includes('/LEGACY/'))).toBe(false);
+  });
+  it('format 1: nothing is excluded, so a missing file still blocks the migration preflight', () => {
+    const e = project(); chains(e);
+    const messages = legacy(e);
+    fs.removeSync(path.join(e.projectDir, messages[1].file));
+    const report = checkMailboxIntegrity(e.projectDir);
+    expect(report.findings.missing_files.map(f => f.id)).toEqual([messages[1].id]);
+    expect(report.ok).toBe(false);
+  });
 });
 
 describe('F03 migration and concurrent writes', () => {
@@ -201,7 +234,10 @@ describe('F03 migration and concurrent writes', () => {
     expect(checkMailboxIntegrity(e.projectDir).ok).toBe(true);
     const bytes = fs.readFileSync(path.join(e.sigmaDir, 'messages/index.json'));
     expect((await migrateMailbox(e.projectDir) as any).moved).toBe(0); expect(fs.readFileSync(path.join(e.sigmaDir, 'messages/index.json')).equals(bytes)).toBe(true);
-    expect(cli(e, 'memo read old0').stdout).toContain('administratively');
+    // Migrated mail is isolated: v2 no longer reads it (the file is opened directly).
+    const readLegacy = cli(e, 'memo read old0');
+    expect(readLegacy.exitCode).not.toBe(0);
+    expect(readLegacy.stdout).not.toContain('legacy evidence');
   });
   it.each(['after_journal', 'after_copy', 'after_index', 'after_commit'])('recovers an interrupted migration at %s without losing or duplicating entries', async point => {
     const e = project(); legacy(e); process.env.SIGMA_TEST_MAILBOX_MIGRATION_FAILPOINT = point;
@@ -262,8 +298,12 @@ describe('F03 migration and concurrent writes', () => {
   }, 20000);
   it('archive preserves ownership and shared lock serializes archive with migration', async () => {
     const e = project(); legacy(e); await migrateMailbox(e.projectDir);
-    expect(() => archiveMessage({ projectRoot: e.projectDir, messageId: 'old1', actorRole: 'FMN' })).toThrow(/addressed to DEV/);
-    await withMailboxLock(e.projectDir, () => archiveMessage({ projectRoot: e.projectDir, messageId: 'old1', actorRole: 'DEV' }));
-    expect(readIndex(e.projectDir).messages.find(m => m.id === 'old1')!.status).toBe('ARCHIVED');
+    const idx = readIndex(e.projectDir); idx.messages.push(entry(e, 'g1', null, 'GENERAL')); writeIndex(e.projectDir, idx);
+    expect(() => archiveMessage({ projectRoot: e.projectDir, messageId: 'g1', actorRole: 'FMN' })).toThrow(/addressed to DEV/);
+    await withMailboxLock(e.projectDir, () => archiveMessage({ projectRoot: e.projectDir, messageId: 'g1', actorRole: 'DEV' }));
+    expect(readIndex(e.projectDir).messages.find(m => m.id === 'g1')!.status).toBe('ARCHIVED');
+    // Migrated (isolated) mail is unknown to v2 and keeps its status.
+    expect(() => archiveMessage({ projectRoot: e.projectDir, messageId: 'old1', actorRole: 'DEV' })).toThrow(/not found/);
+    expect(readIndex(e.projectDir).messages.find(m => m.id === 'old1')!.status).toBe('READ');
   });
 });

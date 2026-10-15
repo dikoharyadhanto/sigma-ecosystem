@@ -16,7 +16,8 @@ function buildMailboxView(root, role) {
         const membershipCache = new Map();
         if (index.mailbox_format === 2)
             for (const e of index.messages)
-                (0, mailboxContext_1.validateEntryMembership)(root, e, membershipCache);
+                if (!(0, mailboxContext_1.isIsolatedLegacy)(e))
+                    (0, mailboxContext_1.validateEntryMembership)(root, e, membershipCache);
         for (const r of role ? [role] : config_1.MESSAGING_ROLES) {
             if (!config_1.MESSAGING_ROLES.includes(r))
                 continue;

@@ -3,14 +3,39 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.operationIdForCommandPath = operationIdForCommandPath;
+exports.isRegisteredReadOnlyOperation = isRegisteredReadOnlyOperation;
 exports.appendOperationLogEntry = appendOperationLogEntry;
 exports.ensureOperationsLog = ensureOperationsLog;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
 const fs_1 = require("./fs");
-// Appends one JSONL line to Sigma/logs/operations.jsonl for the operation
-// that just finished. No-ops outside a Sigma project (nothing to log to).
+let registryLevels = null;
+function operationLevels() {
+    if (registryLevels)
+        return registryLevels;
+    const registryPath = path_1.default.resolve(__dirname, '..', '..', 'Sigma', 'SIGMA-OPERATION-REGISTRY.json');
+    try {
+        const registry = fs_extra_1.default.readJsonSync(registryPath);
+        registryLevels = new Map((registry.operations ?? []).map(operation => [operation.operation_id, operation.level ?? '']));
+    }
+    catch {
+        // Fail closed: an unreadable registry must never suppress an audit entry.
+        registryLevels = new Map();
+    }
+    return registryLevels;
+}
+function operationIdForCommandPath(commandPath) {
+    return commandPath.trim().replace(/[\s-]+/g, '_');
+}
+function isRegisteredReadOnlyOperation(commandPath) {
+    return operationLevels().get(operationIdForCommandPath(commandPath)) === 'read_only';
+}
+// Appends one JSONL line to Sigma/logs/operations.jsonl for a mutating or
+// governance-significant operation that just finished. Read-only operations
+// are filtered by the CLI before this function is called so observation does
+// not change the project it is inspecting. No-ops outside a Sigma project.
 function appendOperationLogEntry(operation, exitCode) {
     let projectRoot;
     try {

@@ -55,7 +55,7 @@ function archiveMessage(input) {
     catch (err) {
         throw new InboxArchiveError('INVALID_OPERATION', err.message);
     }
-    const entry = index.messages.find(m => m.id === messageId);
+    const entry = index.messages.find(m => m.id === messageId && !(0, mailboxContext_1.isIsolatedLegacy)(m));
     if (!entry) {
         throw new InboxArchiveError('INVALID_OPERATION', `Message not found: ${messageId}`);
     }

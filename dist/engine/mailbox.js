@@ -74,6 +74,9 @@ function validateMailboxIndexData(data) {
             throw corruptionError(`entry at index ${i} is not an object`);
         }
         const entry = m;
+        // Isolated legacy mail is outside v2: whatever state it is in cannot invalidate the index.
+        if (d.mailbox_format === 2 && (0, mailboxContext_1.isIsolatedLegacy)(entry))
+            continue;
         for (const field of REQUIRED_ENTRY_FIELDS) {
             if (typeof entry[field] !== 'string' || entry[field].length === 0) {
                 throw corruptionError(`entry at index ${i} has missing or invalid field "${field}"`);
@@ -175,7 +178,7 @@ function buildMessageMarkdown(entry, body) {
 | Status         | ${entry.status} |
 | Created At     | ${entry.created_at} |
 ${replyToRow}| Related Artifact | ${relatedArtifact} |
-| Mailbox Context | ${entry.context ?? 'LEGACY'} |
+| Mailbox Context | ${entry.context ?? 'GENERAL'} |
 | Owning INTENT | ${entry.intent_version ?? '—'} |
 | Attachments    | ${attachmentCell} |
 ${entry.contract_change ? "| Revision ID | " + entry.contract_change.revision_id + " |\n| Contract SHA256 | " + entry.contract_change.contract_sha256 + " |" : ""}
@@ -233,7 +236,7 @@ function selectSurplusRead(index, role, keep, scope, memo) {
     return read.slice(0, read.length - keep);
 }
 function updateMessageStatus(index, id, status) {
-    const entry = index.messages.find(m => m.id === id);
+    const entry = index.messages.find(m => m.id === id && !(0, mailboxContext_1.isIsolatedLegacy)(m));
     if (!entry)
         throw new Error(`Message not found: ${id}`);
     entry.status = status;
@@ -242,14 +245,21 @@ function updateMessageStatus(index, id, status) {
 function resolveInboxDir(projectRoot, role, context = 'GENERAL', memo = false) {
     return (0, mailboxContext_1.assertMailboxPath)(projectRoot, `Sigma/${memo ? 'memo' : 'messages'}/${role}/${context}`);
 }
+// Only a format-2 mailbox is eligible for the legacy exclusion: in format 1 every
+// entry lacks context metadata, and treating those as isolated would blind the
+// pre-migration preflight to real missing files.
 function checkMailboxIntegrity(root) {
     const index = readIndex(root);
+    const excludeLegacy = index.mailbox_format === 2;
+    const isLegacyEntry = (entry) => excludeLegacy && (0, mailboxContext_1.isIsolatedLegacy)(entry);
     const missingFiles = [];
     const missingAttachments = [];
     const invalidFields = [];
     let passes = 0;
     const membershipCache = new Map();
     for (const entry of index.messages) {
+        if (isLegacyEntry(entry))
+            continue;
         try {
             (0, mailboxContext_1.assertMailboxPath)(root, entry.file, true);
             passes++;
@@ -282,6 +292,8 @@ function checkMailboxIntegrity(root) {
     }
     const indexed = new Set(index.messages.map(m => m.file));
     const orphanFiles = (0, mailboxContext_1.mailboxDiskFiles)(root).filter(file => {
+        if (excludeLegacy && (0, mailboxContext_1.isLegacyPath)(file))
+            return false;
         if (indexed.has(file)) {
             passes++;
             return false;

@@ -10,6 +10,12 @@ export interface MailboxScope {
     allIntents?: boolean;
     includeGeneral?: boolean;
 }
+export declare function isLegacyPath(file: unknown): boolean;
+/** True for an entry that belongs to the isolated area. Identified by its recorded context OR by living under a LEGACY folder, so a damaged entry stays isolated. */
+export declare function isIsolatedLegacy(entry: {
+    context?: unknown;
+    file?: unknown;
+}): boolean;
 export interface MailboxSelector {
     intent?: string;
     context?: string;

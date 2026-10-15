@@ -25,8 +25,8 @@ function role(value?: string): MessagingRole {
 
 function selectors(cmd: Command): Command {
   return cmd.option('--intent <version>', 'Select the owning INTENT major (including legacy numbering)')
-    .option('--context <context>', 'Select storage context: GENERAL, LEGACY, or an artifact version')
-    .option('--all-intents', 'Select all intent contexts, GENERAL and LEGACY');
+    .option('--context <context>', 'Select storage context: GENERAL or an artifact version')
+    .option('--all-intents', 'Select all intent contexts, including GENERAL');
 }
 
 function printEntry(e: MessageEntry, i: number): void {
@@ -65,7 +65,6 @@ async function read(id: string, memo: boolean): Promise<void> {
   const root = findProjectRoot();
   await withMailboxLock(root, () => {
     const result = readMailboxEntry(root, id, memo);
-    if (result.entry.context === 'LEGACY') console.log('[LEGACY] Status comes from the index; migration reset UNREAD to READ administratively, not as evidence of recipient understanding.');
     console.log('\n' + result.content);
     console.log(`[Marked as ${result.entry.status}: ${id}]`);
     if (result.outdated) console.log(`[${result.outdated} older READ ${memo ? 'memo' : 'message'}(s) moved to OUTDATED]`);

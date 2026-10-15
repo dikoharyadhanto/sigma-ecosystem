@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
+import { execSync } from 'child_process';
 import { setupTestEnv, stubProjectIdentity, validIntentDocV5, validPlanDocV3, validExecDocV3, runCli, TestEnv } from './helpers';
 import { createInitialChain, ratifyIntent, certifyIntentDoc, registerPlanDraft, registerExecDraft, writeChain, writeActivateStatus, readActiveChain, hasCleanGate3Chain, supersedePlanVersion, resolveTargetVersion, chainFilePath } from '../src/engine/chain';
 import { writeChainMetadata } from '../src/engine/numbering';
@@ -123,6 +124,22 @@ describe('F04 lifecycle and revision contract', () => {
     it('U-07: early approval binds candidate and durable consumed receipt', async () => { const { root, version } = fixture(); await approve(root, 'plan', version); await stage(root, version, true); const id = generateId('opt'); await withGovernanceTransaction(root, 'ticket', () => [ticketPath(root, id)], () => prepareRevisionTicket(root, version, id)); const t = readTicket(root, id)!; const a = generateId('appr'); writeApproval(root, { approval_id: a, project_id: t.project_id, operation_ticket_id: id, operation_id: t.operation_id, arguments_hash: t.arguments_hash, target_artifact: 'plan', target_version: version, target_sha256: t.target!.sha256, expected_state_revision: t.expected_state_revision, decision: 'approve', reason: null, director_identity: 'test-director', authentication_method: 'local_cli', channel: 'cli', issued_at: new Date().toISOString(), expires_at: new Date(Date.now() + 60000).toISOString(), consumed_at: null }); await commitRevision(root, version, id, a); const receipt = readRevisionLedger(root, readActiveChain(root).data, version).records[1].authorization; expect(receipt?.approval.consumed_at).toBeTruthy(); });
     it('U-08: notice cannot be sent by wrong role or with old revision', async () => { const { root, env, version } = fixture(); await approve(root, 'plan', version); await stage(root, version); await commitRevision(root, version); const bad = runCli('send --from dev --to fmn --type CONTRACT_CHANGE --related-artifact PLAN-' + version + ' --revision-id ' + version + ':rev-2 --message "change"', root, env.homeDir); expect(bad.exitCode).toBe(1); expect(readActiveChain(root).data.plan.versions[0].pending_notice).toBe(true); expect(send(env, version).exitCode).toBe(0); expect(send(env, version).exitCode).toBe(1); });
     it('U-09: sender unread GENERAL blocks notice without losing snapshot', async () => { const { root, env, version } = fixture(); await approve(root, 'plan', version); await stage(root, version); await commitRevision(root, version); expect(runCli('send --from dev --to fmn --related-artifact GENERAL --message "pending"', root, env.homeDir).exitCode).toBe(0); const blocked = send(env, version); expect(blocked.exitCode).toBe(1); expect(blocked.stderr).toContain('SEND BLOCKED'); expect(fs.existsSync(boundedPath(root, revisionPaths(version, 2).snapshot))).toBe(true); expect(readActiveChain(root).data.plan.versions[0].pending_notice).toBe(true); });
+    it('MSG-03: a CONTRACT_CHANGE notice reports its ledger/progress writes and leaves Git untouched', async () => {
+        const { root, env, version } = fixture();
+        await approve(root, 'plan', version);
+        await stage(root, version);
+        await commitRevision(root, version);
+        const g = (a: string) => execSync('git ' + a, { cwd: root, encoding: 'utf8' }).trim();
+        g('init -q'); g('config user.email t@example.invalid'); g('config user.name t'); g('add -A'); g('commit -q -m base');
+        const gitState = () => [g('rev-parse HEAD'), g('for-each-ref'), g('tag --list'), g('diff --cached --name-only')].join('\n');
+        const before = gitState();
+        const sent = send(env, version);
+        expect(sent.exitCode).toBe(0);
+        expect(sent.stdout).toContain('PLAN revision ledger');
+        expect(sent.stdout).toContain('chain progress (pending notice)');
+        expect(sent.stdout).toMatch(/Git\s+: nothing staged, committed, tagged, or pushed/);
+        expect(gitState()).toBe(before);
+    });
     it('U-10: notice status OUTDATED does not remove proof; file tamper blocks ack', async () => { const { root, env, version } = fixture(); await approve(root, 'plan', version); exec(root, version); await stage(root, version); await commitRevision(root, version); expect(send(env, version).exitCode).toBe(0); const indexFile = path.join(root, 'Sigma/messages/index.json'); const index = fs.readJsonSync(indexFile); index.messages[0].status = 'OUTDATED'; fs.writeJsonSync(indexFile, index); await ack(root, version, 2); fs.appendFileSync(path.join(root, index.messages[0].file), 'tamper'); expect(() => assertPlanCertified(root, readActiveChain(root).data, version)).toThrow(); });
     it.each(['snapshot', 'ledger'])('U-10: missing/changed %s evidence blocks', async (kind) => { const { root, version } = fixture(); await approve(root, 'plan', version); const paths = revisionPaths(version); fs.appendFileSync(boundedPath(root, kind === 'snapshot' ? paths.snapshot : paths.ledger), 'tamper'); expect(() => assertPlanCertified(root, readActiveChain(root).data, version)).toThrow(); });
     it('U-12: INTENT recertification invalidates APPROVED, never demotes LOCKED history', async () => { const { root, version } = fixture(); await approve(root, 'plan', version); exec(root, version); await ack(root, version, 1); const c = readActiveChain(root).data; certifyIntentDoc(c, path.join(root, c.intent.file!)); writeChain(root, 'v1', c); expect(c.plan.versions[0].needs_intent_review).toBe(true); expect(approvalReview(root, 'exec', version).blockers.join(' ')).toContain('STALE_INTENT'); });

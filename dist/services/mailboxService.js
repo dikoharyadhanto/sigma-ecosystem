@@ -12,7 +12,7 @@ const projectConfig_1 = require("../engine/projectConfig");
 function readMailboxEntry(root, id, memo) {
     const index = (0, mailbox_1.readIndex)(root);
     (0, mailboxContext_1.assertMailboxMutable)(root, index);
-    const entry = index.messages.find(m => m.id === id);
+    const entry = index.messages.find(m => m.id === id && !(0, mailboxContext_1.isIsolatedLegacy)(m));
     if (!entry)
         throw new Error(`${memo ? 'Memo' : 'Message'} not found: ${id}`);
     if ((entry.type === 'MEMO') !== memo)

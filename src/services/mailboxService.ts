@@ -1,13 +1,13 @@
 import fs from 'fs-extra';
 import { MessageEntry, readIndex, writeIndex, selectSurplusRead, updateMessageStatus } from '../engine/mailbox';
-import { assertMailboxMutable, assertMailboxPath, MailboxScope, matchesMailboxScope, retentionScope, entryContext } from '../engine/mailboxContext';
+import { assertMailboxMutable, assertMailboxPath, MailboxScope, matchesMailboxScope, retentionScope, entryContext, isIsolatedLegacy } from '../engine/mailboxContext';
 import { readProjectConfig, resolveAutoOutdateKeep } from '../engine/projectConfig';
 import { MessagingRole } from '../config';
 
 export function readMailboxEntry(root: string, id: string, memo: boolean): { entry: MessageEntry; content: string; outdated: number } {
   const index = readIndex(root);
   assertMailboxMutable(root, index);
-  const entry = index.messages.find(m => m.id === id);
+  const entry = index.messages.find(m => m.id === id && !isIsolatedLegacy(m));
   if (!entry) throw new Error(`${memo ? 'Memo' : 'Message'} not found: ${id}`);
   if ((entry.type === 'MEMO') !== memo) throw new Error(`${id} is not a ${memo ? 'memo' : 'cross-role message'}. Use: sigma ${memo ? 'inbox' : 'memo'} read ${id}`);
   const content = fs.readFileSync(assertMailboxPath(root, entry.file, true), 'utf8');

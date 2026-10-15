@@ -5,8 +5,9 @@ import os from 'os';
 import { setupTestEnv, runCli, makeProgress, stubProjectRootAnchor, TestEnv } from './helpers';
 
 // Coverage for Implementation/planned_sigma_evaluation_2026_07_15/PLAN-EVAL-01:
-// Sigma/logs/operations.jsonl must record every CLI invocation at the local
-// project level (success and failure alike), and must be regenerated
+// Sigma/logs/operations.jsonl records mutating/governance-significant CLI
+// invocations at the local project level (success and failure alike), while
+// registry-classified read-only commands remain observational. The log is regenerated
 // (with .sigma-identity.json's logs_created_at updated) whenever it is
 // missing or corrupt.
 
@@ -54,16 +55,19 @@ describe('sigma operation history log', () => {
     expect(entries[0].exit_code).toBe(1);
   });
 
-  it('records nested subcommands with their full command path', () => {
+  it('does not record registry-classified read-only subcommands', () => {
     env = setupTestEnv();
     stubProjectRootAnchor(env);
     fs.writeJsonSync(env.progressPath, makeProgress());
 
+    // The log may not exist yet; observation must neither create nor extend it.
+    const logPath = path.join(env.sigmaDir, 'logs', 'operations.jsonl');
+    const snapshot = () => (fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : null);
+    const before = snapshot();
+
     const result = runCli('intent status', env.projectDir, env.homeDir);
     expect(result.exitCode).toBe(0);
-
-    const entries = readEntries(env.sigmaDir);
-    expect(entries[0].operation).toBe('intent status');
+    expect(snapshot()).toBe(before);
   });
 
   it('regenerates a missing log and stamps a fresh logs_created_at, preserving it across valid calls', () => {

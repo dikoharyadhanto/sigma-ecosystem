@@ -49,11 +49,14 @@ describe('mailbox — Windows backslash path normalization on read', () => {
 
     // Legacy mutations require migration; migration itself must resolve Windows paths.
     expect(runCli('doctor --migrate-mailbox', env.projectDir, env.homeDir).exitCode).toBe(0);
+    // Migration resolved the Windows path and moved the file into the isolated area intact...
+    const migrated = path.join(env.sigmaDir, 'messages', 'DEV', 'LEGACY', '20260720-043455837-KC06-NOTE-FMN-to-DEV.md');
+    expect(fs.existsSync(migrated)).toBe(true);
+    expect(fs.readFileSync(migrated, 'utf8')).toMatch(/hi/);
+    // ...and v2 no longer reads it: old mail is opened directly.
     const result = runCli('inbox read MSG-20260720-043455-KC06-FMN-DEV', env.projectDir, env.homeDir);
-
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).not.toMatch(/missing on disk|ENOENT/i);
-    expect(result.stdout).toMatch(/hi/);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stdout).not.toMatch(/hi/);
   });
 
   it('sigma inbox check passes for a backslash entry whose forward-slash file exists (no missing + no orphan)', () => {

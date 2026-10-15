@@ -27,7 +27,7 @@ import {
   MessageEntry,
 } from '../engine/mailbox';
 import { findProjectRoot, toPosix } from '../utils/fs';
-import { assertMailboxMutable, resolveMailboxReference, entryContext, assertMailboxPath } from '../engine/mailboxContext';
+import { assertMailboxMutable, resolveMailboxReference, entryContext, assertMailboxPath, isIsolatedLegacy } from '../engine/mailboxContext';
 import { withMailboxLock } from '../engine/mailboxMigration';
 import { assertMailboxLease } from '../engine/mailboxLock';
 
@@ -106,7 +106,7 @@ function runSend(opts: {
   // Resolve identity and validate reply before any file or attachment write.
   const existingIndex = readIndex(projectRoot);
   assertMailboxMutable(projectRoot, existingIndex);
-  const parent = opts.replyTo ? existingIndex.messages.find(m => m.id === opts.replyTo) : undefined;
+  const parent = opts.replyTo ? existingIndex.messages.find(m => m.id === opts.replyTo && !isIsolatedLegacy(m)) : undefined;
   if (opts.replyTo && !parent) throw new Error(`Reply parent not found: ${opts.replyTo}`);
   if (parent && parent.type === 'MEMO') throw new Error('Cannot reply to a self-addressed MEMO.');
   if (parent && !opts.relatedArtifact) relatedArtifact = parent.related_artifact ?? 'GENERAL';
@@ -114,7 +114,7 @@ function runSend(opts: {
   if (parent && context.intent_version && resolveMailboxReference(projectRoot, `INTENT-${context.intent_version}`).intent_version !== context.intent_version) throw new Error('Reply INTENT identity mismatch.');
   if (parent) {
     const parentContext = entryContext(parent);
-    if (parentContext.context === 'LEGACY' || parentContext.intent_version !== context.intent_version || (parentContext.context === 'GENERAL') !== (context.context === 'GENERAL')) throw new Error('Reply context mismatch; activate the parent INTENT or send a new message with an ID pointer.');
+    if (parentContext.intent_version !== context.intent_version || (parentContext.context === 'GENERAL') !== (context.context === 'GENERAL')) throw new Error('Reply context mismatch; activate the parent INTENT or send a new message with an ID pointer.');
   }
   if ('warning' in context && context.warning) console.warn(context.warning);
   const unread = getUnreadForRole(existingIndex, fromRole, { excludeMemo: true, scope: { intent: context.intent_version, includeGeneral: true } });
@@ -134,7 +134,7 @@ function runSend(opts: {
   if (typed) {
     const {data: chain} = readActiveChain(projectRoot);
     const match = /^(?:FMN-)?PLAN-(v\d+\.[1-9]\d*)$/.exec(relatedArtifact);
-    if (!match || context.intent_version !== chain.intent.version || context.context !== match[1]) throw new Error('Contract messages require an explicit registered PLAN in the active INTENT; GENERAL/LEGACY forbidden.');
+    if (!match || context.intent_version !== chain.intent.version || context.context !== match[1]) throw new Error('Contract messages require an explicit registered PLAN in the active INTENT; GENERAL forbidden.');
     const plan=chain.plan.versions.find(p=>p.version===match[1]);
     if(!plan || plan.state!=='APPROVED')throw new Error('Contract messages require an APPROVED PLAN.');
     if(msgType==='CONTRACT_CHANGE_REQUEST') {if(fromRole!=='DEV'||toRole!=='FMN')throw new Error('CONTRACT_CHANGE_REQUEST requires DEV -> FMN and a justified message body.');if(opts.revisionId)throw new Error('--revision-id is only for CONTRACT_CHANGE.');}
@@ -231,6 +231,12 @@ function runSend(opts: {
   if (attachmentPaths.length > 0) {
     console.log(`  Attach   : ${attachmentPaths[0]}`);
   }
+  // Creating a message is a local filesystem mutation only. Say what changed
+  // and what did not, so "message created" is never read as "published".
+  const written = ['message file', 'mailbox index', ...(attachmentPaths.length > 0 ? ['attachment'] : [])];
+  if (contractChange) written.push('PLAN revision ledger', 'chain progress (pending notice)');
+  console.log(`  Local    : wrote ${written.join(', ')}`);
+  console.log('  Git      : nothing staged, committed, tagged, or pushed; publishing is a separate Director action.');
   console.log('');
 }
 
