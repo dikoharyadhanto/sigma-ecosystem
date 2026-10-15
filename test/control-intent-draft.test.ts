@@ -523,6 +523,11 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
       'sigma_create_intent_draft',
       'sigma_create_plan_draft',
       'sigma_create_roadmap_draft',
+      'sigma_create_note',
+      'sigma_create_review',
+      'sigma_prepare_plan_revision',
+      'sigma_issue_plan_revision_ticket',
+      'sigma_commit_plan_revision',
       'sigma_inbox_archive',
       'sigma_prepare_close_lock',
       'sigma_prepare_close_new',
@@ -545,6 +550,7 @@ describe('sigma-control — transport-level (in-memory MCP client)', () => {
       'sigma_prepare_intent_supersede', 'sigma_commit_intent_supersede',
       'sigma_prepare_plan_supersede', 'sigma_commit_plan_supersede',
       'sigma_prepare_close_lock', 'sigma_commit_close_lock',
+      'sigma_commit_plan_revision',
     ]);
     for (const t of tools) {
       expect(t.annotations).toMatchObject({

@@ -4,6 +4,23 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+### MCP coverage, policy, and parity (2026-10-15)
+
+- `src/mcp/capabilityManifest.ts` is the single declaration of what each active operation is on the MCP surface: plane, `mcp_status`, tool names, mapping, rationale. `policy.ts` derives its tier, owner, and status tables from it; the hand-kept `IMPLEMENTED` set is gone. `sigma_get_effective_policy` rows now also carry `plane`, `mcp_tools`, and `registry_status`.
+- `test/mcp-capability-manifest.test.ts` compares the manifest with the registry and with the tools both servers really register. It found that the old table claimed `decisions_target` without a tool and reported 30 operations with real tools as deferred.
+- `notes_list`, `notes_new`, and `notes_update` are classified. Mailbox and memo operations stay deferred.
+- Seven query tools: `sigma_review_check`, `sigma_close_check`, `sigma_dev_status`, `sigma_notes_list`, `sigma_intent_baseline_check`, `sigma_intent_amendment_preview`, `sigma_plan_revise_check`. Each calls the engine function its CLI command uses, writes nothing, and masks host paths. `sigma_close_check` evaluates Gate 3 and the PRODUCT REVIEW; it is not `sigma_check_document(type=close)`.
+- New CLI operation `sigma plan revise ticket --v <version>` freezes the revision review into a Director approval ticket. `sigma plan revise check --prepare-ticket` remains as a deprecated alias with the same effect.
+- Control tool `sigma_create_note` (equivalent of `sigma notes new`): one step, no ticket, attributed to the server's bound role with no role argument, and it lists exactly the note, the registry, and the catalog as its transaction files. It takes the same project lock as the CLI. `notes update` stays CLI-only.
+- Control tool `sigma_create_review` (equivalent of `sigma review new`): ARC only, one step, one file, no chain state. It shares `resolveReviewNewTarget`/`createReviewDraft` with the CLI, records no verdict, and a second call is refused rather than overwriting a review people have edited.
+- Control tools `sigma_prepare_plan_revision`, `sigma_issue_plan_revision_ticket`, `sigma_commit_plan_revision` (FMN only), mirroring `sigma plan revise prepare|ticket|commit`. A ticket and an exact Director approval are required only for a loosening or the `director` checkpoint, as in the engine. Commit also takes `expected_candidate_sha256` so what was checked is what is certified. The candidate is still edited as a file and the CONTRACT_CHANGE notice stays a CLI/skill operation. `preparePlanRevision` now calls the new `assertCanPrepareRevision` so the tool can refuse before opening a transaction.
+- `Implementation/sigma-mcp/SIGMA-MCP-CAPABILITY-MATRIX.generated.md` is rendered from the manifest by `node scripts/generate-mcp-matrix.js` (`--check` reports a stale file). It states the registry baseline, how to start the control server, and the meaning of exact/functional/partial/none. `test/mcp-capability-matrix.test.ts` fails when it is stale.
+- `decisions_resolve` is classified `not_admissible`: resolving a Director decision through MCP would be self-approval.
+- `intent_activate` is classified `not_admissible` (tier W3), following the final Director decision of 2026-09-17: it writes an input of `state_revision` itself.
+- `README.md` lists 33 query tools and 39 control tools; it had said 39 control tools when the server registered 37.
+- The FMN and DEV rules and the ten FMN/DEV skill targets name `sigma plan revise ticket` for early Director approval instead of the `check --prepare-ticket` flag.
+- `sigma-test` check B4 now compares each row's declared tools with the introspected tool list instead of reporting "unverifiable".
+
 ### Closure redesign — INTENT as a mandate, PRODUCT REVIEW, no scoring (2026-10-15)
 
 - `INTENT` is a strategic mandate over one main objective. Template schema 6 (section IDs and order are unchanged, so the validator is unchanged): `Core Requirements` replaces the feature-style requirements (`Required Capability` and `Acceptance Standard`; Priority, User Story, and checkboxes are gone), `Evidence Required` replaces `Measurement Method`, Scope is the boundary of the mandate, Constraints keep only what survives a change of method, and domain-specific quality dimensions are allowed. `sigma intent clone` accepts schema 5 or 6 sources into the schema 6 template.

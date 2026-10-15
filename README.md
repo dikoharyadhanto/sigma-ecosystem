@@ -394,7 +394,7 @@ Sigma ships a read-only [MCP](https://modelcontextprotocol.io) server, `sigma-mc
 
 ### Tools
 
-The query server registers 26 tools:
+The query server registers 33 tools:
 
 | Tool | Returns |
 |:--- | :--- |
@@ -424,8 +424,15 @@ The query server registers 26 tools:
 | `sigma_get_config` | Project configuration |
 | `sigma_get_operation_log` | Bounded operation log entries |
 | `sigma_get_git_evidence` | Git status and change evidence |
+| `sigma_review_check` | PRODUCT REVIEW structure and verdict state; never creates the review |
+| `sigma_close_check` | Whether a CLOSE can be created (Gate 3 and PRODUCT REVIEW verdicts) before one exists; not a check of an existing CLOSE document |
+| `sigma_dev_status` | DEV workspace state: INACTIVE, ACTIVE, or ACTIVE_DEGRADED |
+| `sigma_notes_list` | Registered notes with the same warnings as `sigma notes list` |
+| `sigma_intent_baseline_check` | Whether the INTENT in Git is the latest certified content; reads Git, adopts nothing |
+| `sigma_intent_amendment_preview` | Review package for an amendment: baseline check, diff, hash to approve, impact |
+| `sigma_plan_revise_check` | Evaluation of a staged PLAN revision; issues no ticket (that is `sigma plan revise ticket`) |
 
-The control server registers 39 tools, including the clone, audit, and substantive-question tools. Governance transitions keep prepare and commit approval flows, and retired lock tool names remain as tombstones.
+The control server registers 42 tools, including the clone, audit, and substantive-question tools, `sigma_create_note` (the equivalent of `sigma notes new`: one step, attributed to the bound role, no Director approval needed for a note), `sigma_create_review` (the equivalent of `sigma review new`: ARC only, one file, records no verdict), and the FMN-only PLAN revision trio `sigma_prepare_plan_revision`, `sigma_issue_plan_revision_ticket`, and `sigma_commit_plan_revision`. The trio mirrors `sigma plan revise prepare|ticket|commit`: a Director approval is required only for a loosening or the `director` checkpoint, approval itself stays on the trusted local CLI, and the staged candidate is edited as a file. Governance transitions keep prepare and commit approval flows, and retired lock tool names remain as tombstones.
 
 Sending messages and reading inbox or memo content stay CLI and skill operations. The MCP tools for mailbox integrity and inbox archiving do not expose message content.
 
@@ -551,7 +558,7 @@ Most users do not need these commands. AI roles run operational commands after r
 | plan | `sigma plan clone` | Preview a new `PLAN` draft from a registered source; `--confirm` with the preview token creates it |
 | plan | `sigma plan approve [--v <ver>] [--director-confirm]` | Preview or approve an exact `PLAN` and its dependencies; confirmation needs Director authorization |
 | plan | `sigma plan check [--v <ver>] [--sources]` | Validate `PLAN` structure and report approval readiness (read-only); `--v` is required when ambiguous |
-| plan | `sigma plan revise prepare\|check\|commit` | FMN stages, checks, and commits a controlled revision of an APPROVED `PLAN` |
+| plan | `sigma plan revise prepare\|check\|ticket\|commit` | FMN stages, checks, and commits a controlled revision of an APPROVED `PLAN`; `ticket --v <ver>` freezes the review into a Director approval ticket (`check --prepare-ticket` is a deprecated alias) |
 | plan | `sigma plan status` | Show DRAFT, APPROVED, and LOCKED plans, exec pairing, pending plans, Gate 2 |
 | plan | `sigma plan list` | List plan versions |
 | plan | `sigma plan update --v <ver>` | Update stage title or focus for an existing plan (`--title`, `--focus`) |

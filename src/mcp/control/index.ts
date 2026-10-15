@@ -52,6 +52,9 @@ import { registerPrepareCloseLockTool } from './tools/prepareCloseLock';
 import { registerCommitCloseLockTool } from './tools/commitCloseLock';
 import { registerPreparePlanPromoteTool } from './tools/preparePlanPromote';
 import { registerCommitPlanPromoteTool } from './tools/commitPlanPromote';
+import { registerCreateNoteTool } from './tools/createNote';
+import { registerCreateReviewTool } from './tools/createReview';
+import { registerPlanRevisionTools } from './tools/planRevision';
 
 export function buildControlServer(): McpServer {
   const server = new McpServer({ name: 'sigma-control-server', version: SIGMA_VERSION });
@@ -78,6 +81,15 @@ export function buildControlServer(): McpServer {
   registerCreateRoadmapDraftTool(server);
   registerRenderRoadmapTool(server);
   registerUpdateReferenceTool(server);
+  // WP-MCP-04 (Phase 3) — sigma_create_note. Single step, bound-role
+  // attribution; see createNote.ts's header.
+  registerCreateNoteTool(server);
+  // WP-MCP-04 (Phase 3) — sigma_create_review. ARC only, one file, no chain
+  // state; see createReview.ts's header.
+  registerCreateReviewTool(server);
+  // WP-MCP-04 (Phase 3) — controlled PLAN revision: prepare / ticket / commit.
+  // FMN only; approval stays on the trusted local CLI. See planRevision.ts.
+  registerPlanRevisionTools(server);
   // Stage E W1 — inbox_archive. New ownership check the CLI doesn't have;
   // reconciled with the CLI/MCP shared-service invariant via a shared
   // service with an actor-context parameter — see

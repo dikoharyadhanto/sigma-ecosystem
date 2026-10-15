@@ -18,19 +18,18 @@ const registryIds = registry.operations.map(o => o.operation_id);
 
 const TOMBSTONES = ['intent_lock', 'plan_lock', 'exec_lock'];
 
-// Registry operations that have no tier yet. Unclassified means `forbidden`
-// (policy.ts: absent from the table is forbidden), so this is safe but
-// undecided. Assigning tiers is a policy decision that belongs to
-// Implementation/PLAN-IMPL-SIGMA-MCP-COVERAGE-POLICY-PARITY-20261015.md, not to
-// the diagnostic work. The set is asserted exactly: it must shrink when that
-// plan lands, and it must not grow silently.
-const KNOWN_UNCLASSIFIED = ['notes_list', 'notes_new', 'notes_update'];
+// Registry operations that have no tier. Unclassified means `forbidden`
+// (policy.ts: absent from the manifest is forbidden), so a gap is safe but
+// undecided. The gap closed with PLAN-IMPL-SIGMA-MCP-COVERAGE-POLICY-PARITY
+// (notes_* now classified in src/mcp/capabilityManifest.ts) and must stay
+// empty: a new registry operation needs a manifest record in the same change.
+const KNOWN_UNCLASSIFIED: string[] = [];
 
 describe('operation registry ↔ MCP policy parity', () => {
   it('classifies every active operation, except the explicitly known gap', () => {
     const unclassified = registryIds.filter(id => !(id in OPERATION_TIERS)).sort();
     expect(unclassified,
-      'registry operations without a tier. Classify them in src/mcp/policy.ts, or (if the decision is deferred) add them to KNOWN_UNCLASSIFIED with a reason')
+      'registry operations without a tier. Add a record to src/mcp/capabilityManifest.ts')
       .toEqual(KNOWN_UNCLASSIFIED);
   });
 

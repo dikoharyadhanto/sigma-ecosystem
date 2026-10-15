@@ -4,13 +4,11 @@ import {
   ChainState,
   readActiveChain,
   readChain,
-  assertChainCanMutate,
   normalizeVersionArg,
 } from '../engine/chain';
-import { findProjectRoot, toPosix } from '../utils/fs';
+import { findProjectRoot } from '../utils/fs';
 import { printSigmaDocReport, validateSigmaDocFile } from '../utils/docCheck';
-import { copyTemplateToArtifact } from '../utils/artifacts';
-import { artifactFileName, existingArtifactNames } from '../engine/artifactNames';
+import { createReviewDraft } from '../services/reviewNewService';
 import { findProductReviewRel } from '../services/closeNewService';
 
 // PRODUCT REVIEW is recognized by its file: Sigma/review/PRODUCT-REVIEW-vN.md,
@@ -32,23 +30,11 @@ export function reviewCommand(): Command {
     .action(() => {
       try {
         const projectRoot = findProjectRoot();
-        const { data: chain } = readActiveChain(projectRoot);
-        assertChainCanMutate(chain);
-        if (chain.intent.state !== 'RATIFIED') {
-          throw new Error('PRODUCT REVIEW requires a RATIFIED INTENT. Run: sigma intent ratify');
-        }
-        const version = chain.chain_version;
-        const [existing] = existingArtifactNames(projectRoot, 'review', 'review', version);
-        if (existing) {
-          throw new Error(`PRODUCT REVIEW already exists: Sigma/review/${existing}. Only one is kept per INTENT.`);
-        }
-        const relPath = toPosix(path.join('Sigma', 'review', artifactFileName('review', version)));
-        copyTemplateToArtifact('PRODUCT-REVIEW-TEMPLATE.md', path.join(projectRoot, relPath), projectRoot);
+        const { relPath, docReport: report } = createReviewDraft(projectRoot);
 
         console.log(`Created: ${relPath}`);
         console.log('Open it with FMN\'s Review Request (from the `sigma send` message), then record ARC, AUD, and Director verdicts.');
         console.log('Running automatic validation...\n');
-        const report = validateSigmaDocFile(path.join(projectRoot, relPath), 'review');
         printSigmaDocReport(report, projectRoot);
         if (!report.ok) process.exit(1);
       } catch (e) {

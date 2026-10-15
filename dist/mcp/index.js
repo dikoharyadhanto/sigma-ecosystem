@@ -57,6 +57,13 @@ const checkMailboxIntegrity_1 = require("./tools/checkMailboxIntegrity");
 const getConfig_1 = require("./tools/getConfig");
 const getOperationLog_1 = require("./tools/getOperationLog");
 const getGitEvidence_1 = require("./tools/getGitEvidence");
+const reviewCheck_1 = require("./tools/reviewCheck");
+const closeCheck_1 = require("./tools/closeCheck");
+const devStatus_1 = require("./tools/devStatus");
+const notesList_1 = require("./tools/notesList");
+const intentBaselineCheck_1 = require("./tools/intentBaselineCheck");
+const intentAmendmentPreview_1 = require("./tools/intentAmendmentPreview");
+const planReviseCheck_1 = require("./tools/planReviseCheck");
 const shared_1 = require("./shared");
 const binding_1 = require("./binding");
 // Exported so tests can boot the server in-process (PLAN-IMPL-01 §4).
@@ -103,6 +110,17 @@ function buildServer() {
     (0, getConfig_1.registerGetConfigTool)(server);
     (0, getOperationLog_1.registerGetOperationLogTool)(server);
     (0, getGitEvidence_1.registerGetGitEvidenceTool)(server);
+    // PLAN-IMPL-SIGMA-MCP-COVERAGE-POLICY-PARITY WP-MCP-03 — priority query
+    // tools. Each is a pure read of the same engine function its CLI command
+    // uses; none issues a ticket or writes state. close_check is NOT
+    // sigma_check_document(type=close) — see closeCheck.ts.
+    (0, reviewCheck_1.registerReviewCheckTool)(server);
+    (0, closeCheck_1.registerCloseCheckTool)(server);
+    (0, devStatus_1.registerDevStatusTool)(server);
+    (0, notesList_1.registerNotesListTool)(server);
+    (0, intentBaselineCheck_1.registerIntentBaselineCheckTool)(server);
+    (0, intentAmendmentPreview_1.registerIntentAmendmentPreviewTool)(server);
+    (0, planReviseCheck_1.registerPlanReviseCheckTool)(server);
     return server;
 }
 /**

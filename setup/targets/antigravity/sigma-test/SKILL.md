@@ -152,10 +152,15 @@ Requires an active Sigma project and the query MCP server. Otherwise every B che
 
 Call `sigma_get_effective_policy` (no role filter) and evaluate its rows. Do not call any other operation.
 
-- `B1.classified` — every row has a non-null `tier` and `registry_level`. FAIL listing each `operation_id` with `tier: null` (remediation: classify it in the policy tier table, or record the deferral).
-- `B2.tombstones` — `intent_lock`, `plan_lock`, `exec_lock` are present with tier `NA` and `mcp_status: not_admissible`, and are not counted as active operations. FAIL otherwise.
+- `B1.classified` — every row has a non-null `tier` and `registry_level`. FAIL listing each `operation_id` with `tier: null` (remediation: add a record for it to the capability manifest, `src/mcp/capabilityManifest.ts`).
+- `B2.tombstones` — `intent_lock`, `plan_lock`, `exec_lock` are present with tier `NA`, `mcp_status: not_admissible` and `registry_status: tombstone`, and are not counted as active operations. FAIL otherwise.
 - `B3.count` — the row count equals the registry operation count in the project's `Sigma/SIGMA-OPERATION-REGISTRY.json`. FAIL on mismatch, listing the missing or extra IDs.
-- `B4.mcp_status` — `mcp_status: implemented` is a *claim* in a hand-maintained table, not proof that a tool exists. Until a capability manifest is available to compare against the introspected tool list from A7, report `WARN: unverifiable — mcp_status is not checked against actual tools`. Never PASS this check from `mcp_status` alone.
+- `B4.mcp_status` — each row carries `plane`, `mcp_status` and `mcp_tools`, all declared by the capability manifest. `mcp_status: implemented` is a *claim*, not proof that a tool exists, so compare it with the tool list introspected in A7:
+  - every row with `mcp_status: implemented` and `plane: query` must have each name in `mcp_tools` present in the A7 list. FAIL listing each `operation_id` and the missing tool name.
+  - rows with `plane: control` are checked the same way only when the control server's tool list is available. Otherwise they are not verifiable here: report them as `N/A: control server not connected`, never as PASS.
+  - PASS only when every query row verified and none failed. If control rows were unverifiable, say how many in the evidence column; this is informational, not a WARN.
+  - `N/A: prerequisite absent` when A7 produced no tool list.
+  - Never PASS this check from `mcp_status` alone. The reverse direction (a registered tool that no row accounts for) is not visible in this payload; it is covered by `test/mcp-capability-manifest.test.ts`.
 
 ### Layer C — Representative smoke
 
@@ -181,8 +186,9 @@ Not run by this skill. It lives in the Sigma source repository as fixture tests:
 
 - `test/read-only-conformance.test.ts` — runs every registry `read_only` operation and fails on any file, global, or Git mutation
 - `test/operation-parity.test.ts` — registry ↔ policy tier parity and tombstone handling
+- `test/mcp-capability-manifest.test.ts` — capability manifest ↔ registry ↔ the tools both MCP servers actually register
 
-Report a single informational row: `D — conformance: N/A (fixture/CI only)`, and the command a maintainer would run: `npx vitest run test/read-only-conformance.test.ts test/operation-parity.test.ts`.
+Report a single informational row: `D — conformance: N/A (fixture/CI only)`, and the command a maintainer would run: `npx vitest run test/read-only-conformance.test.ts test/operation-parity.test.ts test/mcp-capability-manifest.test.ts`.
 
 ## Output Format
 
@@ -210,7 +216,7 @@ Project: {active Sigma project / not a Sigma project}
 | B | B1.classified | every operation has a tier | PASS/FAIL/N/A | {unclassified IDs} |
 | B | B2.tombstones | tombstones inadmissible, not active | PASS/FAIL/N/A | |
 | B | B3.count | policy rows = registry operations | PASS/FAIL/N/A | |
-| B | B4.mcp_status | `mcp_status` verified against tools | WARN/N/A | unverifiable until manifest exists |
+| B | B4.mcp_status | `mcp_status` verified against tools | PASS/FAIL/N/A | {verified query rows; unverifiable control rows} |
 | C | C.state … C.git | one smoke call per family | PASS/N/A/FAIL | {prerequisite named if N/A} |
 | D | D.conformance | exhaustive read-only conformance | N/A | fixture/CI only |
 

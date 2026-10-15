@@ -56,6 +56,9 @@ const prepareCloseLock_1 = require("./tools/prepareCloseLock");
 const commitCloseLock_1 = require("./tools/commitCloseLock");
 const preparePlanPromote_1 = require("./tools/preparePlanPromote");
 const commitPlanPromote_1 = require("./tools/commitPlanPromote");
+const createNote_1 = require("./tools/createNote");
+const createReview_1 = require("./tools/createReview");
+const planRevision_1 = require("./tools/planRevision");
 function buildControlServer() {
     const server = new mcp_js_1.McpServer({ name: 'sigma-control-server', version: config_1.SIGMA_VERSION });
     // Stage C — W1 bounded command pilot (create + update DRAFT).
@@ -81,6 +84,15 @@ function buildControlServer() {
     (0, createRoadmapDraft_1.registerCreateRoadmapDraftTool)(server);
     (0, renderRoadmap_1.registerRenderRoadmapTool)(server);
     (0, updateReference_1.registerUpdateReferenceTool)(server);
+    // WP-MCP-04 (Phase 3) — sigma_create_note. Single step, bound-role
+    // attribution; see createNote.ts's header.
+    (0, createNote_1.registerCreateNoteTool)(server);
+    // WP-MCP-04 (Phase 3) — sigma_create_review. ARC only, one file, no chain
+    // state; see createReview.ts's header.
+    (0, createReview_1.registerCreateReviewTool)(server);
+    // WP-MCP-04 (Phase 3) — controlled PLAN revision: prepare / ticket / commit.
+    // FMN only; approval stays on the trusted local CLI. See planRevision.ts.
+    (0, planRevision_1.registerPlanRevisionTools)(server);
     // Stage E W1 — inbox_archive. New ownership check the CLI doesn't have;
     // reconciled with the CLI/MCP shared-service invariant via a shared
     // service with an actor-context parameter — see

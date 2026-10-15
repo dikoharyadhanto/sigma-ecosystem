@@ -329,12 +329,49 @@ export function normalizeRole(role: string | undefined): string | undefined {
   return r;
 }
 
-export function createNote(root: string, rawTitle: string, opts: { role?: string; now?: Date } = {}): NewNoteResult {
+/** Title and slug of a new note, or the NotesError the CLI reports. */
+function nameNote(rawTitle: string): { title: string; slug: string } {
   const title = validateTitle(rawTitle);
   const slug = slugify(title);
   if (!slug) {
     throw new NotesError('INVALID_TITLE', `The title "${title}" has no letters or digits to build a file name from. Use a title with at least one letter or digit.`);
   }
+  return { title, slug };
+}
+
+/** File name a new note takes: timestamped slug, suffixed when the name is already taken. */
+function noteFileName(root: string, registry: NotesRegistry, slug: string, now: Date): string {
+  const p = notesPaths(root);
+  const taken = new Set(registry.notes.map(e => e.file.toLowerCase()));
+  const baseName = `NOTE-${noteStamp(now)}-${slug}`;
+  let fileName = `${baseName}.md`;
+  for (let n = 2; taken.has(fileName.toLowerCase()) || fs.existsSync(path.join(p.registeredDir, fileName)); n += 1) {
+    fileName = `${baseName}-${n}.md`;
+  }
+  return fileName;
+}
+
+/**
+ * Where `createNote` would put a note, without writing. Throws the same
+ * NotesError (bad title, unreadable or missing registry) createNote would.
+ * Callers that must list the files a write may touch before it starts (the
+ * MCP control transaction) use this with the same `now` they pass to
+ * createNote; both run under one lock, so the name cannot change in between.
+ */
+export function planNote(root: string, rawTitle: string, now: Date): { relPath: string; registryRel: string; catalogRel: string } {
+  const { slug } = nameNote(rawTitle);
+  const { registry } = registryForWrite(root);
+  const p = notesPaths(root);
+  const filePath = path.join(p.registeredDir, noteFileName(root, registry, slug, now));
+  return {
+    relPath: toPosix(path.relative(root, filePath)),
+    registryRel: toPosix(path.relative(root, p.registryFile)),
+    catalogRel: toPosix(path.relative(root, p.catalogFile)),
+  };
+}
+
+export function createNote(root: string, rawTitle: string, opts: { role?: string; now?: Date } = {}): NewNoteResult {
+  const { title, slug } = nameNote(rawTitle);
   const role = normalizeRole(opts.role);
   const now = opts.now ?? new Date();
 
@@ -342,12 +379,7 @@ export function createNote(root: string, rawTitle: string, opts: { role?: string
   ensureNotesDirs(root);
   const p = notesPaths(root);
 
-  const taken = new Set(registry.notes.map(e => e.file.toLowerCase()));
-  const baseName = `NOTE-${noteStamp(now)}-${slug}`;
-  let fileName = `${baseName}.md`;
-  for (let n = 2; taken.has(fileName.toLowerCase()) || fs.existsSync(path.join(p.registeredDir, fileName)); n += 1) {
-    fileName = `${baseName}-${n}.md`;
-  }
+  const fileName = noteFileName(root, registry, slug, now);
 
   const filePath = path.join(p.registeredDir, fileName);
   fs.writeFileSync(filePath, `# ${title}\n\nDibuat: ${displayDateTime(now)}\n`, { encoding: 'utf8', flag: 'wx' });

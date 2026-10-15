@@ -304,6 +304,14 @@ describe('sigma-mcp integration — buildServer over in-memory transport', () =>
         'sigma_preview_clone',
         'sigma_get_audit_pack',
         'sigma_list_decisions',
+        // PLAN-IMPL-SIGMA-MCP-COVERAGE-POLICY-PARITY WP-MCP-03 (Phase 2).
+        'sigma_review_check',
+        'sigma_close_check',
+        'sigma_dev_status',
+        'sigma_notes_list',
+        'sigma_intent_baseline_check',
+        'sigma_intent_amendment_preview',
+        'sigma_plan_revise_check',
       ].sort(),
     );
 

@@ -53,6 +53,13 @@ import { registerCheckMailboxIntegrityTool } from './tools/checkMailboxIntegrity
 import { registerGetConfigTool } from './tools/getConfig';
 import { registerGetOperationLogTool } from './tools/getOperationLog';
 import { registerGetGitEvidenceTool } from './tools/getGitEvidence';
+import { registerReviewCheckTool } from './tools/reviewCheck';
+import { registerCloseCheckTool } from './tools/closeCheck';
+import { registerDevStatusTool } from './tools/devStatus';
+import { registerNotesListTool } from './tools/notesList';
+import { registerIntentBaselineCheckTool } from './tools/intentBaselineCheck';
+import { registerIntentAmendmentPreviewTool } from './tools/intentAmendmentPreview';
+import { registerPlanReviseCheckTool } from './tools/planReviseCheck';
 import { addClientRoot, setBinding, getBinding } from './shared';
 import { parseBindingArgs, resolveBinding, BindingError } from './binding';
 
@@ -100,6 +107,17 @@ export function buildServer(): McpServer {
   registerGetConfigTool(server);
   registerGetOperationLogTool(server);
   registerGetGitEvidenceTool(server);
+  // PLAN-IMPL-SIGMA-MCP-COVERAGE-POLICY-PARITY WP-MCP-03 — priority query
+  // tools. Each is a pure read of the same engine function its CLI command
+  // uses; none issues a ticket or writes state. close_check is NOT
+  // sigma_check_document(type=close) — see closeCheck.ts.
+  registerReviewCheckTool(server);
+  registerCloseCheckTool(server);
+  registerDevStatusTool(server);
+  registerNotesListTool(server);
+  registerIntentBaselineCheckTool(server);
+  registerIntentAmendmentPreviewTool(server);
+  registerPlanReviseCheckTool(server);
   return server;
 }
 

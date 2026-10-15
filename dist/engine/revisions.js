@@ -20,6 +20,7 @@ exports.roadmapTransactionFiles = roadmapTransactionFiles;
 exports.renderGovernanceRoadmap = renderGovernanceRoadmap;
 exports.certifyPlanBaseline = certifyPlanBaseline;
 exports.revisionTransactionFiles = revisionTransactionFiles;
+exports.assertCanPrepareRevision = assertCanPrepareRevision;
 exports.preparePlanRevision = preparePlanRevision;
 exports.checkPlanRevision = checkPlanRevision;
 exports.contractDiff = contractDiff;
@@ -251,7 +252,12 @@ function revisionTransactionFiles(root, version) {
     const paths = revisionPaths(version, (plan.revision ?? 0) + 1);
     return [(0, chain_1.chainFilePath)(root, chainVersion), artifactFile(root, chain, 'plan', version), boundedPath(root, paths.snapshot), boundedPath(root, paths.ledger), ...roadmapTransactionFiles(root, chain)];
 }
-function preparePlanRevision(root, version, declaration, replaceStaging = false) {
+/**
+ * Every precondition of `preparePlanRevision`, without writing. The MCP control
+ * tool calls this before it opens a transaction so a refusal leaves no journal;
+ * `preparePlanRevision` calls it again, so the two cannot disagree.
+ */
+function assertCanPrepareRevision(root, version, declaration, replaceStaging = false) {
     validateDeclaration(declaration);
     const { data: chain } = (0, chain_1.readActiveChain)(root);
     const plan = planEntry(chain, version);
@@ -260,11 +266,15 @@ function preparePlanRevision(root, version, declaration, replaceStaging = false)
     assertPlanCertified(root, chain, version, false);
     currentIntent(root, chain);
     const paths = revisionPaths(version);
-    const stage = { format: 1, intent: chain.intent.version, plan: version, base_revision: plan.revision, base_contract_sha256: plan.contract_sha256, base_ledger_sha256: plan.revision_ledger_sha256, declaration };
     const stageFile = boundedPath(root, paths.staging);
     const previous = fs_extra_1.default.existsSync(stageFile) ? JSON.parse(fs_extra_1.default.readFileSync(stageFile, 'utf8')) : null;
     if (previous && previous.base_revision >= plan.revision && !replaceStaging)
         throw new Error('An open staging candidate already exists; finish or explicitly remove it before preparing another.');
+    return { chain, plan, paths, previous };
+}
+function preparePlanRevision(root, version, declaration, replaceStaging = false) {
+    const { chain, plan, paths, previous } = assertCanPrepareRevision(root, version, declaration, replaceStaging);
+    const stage = { format: 1, intent: chain.intent.version, plan: version, base_revision: plan.revision, base_contract_sha256: plan.contract_sha256, base_ledger_sha256: plan.revision_ledger_sha256, declaration };
     (0, controlStore_1.journaledWrite)(root, boundedPath(root, paths.candidate), fs_extra_1.default.readFileSync(artifactFile(root, chain, 'plan', version)), !previous);
     (0, controlStore_1.journaledWrite)(root, boundedPath(root, paths.staging), JSON.stringify(stage, null, 2) + '\n', !previous);
     return { candidate: paths.candidate, metadata: paths.staging };

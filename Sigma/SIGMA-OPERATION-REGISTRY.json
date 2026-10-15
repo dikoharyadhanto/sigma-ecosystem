@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-10-14T18:05:35.000Z",
   "description": "Sigma Operation Registry \u2014 all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 89,
+  "total_operations": 90,
   "domains": [
     "audit",
     "close",
@@ -2480,7 +2480,7 @@
       "action": "revise check",
       "level": "semantic",
       "role": "any",
-      "description": "Read-only before/after review; --prepare-ticket freezes early Director approval candidate.",
+      "description": "Read-only before/after review of a staged PLAN revision. `--prepare-ticket` is a deprecated alias of `plan revise ticket` and also writes a ticket.",
       "inputs": [],
       "outputs": [
         {
@@ -2513,6 +2513,34 @@
       "gating": {
         "pre_condition": "paired_approval and exact current APPROVED PLAN identity/evidence",
         "post_condition": "candidate/evidence updated without final pair lock"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "plan_revise_ticket",
+      "domain": "plan",
+      "action": "revise ticket",
+      "level": "semantic",
+      "role": "any",
+      "description": "Freeze the current revision review of an APPROVED PLAN into a single-use Director approval ticket. Writes one ticket file; changes no PLAN, ledger, or chain state.",
+      "inputs": [
+        {
+          "name": "--v",
+          "type": "string",
+          "required": true,
+          "description": "PLAN target version"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "Operation ticket for Director approval of the staged revision"
+        }
+      ],
+      "constraints": [],
+      "gating": {
+        "pre_condition": "paired_approval and exact current APPROVED PLAN identity/evidence; staged candidate passes `plan revise check`",
+        "post_condition": "ticket written; candidate and canonical PLAN unchanged"
       },
       "error_messages": {}
     },

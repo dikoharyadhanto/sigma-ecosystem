@@ -269,10 +269,12 @@ export interface RevisionStage {
     base_ledger_sha256: string;
     declaration: ChangeDeclaration;
 }
-export function preparePlanRevision(root: string, version: string, declaration: ChangeDeclaration, replaceStaging = false): {
-    candidate: string;
-    metadata: string;
-} {
+/**
+ * Every precondition of `preparePlanRevision`, without writing. The MCP control
+ * tool calls this before it opens a transaction so a refusal leaves no journal;
+ * `preparePlanRevision` calls it again, so the two cannot disagree.
+ */
+export function assertCanPrepareRevision(root: string, version: string, declaration: ChangeDeclaration, replaceStaging = false) {
     validateDeclaration(declaration);
     const { data: chain } = readActiveChain(root);
     const plan = planEntry(chain, version);
@@ -281,11 +283,18 @@ export function preparePlanRevision(root: string, version: string, declaration: 
     assertPlanCertified(root, chain, version, false);
     currentIntent(root, chain);
     const paths = revisionPaths(version);
-    const stage: RevisionStage = { format: 1, intent: chain.intent.version, plan: version, base_revision: plan.revision!, base_contract_sha256: plan.contract_sha256!, base_ledger_sha256: plan.revision_ledger_sha256!, declaration };
     const stageFile = boundedPath(root, paths.staging);
     const previous = fs.existsSync(stageFile) ? JSON.parse(fs.readFileSync(stageFile, 'utf8')) as RevisionStage : null;
     if (previous && previous.base_revision >= plan.revision! && !replaceStaging)
         throw new Error('An open staging candidate already exists; finish or explicitly remove it before preparing another.');
+    return { chain, plan, paths, previous };
+}
+export function preparePlanRevision(root: string, version: string, declaration: ChangeDeclaration, replaceStaging = false): {
+    candidate: string;
+    metadata: string;
+} {
+    const { chain, plan, paths, previous } = assertCanPrepareRevision(root, version, declaration, replaceStaging);
+    const stage: RevisionStage = { format: 1, intent: chain.intent.version, plan: version, base_revision: plan.revision!, base_contract_sha256: plan.contract_sha256!, base_ledger_sha256: plan.revision_ledger_sha256!, declaration };
     journaledWrite(root, boundedPath(root, paths.candidate), fs.readFileSync(artifactFile(root, chain, 'plan', version)), !previous);
     journaledWrite(root, boundedPath(root, paths.staging), JSON.stringify(stage, null, 2) + '\n', !previous);
     return { candidate: paths.candidate, metadata: paths.staging };

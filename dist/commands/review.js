@@ -9,8 +9,7 @@ const path_1 = __importDefault(require("path"));
 const chain_1 = require("../engine/chain");
 const fs_1 = require("../utils/fs");
 const docCheck_1 = require("../utils/docCheck");
-const artifacts_1 = require("../utils/artifacts");
-const artifactNames_1 = require("../engine/artifactNames");
+const reviewNewService_1 = require("../services/reviewNewService");
 const closeNewService_1 = require("../services/closeNewService");
 // PRODUCT REVIEW is recognized by its file: Sigma/review/PRODUCT-REVIEW-vN.md,
 // one per INTENT, version equal to the chain's INTENT version, no chain state.
@@ -29,22 +28,10 @@ function reviewCommand() {
         .action(() => {
         try {
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const { data: chain } = (0, chain_1.readActiveChain)(projectRoot);
-            (0, chain_1.assertChainCanMutate)(chain);
-            if (chain.intent.state !== 'RATIFIED') {
-                throw new Error('PRODUCT REVIEW requires a RATIFIED INTENT. Run: sigma intent ratify');
-            }
-            const version = chain.chain_version;
-            const [existing] = (0, artifactNames_1.existingArtifactNames)(projectRoot, 'review', 'review', version);
-            if (existing) {
-                throw new Error(`PRODUCT REVIEW already exists: Sigma/review/${existing}. Only one is kept per INTENT.`);
-            }
-            const relPath = (0, fs_1.toPosix)(path_1.default.join('Sigma', 'review', (0, artifactNames_1.artifactFileName)('review', version)));
-            (0, artifacts_1.copyTemplateToArtifact)('PRODUCT-REVIEW-TEMPLATE.md', path_1.default.join(projectRoot, relPath), projectRoot);
+            const { relPath, docReport: report } = (0, reviewNewService_1.createReviewDraft)(projectRoot);
             console.log(`Created: ${relPath}`);
             console.log('Open it with FMN\'s Review Request (from the `sigma send` message), then record ARC, AUD, and Director verdicts.');
             console.log('Running automatic validation...\n');
-            const report = (0, docCheck_1.validateSigmaDocFile)(path_1.default.join(projectRoot, relPath), 'review');
             (0, docCheck_1.printSigmaDocReport)(report, projectRoot);
             if (!report.ok)
                 process.exit(1);

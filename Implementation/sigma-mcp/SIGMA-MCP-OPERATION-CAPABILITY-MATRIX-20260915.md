@@ -1,5 +1,7 @@
 # SIGMA MCP — Operation Capability Matrix
 
+> **Catatan 2026-10-15**: dokumen ini adalah baseline lama dan catatan alasan keputusan, bukan sumber kebenaran status. Status terkini dihasilkan otomatis dari manifest di `SIGMA-MCP-CAPABILITY-MATRIX.generated.md` (`node scripts/generate-mcp-matrix.js`).
+
 **Deliverable**: Stage 0 dari `PLAN-IMPL-SIGMA-MCP-QUERY-COMMAND-PLANE-20260915.md` §14.
 **Tanggal**: 2026-09-15, diperbarui 2026-09-16 (batch Stage E W1 + review Codex putaran 1/2; batch B2 query-plane).
 **Sumber**: `Sigma/SIGMA-OPERATION-REGISTRY.json` (59 operasi) diverifikasi silang terhadap `src/commands/*.ts` dan `src/cli.ts`.

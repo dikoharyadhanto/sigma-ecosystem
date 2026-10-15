@@ -305,3 +305,26 @@ Perubahan plan isolasi (tracked): `src/engine/mailbox.ts`, `src/engine/mailboxCo
 
 - Sekitar 33 berkas rule/skill masih memuat kalimat "never target LEGACY for a new write". Benar, tidak menyesatkan, dan sengaja tidak diubah; dapat dirapikan saat tahap instalasi.
 - Salinan terpasang global dan salinan proyek belum diperbarui untuk ketiga plan; `sigma doctor --check-assets` akan melaporkan perbedaan sampai instalasi dilakukan atas persetujuan Director.
+
+## 14. Catatan hasil implementasi
+
+**Ditambahkan:** 2026-10-15, setelah seluruh work package diimplementasikan (belum di-commit; suite 96 file / 1543 test lulus). Isi §1–§13 tidak diubah. Pengingat bahwa Director mendelegasikan keputusan teknis kepada rekomendasi asisten selama desain fitur inti tidak berubah.
+
+### 14.1 Penyimpangan dari teks plan
+
+1. **WP-MCP-04, `plan_revise_prepare`.** Plan menyebutnya menghasilkan tiket. Pada kode, `prepare` hanya men-stage kandidat dan deklarasi; tiket berasal dari `check --prepare-ticket`. Dibuat operasi CLI sendiri `plan revise ticket` (`plan_revise_ticket`, registry 90) atas keputusan Director; flag lama tetap sebagai alias.
+2. **WP-MCP-02 butir 3.** Policy melaporkan status berdasarkan manifest, bukan introspeksi runtime: server query tidak boleh mengimpor server control. Kebenaran deklarasi dijaga `test/mcp-capability-manifest.test.ts`.
+3. **`notes_new`** satu langkah (`sigma_create_note`), bukan prepare/commit; tidak ada tiket atau approval untuk sebuah note.
+4. **`plan_revise_check`** tetap `semantic` di registry karena alias `--prepare-ticket` menulis. Tool MCP hanya mengekspos evaluasi (tier Q, mapping `partial`).
+5. **Tool tambahan di luar daftar plan:** tidak ada tool pengedit kandidat revisi; kandidat tetap diedit sebagai berkas seperti pada CLI.
+6. **Klasifikasi:** `intent_activate` dan `decisions_resolve` `not_admissible`; `config*` dan `notes_update` `deferred`; mailbox/memo `deferred`.
+
+### 14.2 Tool yang ditambahkan
+
+Query (7): `sigma_review_check`, `sigma_close_check`, `sigma_dev_status`, `sigma_notes_list`, `sigma_intent_baseline_check`, `sigma_intent_amendment_preview`, `sigma_plan_revise_check`.
+Control (5): `sigma_create_note`, `sigma_create_review`, `sigma_prepare_plan_revision`, `sigma_issue_plan_revision_ticket`, `sigma_commit_plan_revision`.
+Server query kini 33 tool, control 42.
+
+### 14.3 Penutup §12.4
+
+Poin 1 selesai. Poin 2–4 (`doctor --check-assets`, instalasi global, commit/push) tetap di tangan Director. Rule FMN/DEV berubah (`plan revise ticket`), sehingga salinan terpasang akan dilaporkan DIFF sampai `sigma setup update` dan `sigma project sync`.

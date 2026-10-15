@@ -80,16 +80,34 @@ function registerApprovalCommands(cmd, domain) {
             failure(e);
         }
     });
-    revise.command('check').requiredOption('--v <version>', 'PLAN target', chain_1.normalizeVersionArg).option('--prepare-ticket', 'Freeze review into a Director approval ticket')
+    // `check` is the evaluation. `ticket` is the only command that writes a
+    // Director approval ticket (PLAN-IMPL-SIGMA-MCP-COVERAGE-POLICY-PARITY,
+    // Director decision 5a). `check --prepare-ticket` is kept as an alias for
+    // existing callers and runs exactly the same ticket path.
+    const issueRevisionTicket = async (root, version) => {
+        const id = (0, controlStore_1.generateId)('opt');
+        return (0, governanceTransaction_1.withGovernanceTransaction)(root, 'plan_revise_ticket', () => [(0, controlStore_1.ticketPath)(root, id)], () => (0, revisions_1.prepareRevisionTicket)(root, version, id));
+    };
+    revise.command('check').requiredOption('--v <version>', 'PLAN target', chain_1.normalizeVersionArg).option('--prepare-ticket', 'Deprecated alias of `plan revise ticket`: also freeze the review into a Director approval ticket')
         .action(async (opts) => {
         try {
             const root = (0, fs_1.findProjectRoot)();
             const review = (0, revisions_1.checkPlanRevision)(root, opts.v);
             console.log(JSON.stringify(review, null, 2));
             if (opts.prepareTicket) {
-                const id = (0, controlStore_1.generateId)('opt');
-                console.log(JSON.stringify(await (0, governanceTransaction_1.withGovernanceTransaction)(root, 'plan_revise_ticket', () => [(0, controlStore_1.ticketPath)(root, id)], () => (0, revisions_1.prepareRevisionTicket)(root, opts.v, id)), null, 2));
+                console.log(JSON.stringify(await issueRevisionTicket(root, opts.v), null, 2));
             }
+        }
+        catch (e) {
+            failure(e);
+        }
+    });
+    revise.command('ticket').description('Freeze the current revision review into a single-use Director approval ticket (writes one ticket file; changes no PLAN)')
+        .requiredOption('--v <version>', 'PLAN target', chain_1.normalizeVersionArg)
+        .action(async (opts) => {
+        try {
+            const root = (0, fs_1.findProjectRoot)();
+            console.log(JSON.stringify(await issueRevisionTicket(root, opts.v), null, 2));
         }
         catch (e) {
             failure(e);

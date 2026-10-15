@@ -56,6 +56,18 @@ export interface NewNoteResult {
     catalogError: string | null;
 }
 export declare function normalizeRole(role: string | undefined): string | undefined;
+/**
+ * Where `createNote` would put a note, without writing. Throws the same
+ * NotesError (bad title, unreadable or missing registry) createNote would.
+ * Callers that must list the files a write may touch before it starts (the
+ * MCP control transaction) use this with the same `now` they pass to
+ * createNote; both run under one lock, so the name cannot change in between.
+ */
+export declare function planNote(root: string, rawTitle: string, now: Date): {
+    relPath: string;
+    registryRel: string;
+    catalogRel: string;
+};
 export declare function createNote(root: string, rawTitle: string, opts?: {
     role?: string;
     now?: Date;

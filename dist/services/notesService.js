@@ -30,6 +30,7 @@ exports.renderCatalog = renderCatalog;
 exports.syncCatalog = syncCatalog;
 exports.initNotes = initNotes;
 exports.normalizeRole = normalizeRole;
+exports.planNote = planNote;
 exports.createNote = createNote;
 exports.scanNotes = scanNotes;
 exports.listNotes = listNotes;
@@ -274,16 +275,17 @@ function normalizeRole(role) {
     }
     return r;
 }
-function createNote(root, rawTitle, opts = {}) {
+/** Title and slug of a new note, or the NotesError the CLI reports. */
+function nameNote(rawTitle) {
     const title = validateTitle(rawTitle);
     const slug = slugify(title);
     if (!slug) {
         throw new NotesError('INVALID_TITLE', `The title "${title}" has no letters or digits to build a file name from. Use a title with at least one letter or digit.`);
     }
-    const role = normalizeRole(opts.role);
-    const now = opts.now ?? new Date();
-    const { registry } = registryForWrite(root);
-    ensureNotesDirs(root);
+    return { title, slug };
+}
+/** File name a new note takes: timestamped slug, suffixed when the name is already taken. */
+function noteFileName(root, registry, slug, now) {
     const p = notesPaths(root);
     const taken = new Set(registry.notes.map(e => e.file.toLowerCase()));
     const baseName = `NOTE-${noteStamp(now)}-${slug}`;
@@ -291,6 +293,34 @@ function createNote(root, rawTitle, opts = {}) {
     for (let n = 2; taken.has(fileName.toLowerCase()) || fs_extra_1.default.existsSync(path_1.default.join(p.registeredDir, fileName)); n += 1) {
         fileName = `${baseName}-${n}.md`;
     }
+    return fileName;
+}
+/**
+ * Where `createNote` would put a note, without writing. Throws the same
+ * NotesError (bad title, unreadable or missing registry) createNote would.
+ * Callers that must list the files a write may touch before it starts (the
+ * MCP control transaction) use this with the same `now` they pass to
+ * createNote; both run under one lock, so the name cannot change in between.
+ */
+function planNote(root, rawTitle, now) {
+    const { slug } = nameNote(rawTitle);
+    const { registry } = registryForWrite(root);
+    const p = notesPaths(root);
+    const filePath = path_1.default.join(p.registeredDir, noteFileName(root, registry, slug, now));
+    return {
+        relPath: (0, fs_1.toPosix)(path_1.default.relative(root, filePath)),
+        registryRel: (0, fs_1.toPosix)(path_1.default.relative(root, p.registryFile)),
+        catalogRel: (0, fs_1.toPosix)(path_1.default.relative(root, p.catalogFile)),
+    };
+}
+function createNote(root, rawTitle, opts = {}) {
+    const { title, slug } = nameNote(rawTitle);
+    const role = normalizeRole(opts.role);
+    const now = opts.now ?? new Date();
+    const { registry } = registryForWrite(root);
+    ensureNotesDirs(root);
+    const p = notesPaths(root);
+    const fileName = noteFileName(root, registry, slug, now);
     const filePath = path_1.default.join(p.registeredDir, fileName);
     fs_extra_1.default.writeFileSync(filePath, `# ${title}\n\nDibuat: ${displayDateTime(now)}\n`, { encoding: 'utf8', flag: 'wx' });
     const nextNumber = Math.max(registry.last_id, ...registry.notes.map(e => parseNoteIdNumber(e.id) ?? 0)) + 1;

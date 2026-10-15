@@ -1,4 +1,4 @@
-import { ChainState } from './chain';
+import { ChainState, ArtifactVersion } from './chain';
 import { OperationTicket } from './controlStore';
 export declare const sha256: (bytes: string | Buffer) => string;
 export declare const normalizeDocument: (text: string) => string;
@@ -84,6 +84,22 @@ export interface RevisionStage {
     base_ledger_sha256: string;
     declaration: ChangeDeclaration;
 }
+/**
+ * Every precondition of `preparePlanRevision`, without writing. The MCP control
+ * tool calls this before it opens a transaction so a refusal leaves no journal;
+ * `preparePlanRevision` calls it again, so the two cannot disagree.
+ */
+export declare function assertCanPrepareRevision(root: string, version: string, declaration: ChangeDeclaration, replaceStaging?: boolean): {
+    chain: ChainState;
+    plan: ArtifactVersion;
+    paths: {
+        ledger: string;
+        snapshot: string;
+        candidate: string;
+        staging: string;
+    };
+    previous: RevisionStage | null;
+};
 export declare function preparePlanRevision(root: string, version: string, declaration: ChangeDeclaration, replaceStaging?: boolean): {
     candidate: string;
     metadata: string;

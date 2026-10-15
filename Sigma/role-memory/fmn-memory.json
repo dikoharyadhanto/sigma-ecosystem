@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "role": "FMN",
   "source_rule": "Sigma/rules/FMN-RULE.md",
-  "source_rule_version": "sha256:43fda73f4abe332707c3e60f207c9d2681815e5650846994de546700aa6fa254",
+  "source_rule_version": "sha256:4eb7a7a85bb3faa23865579aa6600e6938d00dcbd27c3a4b186fa4f5aacbbeeb",
   "memory_updated_at": "2026-10-15",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [

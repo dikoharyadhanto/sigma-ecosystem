@@ -134,6 +134,24 @@ describe('sigma-test: layered diagnostic contract', () => {
     });
   }
 
+  // PLAN-IMPL-SIGMA-MCP-COVERAGE-POLICY-PARITY-20261015: B4 compares the
+  // manifest's declared tools with the introspected list instead of reporting
+  // "unverifiable until a manifest exists".
+  for (const rel of VARIANTS['sigma-test']) {
+    it(`${rel} verifies mcp_status against the introspected tools (B4) and points B1 at the manifest`, () => {
+      const text = read(rel);
+      const b4 = text.slice(text.indexOf('- `B4.mcp_status`'), text.indexOf('### Layer C'));
+      expect(b4).toContain('mcp_tools');
+      expect(b4).toContain('A7');
+      expect(b4).toMatch(/Never PASS this check from `mcp_status` alone/);
+      expect(b4).toMatch(/N\/A: control server not connected/);
+      expect(text).not.toMatch(/unverifiable until manifest exists/);
+      expect(text).not.toMatch(/hand-maintained table/);
+      expect(text).toContain('src/mcp/capabilityManifest.ts');
+      expect(text).toContain('test/mcp-capability-manifest.test.ts');
+    });
+  }
+
   it('smoke-layer CLI commands are all registry read_only operations', () => {
     const readOnly = new Set(registry.operations.filter(o => o.level === 'read_only').map(o => o.operation_id));
     const text = read('claude_code/sigma-test.md');
