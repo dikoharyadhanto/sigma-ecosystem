@@ -5,6 +5,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { runCli, setupTestEnv, chainPath } from './helpers';
+import { lfSha256 } from '../src/engine/docHash';
 import { GitProject, setupGitProject, editIntent, commitIntent, amendArgs, git, gitTry, sha256, GitProjectOptions } from './f05-git-helpers';
 
 let current: GitProject | null = null;
@@ -391,7 +392,8 @@ describe('F05 line endings and repository layout (U-08, U-09)', () => {
         const commit = commitIntent(p);
         const r = cli(p, amendArgs(p, commit));
         expect(r.exitCode, r.stdout + r.stderr).toBe(0);
-        expect(chainOf(p).intent.certified_doc_sha256).toBe(sha256(fs.readFileSync(p.intentFile)));
+        // Certification stores the CRLF-folded hash so it is identical on every host.
+        expect(chainOf(p).intent.certified_doc_sha256).toBe(lfSha256(fs.readFileSync(p.intentFile)));
         expect(cli(p, 'intent baseline check').exitCode, 'check after amendment').toBe(0);
       });
     }

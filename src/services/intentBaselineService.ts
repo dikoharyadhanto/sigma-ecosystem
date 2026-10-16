@@ -15,6 +15,7 @@ import {
 } from '../engine/chain';
 import { INTENT_AMENDMENT_LOG_FILE } from '../config';
 import * as git from '../engine/gitRepo';
+import { matchesCertified, lineEndingHint } from '../engine/docHash';
 import { ensureAnnotatedTag, intentTagName, locateIntentInRepo } from '../engine/intentGit';
 import { appendIntentLog } from './intentAmendmentService';
 
@@ -75,13 +76,15 @@ export function adoptIntentBaselineUseCase(projectRoot: string, options: AdoptBa
   if (committedLf !== workingLf) fail(`INTENT at ${resolved.sha.slice(0, 12)} differs from the working-tree file; the baseline commit must hold exactly the current content`);
   if (git.pathStatus(repoRoot, rel) !== '') fail(`${rel} has uncommitted changes`);
 
-  const certifiedMatches = !!chain.intent.certified_doc_sha256 && chain.intent.certified_doc_sha256 === workingSha;
+  // Line-ending-only differences (core.autocrlf) are not an edit: no re-certification, no revision bump.
+  const certifiedMatches = matchesCertified(bytes, chain.intent.certified_doc_sha256);
   let provenance: IntentGitBaseline['provenance'] = 'ratified_commit';
   if (!certifiedMatches) {
     if (!options.importCurrent) {
       fail(
         chain.intent.certified_doc_sha256
           ? 'UNCERTIFIED_EDIT: the INTENT file differs from its certified content and no Git baseline can prove the certified content. ' +
+            `(${lineEndingHint(bytes, chain.intent.certified_doc_sha256)}) ` +
             'Review the current content, then re-run with --import-current to adopt it as the baseline (no amendment is invented, nothing is retroactive).'
           : 'The INTENT has no certified hash. Review the current content, then re-run with --import-current to certify it as the baseline.'
       );

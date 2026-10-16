@@ -6,8 +6,9 @@ import { readCanonicalArtifactFile, candidatesFor, ArtifactType } from '../mcp/a
 import { assertNoTransactionSymlink } from '../engine/controlStore';
 import { readRevisionLedger } from '../engine/revisions';
 import * as git from '../engine/gitRepo';
+import { matchesCertified } from '../engine/docHash';
 import { validateSigmaDocFile } from '../utils/docCheck';
-import { TargetRef, CapturedFile, digest, readF08Store } from './f08Store';
+import { TargetRef, CapturedFile, readF08Store } from './f08Store';
 
 export function reviewChain(root: string, explicit?: string): { chainVersion: string; data: ChainState } {
   const version = explicit ?? readActiveChain(root).chainVersion;
@@ -90,14 +91,14 @@ export function matchReferences(plan: string, intent: string) {
 function certifiedSource(root: string, chain: ChainState, expected: string | undefined, current: CapturedFile) {
   if (!expected) return { status: 'UNKNOWN', sha256: null, content: null as string | null, origin: null as string | null };
   const hash = expected.startsWith('sha256:') ? expected : 'sha256:' + expected;
-  if (hash === current.sha256) return { status: 'AVAILABLE', sha256: hash, content: current.content, origin: 'current-content-matches-reference' };
+  if (hash === current.sha256 || matchesCertified(Buffer.from(current.content, 'utf8'), expected)) return { status: 'AVAILABLE', sha256: hash, content: current.content, origin: 'current-content-matches-reference' };
   const top = git.repoToplevel(root);
   if (top.ok) {
     const rel = git.repoRelativePath(top.root, path.join(root, current.path));
     const commits = [chain.intent.git_baseline?.commit, ...(chain.intent.amendments ?? []).flatMap(a => [a.result_commit, a.baseline_commit])];
     for (const commit of [...new Set(commits.filter((v): v is string => !!v))]) {
       const blob = git.blobAt(top.root, commit, rel);
-      if (blob && digest(blob) === hash) return { status: 'AVAILABLE', sha256: hash, content: blob.toString('utf8'), origin: 'git:' + commit };
+      if (blob && matchesCertified(blob, hash)) return { status: 'AVAILABLE', sha256: hash, content: blob.toString('utf8'), origin: 'git:' + commit };
     }
   }
   return { status: 'UNKNOWN', sha256: hash, content: null as string | null, origin: null as string | null };
@@ -147,7 +148,7 @@ export function reviewPlanSources(root: string, explicitVersion?: string, explic
     structure: { ok: structure.ok, schema: structure.schema, errors: structure.errors, warnings: structure.warnings, requirements: structure.requirements },
     certification: { plan_state: entry.state, plan_revision: entry.revision ?? null, needs_intent_review: entry.needs_intent_review ?? false,
       pending_notice: entry.pending_notice ?? false, reference_is_plan_approval: !!entry.revision_ledger && !findings.some(f => f.startsWith('PLAN ledger: ')), current_intent_sha256: current?.sha256 ?? null, certified_intent_sha256: certified ?? null,
-      current_matches_certified: certified && current ? current.sha256 === (certified.startsWith('sha256:') ? certified : 'sha256:' + certified) : null,
+      current_matches_certified: certified && current ? matchesCertified(Buffer.from(current.content, 'utf8'), certified) : null,
       plan_intent_revision_ref: entry.intent_revision_ref ?? null, baseline },
     current_source: current, current_references: currentRefs, referenced_references: baselineRefs,
     named_sources: { quality_standards: namedSections, planned_stage: roadmap ? sectionsOf(roadmap.content, 'ROADMAP').filter(s => s.id === 'PLANNED_STAGE') : [],

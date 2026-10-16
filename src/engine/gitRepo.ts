@@ -5,7 +5,6 @@
 // an argument vector (no shell) and pathspecs after `--`.
 
 import { spawnSync } from 'child_process';
-import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
@@ -37,12 +36,7 @@ export function runGit(cwd: string, args: string[]): GitResult {
 
 const text = (r: GitResult): string => r.stdout.toString('utf8').trim();
 
-export const sha256Hex = (bytes: string | Buffer): string => crypto.createHash('sha256').update(bytes).digest('hex');
-
-/** Hash of the content with CRLF folded to LF — comparable across `core.autocrlf` settings (F05 R-1). */
-export function lfSha256(bytes: Buffer): string {
-  return sha256Hex(Buffer.from(bytes.toString('latin1').replace(/\r\n/g, '\n'), 'latin1'));
-}
+export { sha256Hex, lfSha256 } from './docHash';
 
 export function gitAvailable(cwd: string): { ok: boolean; version?: string; error?: string } {
   const r = runGit(cwd, ['--version']);

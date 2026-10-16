@@ -166,7 +166,7 @@ export function applyVerifiedAmendment(projectRoot: string, request: AmendmentRe
     throw new IntentAmendmentError('STALE_ARTIFACT', 'The INTENT file changed during the transaction; preview and approve again.');
   }
   certifyIntentDoc(chain, absPath);
-  if (chain.intent.certified_doc_sha256 !== v.verified.working_sha256) {
+  if (chain.intent.certified_doc_sha256 !== v.verified.working_sha256_lf) {
     throw new IntentAmendmentError('STALE_ARTIFACT', 'The INTENT file changed during the transaction; preview and approve again.');
   }
   chain.intent.git_baseline = {

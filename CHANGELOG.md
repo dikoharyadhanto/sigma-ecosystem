@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+### Certified-hash stability across hosts — BUG-20261015 (2026-10-16)
+
+- Certified hashes no longer depend on `core.autocrlf`. New `src/engine/docHash.ts` holds `matchesCertified(bytes, stored)`: a file matches when its raw, CRLF-folded (LF), or CRLF-expanded hash equals the stored one, so certifications made on Fedora (raw LF), on Windows (raw CRLF, e.g. JLH revision 2) and new ones all stay valid on either host without migration.
+- `certifyIntentDoc` stores the LF-folded hash. `isIntentDocUncertified`, `currentIntent` (which now returns the stored certified hash, so PLAN `intent_doc_sha256_ref` is host-independent), `intent baseline check`, `baseline adopt`, and the source review use `matchesCertified`. A line-ending-only difference is no longer `UNCERTIFIED_EDIT`, `baseline adopt` no longer needs `--import-current` for it, and the INTENT revision is not bumped, so approved PLANs do not become `STALE_INTENT`.
+- PLAN revision evidence (ledger, snapshots, CONTRACT_CHANGE notices) is verified with the same tolerance; a CRLF checkout used to fail with `PLAN ledger hash mismatch` / `Snapshot hash mismatch`. Real edits (appended or changed content) are still rejected.
+- `UNCERTIFIED_EDIT` messages now show certified, raw, and LF hashes plus the CRLF count. `sigma doctor` warns when `core.autocrlf=true` and the INTENT has no `eol=lf` attribute, and suggests `Sigma/** text eol=lf` in `.gitattributes`.
+- Not repaired retroactively: a chain that already ran `baseline adopt --import-current` keeps its revision bump; its APPROVED PLANs still need `plan revise`.
+- Tests: `test/crlf-certification.test.ts`, two cases in `test/f04-lifecycle.test.ts`; `test/f05-intent-git-amendment.test.ts` now expects the LF-folded hash.
+
 ### MCP coverage, policy, and parity (2026-10-15)
 
 - `src/mcp/capabilityManifest.ts` is the single declaration of what each active operation is on the MCP surface: plane, `mcp_status`, tool names, mapping, rationale. `policy.ts` derives its tier, owner, and status tables from it; the hand-kept `IMPLEMENTED` set is gone. `sigma_get_effective_policy` rows now also carry `plane`, `mcp_tools`, and `registry_status`.

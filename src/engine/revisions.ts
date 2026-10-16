@@ -7,6 +7,7 @@ import { resolveLifecycleModel } from './lifecycle';
 import { candidateFileNames } from './artifactNames';
 import { journaledWrite, assertNoTransactionSymlink, readTicket, readApproval, markTicketConsumed, markApprovalConsumed, OperationTicket, generateId, writeTicket, TICKET_TTL_MS } from './controlStore';
 import { computeStateRevision } from '../mcp/contract';
+import { matchesCertified, lineEndingHint } from './docHash';
 import { validateSigmaDocFile, ensureSigmaDocEligible } from '../utils/docCheck';
 import { generateStageOverview, replaceSection, removeSectionIfPresent } from '../utils/roadmap';
 export const sha256 = (bytes: string | Buffer): string => crypto.createHash('sha256').update(bytes).digest('hex');
@@ -115,9 +116,11 @@ export function currentIntent(root: string, chain: ChainState): {
 } {
     if (chain.intent.state !== 'RATIFIED' || !chain.intent.certified_doc_sha256)
         throw new Error('INTENT baseline unknown or not RATIFIED; Director certification required.');
-    const hash = sha256(fs.readFileSync(artifactFile(root, chain, 'intent', chain.intent.version)));
-    if (hash !== chain.intent.certified_doc_sha256)
-        throw new Error('UNCERTIFIED_EDIT: INTENT source changed.');
+    const bytes = fs.readFileSync(artifactFile(root, chain, 'intent', chain.intent.version));
+    if (!matchesCertified(bytes, chain.intent.certified_doc_sha256))
+        throw new Error('UNCERTIFIED_EDIT: INTENT source changed. ' + lineEndingHint(bytes, chain.intent.certified_doc_sha256));
+    // Identity is the stored certified hash, not a per-host recomputation, so PLAN refs stay valid on every host.
+    const hash = chain.intent.certified_doc_sha256;
     // Imported current baseline is not a claim about historical amendment count.
     const revision=chain.intent.revision ?? 1;
     if(!Number.isSafeInteger(revision)||revision<1)throw new Error('Invalid certified INTENT revision; Director recovery required.');
@@ -129,7 +132,7 @@ export function readRevisionLedger(root: string, chain: ChainState, version: str
     if (plan.revision_ledger !== paths.ledger || !plan.revision_ledger_sha256 || !plan.revision)
         throw new Error('PLAN revision baseline unknown; explicit baseline approval required.');
     const bytes = fs.readFileSync(boundedPath(root, paths.ledger));
-    if (sha256(bytes) !== plan.revision_ledger_sha256)
+    if (!matchesCertified(bytes, plan.revision_ledger_sha256))
         throw new Error('PLAN ledger hash mismatch.');
     const ledger = JSON.parse(bytes.toString('utf8')) as RevisionLedger;
     if (ledger.format !== 1 || ledger.intent !== chain.intent.version || ledger.plan !== version || !Array.isArray(ledger.records) || ledger.records.length !== plan.revision)
@@ -139,7 +142,7 @@ export function readRevisionLedger(root: string, chain: ChainState, version: str
         if (record.revision !== revision || record.revision_id !== version + ':rev-' + revision || record.snapshot !== revisionPaths(version, revision).snapshot || !Number.isSafeInteger(record.intent_revision_ref) || record.intent_revision_ref < 1 || !/^[a-f0-9]{64}$/.test(record.intent_doc_sha256_ref) || !['initial_approval', 'imported_baseline', 'revision'].includes(record.provenance) || Number.isNaN(Date.parse(record.created_at)))
             throw new Error('Invalid revision record.');
         const snapshot = fs.readFileSync(boundedPath(root, record.snapshot));
-        if (sha256(snapshot) !== record.snapshot_sha256 || planContractHash(snapshot.toString('utf8')) !== record.contract_sha256)
+        if (!matchesCertified(snapshot, record.snapshot_sha256) || planContractHash(snapshot.toString('utf8')) !== record.contract_sha256)
             throw new Error('Snapshot hash mismatch: ' + record.snapshot);
         if (revision > 1) {
             validateDeclaration(record.declaration);
@@ -196,8 +199,10 @@ export function verifyNotice(root: string, ledger: RevisionLedger, record: Revis
     const n = record.notice;
     if (!n || n.from !== 'FMN' || n.to !== 'DEV' || n.intent !== ledger.intent || n.plan !== ledger.plan || n.revision !== record.revision || n.contract_sha256 !== record.contract_sha256 || !n.message_id || !n.file.startsWith('Sigma/messages/DEV/' + ledger.plan + '/') || !/^[a-f0-9]{64}$/.test(n.payload_sha256) || Number.isNaN(Date.parse(n.created_at)))
         throw new Error('Missing or invalid CONTRACT_CHANGE notice for ' + record.revision_id);
-    const noticeText = fs.readFileSync(boundedPath(root, n.file), 'utf8');
-    if (sha256(noticeText) !== n.file_sha256 || !noticeText.includes('| Revision ID | ' + record.revision_id + ' |') || !noticeText.includes('| Contract SHA256 | ' + record.contract_sha256 + ' |') || sha256(noticeText.slice(noticeText.indexOf('\n## Message\n\n') + 13).trimEnd()) !== n.payload_sha256)
+    const noticeBytes = fs.readFileSync(boundedPath(root, n.file));
+    // Line-ending-normalized view: a CRLF checkout (core.autocrlf) must not read as tampering.
+    const noticeText = normalizeDocument(noticeBytes.toString('utf8'));
+    if (!matchesCertified(noticeBytes, n.file_sha256) || !noticeText.includes('| Revision ID | ' + record.revision_id + ' |') || !noticeText.includes('| Contract SHA256 | ' + record.contract_sha256 + ' |') || sha256(noticeText.slice(noticeText.indexOf('\n## Message\n\n') + 13).trimEnd()) !== n.payload_sha256)
         throw new Error('CONTRACT_CHANGE file missing/changed/mismatched: ' + n.message_id);
 }
 export function assertAllNotices(root: string, ledger: RevisionLedger): void { for (const record of ledger.records.slice(1))

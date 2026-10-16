@@ -20,7 +20,7 @@ import { reconstructAllChains, findSigmaProjectRoot, MultiReconstructResult } fr
 import { findProjectRoot, fileExists } from '../utils/fs';
 import { renderIntentHistoryFile } from '../utils/intentHistory';
 import { PROJECT_SIGMA_DIR } from '../config';
-import { intentGitDrift } from '../engine/intentGit';
+import { intentGitDrift, lineEndingAdvice } from '../engine/intentGit';
 import { describeDevWorkspace, getDevWorkspaceStatus, repairDevWorkspace } from '../engine/devWorkspace';
 import { evaluateVersionStatus, formatAssetDifference, inspectAssetDrift } from '../services/assetConsistency';
 
@@ -84,6 +84,8 @@ function collectDiagnostics(projectRoot: string): string[] {
     for (const version of listChainVersions(projectRoot)) {
       const chain = readChain(projectRoot, version);
       for (const line of intentGitDrift(projectRoot, version, chain)) warnings.push(`INTENT ${version} Git: ${line}`);
+      const eol = lineEndingAdvice(projectRoot, chain);
+      if (eol) warnings.push(`INTENT ${version} line endings: ${eol}`);
     }
   } catch (err) { warnings.push(`INTENT Git drift check failed: ${(err as Error).message}`); }
   return warnings;

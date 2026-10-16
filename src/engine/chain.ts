@@ -1,11 +1,11 @@
 import fs from 'fs-extra';
 import path from 'path';
-import crypto from 'crypto';
 import { PROJECT_SIGMA_DIR, PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE, OVERRIDES_FILE, SCHEMA_VERSION } from '../config';
 import { matchArtifactRel } from './artifactNames';
 import { journaledWriteIfActive } from './controlStore';
 import { LifecycleModel, resolveLifecycleModel, approvedPlanCurrent, assertKnownLifecycle } from './lifecycle';
 import { atomicReplaceFileSync } from '../utils/fs';
+import { lfSha256, matchesCertified } from './docHash';
 import { VersioningScheme, resolveVersioningScheme, planMajorForChain, readChainMetadata } from './numbering';
 
 // PLAN-EVAL-01 (Core Storage & Schema Migration, Opsi C) — foundation module.
@@ -267,7 +267,7 @@ export interface SingleIntentState {
   // stay valid without migration.
   amendments?: AmendmentEntry[];       // append-only amendment history
   effective_amendment?: string | null; // last AMD-NNN this doc was certified against; null = certified at ratification, no amendment yet
-  certified_doc_sha256?: string;       // SHA-256 of the DIR-INTENT file at last ratify/amendment
+  certified_doc_sha256?: string;       // SHA-256 (CRLF folded to LF) of the DIR-INTENT file at last ratify/amendment; older chains hold the raw-byte hash, still accepted
   revision?: number;
   revision_provenance?: string;
   certified_at?: string;               // ISO — when certified_doc_sha256 was last stamped
@@ -1295,7 +1295,8 @@ export function ratifyIntent(chain: ChainState): void {
 // other path may silently re-certify a document).
 export function certifyIntentDoc(chain: ChainState, absDocPath: string): void {
   const content = fs.readFileSync(absDocPath);
-  chain.intent.certified_doc_sha256 = crypto.createHash('sha256').update(content).digest('hex');
+  // LF-folded hash: identical on every host regardless of core.autocrlf.
+  chain.intent.certified_doc_sha256 = lfSha256(content);
   chain.intent.certified_at = new Date().toISOString();
   chain.intent.revision = (chain.intent.revision ?? 0) + 1;
   chain.intent.revision_provenance = 'certification';
@@ -1311,9 +1312,7 @@ export function certifyIntentDoc(chain: ChainState, absDocPath: string): void {
 export function isIntentDocUncertified(chain: ChainState, absDocPath: string): boolean {
   if (!chain.intent.certified_doc_sha256) return false; // never certified yet (DRAFT, or a pre-Amendment-era chain) — nothing to compare against
   if (!fs.existsSync(absDocPath)) return false; // a missing file is a different, already-surfaced problem
-  const content = fs.readFileSync(absDocPath);
-  const currentHash = crypto.createHash('sha256').update(content).digest('hex');
-  return currentHash !== chain.intent.certified_doc_sha256;
+  return !matchesCertified(fs.readFileSync(absDocPath), chain.intent.certified_doc_sha256);
 }
 
 // Next "AMD-NNN" id — zero-padded, matching the PREFIX-NNN convention already
