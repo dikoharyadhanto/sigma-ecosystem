@@ -51,6 +51,7 @@ const artifactPath_1 = require("../mcp/artifactPath");
 const controlStore_1 = require("../engine/controlStore");
 const revisions_1 = require("../engine/revisions");
 const git = __importStar(require("../engine/gitRepo"));
+const docHash_1 = require("../engine/docHash");
 const docCheck_1 = require("../utils/docCheck");
 const f08Store_1 = require("./f08Store");
 function reviewChain(root, explicit) {
@@ -142,7 +143,7 @@ function certifiedSource(root, chain, expected, current) {
     if (!expected)
         return { status: 'UNKNOWN', sha256: null, content: null, origin: null };
     const hash = expected.startsWith('sha256:') ? expected : 'sha256:' + expected;
-    if (hash === current.sha256)
+    if (hash === current.sha256 || (0, docHash_1.matchesCertified)(Buffer.from(current.content, 'utf8'), expected))
         return { status: 'AVAILABLE', sha256: hash, content: current.content, origin: 'current-content-matches-reference' };
     const top = git.repoToplevel(root);
     if (top.ok) {
@@ -150,7 +151,7 @@ function certifiedSource(root, chain, expected, current) {
         const commits = [chain.intent.git_baseline?.commit, ...(chain.intent.amendments ?? []).flatMap(a => [a.result_commit, a.baseline_commit])];
         for (const commit of [...new Set(commits.filter((v) => !!v))]) {
             const blob = git.blobAt(top.root, commit, rel);
-            if (blob && (0, f08Store_1.digest)(blob) === hash)
+            if (blob && (0, docHash_1.matchesCertified)(blob, hash))
                 return { status: 'AVAILABLE', sha256: hash, content: blob.toString('utf8'), origin: 'git:' + commit };
         }
     }
@@ -221,7 +222,7 @@ function reviewPlanSources(root, explicitVersion, explicitChain) {
         structure: { ok: structure.ok, schema: structure.schema, errors: structure.errors, warnings: structure.warnings, requirements: structure.requirements },
         certification: { plan_state: entry.state, plan_revision: entry.revision ?? null, needs_intent_review: entry.needs_intent_review ?? false,
             pending_notice: entry.pending_notice ?? false, reference_is_plan_approval: !!entry.revision_ledger && !findings.some(f => f.startsWith('PLAN ledger: ')), current_intent_sha256: current?.sha256 ?? null, certified_intent_sha256: certified ?? null,
-            current_matches_certified: certified && current ? current.sha256 === (certified.startsWith('sha256:') ? certified : 'sha256:' + certified) : null,
+            current_matches_certified: certified && current ? (0, docHash_1.matchesCertified)(Buffer.from(current.content, 'utf8'), certified) : null,
             plan_intent_revision_ref: entry.intent_revision_ref ?? null, baseline },
         current_source: current, current_references: currentRefs, referenced_references: baselineRefs,
         named_sources: { quality_standards: namedSections, planned_stage: roadmap ? sectionsOf(roadmap.content, 'ROADMAP').filter(s => s.id === 'PLANNED_STAGE') : [],

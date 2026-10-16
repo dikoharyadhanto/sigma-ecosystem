@@ -77,4 +77,11 @@ export declare function ensureAnnotatedTag(root: string, name: string, commit: s
 };
 /** Read-only drift summary of recorded Git references (doctor/status). Never writes. */
 export declare function intentGitDrift(root: string, chainVersion: string, chain: ChainState): string[];
+/**
+ * Doctor warning: with `core.autocrlf=true` and no `eol=lf` attribute on the
+ * certified INTENT, the working file is CRLF on Windows and LF elsewhere. Sigma
+ * compares certified hashes with CRLF folded to LF, so this no longer breaks
+ * certification, but a `.gitattributes` rule keeps the bytes identical on every host.
+ */
+export declare function lineEndingAdvice(root: string, chain: ChainState): string | null;
 //# sourceMappingURL=intentGit.d.ts.map

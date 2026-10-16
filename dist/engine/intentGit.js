@@ -50,9 +50,11 @@ exports.verifyResultCommit = verifyResultCommit;
 exports.locateIntentInRepo = locateIntentInRepo;
 exports.ensureAnnotatedTag = ensureAnnotatedTag;
 exports.intentGitDrift = intentGitDrift;
+exports.lineEndingAdvice = lineEndingAdvice;
 const fs_1 = __importDefault(require("fs"));
 const revisions_1 = require("./revisions");
 const git = __importStar(require("./gitRepo"));
+const docHash_1 = require("./docHash");
 function intentTagName(chainVersion, kind) {
     return kind === 'base' ? `sigma/intent-${chainVersion}-base` : `sigma/intent-${chainVersion}-${kind.toLowerCase()}`;
 }
@@ -127,7 +129,7 @@ function inspectIntentGit(root, chainVersion, chain, mode) {
     else
         add('baseline_tag', tag.commit === b.commit, tag.commit === b.commit ? `${b.tag} -> ${b.commit.slice(0, 12)}${tag.annotated ? '' : ' (lightweight)'}` : `Tag ${b.tag} points to ${String(tag.commit).slice(0, 12)}, not the recorded ${b.commit.slice(0, 12)}`);
     if (mode === 'clean') {
-        add('certified_matches_file', report.certified_sha256 === report.working_sha256, 'UNCERTIFIED_EDIT: the INTENT file differs from its certified content');
+        add('certified_matches_file', (0, docHash_1.matchesCertified)(bytes, report.certified_sha256), `UNCERTIFIED_EDIT: the INTENT file differs from its certified content (${(0, docHash_1.lineEndingHint)(bytes, report.certified_sha256)})`);
         add('worktree_clean', git.pathStatus(top.root, rel) === '', `${rel} has uncommitted changes (staged or unstaged)`);
         add('file_matches_baseline', report.working_sha256_lf === b.doc_sha256_lf, 'The INTENT file does not match the recorded Git baseline content');
     }
@@ -183,7 +185,7 @@ function verifyResultCommit(root, chainVersion, chain, ref, expectedSha256) {
             if (git.pathStatus(report.repo_root, report.repo_path) !== '')
                 problems.push(`worktree: ${report.repo_path} has uncommitted changes after the result commit`);
         }
-        if (expectedSha256 && report.working_sha256 !== expectedSha256)
+        if (expectedSha256 && report.working_sha256 !== expectedSha256 && report.working_sha256_lf !== expectedSha256)
             problems.push(`doc_sha256: the INTENT file hash ${report.working_sha256} differs from the reviewed hash ${expectedSha256}; preview and obtain approval again`);
     }
     if (problems.length)
@@ -251,5 +253,33 @@ function intentGitDrift(root, chainVersion, chain) {
             drift.push(`orphan tag ${name} is not recorded in the chain (Sigma does not delete tags)`);
     }
     return drift;
+}
+/**
+ * Doctor warning: with `core.autocrlf=true` and no `eol=lf` attribute on the
+ * certified INTENT, the working file is CRLF on Windows and LF elsewhere. Sigma
+ * compares certified hashes with CRLF folded to LF, so this no longer breaks
+ * certification, but a `.gitattributes` rule keeps the bytes identical on every host.
+ */
+function lineEndingAdvice(root, chain) {
+    if (!chain.intent.certified_doc_sha256)
+        return null;
+    const top = git.repoToplevel(root);
+    if (!top.ok)
+        return null;
+    let rel;
+    try {
+        rel = git.repoRelativePath(top.root, intentAbsPath(root, chain));
+    }
+    catch {
+        return null;
+    }
+    const autocrlf = git.runGit(top.root, ['config', '--get', 'core.autocrlf']);
+    if (!autocrlf.ok || autocrlf.stdout.toString('utf8').trim().toLowerCase() !== 'true')
+        return null;
+    const attr = git.runGit(top.root, ['check-attr', 'eol', '--', rel]);
+    if (attr.ok && /:\s*eol:\s*lf\s*$/m.test(attr.stdout.toString('utf8')))
+        return null;
+    return `core.autocrlf=true and ${rel} has no eol=lf attribute: the file is CRLF on this host and LF on others. ` +
+        'Certification tolerates this, but add to .gitattributes: "Sigma/** text eol=lf" so every host holds identical bytes.';
 }
 //# sourceMappingURL=intentGit.js.map

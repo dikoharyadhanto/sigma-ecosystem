@@ -8,9 +8,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sha256Hex = void 0;
+exports.lfSha256 = exports.sha256Hex = void 0;
 exports.runGit = runGit;
-exports.lfSha256 = lfSha256;
 exports.gitAvailable = gitAvailable;
 exports.repoToplevel = repoToplevel;
 exports.repoRelativePath = repoRelativePath;
@@ -26,7 +25,6 @@ exports.readTag = readTag;
 exports.listTags = listTags;
 exports.createAnnotatedTag = createAnnotatedTag;
 const child_process_1 = require("child_process");
-const crypto_1 = __importDefault(require("crypto"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const MAX_BUFFER = 256 * 1024 * 1024;
@@ -46,12 +44,9 @@ function runGit(cwd, args) {
     return { ok: r.status === 0, code: r.status, stdout: r.stdout ?? Buffer.alloc(0), stderr: (r.stderr ?? Buffer.alloc(0)).toString('utf8').trim() };
 }
 const text = (r) => r.stdout.toString('utf8').trim();
-const sha256Hex = (bytes) => crypto_1.default.createHash('sha256').update(bytes).digest('hex');
-exports.sha256Hex = sha256Hex;
-/** Hash of the content with CRLF folded to LF — comparable across `core.autocrlf` settings (F05 R-1). */
-function lfSha256(bytes) {
-    return (0, exports.sha256Hex)(Buffer.from(bytes.toString('latin1').replace(/\r\n/g, '\n'), 'latin1'));
-}
+var docHash_1 = require("./docHash");
+Object.defineProperty(exports, "sha256Hex", { enumerable: true, get: function () { return docHash_1.sha256Hex; } });
+Object.defineProperty(exports, "lfSha256", { enumerable: true, get: function () { return docHash_1.lfSha256; } });
 function gitAvailable(cwd) {
     const r = runGit(cwd, ['--version']);
     if (r.spawnError)

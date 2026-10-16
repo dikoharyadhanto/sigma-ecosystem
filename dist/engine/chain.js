@@ -60,12 +60,12 @@ exports.lockActiveClose = lockActiveClose;
 exports.getNextValidOperations = getNextValidOperations;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
-const crypto_1 = __importDefault(require("crypto"));
 const config_1 = require("../config");
 const artifactNames_1 = require("./artifactNames");
 const controlStore_1 = require("./controlStore");
 const lifecycle_1 = require("./lifecycle");
 const fs_1 = require("../utils/fs");
+const docHash_1 = require("./docHash");
 const numbering_1 = require("./numbering");
 // ── Overrides (read by doctor.ts / override.ts) ─────────────────────────────
 function readOverrides(projectRoot) {
@@ -957,7 +957,8 @@ function ratifyIntent(chain) {
 // other path may silently re-certify a document).
 function certifyIntentDoc(chain, absDocPath) {
     const content = fs_extra_1.default.readFileSync(absDocPath);
-    chain.intent.certified_doc_sha256 = crypto_1.default.createHash('sha256').update(content).digest('hex');
+    // LF-folded hash: identical on every host regardless of core.autocrlf.
+    chain.intent.certified_doc_sha256 = (0, docHash_1.lfSha256)(content);
     chain.intent.certified_at = new Date().toISOString();
     chain.intent.revision = (chain.intent.revision ?? 0) + 1;
     chain.intent.revision_provenance = 'certification';
@@ -976,9 +977,7 @@ function isIntentDocUncertified(chain, absDocPath) {
         return false; // never certified yet (DRAFT, or a pre-Amendment-era chain) — nothing to compare against
     if (!fs_extra_1.default.existsSync(absDocPath))
         return false; // a missing file is a different, already-surfaced problem
-    const content = fs_extra_1.default.readFileSync(absDocPath);
-    const currentHash = crypto_1.default.createHash('sha256').update(content).digest('hex');
-    return currentHash !== chain.intent.certified_doc_sha256;
+    return !(0, docHash_1.matchesCertified)(fs_extra_1.default.readFileSync(absDocPath), chain.intent.certified_doc_sha256);
 }
 // Next "AMD-NNN" id — zero-padded, matching the PREFIX-NNN convention already
 // used by REQ-001/CON-001/ASM-001/RR-001 elsewhere in DIR-INTENT.

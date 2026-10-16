@@ -91,6 +91,9 @@ function collectDiagnostics(projectRoot) {
             const chain = (0, chain_1.readChain)(projectRoot, version);
             for (const line of (0, intentGit_1.intentGitDrift)(projectRoot, version, chain))
                 warnings.push(`INTENT ${version} Git: ${line}`);
+            const eol = (0, intentGit_1.lineEndingAdvice)(projectRoot, chain);
+            if (eol)
+                warnings.push(`INTENT ${version} line endings: ${eol}`);
         }
     }
     catch (err) {

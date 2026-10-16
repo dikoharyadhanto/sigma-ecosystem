@@ -7,9 +7,7 @@ export interface GitResult {
     spawnError?: string;
 }
 export declare function runGit(cwd: string, args: string[]): GitResult;
-export declare const sha256Hex: (bytes: string | Buffer) => string;
-/** Hash of the content with CRLF folded to LF — comparable across `core.autocrlf` settings (F05 R-1). */
-export declare function lfSha256(bytes: Buffer): string;
+export { sha256Hex, lfSha256 } from './docHash';
 export declare function gitAvailable(cwd: string): {
     ok: boolean;
     version?: string;
