@@ -20,6 +20,7 @@ const changelogService_1 = require("../services/changelogService");
 const chain_1 = require("../engine/chain");
 const projectConfig_1 = require("../engine/projectConfig");
 const gitignoreService_1 = require("../services/gitignoreService");
+const originMachine_1 = require("../engine/originMachine");
 const languageWizard_1 = require("../engine/languageWizard");
 const output_1 = require("../utils/output");
 const fs_1 = require("../utils/fs");
@@ -138,7 +139,7 @@ function resolveLogsCreatedAt(projectRoot, logsReinitialized) {
     }
     return new Date().toISOString();
 }
-function writeProjectIdentity(projectRoot, projectId, projectName, logsCreatedAt, gitignoreSigma) {
+function writeProjectIdentity(projectRoot, projectId, projectName, logsCreatedAt, gitignoreSigma, recordOriginMachine = false) {
     // Read-merge-write: fields this function does not own (for example the DEV
     // workspace record) must survive a re-initialization.
     const existing = { ...readExistingIdentity(projectRoot) };
@@ -153,6 +154,9 @@ function writeProjectIdentity(projectRoot, projectId, projectName, logsCreatedAt
     };
     if (gitignoreSigma !== undefined)
         identity.git = { ...existing.git, gitignore_sigma: gitignoreSigma };
+    // Recorded once, by `project start`; a re-init never moves an origin the Director already set.
+    if (recordOriginMachine && !existing.origin_machine)
+        identity.origin_machine = { name: (0, originMachine_1.currentMachineName)(), recorded_at: new Date().toISOString() };
     fs_extra_1.default.writeJsonSync(path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE), identity, { spaces: 2 });
     // The manifest may not exist yet when `register` repairs a damaged project;
     // creating it here would make a broken Sigma/ look healthy, so only patch an existing one.
@@ -326,7 +330,7 @@ async function runStart(opts) {
     (0, chain_1.writeActivateStatus)(projectRoot, null);
     // Write .sigma-identity.json (root-level, used by `sigma doctor --reconstruct`
     // as a fallback if identity can't otherwise be determined)
-    writeProjectIdentity(projectRoot, projectId, projectName, resolveLogsCreatedAt(projectRoot, logsReinitialized), (0, projectConfig_1.resolveGitignoreSigma)(projectConfig));
+    writeProjectIdentity(projectRoot, projectId, projectName, resolveLogsCreatedAt(projectRoot, logsReinitialized), (0, projectConfig_1.resolveGitignoreSigma)(projectConfig), true);
     console.log('  Identity: .sigma-identity.json written.');
     // Write project.config.json with language preferences
     (0, projectConfig_1.writeProjectConfig)(projectRoot, projectConfig);

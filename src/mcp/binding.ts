@@ -200,7 +200,7 @@ export function resolveBinding(parsed: ParsedBindingArgs): Binding {
   if (registration.state === 'IDENTITY_ONLY_MISSING_SIGMA') {
     throw new BindingError(
       'MISSING_SIGMA_FILES',
-      missingSigmaFilesMessage(registration.projectId ?? 'UNKNOWN', registration.projectName ?? 'UNKNOWN'),
+      missingSigmaFilesMessage(registration.projectId ?? 'UNKNOWN', registration.projectName ?? 'UNKNOWN', registration.originMachine),
     );
   }
 

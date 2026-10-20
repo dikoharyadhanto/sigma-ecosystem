@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.configCommand = configCommand;
 const commander_1 = require("commander");
@@ -6,7 +9,24 @@ const fs_1 = require("../utils/fs");
 const projectConfig_1 = require("../engine/projectConfig");
 const gitignoreService_1 = require("../services/gitignoreService");
 const output_1 = require("../utils/output");
+const fs_extra_1 = __importDefault(require("fs-extra"));
+const path_1 = __importDefault(require("path"));
+const config_1 = require("../config");
+const originMachine_1 = require("../engine/originMachine");
 const languageWizard_1 = require("../engine/languageWizard");
+function readOriginMachineLine(projectRoot) {
+    try {
+        const identity = fs_extra_1.default.readJsonSync(path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE));
+        const origin = (0, originMachine_1.parseOriginMachine)(identity.origin_machine);
+        if (!origin)
+            return '(not recorded — run on the original machine: sigma config set origin-machine)';
+        const here = (0, originMachine_1.sameMachine)(origin.name, (0, originMachine_1.currentMachineName)()) ? ' [this machine]' : ` [this machine is "${(0, originMachine_1.currentMachineName)()}"]`;
+        return `${origin.name}${here}`;
+    }
+    catch {
+        return '(identity unreadable)';
+    }
+}
 function configCommand() {
     const cmd = new commander_1.Command('config');
     cmd.description('Manage project configuration (Sigma/project.config.json)');
@@ -138,6 +158,26 @@ function configCommand() {
             process.exit(1);
         }
     });
+    set.command('origin-machine [name]')
+        .description('Record which machine this project was registered on, in the Git-tracked .sigma-identity.json. ' +
+        'Without a name, the hostname of this machine is used (a label such as "office-laptop" is clearer, since hostnames repeat). ' +
+        'A clone without Sigma files names it when Sigma is blocked there. Run it on the original machine; running it again replaces the record.')
+        .action((name) => {
+        try {
+            const machine = (0, originMachine_1.validateMachineName)(name ?? (0, originMachine_1.currentMachineName)());
+            const projectRoot = (0, fs_1.findProjectRoot)();
+            const previous = (0, originMachine_1.writeOriginMachine)(projectRoot, machine);
+            console.log(`Origin machine: ${previous ? `"${previous.name}"` : '(not recorded)'} -> "${machine}"`);
+            console.log('  Stored in .sigma-identity.json, which is tracked by Git: the name is pushed with the repository.');
+            console.log('  Informational only: it never decides whether Sigma is blocked.');
+            if (!name)
+                console.log(`  Taken from this machine's hostname. To use a label instead: sigma config set origin-machine <name>`);
+        }
+        catch (e) {
+            console.error(e.message);
+            process.exit(1);
+        }
+    });
     cmd.command('show')
         .description('Show current project configuration')
         .action(() => {
@@ -152,6 +192,7 @@ function configCommand() {
             console.log(`Mailbox Auto-Outdate Keep:     ${keep === 0 ? 'OFF' : keep}`);
             const memoLimit = (0, projectConfig_1.resolveMemoLimit)(config);
             console.log(`Memo Unread Limit:             ${memoLimit === 0 ? 'OFF (memo disabled)' : memoLimit}`);
+            console.log(`Origin Machine:                ${readOriginMachineLine(projectRoot)}`);
             const gitignoreOn = (0, projectConfig_1.resolveGitignoreSigma)(config);
             const applied = (0, gitignoreService_1.isGitignoreBlockApplied)(projectRoot);
             const origin = (0, projectConfig_1.hasExplicitGitignoreSigma)(config) ? '' : ' [default]';

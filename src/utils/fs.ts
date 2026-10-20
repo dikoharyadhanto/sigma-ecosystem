@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import os from 'os';
 import { ACTIVATE_STATUS_FILE, PROJECT_IDENTITY_FILE, PROJECT_SIGMA_DIR } from '../config';
 
 export function ensureDir(dir: string): void {
@@ -122,19 +123,22 @@ export interface ProjectRegistrationInspection {
   root: string | null;
   projectId: string | null;
   projectName: string | null;
+  /** Name recorded by `sigma config set origin-machine` / `project start`; null when never recorded. */
+  originMachine: string | null;
 }
 
-function readRegisteredIdentity(dir: string): { projectId: string; projectName: string } | null {
+function readRegisteredIdentity(dir: string): { projectId: string; projectName: string; originMachine: string | null } | null {
   const file = path.join(dir, PROJECT_IDENTITY_FILE);
   if (!fs.existsSync(file)) return null;
   try {
     const parsed: unknown = fs.readJsonSync(file);
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
-    const identity = parsed as { registered?: unknown; project_id?: unknown; project_name?: unknown };
+    const identity = parsed as { registered?: unknown; project_id?: unknown; project_name?: unknown; origin_machine?: { name?: unknown } | null };
     if (identity.registered !== true || typeof identity.project_id !== 'string') return null;
     return {
       projectId: identity.project_id,
       projectName: typeof identity.project_name === 'string' ? identity.project_name : identity.project_id,
+      originMachine: typeof identity.origin_machine?.name === 'string' && identity.origin_machine.name.trim() ? identity.origin_machine.name : null,
     };
   } catch {
     return null;
@@ -156,25 +160,61 @@ export function inspectProjectRegistrationState(
   let current = path.resolve(startDir);
   while (true) {
     if (fs.existsSync(path.join(current, ACTIVATE_STATUS_FILE))) {
-      return { state: 'REGISTERED_COMPLETE', root: current, projectId: null, projectName: null };
+      return { state: 'REGISTERED_COMPLETE', root: current, projectId: null, projectName: null, originMachine: null };
     }
     const identity = readRegisteredIdentity(current);
     if (identity && !fs.existsSync(path.join(current, PROJECT_SIGMA_DIR))) {
-      return { state: 'IDENTITY_ONLY_MISSING_SIGMA', root: current, projectId: identity.projectId, projectName: identity.projectName };
+      return { state: 'IDENTITY_ONLY_MISSING_SIGMA', root: current, projectId: identity.projectId, projectName: identity.projectName, originMachine: identity.originMachine };
     }
     const parent = path.dirname(current);
     if (options.exact || parent === current) {
-      return { state: 'UNREGISTERED', root: null, projectId: null, projectName: null };
+      return { state: 'UNREGISTERED', root: null, projectId: null, projectName: null, originMachine: null };
     }
     current = parent;
   }
 }
 
-export function missingSigmaFilesMessage(projectId: string, projectName: string): string {
-  return [
+export function missingSigmaFilesMessage(
+  projectId: string,
+  projectName: string,
+  originMachine: string | null = null,
+  currentMachine: string = os.hostname().trim(),
+): string {
+  const header = [
     '[SIGMA BLOCKED — MISSING LOCAL SIGMA FILES]',
     `This project was previously registered with Sigma (detected via ${PROJECT_IDENTITY_FILE}: ${projectId} — "${projectName}"),`,
     'but the Sigma runtime files (Sigma/) were not found on this machine.',
+  ];
+  const sameMachine = originMachine !== null && originMachine.trim().toLowerCase() === currentMachine.trim().toLowerCase();
+
+  if (sameMachine) {
+    // The machine that should hold the files does not hold them in this folder: either they were
+    // lost, or this folder is a second clone on the same machine (hostnames cannot tell the two apart).
+    return [
+      ...header,
+      `This machine ("${currentMachine}") is the machine where this project was registered, but the Sigma files are not in this folder.`,
+      '',
+      'All Sigma operations are blocked and you cannot run any Sigma command on this machine',
+      '(including re-registering or re-initializing the project).',
+      '',
+      'To recover:',
+      '  1. Restore the Sigma/ folder and the other Sigma files from a backup or from Git history',
+      '     (for example: git checkout <commit-before-gitignore-on> -- Sigma).',
+      '  2. Do not re-register: that would create a second, diverging Sigma state.',
+      '',
+      'If this folder is another clone of the project on this same machine, the Sigma files live in the original folder:',
+      '  1. There, disable Sigma gitignore: sigma config set gitignore off',
+      '  2. Commit and push all Sigma files from there.',
+      '  3. Run `git pull` here.',
+    ].join('\n');
+  }
+
+  const where = originMachine === null
+    ? 'The original machine was not recorded for this project (set it on that machine with: sigma config set origin-machine).'
+    : `This machine ("${currentMachine}") is not the machine where this project was registered ("${originMachine}").`;
+  return [
+    ...header,
+    where,
     '',
     'All Sigma operations are blocked and you cannot run any Sigma command on this machine',
     '(including re-registering or re-initializing the project).',
@@ -188,8 +228,8 @@ export function missingSigmaFilesMessage(projectId: string, projectName: string)
 }
 
 export class MissingSigmaFilesError extends Error {
-  constructor(public readonly projectId: string, public readonly projectName: string) {
-    super(missingSigmaFilesMessage(projectId, projectName));
+  constructor(public readonly projectId: string, public readonly projectName: string, public readonly originMachine: string | null = null) {
+    super(missingSigmaFilesMessage(projectId, projectName, originMachine));
     this.name = 'MissingSigmaFilesError';
   }
 }
@@ -198,6 +238,6 @@ export class MissingSigmaFilesError extends Error {
 export function assertSigmaFilesPresentOrThrow(startDir: string = process.cwd(), options: { exact?: boolean } = {}): void {
   const inspection = inspectProjectRegistrationState(startDir, options);
   if (inspection.state === 'IDENTITY_ONLY_MISSING_SIGMA') {
-    throw new MissingSigmaFilesError(inspection.projectId ?? 'UNKNOWN', inspection.projectName ?? 'UNKNOWN');
+    throw new MissingSigmaFilesError(inspection.projectId ?? 'UNKNOWN', inspection.projectName ?? 'UNKNOWN', inspection.originMachine);
   }
 }

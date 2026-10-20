@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-20
+
+- Version 2.2.0. The entries below, from "Gitignore by default, identity guardrail, portability" through "Certified-hash stability across hosts", are part of this release; the host (`~/.sigma`) and each project receive the new rules through `sigma setup update` and `sigma project sync`.
+
 ### Certified-hash stability across hosts — BUG-20261015 (2026-10-16)
 
 - Certified hashes no longer depend on `core.autocrlf`. New `src/engine/docHash.ts` holds `matchesCertified(bytes, stored)`: a file matches when its raw, CRLF-folded (LF), or CRLF-expanded hash equals the stored one, so certifications made on Fedora (raw LF), on Windows (raw CRLF, e.g. JLH revision 2) and new ones all stay valid on either host without migration.
@@ -22,7 +26,8 @@ All notable changes to this project are documented in this file. The format loos
 - Portability: asset hashes fold CRLF to LF for text files (LF files hash as before); before a mutating command, a `.mcp.json`/`opencode.json` that names another project root is refreshed and a missing `dev/.sigma-workspace.json` is rebuilt from the identity record (read-only commands and `project sync` dry runs never write).
 - `sigma config set gitignore on` warns that pulling the cleanup commit on another clone removes that clone's tracked Sigma files from disk, and lists RATIFIED chains that keep a Git INTENT baseline while the INTENT is no longer tracked, with the Director-approved command that moves them to snapshot mode (nothing is changed automatically).
 - `ARC-RULE.md` §Amendment Request and `SIGMA_PROTOCOL.md` §7.4 describe Git mode and snapshot mode; "a project without Git cannot run an amendment" is gone.
-- New operation `config_set_gitignore` (registry: 91 operations; classified CLI-only, deferred).
+- Origin machine: `.sigma-identity.json` gains `origin_machine` (`name`, `recorded_at`). `project start` records this machine's hostname; `sigma config set origin-machine [name]` records or replaces it (a label such as `office-laptop` is clearer than a hostname, and `config show` reports it). When Sigma is blocked for missing files, the message names the original machine and this one; on the origin machine itself it points to recovery first and to the same-machine-clone route second; with no record it says the origin was never recorded. Informational only: the block is still decided solely by the absence of `Sigma/`, because hostnames change and repeat. The name is stored in the Git-tracked identity file.
+- New operations `config_set_gitignore` and `config_set_origin_machine` (registry: 92 operations; classified CLI-only, deferred).
 
 ### MCP coverage, policy, and parity (2026-10-15)
 

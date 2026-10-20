@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "generated_at": "2026-10-14T18:05:35.000Z",
   "description": "Sigma Operation Registry \u2014 all valid CLI operations with pre/post conditions, gating, and outputs. Phase 3 CLI implementation must conform to every entry in this registry.",
-  "total_operations": 91,
+  "total_operations": 92,
   "domains": [
     "audit",
     "close",
@@ -3242,6 +3242,40 @@
       "gating": {
         "pre_condition": "Inside a Sigma project (all Sigma files present on this machine)",
         "post_condition": "Setting written; .gitignore block matches the setting; no local Sigma file deleted"
+      },
+      "error_messages": {}
+    },
+    {
+      "operation_id": "config_set_origin_machine",
+      "domain": "config",
+      "action": "set origin machine",
+      "level": "semantic",
+      "role": "any",
+      "description": "Record which machine this project was registered on in .sigma-identity.json (origin_machine: name + timestamp). Without a name the hostname of the current machine is used. Informational: shown when Sigma is blocked on a clone that has no Sigma files, and never decides whether Sigma is blocked. The identity file is tracked by Git, so the name is pushed with the repository.",
+      "inputs": [
+        {
+          "name": "[name]",
+          "type": "string",
+          "required": false,
+          "description": "Machine label (1-64 characters, no control characters). Defaults to the hostname."
+        }
+      ],
+      "outputs": [
+        {
+          "type": "state_change",
+          "description": "origin_machine written to .sigma-identity.json; other identity fields preserved"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "validation",
+          "condition": "name is 1-64 characters without control characters",
+          "error_message": "Machine name must be between 1 and 64 characters."
+        }
+      ],
+      "gating": {
+        "pre_condition": "Inside a Sigma project (all Sigma files present on this machine)",
+        "post_condition": "origin_machine updated; previous value reported"
       },
       "error_messages": {}
     },

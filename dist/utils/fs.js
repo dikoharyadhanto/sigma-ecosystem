@@ -16,6 +16,7 @@ exports.missingSigmaFilesMessage = missingSigmaFilesMessage;
 exports.assertSigmaFilesPresentOrThrow = assertSigmaFilesPresentOrThrow;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
+const os_1 = __importDefault(require("os"));
 const config_1 = require("../config");
 function ensureDir(dir) {
     fs_extra_1.default.ensureDirSync(dir);
@@ -121,6 +122,7 @@ function readRegisteredIdentity(dir) {
         return {
             projectId: identity.project_id,
             projectName: typeof identity.project_name === 'string' ? identity.project_name : identity.project_id,
+            originMachine: typeof identity.origin_machine?.name === 'string' && identity.origin_machine.name.trim() ? identity.origin_machine.name : null,
         };
     }
     catch {
@@ -139,24 +141,53 @@ function inspectProjectRegistrationState(startDir = process.cwd(), options = {})
     let current = path_1.default.resolve(startDir);
     while (true) {
         if (fs_extra_1.default.existsSync(path_1.default.join(current, config_1.ACTIVATE_STATUS_FILE))) {
-            return { state: 'REGISTERED_COMPLETE', root: current, projectId: null, projectName: null };
+            return { state: 'REGISTERED_COMPLETE', root: current, projectId: null, projectName: null, originMachine: null };
         }
         const identity = readRegisteredIdentity(current);
         if (identity && !fs_extra_1.default.existsSync(path_1.default.join(current, config_1.PROJECT_SIGMA_DIR))) {
-            return { state: 'IDENTITY_ONLY_MISSING_SIGMA', root: current, projectId: identity.projectId, projectName: identity.projectName };
+            return { state: 'IDENTITY_ONLY_MISSING_SIGMA', root: current, projectId: identity.projectId, projectName: identity.projectName, originMachine: identity.originMachine };
         }
         const parent = path_1.default.dirname(current);
         if (options.exact || parent === current) {
-            return { state: 'UNREGISTERED', root: null, projectId: null, projectName: null };
+            return { state: 'UNREGISTERED', root: null, projectId: null, projectName: null, originMachine: null };
         }
         current = parent;
     }
 }
-function missingSigmaFilesMessage(projectId, projectName) {
-    return [
+function missingSigmaFilesMessage(projectId, projectName, originMachine = null, currentMachine = os_1.default.hostname().trim()) {
+    const header = [
         '[SIGMA BLOCKED — MISSING LOCAL SIGMA FILES]',
         `This project was previously registered with Sigma (detected via ${config_1.PROJECT_IDENTITY_FILE}: ${projectId} — "${projectName}"),`,
         'but the Sigma runtime files (Sigma/) were not found on this machine.',
+    ];
+    const sameMachine = originMachine !== null && originMachine.trim().toLowerCase() === currentMachine.trim().toLowerCase();
+    if (sameMachine) {
+        // The machine that should hold the files does not hold them in this folder: either they were
+        // lost, or this folder is a second clone on the same machine (hostnames cannot tell the two apart).
+        return [
+            ...header,
+            `This machine ("${currentMachine}") is the machine where this project was registered, but the Sigma files are not in this folder.`,
+            '',
+            'All Sigma operations are blocked and you cannot run any Sigma command on this machine',
+            '(including re-registering or re-initializing the project).',
+            '',
+            'To recover:',
+            '  1. Restore the Sigma/ folder and the other Sigma files from a backup or from Git history',
+            '     (for example: git checkout <commit-before-gitignore-on> -- Sigma).',
+            '  2. Do not re-register: that would create a second, diverging Sigma state.',
+            '',
+            'If this folder is another clone of the project on this same machine, the Sigma files live in the original folder:',
+            '  1. There, disable Sigma gitignore: sigma config set gitignore off',
+            '  2. Commit and push all Sigma files from there.',
+            '  3. Run `git pull` here.',
+        ].join('\n');
+    }
+    const where = originMachine === null
+        ? 'The original machine was not recorded for this project (set it on that machine with: sigma config set origin-machine).'
+        : `This machine ("${currentMachine}") is not the machine where this project was registered ("${originMachine}").`;
+    return [
+        ...header,
+        where,
         '',
         'All Sigma operations are blocked and you cannot run any Sigma command on this machine',
         '(including re-registering or re-initializing the project).',
@@ -169,10 +200,11 @@ function missingSigmaFilesMessage(projectId, projectName) {
     ].join('\n');
 }
 class MissingSigmaFilesError extends Error {
-    constructor(projectId, projectName) {
-        super(missingSigmaFilesMessage(projectId, projectName));
+    constructor(projectId, projectName, originMachine = null) {
+        super(missingSigmaFilesMessage(projectId, projectName, originMachine));
         this.projectId = projectId;
         this.projectName = projectName;
+        this.originMachine = originMachine;
         this.name = 'MissingSigmaFilesError';
     }
 }
@@ -181,7 +213,7 @@ exports.MissingSigmaFilesError = MissingSigmaFilesError;
 function assertSigmaFilesPresentOrThrow(startDir = process.cwd(), options = {}) {
     const inspection = inspectProjectRegistrationState(startDir, options);
     if (inspection.state === 'IDENTITY_ONLY_MISSING_SIGMA') {
-        throw new MissingSigmaFilesError(inspection.projectId ?? 'UNKNOWN', inspection.projectName ?? 'UNKNOWN');
+        throw new MissingSigmaFilesError(inspection.projectId ?? 'UNKNOWN', inspection.projectName ?? 'UNKNOWN', inspection.originMachine);
     }
 }
 //# sourceMappingURL=fs.js.map

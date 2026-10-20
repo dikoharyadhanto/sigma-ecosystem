@@ -12,6 +12,8 @@ export interface ProjectRegistrationInspection {
     root: string | null;
     projectId: string | null;
     projectName: string | null;
+    /** Name recorded by `sigma config set origin-machine` / `project start`; null when never recorded. */
+    originMachine: string | null;
 }
 /**
  * Walks up from `startDir` (or inspects only `startDir` when `exact`).
@@ -24,11 +26,12 @@ export interface ProjectRegistrationInspection {
 export declare function inspectProjectRegistrationState(startDir?: string, options?: {
     exact?: boolean;
 }): ProjectRegistrationInspection;
-export declare function missingSigmaFilesMessage(projectId: string, projectName: string): string;
+export declare function missingSigmaFilesMessage(projectId: string, projectName: string, originMachine?: string | null, currentMachine?: string): string;
 export declare class MissingSigmaFilesError extends Error {
     readonly projectId: string;
     readonly projectName: string;
-    constructor(projectId: string, projectName: string);
+    readonly originMachine: string | null;
+    constructor(projectId: string, projectName: string, originMachine?: string | null);
 }
 /** Throws MissingSigmaFilesError when only the identity file is present. Any other state passes. */
 export declare function assertSigmaFilesPresentOrThrow(startDir?: string, options?: {

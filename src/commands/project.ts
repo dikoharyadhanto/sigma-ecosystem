@@ -47,6 +47,7 @@ import {
   hasExplicitGitignoreSigma,
 } from '../engine/projectConfig';
 import { applyGitignorePolicy, enableSigmaGitignore } from '../services/gitignoreService';
+import { currentMachineName } from '../engine/originMachine';
 import { promptLanguageWizard } from '../engine/languageWizard';
 import { success, info, warn, error } from '../utils/output';
 import { assertSigmaFilesPresentOrThrow, ensureDir, fileExists, findProjectRoot } from '../utils/fs';
@@ -179,6 +180,8 @@ interface ProjectIdentity {
   // (PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.4 item 2): this file
   // is the one Sigma file kept in Git, so it only holds stable identity.
   git?: { gitignore_sigma: boolean };
+  // Machine the project was registered on (informational; see engine/originMachine.ts).
+  origin_machine?: { name: string; recorded_at: string };
 }
 
 // Preserves the existing logs_created_at unless the operations log was just
@@ -209,6 +212,7 @@ function writeProjectIdentity(
   projectName: string,
   logsCreatedAt: string,
   gitignoreSigma?: boolean,
+  recordOriginMachine = false,
 ): void {
   // Read-merge-write: fields this function does not own (for example the DEV
   // workspace record) must survive a re-initialization.
@@ -223,6 +227,8 @@ function writeProjectIdentity(
     registered: true,
   };
   if (gitignoreSigma !== undefined) identity.git = { ...(existing.git as object | undefined), gitignore_sigma: gitignoreSigma };
+  // Recorded once, by `project start`; a re-init never moves an origin the Director already set.
+  if (recordOriginMachine && !existing.origin_machine) identity.origin_machine = { name: currentMachineName(), recorded_at: new Date().toISOString() };
   fs.writeJsonSync(path.join(projectRoot, PROJECT_IDENTITY_FILE), identity, { spaces: 2 });
   // The manifest may not exist yet when `register` repairs a damaged project;
   // creating it here would make a broken Sigma/ look healthy, so only patch an existing one.
@@ -412,6 +418,7 @@ async function runStart(opts: {
     projectRoot, projectId, projectName,
     resolveLogsCreatedAt(projectRoot, logsReinitialized),
     resolveGitignoreSigma(projectConfig),
+    true,
   );
   console.log('  Identity: .sigma-identity.json written.');
 

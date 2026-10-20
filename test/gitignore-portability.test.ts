@@ -14,6 +14,7 @@ import {
 } from '../src/utils/gitignore';
 import { resolveBinding, BindingError } from '../src/mcp/binding';
 import { runCli, setupTestEnv, chainPath } from './helpers';
+import { missingSigmaFilesMessage } from '../src/utils/fs';
 import { setupGitProject } from './f05-git-helpers';
 
 // PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY-20261020 — WP-6.
@@ -195,7 +196,7 @@ describe('sigma project start / sigma config set gitignore (CLI)', () => {
   it('keeps volatile fields out of the identity file', () => {
     const { project } = startedProject();
     const identity = fs.readJsonSync(path.join(project, '.sigma-identity.json'));
-    expect(Object.keys(identity).sort()).toEqual(['git', 'project_id', 'project_name', 'registered', 'schema_version']);
+    expect(Object.keys(identity).sort()).toEqual(['git', 'origin_machine', 'project_id', 'project_name', 'registered', 'schema_version']);
     const manifest = fs.readJsonSync(path.join(project, 'Sigma', 'activate_status.json'));
     expect(typeof manifest.logs_created_at).toBe('string');
     expect(manifest.sigma_applied.sigma_version).toBeDefined();
@@ -271,6 +272,8 @@ describe('sigma project start / sigma config set gitignore (CLI)', () => {
 describe('invariant 4: Sigma is blocked where only .sigma-identity.json exists', () => {
   function secondMachine(): { clone: string; home: string; origin: string; originHome: string } {
     const { project: origin, home: originHome } = startedProject();
+    // These tests stand in for a second PC on one host, so the origin must not look like this machine.
+    expect(sigma(['config', 'set', 'origin-machine', 'office-laptop'], origin, originHome).exitCode).toBe(0);
     git(origin, 'add', '-A');
     git(origin, 'commit', '-q', '-m', 'identity only');
     const parent = tmp('sigma-gi-second-');
@@ -476,6 +479,128 @@ describe('approved follow-ups: other-clone warning and Git-bound chains', () => 
       expect(runCli('intent baseline check', p.projectDir, p.env.homeDir).exitCode).toBe(0);
     } finally {
       p.cleanup();
+    }
+  });
+});
+
+describe('origin machine in the identity file', () => {
+  const HOST = os.hostname().trim();
+  const identityOf = (dir: string) => fs.readJsonSync(path.join(dir, '.sigma-identity.json'));
+
+  it('project start records this machine automatically', () => {
+    const { project } = startedProject();
+    expect(identityOf(project).origin_machine.name).toBe(HOST);
+    expect(typeof identityOf(project).origin_machine.recorded_at).toBe('string');
+  });
+
+  it('--reinit never moves an origin that was already set', () => {
+    const { project, home } = startedProject();
+    expect(sigma(['config', 'set', 'origin-machine', 'office-laptop'], project, home).exitCode).toBe(0);
+    const re = sigma(['project', 'start', '--id', 'GI', '--name', 'Gitignore test', '--confirm', '--reinit'], project, home);
+    expect(re.exitCode, re.stdout + re.stderr).toBe(0);
+    expect(identityOf(project).origin_machine.name).toBe('office-laptop');
+  });
+
+  it('config set origin-machine: hostname by default, label on request, replaces, warns it is pushed to Git', () => {
+    const { project, home } = startedProject();
+    const before = identityOf(project);
+    const named = sigma(['config', 'set', 'origin-machine', '  office-laptop  '], project, home);
+    expect(named.exitCode, named.stdout + named.stderr).toBe(0);
+    expect(named.stdout).toMatch(new RegExp(`Origin machine: "${HOST}" -> "office-laptop"`));
+    expect(named.stdout).toMatch(/tracked by Git: the name is pushed with the repository/);
+    expect(named.stdout).toMatch(/never decides whether Sigma is blocked/);
+
+    const after = identityOf(project);
+    expect(after.origin_machine.name).toBe('office-laptop');
+    for (const key of ['project_id', 'project_name', 'registered', 'schema_version', 'git']) expect(after[key]).toEqual(before[key]);
+
+    const byHost = sigma(['config', 'set', 'origin-machine'], project, home);
+    expect(byHost.exitCode).toBe(0);
+    expect(byHost.stdout).toMatch(/Taken from this machine's hostname/);
+    expect(identityOf(project).origin_machine.name).toBe(HOST);
+  });
+
+  it('rejects an empty, over-long or multi-line name and leaves the identity alone', () => {
+    const { project, home } = startedProject();
+    const before = fs.readFileSync(path.join(project, '.sigma-identity.json'), 'utf8');
+    for (const bad of ['   ', 'x'.repeat(65), 'a\nb']) {
+      const r = sigma(['config', 'set', 'origin-machine', bad], project, home);
+      expect(r.exitCode, JSON.stringify(bad)).toBe(1);
+    }
+    expect(fs.readFileSync(path.join(project, '.sigma-identity.json'), 'utf8')).toBe(before);
+  });
+
+  it('config show reports it, including whether it is this machine', () => {
+    const { project, home } = startedProject();
+    expect(sigma(['config', 'show'], project, home).stdout).toMatch(new RegExp(`Origin Machine: +${HOST} \\[this machine\\]`));
+    sigma(['config', 'set', 'origin-machine', 'office-laptop'], project, home);
+    expect(sigma(['config', 'show'], project, home).stdout).toMatch(new RegExp(`Origin Machine: +office-laptop \\[this machine is "${HOST}"\\]`));
+    const legacy = identityOf(project);
+    delete legacy.origin_machine;
+    fs.writeJsonSync(path.join(project, '.sigma-identity.json'), legacy);
+    expect(sigma(['config', 'show'], project, home).stdout).toMatch(/Origin Machine: +\(not recorded/);
+  });
+
+  function blockedClone(origin: string | null): { clone: string; home: string } {
+    const { project, home: originHome } = startedProject();
+    if (origin) expect(sigma(['config', 'set', 'origin-machine', origin], project, originHome).exitCode).toBe(0);
+    else {
+      const identity = identityOf(project);
+      delete identity.origin_machine;
+      fs.writeJsonSync(path.join(project, '.sigma-identity.json'), identity);
+    }
+    git(project, 'add', '-A');
+    git(project, 'commit', '-q', '-m', 'identity only');
+    const parent = tmp('sigma-gi-origin-');
+    const clone = path.join(parent, 'clone');
+    git(parent, 'clone', '-q', project, clone);
+    const home = tmp('sigma-gi-originhome-');
+    expect(sigma(['setup', 'install', '--yes'], clone, home).exitCode).toBe(0);
+    return { clone, home };
+  }
+
+  it('the block names the original machine and this one when they differ', () => {
+    const { clone, home } = blockedClone('office-laptop');
+    const r = sigma(['project', 'status'], clone, home);
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toContain(`This machine ("${HOST}") is not the machine where this project was registered ("office-laptop").`);
+    expect(r.stderr).toContain('Run `git pull` on this machine.');
+    expect(sigma(['project', 'start', '--id', 'GI', '--name', 'x', '--confirm'], clone, home).stderr).toContain('"office-laptop"');
+  });
+
+  it('says so when the original machine was never recorded', () => {
+    const { clone, home } = blockedClone(null);
+    const r = sigma(['config', 'show'], clone, home);
+    expect(r.stderr).toContain('The original machine was not recorded for this project (set it on that machine with: sigma config set origin-machine).');
+    expect(r.stderr).toContain('Run `git pull` on this machine.');
+  });
+
+  it('on the origin machine it offers recovery first, and the same-machine-clone route second', () => {
+    const { project, home } = startedProject();
+    fs.removeSync(path.join(project, 'Sigma'));
+    const r = sigma(['project', 'status'], project, home);
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toContain(`This machine ("${HOST}") is the machine where this project was registered, but the Sigma files are not in this folder`);
+    expect(r.stderr).toContain('Restore the Sigma/ folder');
+    expect(r.stderr).toContain('Do not re-register');
+    expect(r.stderr).toContain('another clone of the project on this same machine');
+    expect(fs.existsSync(path.join(project, 'Sigma'))).toBe(false);
+  });
+
+  it('compares names case-insensitively and falls back to the plain message without a name', () => {
+    expect(missingSigmaFilesMessage('P', 'N', 'FEDORA', 'fedora')).toContain('is the machine where this project was registered');
+    expect(missingSigmaFilesMessage('P', 'N', 'a', 'b')).toContain('is not the machine where this project was registered ("a")');
+    expect(missingSigmaFilesMessage('P', 'N')).toContain('was not recorded');
+  });
+
+  it('the MCP binding message carries the origin too', () => {
+    const { clone } = blockedClone('office-laptop');
+    try {
+      resolveBinding({ mode: 'query', projectRoot: clone, projectId: 'GI' });
+      throw new Error('expected a BindingError');
+    } catch (e) {
+      expect((e as BindingError).code).toBe('MISSING_SIGMA_FILES');
+      expect((e as BindingError).message).toContain('("office-laptop")');
     }
   });
 });

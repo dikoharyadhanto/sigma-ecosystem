@@ -5,10 +5,10 @@
 
 ## Baseline
 
-- Sigma version: `2.1.0`
-- Operation registry: schema `1.0.0`, generated `2026-10-14T18:05:35.000Z`, 91 entries
-- Active operations: 88; tombstones: 3 (`intent_lock`, `plan_lock`, `exec_lock`)
-- Implemented on MCP: 57; deferred: 16; not admissible: 15
+- Sigma version: `2.2.0`
+- Operation registry: schema `1.0.0`, generated `2026-10-14T18:05:35.000Z`, 92 entries
+- Active operations: 89; tombstones: 3 (`intent_lock`, `plan_lock`, `exec_lock`)
+- Implemented on MCP: 57; deferred: 17; not admissible: 15
 
 This matrix replaces `Implementation/sigma-mcp/SIGMA-MCP-OPERATION-CAPABILITY-MATRIX-20260915.md` as the
 reference for what exists. That file stays as the record of the original reasoning and decisions.
@@ -102,7 +102,7 @@ Tombstones are never counted as active operations and can never receive a record
 | `roadmap_new` | W1 | semantic | implemented | `sigma_create_roadmap_draft` | exact | FMN only; one ROADMAP per chain. |
 | `roadmap_render` | W1 | semantic | implemented | `sigma_render_roadmap` | exact | Deterministic Stage Overview re-derivation. |
 
-## CLI only — 21
+## CLI only — 22
 
 | operation | tier | registry level | mcp_status | tools | mapping | rationale |
 |:--|:--|:--|:--|:--|:--|:--|
@@ -111,6 +111,7 @@ Tombstones are never counted as active operations and can never receive a record
 | `config_set_language` | W1 | semantic | deferred | — | none | Project configuration; CLI-only this iteration. |
 | `config_set_mailbox_outdate_keep` | W3 | semantic | deferred | — | none | Project configuration; CLI-only this iteration. |
 | `config_set_memo_limit` | W3 | semantic | deferred | — | none | Project configuration; CLI-only this iteration. |
+| `config_set_origin_machine` | W3 | semantic | deferred | — | none | Project configuration; writes the Git-tracked identity file; CLI-only this iteration. |
 | `control_approve` | W3 | semantic | not_admissible | — | none | Trusted local Director surface; an MCP approval tool would void the ticket model. |
 | `control_reject` | W3 | semantic | not_admissible | — | none | Trusted local Director surface. |
 | `control_show` | W3 | read_only | not_admissible | — | none | Trusted local Director surface. |

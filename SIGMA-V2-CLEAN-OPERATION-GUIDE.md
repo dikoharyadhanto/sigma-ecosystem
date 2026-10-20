@@ -1,6 +1,6 @@
 # Sigma v2 — Clean Operation Guide
 
-Written 2026-10-15 for Sigma 2.1.0 (master commit `61c1dce`). Facts were verified against the code, the CLI help, and the machine on that date. Items marked **[Inference]** were not verified.
+Written 2026-10-15 for Sigma 2.1.0 (master commit `61c1dce`); updated 2026-10-20 for Sigma 2.2.0 (gitignore by default, identity guardrail, snapshot-mode INTENT baseline, portability). Facts were verified against the code, the CLI help, and the machine on those dates. Items marked **[Inference]** were not verified.
 
 **Audience:** any AI that is active inside an existing Sigma project while the machine's global Sigma installation is already the latest version, and the Director who supervises it.
 
@@ -14,7 +14,8 @@ Written 2026-10-15 for Sigma 2.1.0 (master commit `61c1dce`). Facts were verifie
 2. Do **only read-only commands** until the Director approves a sync. Run the orientation in section 2.
 3. Do not run bare `sigma doctor`. It reconciles state and can write. The read-only form is `sigma doctor --check-assets`.
 4. Do not activate ARC, FMN, DEV, or AUD on your own. A governance role needs explicit Director activation.
-5. If anything is unclear, stop and ask the Director with a recommendation. Do not infer.
+5. If a command prints `[SIGMA BLOCKED — MISSING LOCAL SIGMA FILES]`, stop: this clone has no Sigma files and must not be re-registered (section 1.8).
+6. If anything is unclear, stop and ask the Director with a recommendation. Do not infer.
 
 ---
 
@@ -44,9 +45,18 @@ Because the CLI is shared, items marked **applies now** already hold in your pro
 - Do not migrate a legacy chain (`sigma doctor --migrate-lifecycle --director-confirm`) unless the Director decides so per chain. Migration turns LOCKED PLANs into APPROVED and needs baseline review.
 - `sigma intent new` also **activates** the new chain. The old chain stays untouched and inactive. `sigma intent activate --v <chain>` switches back and needs no confirmation, so treat it as consequential: every later command acts on the active chain.
 
-### 1.3 INTENT amendment through Git (F05)
+### 1.3 INTENT amendment: Git mode and snapshot mode (F05; snapshot mode since 2.2.0)
 
-`sigma intent baseline check` → edit → `sigma intent amendment preview` (read-only diff, hash, PLAN/EXEC impact) → Director reviews → **commit to Git** → `sigma intent amendment --change ... --purpose-changed ... --commit <ref> --doc-sha256 <hash> --director-confirm`. Sigma never stages, commits, or pushes. A chain with no Git baseline needs `sigma intent baseline adopt --commit <ref> --director-confirm` first. Approval relayed by another role is not approval.
+`sigma intent baseline check` → edit → `sigma intent amendment preview` (read-only diff, hash, PLAN/EXEC impact; it prints `Mode: git` or `Mode: snapshot`) → Director reviews → record the amendment. Sigma never stages, commits, or pushes. Approval relayed by another role is not approval.
+
+| | Git mode | Snapshot mode |
+|---|---|---|
+| Used when | The chain already has a Git baseline, or the INTENT is tracked by Git | Git does not track the INTENT (the default while the Sigma gitignore is on, see 1.8) or there is no Git |
+| Baseline | `sigma intent baseline adopt --commit <ref> --director-confirm` (commit + local tag) | `sigma intent baseline adopt --director-confirm` (no `--commit`; stores `Sigma/revisions/INTENT-v<N>/base.md`) |
+| Between preview and record | Commit the reviewed content to Git | Nothing |
+| Record | `sigma intent amendment --change ... --purpose-changed ... --commit <ref> --doc-sha256 <hash> --director-confirm` | The same without `--commit` (passing it is rejected); stores `amd-<NNN>.md` |
+
+A chain that has a Git baseline stays in Git mode even after its INTENT stops being tracked; `sigma config set gitignore on` lists such chains and the Director moves one with `sigma intent baseline adopt --v <chain> --director-confirm` (no `--commit`). Sigma does this only on that explicit approval.
 
 ### 1.4 Artifacts, files, and changelog
 
@@ -70,7 +80,7 @@ Inside a project, ordinary commands print one stderr line when something is behi
 |---|---|---|
 | "the global installation (~/.sigma) … is behind the installed CLI … Run: sigma setup update" | Host is behind master | Stop. Tell the Director. Host-level; you do not run `setup update`. |
 | "this project was last synced at … and is behind ~/.sigma … Run: sigma project sync" | Project copies are behind host | Section 3, step 4. Dry run only until approved. |
-| "no version stamp" | Project was never synced under 2.1.0 | Same as above. |
+| "no version stamp" | Project was never synced under 2.1.0 or later | Same as above. |
 
 `sigma doctor --check-assets`, `sigma session bootstrap`, `sigma project start|register|sync`, and `sigma setup` do not print this line; they report version status themselves.
 
@@ -79,6 +89,19 @@ Inside a project, ordinary commands print one stderr line when something is behi
 - **Added:** `sigma notes new|list|update` (free-form notes, registered), `sigma control` (trusted local Director surface, never reachable by MCP), `sigma audit` (hash-bound audit snapshots), clone commands (`sigma intent clone`, `sigma plan clone`: preview first), read-only PLAN source review, two MCP servers (`sigma-mcp` query, `sigma-control`), opencode as a target (with a `protect-sigma` plugin).
 - **Removed:** the Notion integration and `sigma notion`, `sigma intent|exec|close humanize` commands (the `/humanize` skill and `sigma scan` remain), the HUMAN templates, the Cursor target.
 - **Protected files:** the Claude Code hook and the opencode plugin block direct edits to `Sigma/progress-v<N>.json`. Chain state is changed only by `sigma` commands.
+
+### 1.8 Gitignore by default, the identity guardrail, and moving between machines (2.2.0; the guardrail and new-project behavior apply now)
+
+| Topic | Now | What you must do differently |
+|---|---|---|
+| Gitignore | `git.gitignore_sigma` (default on). `sigma project start` writes a `# >>> sigma-managed >>>` block to `.gitignore` listing `/Sigma/`, the five bridge files, `.mcp.json`, `opencode.json(c)`, `CHANGE-RECORD.md`, and inside the DEV workspace only `dev/.sigma-workspace.json` and `dev/CHANGE-RECORD.md`. `dev/` itself is never ignored. `.sigma-identity.json` is the one Sigma file left in Git. | Do not edit inside the block. Do not add `.gitignore` rules below it that re-include or exclude Sigma files. |
+| Existing projects | Not changed by a sync. The setting shows as `ON [default]` until the Director runs `sigma config set gitignore on`. | Never run `on` yourself. It is a Director decision per project (see 5 and the sync guide in `Discussion/`). |
+| What `on` does | Writes the block and detaches already-tracked Sigma files from the Git index (`git rm --cached`). Files on disk are untouched; nothing is committed. | Report the `git status` afterwards; the Director commits. |
+| Other clones | After the cleanup commit is pushed, `git pull` in any other clone **removes that clone's tracked Sigma files from disk**, and that clone is then blocked. | Before anyone pulls it, make sure other clones have their Sigma files copied somewhere safe. |
+| Guardrail | If `.sigma-identity.json` exists but `Sigma/` does not, every `sigma` command except `sigma setup` (including `project start`, `register`, `sync`) and every MCP server refuses with `[SIGMA BLOCKED — MISSING LOCAL SIGMA FILES]`. The message names the original machine when the identity records one (`origin_machine`, set by `project start` or `sigma config set origin-machine`) and says whether this is that machine. The record is informational; it never decides the block. | Do not try to work around it, re-register, or recreate `Sigma/`. Report it. |
+| Moving a project to another machine | `sigma config set gitignore off`, commit and push all Sigma files from the original machine, `git pull` on the other. | Never copy `Sigma/` by hand into a blocked clone without the Director. |
+| Stable identity | `.sigma-identity.json` no longer carries the version stamp (`sigma_applied`) or `logs_created_at`; they live in `Sigma/activate_status.json`. | Do not read the stamp from the identity file. |
+| Self-heal | Before a command that changes state, a `.mcp.json`/`opencode.json` that names another project root is refreshed, and a missing `dev/.sigma-workspace.json` is rebuilt from the identity record. Read-only commands never do this. | Expect a one-line stderr note; it is not an error. |
 
 ---
 
@@ -143,7 +166,8 @@ Side effects of `--confirm` (so they are not a surprise):
 - upserts the `sigma` entry in the project's `.mcp.json` and `opencode.json(c)`;
 - **rewrites the global `~/.codex/config.toml` and `~/.gemini/config/mcp_config.json` `sigma` entry to point at this project** (last project synced wins). If several projects are synced in a row, tell the Director the global entry now points at the last one; `sigma setup update` resets it to discovery mode;
 - creates an empty `CHANGE-RECORD.md` only if none exists in the root or `dev/`;
-- writes the version stamp into `.sigma-identity.json` only when every managed file then matches;
+- writes the version stamp into `Sigma/activate_status.json` (since 2.2.0; not the identity file) only when every managed file then matches, and removes a stamp that an older version left on `.sigma-identity.json`;
+- re-asserts the gitignore block only when the project explicitly chose `on` (a project that never ran `sigma config set gitignore` is left alone);
 - backs up replaced files under `~/.local/share/sigma/sync-backups/`.
 
 ### 3.3 Reload what you rely on (step 5)
@@ -205,7 +229,7 @@ Prerequisite: section 3 is done for this project (state C).
 |---|---|
 | Read-only (free to run when relevant) | `sigma doctor --check-assets`, `sigma project status`, `sigma intent status|list|check`, `sigma intent amendment preview`, `sigma intent baseline check`, `sigma plan status|list|check`, `sigma exec status|list|check`, `sigma close status|check`, `sigma review check`, `sigma inbox`, `sigma memory --<role>`, `sigma report …`, `sigma git evidence` |
 | Draft / operational (your role only, per its rule) | `sigma intent new`, `sigma plan new`, `sigma exec new`, `sigma review new`, `sigma close new`, `sigma send`, `sigma memo write`, `sigma notes new` |
-| **Director approval required** | `sigma intent ratify`, `sigma plan approve`, `sigma exec approve`, `sigma close lock`, `sigma intent amendment`, `sigma intent baseline adopt`, `sigma intent supersede`, `sigma override`, `sigma project sync --confirm [--accept]`, `sigma doctor` with any reconciling flag, `sigma setup install|update|uninstall` |
+| **Director approval required** | `sigma intent ratify`, `sigma plan approve`, `sigma exec approve`, `sigma close lock`, `sigma intent amendment`, `sigma intent baseline adopt`, `sigma intent supersede`, `sigma override`, `sigma config set gitignore on|off` (changes the Git index and, for other clones, what a pull deletes), `sigma config set origin-machine` (writes the Git-tracked identity file), `sigma project sync --confirm [--accept]`, `sigma doctor` with any reconciling flag, `sigma setup install|update|uninstall` |
 
 Behavior rules:
 
@@ -230,6 +254,9 @@ Behavior rules:
 | Commands act on a chain you did not expect | Active chain changed (`intent new` or `intent activate`) | `sigma intent list`; `sigma intent activate --v <chain>` only with the Director's knowledge. |
 | `sigma send` rejects the artifact reference | Missing/unknown `--related-artifact` | Use a registered artifact of the active INTENT, or `GENERAL` explicitly. Never substitute silently. |
 | Changelog was not recorded because … | F17 guard on `CHANGE-RECORD.md` | Fix the file manually, then resolve; do not re-run blindly. |
+| `[SIGMA BLOCKED — MISSING LOCAL SIGMA FILES]` | This clone holds only `.sigma-identity.json`; the project's Sigma files are not in Git (gitignore on). The message says which machine registered the project, or that none was recorded. | Stop. Report to the Director, quoting the machine line. The way forward is on the original machine (1.8); do not re-register. If the message says this machine IS the origin, the files were lost here: restore from backup or Git history. |
+| `sigma intent amendment` says `--commit is not used` / `--commit is required` | Mode mismatch (snapshot vs Git) | Read `Mode:` from `sigma intent amendment preview`; use the matching form (1.3). |
+| `sigma intent baseline check` fails `intent_tracked` | A Git-baseline chain whose INTENT is no longer tracked | Report; the Director decides on `sigma intent baseline adopt --v <chain> --director-confirm` (1.3). |
 | Codex/Antigravity MCP answers about the wrong project | Global entry is pinned to the last synced project | Report; Director runs `sigma setup update` or re-syncs the intended project last. |
 
 ---

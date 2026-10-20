@@ -267,14 +267,16 @@ export function intentCommand(): Command {
         const projectRoot = findProjectRoot();
         const { chainVersion, data: chain } = opts.v ? { chainVersion: opts.v, data: readChain(projectRoot, opts.v) } : readActiveChain(projectRoot);
         const report = inspectIntentGit(projectRoot, chainVersion, chain, 'clean');
-        console.log(`\n=== INTENT Git Baseline — ${chainVersion} ===\n`);
+        console.log(`\n=== INTENT ${report.checks.some(c => c.id === 'verification_mode') ? 'Snapshot' : 'Git'} Baseline — ${chainVersion} ===\n`);
         printGitReport(report);
         for (const line of intentGitDrift(projectRoot, chainVersion, chain)) console.log(`  [DRIFT] ${line}`);
         if (report.blockers.length) {
           console.error('Not ready:\n' + report.blockers.map(b => ` - ${b}`).join('\n'));
           process.exit(1);
         }
-        console.log('\nINTENT in Git matches the certified baseline.');
+        console.log(report.checks.some(c => c.id === 'verification_mode')
+          ? '\nINTENT matches the certified baseline (snapshot).'
+          : '\nINTENT in Git matches the certified baseline.');
       } catch (e) {
         console.error((e as Error).message);
         process.exit(1);
