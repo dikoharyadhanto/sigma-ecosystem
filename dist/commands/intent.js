@@ -162,7 +162,7 @@ function intentCommand() {
         .description('Record a Director-approved amendment of a RATIFIED INTENT from a Git commit; `amendment preview` is read-only')
         .option('--change <change>', 'Single-line summary of the change, commit-message style')
         .option('--purpose-changed <yes|no>', 'Director-reviewed declaration whether the purpose or core outcome changes (informational, never a gate)')
-        .option('--commit <ref>', 'Commit that holds exactly the reviewed and approved INTENT content')
+        .option('--commit <ref>', 'Git mode only: commit that holds exactly the reviewed and approved INTENT content. Omit when the preview reports snapshot mode')
         .option('--doc-sha256 <hash>', 'INTENT file hash shown by `amendment preview` (binds the approval to the reviewed content)')
         .option('--v <version>', 'Chain version to amend instead of the active one', chain_1.normalizeVersionArg)
         .option('--director-confirm', 'Required. Explicit Director approval of the reviewed content and change list.')
@@ -176,8 +176,7 @@ function intentCommand() {
                 missing.push('--purpose-changed yes|no');
             else if (!['yes', 'no'].includes(opts.purposeChanged))
                 throw new Error('--purpose-changed must be yes or no.');
-            if (!opts.commit)
-                missing.push('--commit <ref>');
+            // --commit is required only in Git mode; the use-case reports it when the chain needs it.
             if (!opts.docSha256)
                 missing.push('--doc-sha256 <hash from preview>');
             if (!opts.directorConfirm)
@@ -185,18 +184,24 @@ function intentCommand() {
             if (missing.length) {
                 console.error(`Amendment not completed. Missing: ${missing.join(', ')}.`);
                 console.error('Steps: (1) sigma intent baseline check, (2) edit INTENT, (3) sigma intent amendment preview,');
-                console.error('       (4) Director approves the reviewed content, (5) commit that content, (6) re-run this command with all options.');
+                console.error('       (4) Director approves the reviewed content, (5) Git mode only: commit that content, (6) re-run this command with all options.');
                 process.exit(1);
             }
-            const request = { change: opts.change, purposeChanged: opts.purposeChanged === 'yes', commit: opts.commit, docSha256: opts.docSha256 };
+            const request = { change: opts.change, purposeChanged: opts.purposeChanged === 'yes', ...(opts.commit ? { commit: opts.commit } : {}), docSha256: opts.docSha256 };
             const result = await (0, governanceTransaction_1.withGovernanceTransaction)(projectRoot, 'intent_amendment', () => (0, intentAmendmentService_1.intentAmendmentTransactionFiles)(projectRoot, opts.v), () => (0, intentAmendmentService_1.recordIntentAmendmentUseCase)(projectRoot, request, opts.v));
             console.log(`${result.entry.id} recorded for DIR-INTENT ${result.chainVersion}.`);
             console.log(`Change: ${result.entry.change}`);
             console.log(`Purpose changed: ${request.purposeChanged ? 'yes' : 'no'}`);
-            console.log(`Commit: ${result.commit}`);
-            console.log(`Tag: ${result.tag}${result.tagCreated ? ' (created, local only)' : ' (existing tag at the same commit adopted)'}`);
-            console.log('Document re-certified. APPROVED PLANs are flagged for INTENT review; LOCKED pairs are unchanged.');
-            console.log(`Distribution: Sigma never pushes. Push is yours; "git push --follow-tags" sends annotated tags, otherwise "git push origin ${result.tag}".`);
+            if (result.mode === 'snapshot') {
+                console.log(`Snapshot: ${result.tag}${result.tagCreated ? ' (written)' : ' (identical snapshot adopted)'}`);
+                console.log('Document re-certified. APPROVED PLANs are flagged for INTENT review; LOCKED pairs are unchanged.');
+            }
+            else {
+                console.log(`Commit: ${result.commit}`);
+                console.log(`Tag: ${result.tag}${result.tagCreated ? ' (created, local only)' : ' (existing tag at the same commit adopted)'}`);
+                console.log('Document re-certified. APPROVED PLANs are flagged for INTENT review; LOCKED pairs are unchanged.');
+                console.log(`Distribution: Sigma never pushes. Push is yours; "git push --follow-tags" sends annotated tags, otherwise "git push origin ${result.tag}".`);
+            }
         }
         catch (e) {
             console.error(e.message);
@@ -215,7 +220,8 @@ function intentCommand() {
             printGitReport(preview.report);
             console.log(`\nINTENT file: ${preview.report.repo_path ?? preview.report.file ?? '(unknown)'}`);
             console.log(`SHA-256 (use as --doc-sha256 after approval): ${preview.report.working_sha256 ?? '(unavailable)'}`);
-            console.log(`Next: ${preview.next_amendment_id} -> tag ${preview.next_tag}`);
+            console.log(`Mode: ${preview.mode}${preview.mode === 'snapshot' ? ' (no commit needed — omit --commit)' : ' (commit the reviewed content, then pass --commit)'}`);
+            console.log(`Next: ${preview.next_amendment_id} -> ${preview.mode === 'snapshot' ? 'snapshot' : 'tag'} ${preview.next_tag}`);
             console.log('\n--- Impact ---');
             console.log(`INTENT revision: ${preview.impact.current_revision ?? '(none)'} -> ${preview.impact.next_revision}`);
             console.log(`PLAN APPROVED, flagged for INTENT review: ${preview.impact.plans_flagged_for_review.join(', ') || 'none'}`);
@@ -259,26 +265,34 @@ function intentCommand() {
         }
     });
     baseline.command('adopt')
-        .description('Bind the certified INTENT content to a commit and a local annotated tag (requires --director-confirm)')
-        .requiredOption('--commit <ref>', 'Commit that holds exactly the current INTENT content')
+        .description('Record the certified INTENT content as the baseline (requires --director-confirm). With --commit: bind it to a Git commit and a local annotated tag. Without: store a local snapshot under Sigma/revisions/ (no Git needed)')
+        .option('--commit <ref>', 'Git mode: commit that holds exactly the current INTENT content. Omit for snapshot mode')
         .option('--import-current', 'Adopt the reviewed current content when the certified content cannot be recovered from Git (no amendment is invented)')
         .option('--v <version>', 'Chain version instead of the active one', chain_1.normalizeVersionArg)
         .option('--director-confirm', 'Required. Explicit Director authorization.')
         .action(async (opts) => {
         try {
             if (!opts.directorConfirm) {
-                console.error('Error: --director-confirm is required to adopt an INTENT Git baseline.');
+                console.error('Error: --director-confirm is required to adopt an INTENT baseline.');
                 process.exit(1);
             }
             const projectRoot = (0, fs_1.findProjectRoot)();
-            const result = await (0, governanceTransaction_1.withGovernanceTransaction)(projectRoot, 'intent_baseline_adopt', () => (0, intentBaselineService_1.adoptIntentBaselineTransactionFiles)(projectRoot, opts.v), () => (0, intentBaselineService_1.adoptIntentBaselineUseCase)(projectRoot, { commit: opts.commit, importCurrent: !!opts.importCurrent }, opts.v));
-            if (result.alreadyRecorded) {
-                console.log(`Baseline already recorded for ${result.chainVersion} at ${result.baseline.commit} (tag ${result.baseline.tag}).`);
+            const result = await (0, governanceTransaction_1.withGovernanceTransaction)(projectRoot, 'intent_baseline_adopt', () => (0, intentBaselineService_1.adoptIntentBaselineTransactionFiles)(projectRoot, opts.v), () => (0, intentBaselineService_1.adoptIntentBaselineUseCase)(projectRoot, { ...(opts.commit ? { commit: opts.commit } : {}), importCurrent: !!opts.importCurrent }, opts.v));
+            if (result.mode === 'snapshot') {
+                const snap = result.snapshot;
+                console.log(result.alreadyRecorded
+                    ? `Snapshot baseline already recorded for ${result.chainVersion}: ${snap.file}.`
+                    : `Snapshot baseline recorded for ${result.chainVersion}: ${snap.file} (${snap.provenance}).`);
                 return;
             }
-            console.log(`Baseline recorded for ${result.chainVersion}: ${result.baseline.commit} (${result.baseline.provenance}).`);
-            console.log(`Tag: ${result.baseline.tag}${result.tagCreated ? ' (created, local only)' : ' (existing tag at the same commit adopted)'}`);
-            console.log(`Distribution: Sigma never pushes. "git push --follow-tags" sends annotated tags, otherwise "git push origin ${result.baseline.tag}".`);
+            const gitBaseline = result.baseline;
+            if (result.alreadyRecorded) {
+                console.log(`Baseline already recorded for ${result.chainVersion} at ${gitBaseline.commit} (tag ${gitBaseline.tag}).`);
+                return;
+            }
+            console.log(`Baseline recorded for ${result.chainVersion}: ${gitBaseline.commit} (${gitBaseline.provenance}).`);
+            console.log(`Tag: ${gitBaseline.tag}${result.tagCreated ? ' (created, local only)' : ' (existing tag at the same commit adopted)'}`);
+            console.log(`Distribution: Sigma never pushes. "git push --follow-tags" sends annotated tags, otherwise "git push origin ${gitBaseline.tag}".`);
         }
         catch (e) {
             console.error(e.message);
@@ -401,12 +415,16 @@ function intentCommand() {
                 console.log(`Doc state:  UNCERTIFIED_EDIT (edited after ${since})`);
             }
             const gitBaseline = chain.intent.git_baseline;
-            console.log(gitBaseline
-                ? `Git baseline: ${gitBaseline.commit.slice(0, 12)} (${gitBaseline.tag}, ${gitBaseline.provenance})`
-                : 'Git baseline: none (run: sigma intent baseline adopt --commit <ref> --director-confirm)');
+            const snapshotBaseline = chain.intent.snapshot_baseline;
+            if (snapshotBaseline)
+                console.log(`Snapshot baseline: ${snapshotBaseline.file} (${snapshotBaseline.provenance})`);
+            else
+                console.log(gitBaseline
+                    ? `Git baseline: ${gitBaseline.commit.slice(0, 12)} (${gitBaseline.tag}, ${gitBaseline.provenance})`
+                    : 'Baseline: none (run: sigma intent baseline adopt --director-confirm for a local snapshot, or add --commit <ref> for a Git baseline)');
             const lastAmendment = chain.intent.amendments?.[chain.intent.amendments.length - 1];
             if (lastAmendment)
-                console.log(`Last amendment: ${lastAmendment.id} (${lastAmendment.created_at.slice(0, 10)})${lastAmendment.result_tag ? ` ${lastAmendment.result_tag}` : ' — no Git reference (pre-F05)'}`);
+                console.log(`Last amendment: ${lastAmendment.id} (${lastAmendment.created_at.slice(0, 10)})${lastAmendment.result_tag ? ` ${lastAmendment.result_tag}` : lastAmendment.snapshot_file ? ` ${lastAmendment.snapshot_file}` : ' — no Git reference (pre-F05)'}`);
             console.log(`\nGate 1:     ${chain.gates.gate_1_open ? 'OPEN' : 'BLOCKED'}`);
             console.log('');
         }

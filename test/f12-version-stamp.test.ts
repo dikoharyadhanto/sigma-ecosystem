@@ -34,7 +34,7 @@ function tmp(prefix: string): string {
 }
 afterEach(() => { while (cleanups.length) fs.removeSync(cleanups.pop()!); });
 
-interface World { home: string; project: string; identityPath: string; configPath: string }
+interface World { home: string; project: string; identityPath: string; manifestPath: string; configPath: string }
 
 function installedWorld(): World {
   const home = tmp('sigma-f12-home-');
@@ -45,11 +45,21 @@ function installedWorld(): World {
   return {
     home, project,
     identityPath: path.join(project, '.sigma-identity.json'),
+    manifestPath: path.join(project, 'Sigma', 'activate_status.json'),
     configPath: path.join(home, '.sigma', 'sigma.config.json'),
   };
 }
 
 const readJson = (file: string): Record<string, unknown> => fs.readJsonSync(file);
+
+// PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.4 item 2: the stamp lives in
+// Sigma/activate_status.json so the Git-tracked identity file stays stable.
+function removeStamp(w: World): void {
+  const manifest = readJson(w.manifestPath);
+  delete manifest.sigma_applied;
+  fs.writeJsonSync(w.manifestPath, manifest);
+}
+const stampOf = (w: World) => readJson(w.manifestPath).sigma_applied as Record<string, string> | undefined;
 
 describe('F12 assets hash', () => {
   it('is stable across order and sensitive to content and label', () => {
@@ -89,12 +99,13 @@ describe('F12 stamps', () => {
     expect(host.assets_hash).toMatch(/^sha256:/);
     expect(typeof host.synced_at).toBe('string');
 
-    const applied = readJson(w.identityPath).sigma_applied as Record<string, string>;
+    const applied = stampOf(w)!;
     expect(applied.sigma_version).toBe(SIGMA_VERSION);
     expect(applied.assets_hash).toMatch(/^sha256:/);
     expect(typeof applied.synced_at).toBe('string');
-    // Existing identity fields are kept.
+    // Existing identity fields are kept, and the identity carries no volatile stamp.
     expect(readJson(w.identityPath).project_id).toBe('F12T');
+    expect(readJson(w.identityPath).sigma_applied).toBeUndefined();
   });
 
   it('setup update refreshes the host stamp and keeps installed_at', () => {
@@ -112,30 +123,26 @@ describe('F12 stamps', () => {
 
   it('project sync dry run writes nothing; sync --confirm stamps an unstamped project', () => {
     const w = installedWorld();
-    const identity = readJson(w.identityPath);
-    delete identity.sigma_applied;
-    fs.writeJsonSync(w.identityPath, identity);
+    removeStamp(w);
 
     const dry = sigma(['project', 'sync'], w.project, w.home);
     expect(dry.exitCode).toBe(0);
-    expect(readJson(w.identityPath).sigma_applied).toBeUndefined();
+    expect(stampOf(w)).toBeUndefined();
 
     const confirmed = sigma(['project', 'sync', '--confirm'], w.project, w.home);
     expect(confirmed.exitCode).toBe(0);
-    expect((readJson(w.identityPath).sigma_applied as Record<string, string>).sigma_version).toBe(SIGMA_VERSION);
+    expect(stampOf(w)!.sigma_version).toBe(SIGMA_VERSION);
   });
 
   it('project register stamps only when assets match, and reports otherwise', () => {
     const w = installedWorld();
-    const identity = readJson(w.identityPath);
-    delete identity.sigma_applied;
-    fs.writeJsonSync(w.identityPath, identity);
+    removeStamp(w);
     // A project rule that differs from the host copy blocks the stamp.
     fs.appendFileSync(path.join(w.project, 'Sigma', 'rules', 'ARC-RULE.md'), '\nlocal edit\n');
     const registered = sigma(['project', 'register', '--id', 'F12T', '--name', 'F12 test'], w.project, w.home);
     expect(registered.exitCode).toBe(0);
     expect(registered.stdout).toContain('stamp not written');
-    expect(readJson(w.identityPath).sigma_applied).toBeUndefined();
+    expect(stampOf(w)).toBeUndefined();
   });
 });
 
@@ -148,9 +155,7 @@ describe('F12 warning', () => {
 
   it('reports a project without a stamp as unknown', () => {
     const w = installedWorld();
-    const identity = readJson(w.identityPath);
-    delete identity.sigma_applied;
-    fs.writeJsonSync(w.identityPath, identity);
+    removeStamp(w);
     const run = sigma(['config', 'show'], w.project, w.home);
     expect(run.stderr).toContain('has no version stamp');
     expect(run.stderr).toContain('sigma project sync');
@@ -233,10 +238,10 @@ describe('F12 warning', () => {
   it('keeps a stamp from being written after a rejected sync', () => {
     const w = installedWorld();
     fs.appendFileSync(path.join(w.home, '.sigma', 'rules', 'ARC-RULE.md'), '\nnewer rule\n');
-    const before = readJson(w.identityPath).sigma_applied;
+    const before = stampOf(w);
     const sync = sigma(['project', 'sync', '--confirm'], w.project, w.home);
     expect(sync.exitCode).not.toBe(0);
-    expect(readJson(w.identityPath).sigma_applied).toEqual(before);
+    expect(stampOf(w)).toEqual(before);
     expect(sigma(['config', 'show'], w.project, w.home).stderr).toContain('is behind ~/.sigma');
   });
 });

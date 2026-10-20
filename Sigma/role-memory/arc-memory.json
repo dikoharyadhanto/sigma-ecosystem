@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "role": "ARC",
   "source_rule": "Sigma/rules/ARC-RULE.md",
-  "source_rule_version": "sha256:9325a46ce81e0c4de8e5b3e4a25c673f038b1055047ad539f836818536a910c9",
+  "source_rule_version": "sha256:67dc91ee7f61b4c1c34fb2966d68b3ac96629b51e185329de9fbc0c6e95e1624",
   "memory_updated_at": "2026-10-15",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [

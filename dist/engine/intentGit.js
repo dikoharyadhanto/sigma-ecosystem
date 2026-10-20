@@ -52,9 +52,11 @@ exports.ensureAnnotatedTag = ensureAnnotatedTag;
 exports.intentGitDrift = intentGitDrift;
 exports.lineEndingAdvice = lineEndingAdvice;
 const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const revisions_1 = require("./revisions");
 const git = __importStar(require("./gitRepo"));
 const docHash_1 = require("./docHash");
+const intentSnapshot_1 = require("./intentSnapshot");
 function intentTagName(chainVersion, kind) {
     return kind === 'base' ? `sigma/intent-${chainVersion}-base` : `sigma/intent-${chainVersion}-${kind.toLowerCase()}`;
 }
@@ -66,6 +68,10 @@ function intentAbsPath(root, chain) {
  * `edited` — the INTENT is expected to differ from the baseline (preview and commit verification).
  */
 function inspectIntentGit(root, chainVersion, chain, mode) {
+    // Snapshot mode (PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.4 item 1): when
+    // Git cannot hold the INTENT, the same report is produced from local snapshots.
+    if ((0, intentSnapshot_1.resolveIntentVerificationMode)(root, chain) === 'snapshot')
+        return (0, intentSnapshot_1.inspectIntentSnapshot)(root, chainVersion, chain, mode);
     const checks = [];
     const report = {
         chain: chainVersion, file: chain.intent.file ?? null, repo_path: null, repo_root: null, checks, blockers: [],
@@ -152,12 +158,32 @@ function nextAmendmentIdOf(chain) {
     return `AMD-${String((chain.intent.amendments?.length ?? 0) + 1).padStart(3, '0')}`;
 }
 function previewIntentAmendment(root, chainVersion, chain) {
+    const mode = (0, intentSnapshot_1.resolveIntentVerificationMode)(root, chain);
+    if (mode === 'snapshot')
+        return previewSnapshotAmendment(root, chainVersion, chain);
     const report = inspectIntentGit(root, chainVersion, chain, 'edited');
     const diff = report.baseline && report.repo_path && report.checks.find(c => c.id === 'baseline_commit')?.ok
         ? git.diffAgainstWorktree(report.repo_root, report.baseline.commit, report.repo_path)
         : { stat: '', patch: '' };
     const id = nextAmendmentIdOf(chain);
-    return { report, impact: amendmentImpact(chain), diff, diff_sha256: git.sha256Hex(diff.patch), next_amendment_id: id, next_tag: intentTagName(chainVersion, id) };
+    return { mode: 'git', report, impact: amendmentImpact(chain), diff, diff_sha256: git.sha256Hex(diff.patch), next_amendment_id: id, next_tag: intentTagName(chainVersion, id) };
+}
+function previewSnapshotAmendment(root, chainVersion, chain) {
+    const report = (0, intentSnapshot_1.inspectIntentSnapshot)(root, chainVersion, chain, 'edited');
+    const id = nextAmendmentIdOf(chain);
+    const baseline = chain.intent.snapshot_baseline;
+    let diff = { stat: '', patch: '' };
+    if (baseline && report.checks.find(c => c.id === 'baseline_snapshot')?.ok && report.repo_path) {
+        const before = (0, intentSnapshot_1.readBaselineSnapshot)(root, baseline).toString('utf8');
+        const after = fs_1.default.readFileSync(intentAbsPath(root, chain), 'utf8');
+        diff = (0, intentSnapshot_1.diffDocuments)(before, after, baseline.file, report.repo_path);
+    }
+    return {
+        mode: 'snapshot', report, impact: amendmentImpact(chain), diff, diff_sha256: git.sha256Hex(diff.patch),
+        next_amendment_id: id,
+        // Field name kept for the MCP/CLI consumers; in snapshot mode it names the snapshot file.
+        next_tag: (0, intentSnapshot_1.snapshotFileRel)(chainVersion, id),
+    };
 }
 /** Verifies that `ref` is a commit holding exactly the working-tree INTENT content (F05 §4.5). Throws with every failed condition. */
 function verifyResultCommit(root, chainVersion, chain, ref, expectedSha256) {
@@ -228,6 +254,8 @@ function ensureAnnotatedTag(root, name, commit, message) {
 }
 /** Read-only drift summary of recorded Git references (doctor/status). Never writes. */
 function intentGitDrift(root, chainVersion, chain) {
+    if (chain.intent.snapshot_baseline)
+        return intentSnapshotDrift(root, chainVersion, chain);
     if (!chain.intent.git_baseline)
         return [];
     const drift = [];
@@ -281,5 +309,29 @@ function lineEndingAdvice(root, chain) {
         return null;
     return `core.autocrlf=true and ${rel} has no eol=lf attribute: the file is CRLF on this host and LF on others. ` +
         'Certification tolerates this, but add to .gitattributes: "Sigma/** text eol=lf" so every host holds identical bytes.';
+}
+/** Read-only drift summary of the local INTENT snapshots (doctor/status). Never writes. */
+function intentSnapshotDrift(root, chainVersion, chain) {
+    const drift = [];
+    const baseline = chain.intent.snapshot_baseline;
+    if (!(0, intentSnapshot_1.readBaselineSnapshot)(root, baseline))
+        drift.push(`baseline: snapshot ${baseline.file} is missing or no longer matches its recorded hash`);
+    let ledger;
+    try {
+        ledger = (0, intentSnapshot_1.readSnapshotLedger)(root, chainVersion);
+    }
+    catch (e) {
+        return [...drift, e.message];
+    }
+    const recorded = new Set(ledger.entries.map(e => e.id));
+    for (const a of chain.intent.amendments ?? []) {
+        if (!a.snapshot_file)
+            continue;
+        if (!fs_1.default.existsSync(path_1.default.join(root, a.snapshot_file)))
+            drift.push(`${a.id}: snapshot ${a.snapshot_file} is missing`);
+        if (!recorded.has(a.id))
+            drift.push(`${a.id}: not present in the snapshot ledger`);
+    }
+    return drift;
 }
 //# sourceMappingURL=intentGit.js.map

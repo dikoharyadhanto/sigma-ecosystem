@@ -21,6 +21,7 @@ export function computeIntentAmendmentPreview(root: string | null, chain?: strin
     const patch = boundText(preview.diff.patch);
     return {
       active_chain: chainVersion,
+      mode: preview.mode,
       report: serializeGitReport(preview.report, root),
       doc_sha256_to_approve: preview.report.working_sha256,
       next_amendment_id: preview.next_amendment_id,
@@ -48,7 +49,9 @@ export function registerIntentAmendmentPreviewTool(server: McpServer): void {
       description:
         'Build the read-only review package for an INTENT amendment — the query-plane equivalent of ' +
         '`sigma intent amendment preview`: Git baseline check, diff against the baseline, the INTENT file hash to ' +
-        'approve, and the impact on PLAN and EXEC. Creates no amendment, ticket, or tag. Returns { active_chain, ' +
+        'approve, and the impact on PLAN and EXEC. Creates no amendment, ticket, or tag. mode is "git" (baseline ' +
+        'is a commit + tag; the commit is supplied at commit time) or "snapshot" (baseline is a local copy under ' +
+        'Sigma/revisions/; no commit is used). Returns { active_chain, mode, ' +
         'report, doc_sha256_to_approve, next_amendment_id, next_tag, impact, diff{stat,patch,patch_truncated,' +
         'patch_sha256}, source }. report.ok:false is a finding, not an error; the patch is cut at 64 KiB and ' +
         'flagged by patch_truncated.',

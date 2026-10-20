@@ -3,10 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_MAILBOX = void 0;
+exports.DEFAULT_GIT = exports.DEFAULT_MAILBOX = void 0;
 exports.readProjectConfig = readProjectConfig;
 exports.writeProjectConfig = writeProjectConfig;
 exports.createDefaultProjectConfig = createDefaultProjectConfig;
+exports.resolveGitignoreSigma = resolveGitignoreSigma;
+exports.hasExplicitGitignoreSigma = hasExplicitGitignoreSigma;
 exports.resolveAutoOutdateKeep = resolveAutoOutdateKeep;
 exports.resolveMemoLimit = resolveMemoLimit;
 const fs_extra_1 = __importDefault(require("fs-extra"));
@@ -16,12 +18,15 @@ exports.DEFAULT_MAILBOX = {
     auto_outdate_read_keep: 5,
     memo_unread_limit: 5,
 };
+exports.DEFAULT_GIT = { gitignore_sigma: true };
 const DEFAULTS = {
     schema_version: config_1.SCHEMA_VERSION,
     document_language: 'English',
     interaction_language: 'English',
     output_document_language: 'English',
     mailbox: { ...exports.DEFAULT_MAILBOX },
+    // `git` is deliberately absent: a config written before the field existed
+    // must stay distinguishable from one that chose a value (hasExplicitGitignoreSigma).
 };
 function readProjectConfig(projectRoot) {
     const filePath = path_1.default.join(projectRoot, config_1.PROJECT_CONFIG_FILE);
@@ -47,7 +52,19 @@ function createDefaultProjectConfig(lang = 'English') {
         interaction_language: lang,
         output_document_language: lang,
         mailbox: { ...exports.DEFAULT_MAILBOX },
+        git: { ...exports.DEFAULT_GIT },
     };
+}
+// Resolves the Sigma-gitignore switch, tolerating a missing or malformed `git`
+// block (project.config.json written before this field existed). Anything that
+// is not an explicit boolean falls back to the default (ON).
+function resolveGitignoreSigma(config) {
+    const raw = config.git?.gitignore_sigma;
+    return typeof raw === 'boolean' ? raw : exports.DEFAULT_GIT.gitignore_sigma;
+}
+/** True when project.config.json carries an explicit gitignore_sigma value (as opposed to the implicit default). */
+function hasExplicitGitignoreSigma(config) {
+    return typeof config.git?.gitignore_sigma === 'boolean';
 }
 // Resolves the auto-outdate keep-count, tolerating a missing or malformed
 // `mailbox` block. An explicit 0 is honored (disables the sweep); anything

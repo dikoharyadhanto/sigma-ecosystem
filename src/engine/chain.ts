@@ -228,6 +228,22 @@ export interface AmendmentEntry {
   doc_sha256?: string;           // raw-byte SHA-256 certified by this amendment
   doc_sha256_lf?: string;        // same content with CRLF folded to LF (stable across core.autocrlf)
   diff_stat?: string;
+  // Snapshot mode (PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.4 item 1): the
+  // certified bytes of this amendment, kept under Sigma/revisions/INTENT-v<N>/ instead
+  // of a Git commit. Project-root-relative, forward slashes.
+  snapshot_file?: string;
+}
+
+// Snapshot mode counterpart of IntentGitBaseline: the certified INTENT content
+// reproducible from a local file, so `Sigma/` can be gitignored.
+export interface IntentSnapshotBaseline {
+  file: string;
+  doc_sha256: string;
+  doc_sha256_lf: string;
+  revision: number;
+  provenance: 'adopted' | 'amendment' | 'imported_current';
+  recorded_at: string;
+  amendment?: string;
 }
 
 // F05 — the certified INTENT content that is reproducible from Git. Written by
@@ -272,6 +288,7 @@ export interface SingleIntentState {
   revision_provenance?: string;
   certified_at?: string;               // ISO — when certified_doc_sha256 was last stamped
   git_baseline?: IntentGitBaseline;    // F05 — Git-reproducible certified content; absent = no baseline yet
+  snapshot_baseline?: IntentSnapshotBaseline; // snapshot mode — when present it supersedes git_baseline for verification
 }
 
 export interface SingleRoadmapState {
@@ -326,6 +343,12 @@ export interface ChainState {
 // PLAN-EVAL-01 §3.1/§3.3.
 export interface ActivateStatus {
   active_chain: string | null; // null only before the first `intent new`
+  // Volatile bookkeeping moved here from .sigma-identity.json (PLAN-IMPL-SIGMA-
+  // GITIGNORE-IDENTITY-AND-PORTABILITY §3.4 item 2) so the identity file — the
+  // one Sigma file that stays in Git — does not change on every sync or log
+  // reset. Readers fall back to the identity copy written by older versions.
+  sigma_applied?: { sigma_version: string; assets_hash: string; synced_at: string };
+  logs_created_at?: string;
 }
 
 // Mirrors the shape written by `sigma project start`/`register`
@@ -336,7 +359,8 @@ export interface ProjectIdentity {
   project_id: string;
   project_name: string;
   registered: true;
-  logs_created_at: string;
+  // Legacy: new projects keep this in Sigma/activate_status.json (see ActivateStatus).
+  logs_created_at?: string;
   // Present once a DEV workspace has been activated. Other fields written by
   // newer versions are preserved on rewrite (see writeProjectIdentity).
   dev_workspace?: { path: string; created_at: string };
@@ -396,15 +420,47 @@ export function readActivateStatus(projectRoot: string): ActivateStatus {
   if (!('active_chain' in d) || (d.active_chain !== null && typeof d.active_chain !== 'string')) {
     throw new Error(`${filePath} is malformed — expected { active_chain: string | null }`);
   }
-  return { active_chain: d.active_chain as string | null };
+  const status: ActivateStatus = { active_chain: d.active_chain as string | null };
+  if (d.sigma_applied !== null && typeof d.sigma_applied === 'object') {
+    status.sigma_applied = d.sigma_applied as ActivateStatus['sigma_applied'];
+  }
+  if (typeof d.logs_created_at === 'string') status.logs_created_at = d.logs_created_at;
+  return status;
 }
 
-export function writeActivateStatus(projectRoot: string, activeChain: string | null): void {
+// Best-effort read of the whole manifest object, tolerant of absence/corruption.
+// Used by writers that must preserve fields they do not own.
+function readActivateStatusObject(projectRoot: string): Record<string, unknown> {
+  try {
+    const raw: unknown = fs.readJsonSync(activateStatusPath(projectRoot));
+    if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, unknown>;
+  } catch {
+    // missing or unreadable: nothing to preserve
+  }
+  return {};
+}
+
+function writeActivateStatusObject(projectRoot: string, data: Record<string, unknown>): void {
   const filePath = activateStatusPath(projectRoot);
-  const tmpPath = `${filePath}.tmp`;
-  const data: ActivateStatus = { active_chain: activeChain };
+  const tmpPath = `${filePath}.${process.pid}.tmp`;
+  fs.ensureDirSync(path.dirname(filePath));
   fs.writeJsonSync(tmpPath, data, { spaces: 2 });
   atomicReplaceFileSync(tmpPath, filePath); // see src/utils/fs.ts — §21.9
+}
+
+// Read-merge-write: sigma_applied / logs_created_at belong to other writers and
+// must survive a change of the active chain.
+export function writeActivateStatus(projectRoot: string, activeChain: string | null): void {
+  writeActivateStatusObject(projectRoot, { ...readActivateStatusObject(projectRoot), active_chain: activeChain });
+}
+
+/** Merges bookkeeping fields into the manifest without touching `active_chain`. */
+export function patchActivateStatus(
+  projectRoot: string,
+  patch: Pick<ActivateStatus, 'sigma_applied' | 'logs_created_at'>,
+): void {
+  const current = readActivateStatusObject(projectRoot);
+  writeActivateStatusObject(projectRoot, { active_chain: null, ...current, ...patch });
 }
 
 // ── Invariant: exactly one ACTIVE chain ─────────────────────────────────────

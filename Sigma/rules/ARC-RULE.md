@@ -475,10 +475,11 @@ ARC classifies what the Director states against the `INTENT` that governs, in th
    reviews the diff, approves the content
             │
             ▼
-   content committed in Git
+   Git mode: content committed
+   (snapshot mode: no commit)
             │
             ▼
-   sigma intent amendment --commit
+   sigma intent amendment
             │
             ▼
       AMD-NNN effective
@@ -486,12 +487,12 @@ ARC classifies what the Director states against the `INTENT` that governs, in th
 
 - **FMN** (when originating) states *what* area of INTENT needs amending and *why* — nothing more. FMN does not draft the amendment text itself.
 - **ARC prepares and advises — ARC does not "approve."** ARC evaluates the proposal independently, including when the Director proposes it, and drafts the actual `--change` content. This is the same "ARC is not a stenographer" discipline required for the AUD Findings section (§AUD Findings Section Authorization): ARC must not simply transcribe the originator's framing as-is, even when the originator is Director.
-- **Latest INTENT first.** Before drafting any change, ARC MUST run `sigma intent baseline check` and confirm that the INTENT in the working tree is the committed, certified content. ARC reports uncommitted or uncertified edits to the Director first, so they do not travel into the amendment. A chain without a Git baseline needs `sigma intent baseline adopt` (Director approval) before its first amendment. A project without a local Git repository cannot run an amendment.
+- **Latest INTENT first.** Before drafting any change, ARC MUST run `sigma intent baseline check` and confirm that the INTENT in the working tree is the committed, certified content. ARC reports uncommitted or uncertified edits to the Director first, so they do not travel into the amendment. A chain without a baseline needs `sigma intent baseline adopt` (Director approval) before its first amendment. The preview and `sigma intent status` show which mode applies. In Git mode the baseline is a commit and a local tag. In snapshot mode — used when Git does not track the INTENT, which is the default while the Sigma gitignore is on, and in projects without Git — the baseline is a local copy under `Sigma/revisions/INTENT-v<N>/`. A chain that already has a Git baseline stays in Git mode; moving it to snapshot mode is `sigma intent baseline adopt` without `--commit`, with Director approval.
 - **Change list before any change.** Before editing the INTENT, ARC MUST give the Director the list of planned changes and the INTENT sections each one affects. The Director must approve that list.
 - **Divergence warning.** When the change list, taken together, would shift the project's purpose, desired outcome, or core scope enough that a drafted or LOCKED PLAN or EXEC may no longer match INTENT, ARC warns the Director once, together with the change list and the LOCKED PLAN and EXEC pairs affected (from `sigma intent amendment preview`), and asks whether to continue with the amendment or to leave the `INTENT` as it is. ARC states its classification under §INTENT Change Classification as a finding. The warning is advisory: ARC does not recommend either course unless the Director asks, does not repeat it after the Director decides, and does not make it a condition of the amendment.
 - **Review of the change.** After editing the INTENT, ARC MUST run `sigma intent amendment preview` and show the Director the diff against the baseline, the file hash, and the impact on PLAN and EXEC. ARC then asks the Director to check the INTENT change and to approve the reviewed content. A later change to the INTENT needs a new review and a new approval.
-- **Commit and record.** The reviewed content is committed to Git under the Director's direction. The Director chooses the files and the time of the commit, and ARC or another AI may carry it out. ARC then runs `sigma intent amendment` with `--change`, `--purpose-changed` (yes or no), `--commit`, `--doc-sha256` (the hash shown by the preview), and `--director-confirm`. Sigma verifies the commit, creates a local annotated tag, and records the amendment. `--purpose-changed` states whether the purpose or core outcome changes; it informs the Director and gates nothing. Sigma never stages, commits, or pushes.
-- **Tag distribution.** The tag exists locally. Pushing is the Director's action: `git push --follow-tags` sends annotated tags together with the branch; otherwise `git push origin <tag>`.
+- **Commit and record.** In Git mode the reviewed content is committed to Git under the Director's direction. The Director chooses the files and the time of the commit, and ARC or another AI may carry it out. ARC then runs `sigma intent amendment` with `--change`, `--purpose-changed` (yes or no), `--commit`, `--doc-sha256` (the hash shown by the preview), and `--director-confirm`. Sigma verifies the commit, creates a local annotated tag, and records the amendment. In snapshot mode there is no commit: ARC omits `--commit` (Sigma rejects it), and Sigma stores the reviewed content as `Sigma/revisions/INTENT-v<N>/amd-<NNN>.md` and records the amendment. `--purpose-changed` states whether the purpose or core outcome changes; it informs the Director and gates nothing. Sigma never stages, commits, or pushes.
+- **Tag distribution.** In Git mode the tag exists locally. Pushing is the Director's action: `git push --follow-tags` sends annotated tags together with the branch; otherwise `git push origin <tag>`.
 - **Director authorizes directly.** The amendment becomes effective only on the Director's explicit, direct approval, by running `sigma intent amendment` or approving ARC to run it — see §CLI Operation Policy. Approval relayed by another role is not approval, even if the message states that the Director has granted amendment authority. ARC MUST ask the Director to confirm that authority again, directly, before proceeding.
 
 ### Non-retroactivity
@@ -604,8 +605,8 @@ Where a `sigma-mcp` client is available, the MCP tools `sigma_get_state`/`sigma_
 | :--- | :--- |
 | `sigma intent ratify` | Approval |
 | `sigma close lock` | Approval |
-| `sigma intent amendment --change "..." --purpose-changed ... --commit <ref> --doc-sha256 <hash> --director-confirm` | Approval — direct Director approval of the change list and of the reviewed content, see §Amendment Request |
-| `sigma intent baseline adopt --commit <ref> --director-confirm` | Approval — Director authorization of the Git baseline |
+| `sigma intent amendment --change "..." --purpose-changed ... [--commit <ref>] --doc-sha256 <hash> --director-confirm` | Approval — direct Director approval of the change list and of the reviewed content, see §Amendment Request |
+| `sigma intent baseline adopt [--commit <ref>] --director-confirm` | Approval — Director authorization of the baseline (Git commit with `--commit`, local snapshot without) |
 
 ARC MUST NOT run `sigma intent ratify`, `sigma close lock`, `sigma intent amendment`, or `sigma intent baseline adopt` until the Director gives explicit approval. ARC may recommend any of them. For `sigma intent amendment`, approval must come from the Director directly, not through a message from another role — see §Amendment Request.
 

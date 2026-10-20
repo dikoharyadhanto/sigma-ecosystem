@@ -25,8 +25,9 @@ import { controlCommand } from './commands/control';
 import { devCommand } from './commands/dev';
 import { auditCommand, decisionsCommand } from './commands/f08';
 import { appendOperationLogEntry, isRegisteredReadOnlyOperation } from './utils/operationLog';
-import { findProjectRoot } from './utils/fs';
+import { assertSigmaFilesPresentOrThrow, findProjectRoot } from './utils/fs';
 import { evaluateVersionStatus } from './services/assetConsistency';
+import { healPortabilityState } from './services/portabilityHeal';
 
 const program = new Command();
 
@@ -65,6 +66,18 @@ program.on('command:*', (operands: string[]) => {
   console.error(`Unknown command: sigma ${operands.join(' ')}`);
   console.error('Run `sigma --help` for available commands.');
   process.exit(1);
+});
+
+// ── Cross-machine guardrail (PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.1) ──
+// Registered first on purpose: when only .sigma-identity.json exists on this
+// machine every Sigma command is refused — including `project start|register|
+// sync` — before the operation log or the version check can run. Throwing here
+// aborts the action; the parseAsync handler below prints the message and sets
+// the exit code. Only `setup` (the global host installer) is exempt: it never
+// reads or writes a project.
+program.hook('preAction', (_thisCommand, actionCommand) => {
+  if (commandPath(actionCommand).split(' ')[0] === 'setup') return;
+  assertSigmaFilesPresentOrThrow();
 });
 
 // ── Operation history log ───────────────────────────────────────────────────
@@ -119,6 +132,27 @@ program.hook('preAction', (_thisCommand, actionCommand) => {
   }
   const status = evaluateVersionStatus(projectRoot);
   if (status?.message) console.error(status.message);
+});
+
+// ── Portability self-heal (PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.4) ──
+// Rebuilds machine-local derived state (MCP project root, DEV marker) before a
+// mutating operation. Read-only operations never reach this (pendingOperation
+// is null for them), and the commands that manage these files themselves are
+// exempt so a dry run stays a dry run.
+const HEAL_EXEMPT_OPERATIONS = new Set(['project start', 'project register', 'project sync']);
+
+program.hook('preAction', (_thisCommand, actionCommand) => {
+  if (!pendingOperation) return;
+  const operation = commandPath(actionCommand);
+  const [head] = operation.split(' ');
+  if (head === 'setup' || head === 'doctor' || HEAL_EXEMPT_OPERATIONS.has(operation)) return;
+  let projectRoot: string;
+  try {
+    projectRoot = findProjectRoot();
+  } catch {
+    return;
+  }
+  for (const message of healPortabilityState(projectRoot).messages) console.error(message);
 });
 
 process.on('exit', (code) => {

@@ -78,8 +78,12 @@ describe('sigma operation history log', () => {
     const first = runCli('project register --id TEST --name "Test Project"', env.projectDir, env.homeDir);
     expect(first.exitCode).toBe(0);
 
+    // logs_created_at lives in Sigma/activate_status.json (PLAN-IMPL-SIGMA-GITIGNORE-
+    // IDENTITY-AND-PORTABILITY §3.4 item 2) so the Git-tracked identity file stays stable.
     const identityPath = path.join(env.projectDir, '.sigma-identity.json');
-    const identityAfterFirst = fs.readJsonSync(identityPath);
+    const manifestPath = env.activateStatusPath;
+    expect(fs.readJsonSync(identityPath).logs_created_at).toBeUndefined();
+    const identityAfterFirst = fs.readJsonSync(manifestPath);
     expect(typeof identityAfterFirst.logs_created_at).toBe('string');
 
     // Log was missing before this call, so ensureOperationsLog wiped it
@@ -93,7 +97,7 @@ describe('sigma operation history log', () => {
     const second = runCli('project register --id TEST --name "Test Project"', env.projectDir, env.homeDir);
     expect(second.exitCode).toBe(0);
 
-    const identityAfterSecond = fs.readJsonSync(identityPath);
+    const identityAfterSecond = fs.readJsonSync(manifestPath);
     expect(identityAfterSecond.logs_created_at).toBe(identityAfterFirst.logs_created_at);
 
     entries = readEntries(env.sigmaDir);
@@ -107,7 +111,7 @@ describe('sigma operation history log', () => {
     const third = runCli('project register --id TEST --name "Test Project"', env.projectDir, env.homeDir);
     expect(third.exitCode).toBe(0);
 
-    const identityAfterThird = fs.readJsonSync(identityPath);
+    const identityAfterThird = fs.readJsonSync(manifestPath);
     expect(identityAfterThird.logs_created_at).not.toBe(identityAfterFirst.logs_created_at);
 
     entries = readEntries(env.sigmaDir);

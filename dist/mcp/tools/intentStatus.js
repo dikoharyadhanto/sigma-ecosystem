@@ -42,8 +42,12 @@ function computeIntentStatus(root) {
         git_baseline: chain.intent.git_baseline
             ? { commit: chain.intent.git_baseline.commit, tag: chain.intent.git_baseline.tag, provenance: chain.intent.git_baseline.provenance, revision: chain.intent.git_baseline.revision }
             : null,
+        // Snapshot mode — local copy of the certified content; no Git involved.
+        snapshot_baseline: chain.intent.snapshot_baseline
+            ? { file: chain.intent.snapshot_baseline.file, provenance: chain.intent.snapshot_baseline.provenance, revision: chain.intent.snapshot_baseline.revision }
+            : null,
         last_amendment: lastAmendment
-            ? { id: lastAmendment.id, created_at: lastAmendment.created_at, purpose_changed: lastAmendment.purpose_changed ?? null, result_tag: lastAmendment.result_tag ?? null }
+            ? { id: lastAmendment.id, created_at: lastAmendment.created_at, purpose_changed: lastAmendment.purpose_changed ?? null, result_tag: lastAmendment.result_tag ?? null, snapshot_file: lastAmendment.snapshot_file ?? null }
             : null,
         source: shared_1.SOURCE_ENGINE,
     };
@@ -54,7 +58,7 @@ function registerIntentStatusTool(server) {
         description: 'Return the active chain\'s DIR-INTENT status — the query-plane equivalent of `sigma intent status`: ' +
             'version, state, ratification timestamp, whether the document was edited since it was last ' +
             'certified/ratified, and Gate 1. Read-only. Returns { active, active_chain, version, state, ratified_at, ' +
-            'file, doc_uncertified, doc_uncertified_since, gate_1_open, git_baseline, last_amendment, source }, or { active: false, gate_1_open: ' +
+            'file, doc_uncertified, doc_uncertified_since, gate_1_open, git_baseline, snapshot_baseline, last_amendment, source }, or { active: false, gate_1_open: ' +
             'false, source } when no chain exists yet.',
         inputSchema: {},
         annotations: {

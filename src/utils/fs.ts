@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { ACTIVATE_STATUS_FILE } from '../config';
+import { ACTIVATE_STATUS_FILE, PROJECT_IDENTITY_FILE, PROJECT_SIGMA_DIR } from '../config';
 
 export function ensureDir(dir: string): void {
   fs.ensureDirSync(dir);
@@ -101,5 +101,103 @@ export function findProjectRoot(startDir: string = process.cwd()): string {
     }
 
     current = parent;
+  }
+}
+
+// ── Cross-machine guardrail (PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.1) ──
+//
+// With gitignore ON, `.sigma-identity.json` is the only Sigma file in Git. A
+// clone on another machine therefore holds the identity but no `Sigma/` folder.
+// Re-registering there would mint a second, diverging Sigma state for the same
+// project, so every Sigma operation is refused instead.
+
+export type ProjectRegistrationState =
+  | 'REGISTERED_COMPLETE'
+  | 'IDENTITY_ONLY_MISSING_SIGMA'
+  | 'UNREGISTERED';
+
+export interface ProjectRegistrationInspection {
+  state: ProjectRegistrationState;
+  /** Directory that holds the identity (or the whole project); null when UNREGISTERED. */
+  root: string | null;
+  projectId: string | null;
+  projectName: string | null;
+}
+
+function readRegisteredIdentity(dir: string): { projectId: string; projectName: string } | null {
+  const file = path.join(dir, PROJECT_IDENTITY_FILE);
+  if (!fs.existsSync(file)) return null;
+  try {
+    const parsed: unknown = fs.readJsonSync(file);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    const identity = parsed as { registered?: unknown; project_id?: unknown; project_name?: unknown };
+    if (identity.registered !== true || typeof identity.project_id !== 'string') return null;
+    return {
+      projectId: identity.project_id,
+      projectName: typeof identity.project_name === 'string' ? identity.project_name : identity.project_id,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Walks up from `startDir` (or inspects only `startDir` when `exact`).
+ *
+ * IDENTITY_ONLY_MISSING_SIGMA means: a registered identity file and *no* `Sigma/`
+ * directory beside it. A `Sigma/` folder that exists but lacks
+ * activate_status.json is a damaged project, not a foreign machine, and is
+ * deliberately left to the existing repair paths (`sigma doctor`).
+ */
+export function inspectProjectRegistrationState(
+  startDir: string = process.cwd(),
+  options: { exact?: boolean } = {},
+): ProjectRegistrationInspection {
+  let current = path.resolve(startDir);
+  while (true) {
+    if (fs.existsSync(path.join(current, ACTIVATE_STATUS_FILE))) {
+      return { state: 'REGISTERED_COMPLETE', root: current, projectId: null, projectName: null };
+    }
+    const identity = readRegisteredIdentity(current);
+    if (identity && !fs.existsSync(path.join(current, PROJECT_SIGMA_DIR))) {
+      return { state: 'IDENTITY_ONLY_MISSING_SIGMA', root: current, projectId: identity.projectId, projectName: identity.projectName };
+    }
+    const parent = path.dirname(current);
+    if (options.exact || parent === current) {
+      return { state: 'UNREGISTERED', root: null, projectId: null, projectName: null };
+    }
+    current = parent;
+  }
+}
+
+export function missingSigmaFilesMessage(projectId: string, projectName: string): string {
+  return [
+    '[SIGMA BLOCKED — MISSING LOCAL SIGMA FILES]',
+    `This project was previously registered with Sigma (detected via ${PROJECT_IDENTITY_FILE}: ${projectId} — "${projectName}"),`,
+    'but the Sigma runtime files (Sigma/) were not found on this machine.',
+    '',
+    'All Sigma operations are blocked and you cannot run any Sigma command on this machine',
+    '(including re-registering or re-initializing the project).',
+    '',
+    'To use Sigma on this machine:',
+    '  1. On the original machine where this project is registered, disable Sigma gitignore:',
+    '     sigma config set gitignore off',
+    '  2. Commit and push all Sigma files from the original machine to your Git repository.',
+    '  3. Run `git pull` on this machine.',
+  ].join('\n');
+}
+
+export class MissingSigmaFilesError extends Error {
+  constructor(public readonly projectId: string, public readonly projectName: string) {
+    super(missingSigmaFilesMessage(projectId, projectName));
+    this.name = 'MissingSigmaFilesError';
+  }
+}
+
+/** Throws MissingSigmaFilesError when only the identity file is present. Any other state passes. */
+export function assertSigmaFilesPresentOrThrow(startDir: string = process.cwd(), options: { exact?: boolean } = {}): void {
+  const inspection = inspectProjectRegistrationState(startDir, options);
+  if (inspection.state === 'IDENTITY_ONLY_MISSING_SIGMA') {
+    throw new MissingSigmaFilesError(inspection.projectId ?? 'UNKNOWN', inspection.projectName ?? 'UNKNOWN');
   }
 }

@@ -44,11 +44,13 @@ exports.IntentBaselineError = void 0;
 exports.adoptIntentBaselineTransactionFiles = adoptIntentBaselineTransactionFiles;
 exports.adoptIntentBaselineUseCase = adoptIntentBaselineUseCase;
 const path_1 = __importDefault(require("path"));
+const fs_extra_1 = __importDefault(require("fs-extra"));
 const chain_1 = require("../engine/chain");
 const config_1 = require("../config");
 const git = __importStar(require("../engine/gitRepo"));
 const docHash_1 = require("../engine/docHash");
 const intentGit_1 = require("../engine/intentGit");
+const intentSnapshot_1 = require("../engine/intentSnapshot");
 const intentAmendmentService_1 = require("./intentAmendmentService");
 class IntentBaselineError extends Error {
     constructor(code, message) {
@@ -60,7 +62,11 @@ class IntentBaselineError extends Error {
 exports.IntentBaselineError = IntentBaselineError;
 function adoptIntentBaselineTransactionFiles(projectRoot, targetChainVersion) {
     const chainVersion = targetChainVersion ?? (0, chain_1.readActiveChain)(projectRoot).chainVersion;
-    return [(0, chain_1.chainFilePath)(projectRoot, chainVersion), path_1.default.join(projectRoot, config_1.INTENT_AMENDMENT_LOG_FILE)];
+    return [
+        (0, chain_1.chainFilePath)(projectRoot, chainVersion),
+        path_1.default.join(projectRoot, config_1.INTENT_AMENDMENT_LOG_FILE),
+        ...(0, intentSnapshot_1.intentSnapshotTransactionFiles)(projectRoot, chainVersion, 'BASE'),
+    ];
 }
 function adoptIntentBaselineUseCase(projectRoot, options, targetChainVersion) {
     const { chainVersion, data: chain } = targetChainVersion
@@ -70,13 +76,15 @@ function adoptIntentBaselineUseCase(projectRoot, options, targetChainVersion) {
     const fail = (m) => { throw new IntentBaselineError('INVALID_OPERATION', m); };
     if (chain.intent.state !== 'RATIFIED')
         fail(`INTENT ${chain.intent.version} is in state "${chain.intent.state}"; a baseline requires RATIFIED`);
+    if (!options.commit)
+        return adoptSnapshotBaseline(projectRoot, chainVersion, chain, options, fail);
     const resolved = git.resolveCommit(projectRoot, options.commit);
     if (!resolved.ok)
         return fail(resolved.error);
     const existing = chain.intent.git_baseline;
     if (existing) {
         if (existing.commit === resolved.sha)
-            return { chainVersion, baseline: existing, tagCreated: false, alreadyRecorded: true };
+            return { mode: 'git', chainVersion, baseline: existing, tagCreated: false, alreadyRecorded: true };
         return fail(`A baseline is already recorded at ${existing.commit.slice(0, 12)}; amendments advance it, adopt does not replace it`);
     }
     let located;
@@ -139,6 +147,53 @@ function adoptIntentBaselineUseCase(projectRoot, options, targetChainVersion) {
     chain.intent.git_baseline = baseline;
     (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
     (0, intentAmendmentService_1.appendIntentLog)(projectRoot, { event: 'baseline', chain: chainVersion, recorded_at: baseline.recorded_at, provenance, commit: baseline.commit, tag, doc_sha256: workingSha });
-    return { chainVersion, baseline, tagCreated, alreadyRecorded: false };
+    return { mode: 'git', chainVersion, baseline, tagCreated, alreadyRecorded: false };
+}
+/** Snapshot mode: certified INTENT bytes -> Sigma/revisions/INTENT-v<N>/base.md. Same Director gate, no Git. */
+function adoptSnapshotBaseline(projectRoot, chainVersion, chain, options, fail) {
+    const existing = chain.intent.snapshot_baseline;
+    if (existing) {
+        return { mode: 'snapshot', chainVersion, snapshot: existing, tagCreated: false, alreadyRecorded: true };
+    }
+    const abs = (0, intentGit_1.intentAbsPath)(projectRoot, chain);
+    if (!fs_extra_1.default.existsSync(abs))
+        fail('INTENT file is not present on disk');
+    const bytes = fs_extra_1.default.readFileSync(abs);
+    const workingSha = git.sha256Hex(bytes);
+    // Line-ending-only differences (core.autocrlf) are not an edit: no re-certification, no revision bump.
+    const certifiedMatches = (0, docHash_1.matchesCertified)(bytes, chain.intent.certified_doc_sha256);
+    let provenance = 'adopted';
+    if (!certifiedMatches) {
+        if (!options.importCurrent) {
+            fail(chain.intent.certified_doc_sha256
+                ? 'UNCERTIFIED_EDIT: the INTENT file differs from its certified content and no earlier copy can prove the certified content. ' +
+                    `(${(0, docHash_1.lineEndingHint)(bytes, chain.intent.certified_doc_sha256)}) ` +
+                    'Review the current content, then re-run with --import-current to adopt it as the baseline (no amendment is invented, nothing is retroactive).'
+                : 'The INTENT has no certified hash. Review the current content, then re-run with --import-current to certify it as the baseline.');
+        }
+        (0, chain_1.certifyIntentDoc)(chain, abs);
+        chain.intent.revision_provenance = 'imported_current_certification';
+        provenance = 'imported_current';
+    }
+    const recordedAt = new Date().toISOString();
+    const revision = chain.intent.revision ?? 1;
+    try {
+        (0, intentSnapshot_1.writeSnapshot)(projectRoot, chainVersion, 'BASE', bytes, { revision, provenance, recorded_at: recordedAt });
+    }
+    catch (e) {
+        return fail(e.message);
+    }
+    const snapshot = {
+        file: (0, intentSnapshot_1.snapshotFileRel)(chainVersion, 'BASE'),
+        doc_sha256: workingSha,
+        doc_sha256_lf: git.lfSha256(bytes),
+        revision,
+        provenance,
+        recorded_at: recordedAt,
+    };
+    chain.intent.snapshot_baseline = snapshot;
+    (0, chain_1.writeChain)(projectRoot, chainVersion, chain);
+    (0, intentAmendmentService_1.appendIntentLog)(projectRoot, { event: 'baseline', mode: 'snapshot', chain: chainVersion, recorded_at: recordedAt, provenance, snapshot_file: snapshot.file, doc_sha256: workingSha });
+    return { mode: 'snapshot', chainVersion, snapshot, tagCreated: false, alreadyRecorded: false };
 }
 //# sourceMappingURL=intentBaselineService.js.map

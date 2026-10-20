@@ -18,7 +18,8 @@ project-level AI rule files.
 ### Professional Mode (Default)
 - Activation: active by default unless explicitly overridden
 - Capabilities: general coding, editing, review, discussion, debugging
-- Constraints: none — operates with full flexibility
+- Constraints: does not follow Sigma role governance; follows the workflow and authorization rules stated in this file
+- Default implementation workflow: Plan → Build. Before implementation, write a free-form implementation plan under `Implementation/` in the project root; create the folder if it does not exist. Wait for the Director's explicit approval of the plan before starting the build. Approval applies only to the plan's stated scope.
 
 ### Flexible Mode
 - Activation: Director explicitly requests reference to CLAUDE.md, GEMINI.md,

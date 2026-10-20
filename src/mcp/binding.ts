@@ -20,6 +20,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
 import { PROJECT_IDENTITY_FILE, ACTIVATE_STATUS_FILE } from '../config';
+import { inspectProjectRegistrationState, missingSigmaFilesMessage } from '../utils/fs';
 
 export type BindingMode = 'query' | 'control';
 export type BindingKind = 'verified' | 'bound' | 'discovery';
@@ -192,6 +193,16 @@ export function resolveBinding(parsed: ParsedBindingArgs): Binding {
   }
 
   const root = canonicalize(parsed.projectRoot);
+
+  // PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.1 — a clone that holds
+  // only .sigma-identity.json must not get a server at all, in any mode.
+  const registration = inspectProjectRegistrationState(root, { exact: true });
+  if (registration.state === 'IDENTITY_ONLY_MISSING_SIGMA') {
+    throw new BindingError(
+      'MISSING_SIGMA_FILES',
+      missingSigmaFilesMessage(registration.projectId ?? 'UNKNOWN', registration.projectName ?? 'UNKNOWN'),
+    );
+  }
 
   if (!fs.existsSync(path.join(root, ACTIVATE_STATUS_FILE))) {
     throw new BindingError(

@@ -1,5 +1,6 @@
 import { AmendmentEntry } from '../engine/chain';
 import { VerifiedResultCommit } from '../engine/intentGit';
+import type { IntentVerificationMode } from '../engine/intentSnapshot';
 export declare class IntentAmendmentError extends Error {
     readonly code: string;
     constructor(code: string, message: string);
@@ -7,12 +8,14 @@ export declare class IntentAmendmentError extends Error {
 export interface AmendmentRequest {
     change: string;
     purposeChanged: boolean;
-    /** Explicit commit reference holding the approved content (F05 §4.5). */
-    commit: string;
+    /** Explicit commit reference holding the approved content (F05 §4.5). Git mode only; snapshot mode takes none. */
+    commit?: string;
     /** Raw-byte SHA-256 of the INTENT file the Director reviewed (from `amendment preview`). */
     docSha256?: string;
 }
 export interface VerifiedAmendment {
+    /** `snapshot`: no commit or tag exists; `tag` holds the project-relative snapshot file. */
+    mode: IntentVerificationMode;
     chainVersion: string;
     verified: VerifiedResultCommit;
     tag: string;
@@ -21,6 +24,7 @@ export interface VerifiedAmendment {
     amendmentId: string;
 }
 export interface RecordIntentAmendmentResult {
+    mode: IntentVerificationMode;
     chainVersion: string;
     version: string;
     entry: AmendmentEntry;

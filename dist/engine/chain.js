@@ -13,6 +13,7 @@ exports.listChainVersions = listChainVersions;
 exports.nextChainVersion = nextChainVersion;
 exports.readActivateStatus = readActivateStatus;
 exports.writeActivateStatus = writeActivateStatus;
+exports.patchActivateStatus = patchActivateStatus;
 exports.resolveActiveChainVersion = resolveActiveChainVersion;
 exports.readChain = readChain;
 exports.writeChain = writeChain;
@@ -165,14 +166,43 @@ function readActivateStatus(projectRoot) {
     if (!('active_chain' in d) || (d.active_chain !== null && typeof d.active_chain !== 'string')) {
         throw new Error(`${filePath} is malformed — expected { active_chain: string | null }`);
     }
-    return { active_chain: d.active_chain };
+    const status = { active_chain: d.active_chain };
+    if (d.sigma_applied !== null && typeof d.sigma_applied === 'object') {
+        status.sigma_applied = d.sigma_applied;
+    }
+    if (typeof d.logs_created_at === 'string')
+        status.logs_created_at = d.logs_created_at;
+    return status;
 }
-function writeActivateStatus(projectRoot, activeChain) {
+// Best-effort read of the whole manifest object, tolerant of absence/corruption.
+// Used by writers that must preserve fields they do not own.
+function readActivateStatusObject(projectRoot) {
+    try {
+        const raw = fs_extra_1.default.readJsonSync(activateStatusPath(projectRoot));
+        if (raw !== null && typeof raw === 'object' && !Array.isArray(raw))
+            return raw;
+    }
+    catch {
+        // missing or unreadable: nothing to preserve
+    }
+    return {};
+}
+function writeActivateStatusObject(projectRoot, data) {
     const filePath = activateStatusPath(projectRoot);
-    const tmpPath = `${filePath}.tmp`;
-    const data = { active_chain: activeChain };
+    const tmpPath = `${filePath}.${process.pid}.tmp`;
+    fs_extra_1.default.ensureDirSync(path_1.default.dirname(filePath));
     fs_extra_1.default.writeJsonSync(tmpPath, data, { spaces: 2 });
     (0, fs_1.atomicReplaceFileSync)(tmpPath, filePath); // see src/utils/fs.ts — §21.9
+}
+// Read-merge-write: sigma_applied / logs_created_at belong to other writers and
+// must survive a change of the active chain.
+function writeActivateStatus(projectRoot, activeChain) {
+    writeActivateStatusObject(projectRoot, { ...readActivateStatusObject(projectRoot), active_chain: activeChain });
+}
+/** Merges bookkeeping fields into the manifest without touching `active_chain`. */
+function patchActivateStatus(projectRoot, patch) {
+    const current = readActivateStatusObject(projectRoot);
+    writeActivateStatusObject(projectRoot, { active_chain: null, ...current, ...patch });
 }
 // ── Invariant: exactly one ACTIVE chain ─────────────────────────────────────
 // PLAN-EVAL-01 §4 / DISCUSSION §12 — if active_chain is missing/invalid

@@ -119,6 +119,16 @@ export interface AmendmentEntry {
     doc_sha256?: string;
     doc_sha256_lf?: string;
     diff_stat?: string;
+    snapshot_file?: string;
+}
+export interface IntentSnapshotBaseline {
+    file: string;
+    doc_sha256: string;
+    doc_sha256_lf: string;
+    revision: number;
+    provenance: 'adopted' | 'amendment' | 'imported_current';
+    recorded_at: string;
+    amendment?: string;
 }
 export interface IntentGitBaseline {
     commit: string;
@@ -150,6 +160,7 @@ export interface SingleIntentState {
     revision_provenance?: string;
     certified_at?: string;
     git_baseline?: IntentGitBaseline;
+    snapshot_baseline?: IntentSnapshotBaseline;
 }
 export interface SingleRoadmapState {
     version: string;
@@ -188,13 +199,19 @@ export interface ChainState {
 }
 export interface ActivateStatus {
     active_chain: string | null;
+    sigma_applied?: {
+        sigma_version: string;
+        assets_hash: string;
+        synced_at: string;
+    };
+    logs_created_at?: string;
 }
 export interface ProjectIdentity {
     schema_version: string;
     project_id: string;
     project_name: string;
     registered: true;
-    logs_created_at: string;
+    logs_created_at?: string;
     dev_workspace?: {
         path: string;
         created_at: string;
@@ -206,6 +223,8 @@ export declare function listChainVersions(projectRoot: string): string[];
 export declare function nextChainVersion(projectRoot: string): string;
 export declare function readActivateStatus(projectRoot: string): ActivateStatus;
 export declare function writeActivateStatus(projectRoot: string, activeChain: string | null): void;
+/** Merges bookkeeping fields into the manifest without touching `active_chain`. */
+export declare function patchActivateStatus(projectRoot: string, patch: Pick<ActivateStatus, 'sigma_applied' | 'logs_created_at'>): void;
 export declare function resolveActiveChainVersion(projectRoot: string): string;
 export declare function readChain(projectRoot: string, chainVersion: string): ChainState;
 export declare function writeChain(projectRoot: string, chainVersion: string, data: ChainState): void;

@@ -1,6 +1,8 @@
 import { Command } from 'commander';
 import { findProjectRoot } from '../utils/fs';
-import { readProjectConfig, writeProjectConfig, resolveAutoOutdateKeep, resolveMemoLimit, DEFAULT_MAILBOX } from '../engine/projectConfig';
+import { readProjectConfig, writeProjectConfig, resolveAutoOutdateKeep, resolveMemoLimit, resolveGitignoreSigma, hasExplicitGitignoreSigma, DEFAULT_MAILBOX } from '../engine/projectConfig';
+import { disableSigmaGitignore, enableSigmaGitignore, isGitignoreBlockApplied, persistGitignoreSetting } from '../services/gitignoreService';
+import { warn } from '../utils/output';
 import { promptLanguageWizard } from '../engine/languageWizard';
 
 export function configCommand(): Command {
@@ -111,6 +113,37 @@ export function configCommand(): Command {
       }
     });
 
+  set.command('gitignore <mode>')
+    .description(
+      'Turn the Sigma .gitignore block on or off (git.gitignore_sigma, default on). ' +
+      'on|activate|true|1: ignore every Sigma-generated file except .sigma-identity.json and detach already-tracked ones from the Git index (files stay on disk). ' +
+      'off|deactivate|false|0: remove the block so Sigma files can be committed and pushed to another machine.'
+    )
+    .action((mode: string) => {
+      try {
+        const normalized = mode.trim().toLowerCase();
+        const ON = ['on', 'activate', 'true', '1'];
+        const OFF = ['off', 'deactivate', 'false', '0'];
+        if (!ON.includes(normalized) && !OFF.includes(normalized)) {
+          throw new Error(`Unknown mode "${mode}". Use on|activate|true|1 or off|deactivate|false|0.`);
+        }
+        const enable = ON.includes(normalized);
+        const projectRoot = findProjectRoot();
+        const prev = resolveGitignoreSigma(readProjectConfig(projectRoot));
+        persistGitignoreSetting(projectRoot, enable);
+        const report = enable ? enableSigmaGitignore(projectRoot) : disableSigmaGitignore(projectRoot);
+        console.log(`Sigma Gitignore Mode: ${prev ? 'ON' : 'OFF'} -> ${enable ? 'ON' : 'OFF'}`);
+        for (const line of report.lines) console.log('  ' + line);
+        for (const line of report.warnings) warn(line);
+        if (!enable) {
+          console.log('  Next: commit and push the Sigma files from this machine, then `git pull` on the other machine.');
+        }
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    });
+
   cmd.command('show')
     .description('Show current project configuration')
     .action(() => {
@@ -125,6 +158,15 @@ export function configCommand(): Command {
         console.log(`Mailbox Auto-Outdate Keep:     ${keep === 0 ? 'OFF' : keep}`);
         const memoLimit = resolveMemoLimit(config);
         console.log(`Memo Unread Limit:             ${memoLimit === 0 ? 'OFF (memo disabled)' : memoLimit}`);
+        const gitignoreOn = resolveGitignoreSigma(config);
+        const applied = isGitignoreBlockApplied(projectRoot);
+        const origin = hasExplicitGitignoreSigma(config) ? '' : ' [default]';
+        console.log(`Sigma Gitignore Mode:          ${gitignoreOn
+          ? 'ON (active — only .sigma-identity.json tracked in Git)'
+          : 'OFF (inactive — Sigma files can be tracked in Git)'}${origin}`);
+        if (gitignoreOn && !applied) {
+          console.log('                               (block not yet in .gitignore — run: sigma config set gitignore on)');
+        }
         console.log('');
       } catch (e) {
         console.error((e as Error).message);

@@ -358,7 +358,7 @@ describe('sigma_intent_baseline_check and sigma_intent_amendment_preview', () =>
     });
   });
 
-  it('reports a project without Git as a finding with no host path', async () => {
+  it('reports a project without Git as snapshot mode awaiting a baseline, with no host path', async () => {
     const p = setupGitProject(track(setupTestEnv()), { noGit: true });
     envs.push({ cleanup: p.cleanup });
     process.chdir(p.projectDir);
@@ -366,7 +366,8 @@ describe('sigma_intent_baseline_check and sigma_intent_amendment_preview', () =>
     const { payload, error, raw } = await call(client, 'sigma_intent_baseline_check');
     expect(error).toBe(false);
     expect(payload.ok).toBe(false);
-    expect(payload.checks.find((c: Payload) => c.id === 'git_repository' && !c.ok)).toBeTruthy();
+    expect(payload.checks.find((c: Payload) => c.id === 'git_repository')).toBeUndefined();
+    expect(payload.checks.find((c: Payload) => c.id === 'baseline_recorded' && !c.ok)).toBeTruthy();
     expect(raw).not.toContain(p.projectDir);
   });
 });

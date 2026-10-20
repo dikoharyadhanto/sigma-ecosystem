@@ -7,6 +7,7 @@ import { assertNoTransactionSymlink } from '../engine/controlStore';
 import { readRevisionLedger } from '../engine/revisions';
 import * as git from '../engine/gitRepo';
 import { matchesCertified } from '../engine/docHash';
+import { findSnapshotByHash } from '../engine/intentSnapshot';
 import { validateSigmaDocFile } from '../utils/docCheck';
 import { TargetRef, CapturedFile, readF08Store } from './f08Store';
 
@@ -92,6 +93,9 @@ function certifiedSource(root: string, chain: ChainState, expected: string | und
   if (!expected) return { status: 'UNKNOWN', sha256: null, content: null as string | null, origin: null as string | null };
   const hash = expected.startsWith('sha256:') ? expected : 'sha256:' + expected;
   if (hash === current.sha256 || matchesCertified(Buffer.from(current.content, 'utf8'), expected)) return { status: 'AVAILABLE', sha256: hash, content: current.content, origin: 'current-content-matches-reference' };
+  // Snapshot mode: certified INTENT content kept under Sigma/revisions/INTENT-v<N>/.
+  const snapshot = findSnapshotByHash(root, chain.chain_version, hash);
+  if (snapshot) return { status: 'AVAILABLE', sha256: hash, content: snapshot.toString('utf8'), origin: 'snapshot:' + chain.chain_version };
   const top = git.repoToplevel(root);
   if (top.ok) {
     const rel = git.repoRelativePath(top.root, path.join(root, current.path));

@@ -131,6 +131,7 @@ exports.CAPABILITY_MANIFEST = Object.freeze([
     rec('config_set_language', 'W1', 'cli_only', 'deferred', [], 'none', 'Project configuration; CLI-only this iteration.'),
     rec('config_set_mailbox_outdate_keep', 'W3', 'cli_only', 'deferred', [], 'none', 'Project configuration; CLI-only this iteration.'),
     rec('config_set_memo_limit', 'W3', 'cli_only', 'deferred', [], 'none', 'Project configuration; CLI-only this iteration.'),
+    rec('config_set_gitignore', 'W3', 'cli_only', 'deferred', [], 'none', 'Project configuration that also edits .gitignore and the Git index (git rm --cached); CLI-only this iteration.'),
     rec('decisions_resolve', 'W3', 'cli_only', 'not_admissible', [], 'none', 'Resolving a Director decision is the Director\'s own act; an MCP tool doing it is self-approval, which the ticket/approval model exists to prevent. sigma_add_decision already states that no MCP tool resolves one. Reclassified from deferred on the Director\'s delegation of technical classification (2026-10-15).'),
     rec('notes_update', 'W3', 'cli_only', 'deferred', [], 'none', 'Moves files and refreshes the notes index; needs a concurrency and target-note contract first.'),
 ]);

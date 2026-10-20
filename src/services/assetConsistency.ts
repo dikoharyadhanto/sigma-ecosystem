@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import {
+  ACTIVATE_STATUS_FILE,
   BRIDGE_STUBS,
   GLOBAL_BRIDGE_DIR,
   GLOBAL_CONFIG_FILE,
@@ -13,6 +14,7 @@ import {
   PROJECT_SIGMA_DIR,
   SIGMA_VERSION,
 } from '../config';
+import { patchActivateStatus } from '../engine/chain';
 import { ROLE_MEMORY_ROLES } from '../engine/roleMemory';
 import { targetPaths } from '../utils/detect';
 import { atomicReplaceFileSync } from '../utils/fs';
@@ -35,8 +37,18 @@ export interface AssetDifference extends AssetPair {
   acceptanceToken?: string;
 }
 
+// Text assets are hashed with CRLF folded to LF, so a checkout under
+// `core.autocrlf` (or an editor that rewrote line endings) on another OS does
+// not turn an identical file into a DIFF. A file that is already LF hashes
+// exactly as before, so existing stamps and acceptance tokens stay valid.
+const LF_NORMALIZED_EXTENSIONS = new Set(['.md', '.json', '.jsonc', '.toml', '.txt']);
+
 export function sha256File(file: string): string {
-  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  const bytes = fs.readFileSync(file);
+  if (LF_NORMALIZED_EXTENSIONS.has(path.extname(file).toLowerCase()) && bytes.includes(0x0d)) {
+    return crypto.createHash('sha256').update(Buffer.from(bytes.toString('latin1').replace(/\r\n/g, '\n'), 'latin1')).digest('hex');
+  }
+  return crypto.createHash('sha256').update(bytes).digest('hex');
 }
 
 function listFiles(dir: string): string[] {
@@ -372,6 +384,10 @@ function writeJsonAtomic(file: string, value: Record<string, unknown>): void {
   atomicReplaceFileSync(tmp, file);
 }
 
+function readActivateStatusObjectSafe(projectRoot: string): Record<string, unknown> | null {
+  return readJsonObject(path.join(projectRoot, ACTIVATE_STATUS_FILE));
+}
+
 function asStamp(raw: unknown, versionKey: string): VersionStamp | null {
   if (raw === null || typeof raw !== 'object') return null;
   const record = raw as Record<string, unknown>;
@@ -395,12 +411,20 @@ export function stampProjectIfCurrent(projectRoot: string): StampResult {
     const identityPath = path.join(projectRoot, PROJECT_IDENTITY_FILE);
     const identity = readJsonObject(identityPath);
     if (!identity) return { written: false, reason: PROJECT_IDENTITY_FILE + ' is missing or unreadable' };
-    identity.sigma_applied = {
-      sigma_version: SIGMA_VERSION,
-      assets_hash: computeAssetsHash(pairs),
-      synced_at: new Date().toISOString(),
-    } satisfies VersionStamp;
-    writeJsonAtomic(identityPath, identity);
+    // The stamp lives in Sigma/activate_status.json: the identity file is the
+    // one Sigma file that stays in Git and must not change on every sync. A
+    // stamp left on the identity by an older version is dropped here, once.
+    patchActivateStatus(projectRoot, {
+      sigma_applied: {
+        sigma_version: SIGMA_VERSION,
+        assets_hash: computeAssetsHash(pairs),
+        synced_at: new Date().toISOString(),
+      } satisfies VersionStamp,
+    });
+    if ('sigma_applied' in identity) {
+      delete identity.sigma_applied;
+      writeJsonAtomic(identityPath, identity);
+    }
     return { written: true };
   } catch (err) {
     return { written: false, reason: (err as Error).message };
@@ -437,7 +461,7 @@ export function evaluateVersionStatus(projectRoot: string): VersionStatus | null
     const host = asStamp(hostConfig && { ...hostConfig, sigma_version: hostConfig.cli_version }, 'sigma_version');
     const hostHash = computeAssetsHash(masterToHost());
     const identity = readJsonObject(path.join(projectRoot, PROJECT_IDENTITY_FILE));
-    const project = asStamp(identity?.sigma_applied, 'sigma_version');
+    const project = asStamp(readActivateStatusObjectSafe(projectRoot)?.sigma_applied ?? identity?.sigma_applied, 'sigma_version');
     const base = { installed_version: SIGMA_VERSION, host, project };
 
     if (!hostConfig) {

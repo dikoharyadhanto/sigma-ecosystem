@@ -20,6 +20,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const os_1 = __importDefault(require("os"));
 const path_1 = __importDefault(require("path"));
 const config_1 = require("../config");
+const chain_1 = require("../engine/chain");
 const roleMemory_1 = require("../engine/roleMemory");
 const detect_1 = require("../utils/detect");
 const fs_1 = require("../utils/fs");
@@ -27,8 +28,17 @@ const PACKAGE_ROOT = path_1.default.resolve(__dirname, '..', '..');
 const BUNDLE_SIGMA = path_1.default.join(PACKAGE_ROOT, 'Sigma');
 const BUNDLE_BRIDGE = path_1.default.join(PACKAGE_ROOT, 'setup', 'targets', 'bridge');
 const BUNDLE_TARGETS = path_1.default.join(PACKAGE_ROOT, 'setup', 'targets');
+// Text assets are hashed with CRLF folded to LF, so a checkout under
+// `core.autocrlf` (or an editor that rewrote line endings) on another OS does
+// not turn an identical file into a DIFF. A file that is already LF hashes
+// exactly as before, so existing stamps and acceptance tokens stay valid.
+const LF_NORMALIZED_EXTENSIONS = new Set(['.md', '.json', '.jsonc', '.toml', '.txt']);
 function sha256File(file) {
-    return crypto_1.default.createHash('sha256').update(fs_extra_1.default.readFileSync(file)).digest('hex');
+    const bytes = fs_extra_1.default.readFileSync(file);
+    if (LF_NORMALIZED_EXTENSIONS.has(path_1.default.extname(file).toLowerCase()) && bytes.includes(0x0d)) {
+        return crypto_1.default.createHash('sha256').update(Buffer.from(bytes.toString('latin1').replace(/\r\n/g, '\n'), 'latin1')).digest('hex');
+    }
+    return crypto_1.default.createHash('sha256').update(bytes).digest('hex');
 }
 function listFiles(dir) {
     if (!fs_extra_1.default.existsSync(dir))
@@ -297,6 +307,9 @@ function writeJsonAtomic(file, value) {
     fs_extra_1.default.writeJsonSync(tmp, value, { spaces: 2 });
     (0, fs_1.atomicReplaceFileSync)(tmp, file);
 }
+function readActivateStatusObjectSafe(projectRoot) {
+    return readJsonObject(path_1.default.join(projectRoot, config_1.ACTIVATE_STATUS_FILE));
+}
 function asStamp(raw, versionKey) {
     if (raw === null || typeof raw !== 'object')
         return null;
@@ -322,12 +335,20 @@ function stampProjectIfCurrent(projectRoot) {
         const identity = readJsonObject(identityPath);
         if (!identity)
             return { written: false, reason: config_1.PROJECT_IDENTITY_FILE + ' is missing or unreadable' };
-        identity.sigma_applied = {
-            sigma_version: config_1.SIGMA_VERSION,
-            assets_hash: computeAssetsHash(pairs),
-            synced_at: new Date().toISOString(),
-        };
-        writeJsonAtomic(identityPath, identity);
+        // The stamp lives in Sigma/activate_status.json: the identity file is the
+        // one Sigma file that stays in Git and must not change on every sync. A
+        // stamp left on the identity by an older version is dropped here, once.
+        (0, chain_1.patchActivateStatus)(projectRoot, {
+            sigma_applied: {
+                sigma_version: config_1.SIGMA_VERSION,
+                assets_hash: computeAssetsHash(pairs),
+                synced_at: new Date().toISOString(),
+            },
+        });
+        if ('sigma_applied' in identity) {
+            delete identity.sigma_applied;
+            writeJsonAtomic(identityPath, identity);
+        }
         return { written: true };
     }
     catch (err) {
@@ -364,7 +385,7 @@ function evaluateVersionStatus(projectRoot) {
         const host = asStamp(hostConfig && { ...hostConfig, sigma_version: hostConfig.cli_version }, 'sigma_version');
         const hostHash = computeAssetsHash(masterToHost());
         const identity = readJsonObject(path_1.default.join(projectRoot, config_1.PROJECT_IDENTITY_FILE));
-        const project = asStamp(identity?.sigma_applied, 'sigma_version');
+        const project = asStamp(readActivateStatusObjectSafe(projectRoot)?.sigma_applied ?? identity?.sigma_applied, 'sigma_version');
         const base = { installed_version: config_1.SIGMA_VERSION, host, project };
         if (!hostConfig) {
             return { ...base, level: 'host_unknown', command: 'sigma setup install',

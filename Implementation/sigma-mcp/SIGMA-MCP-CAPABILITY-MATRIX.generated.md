@@ -6,9 +6,9 @@
 ## Baseline
 
 - Sigma version: `2.1.0`
-- Operation registry: schema `1.0.0`, generated `2026-10-14T18:05:35.000Z`, 90 entries
-- Active operations: 87; tombstones: 3 (`intent_lock`, `plan_lock`, `exec_lock`)
-- Implemented on MCP: 57; deferred: 15; not admissible: 15
+- Operation registry: schema `1.0.0`, generated `2026-10-14T18:05:35.000Z`, 91 entries
+- Active operations: 88; tombstones: 3 (`intent_lock`, `plan_lock`, `exec_lock`)
+- Implemented on MCP: 57; deferred: 16; not admissible: 15
 
 This matrix replaces `Implementation/sigma-mcp/SIGMA-MCP-OPERATION-CAPABILITY-MATRIX-20260915.md` as the
 reference for what exists. That file stays as the record of the original reasoning and decisions.
@@ -102,11 +102,12 @@ Tombstones are never counted as active operations and can never receive a record
 | `roadmap_new` | W1 | semantic | implemented | `sigma_create_roadmap_draft` | exact | FMN only; one ROADMAP per chain. |
 | `roadmap_render` | W1 | semantic | implemented | `sigma_render_roadmap` | exact | Deterministic Stage Overview re-derivation. |
 
-## CLI only — 20
+## CLI only — 21
 
 | operation | tier | registry level | mcp_status | tools | mapping | rationale |
 |:--|:--|:--|:--|:--|:--|:--|
 | `config` | W3 | semantic | deferred | — | none | Project configuration; CLI-only this iteration. |
+| `config_set_gitignore` | W3 | semantic | deferred | — | none | Project configuration that also edits .gitignore and the Git index (git rm --cached); CLI-only this iteration. |
 | `config_set_language` | W1 | semantic | deferred | — | none | Project configuration; CLI-only this iteration. |
 | `config_set_mailbox_outdate_keep` | W3 | semantic | deferred | — | none | Project configuration; CLI-only this iteration. |
 | `config_set_memo_limit` | W3 | semantic | deferred | — | none | Project configuration; CLI-only this iteration. |

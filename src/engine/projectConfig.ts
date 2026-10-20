@@ -23,12 +23,22 @@ export const DEFAULT_MAILBOX: MailboxConfig = {
   memo_unread_limit: 5,
 };
 
+// PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.3. When true (default),
+// every file Sigma generates is listed in the project's .gitignore except
+// .sigma-identity.json, which stays tracked as the cross-machine guardrail.
+export interface GitProjectConfig {
+  gitignore_sigma: boolean;
+}
+
+export const DEFAULT_GIT: GitProjectConfig = { gitignore_sigma: true };
+
 export interface ProjectConfig {
   schema_version: string;
   document_language: string;
   interaction_language: string;
   output_document_language: string;
   mailbox?: MailboxConfig;
+  git?: GitProjectConfig;
 }
 
 const DEFAULTS: ProjectConfig = {
@@ -37,6 +47,8 @@ const DEFAULTS: ProjectConfig = {
   interaction_language: 'English',
   output_document_language: 'English',
   mailbox: { ...DEFAULT_MAILBOX },
+  // `git` is deliberately absent: a config written before the field existed
+  // must stay distinguishable from one that chose a value (hasExplicitGitignoreSigma).
 };
 
 export function readProjectConfig(projectRoot: string): ProjectConfig {
@@ -63,7 +75,21 @@ export function createDefaultProjectConfig(lang = 'English'): ProjectConfig {
     interaction_language: lang,
     output_document_language: lang,
     mailbox: { ...DEFAULT_MAILBOX },
+    git: { ...DEFAULT_GIT },
   };
+}
+
+// Resolves the Sigma-gitignore switch, tolerating a missing or malformed `git`
+// block (project.config.json written before this field existed). Anything that
+// is not an explicit boolean falls back to the default (ON).
+export function resolveGitignoreSigma(config: ProjectConfig): boolean {
+  const raw = config.git?.gitignore_sigma;
+  return typeof raw === 'boolean' ? raw : DEFAULT_GIT.gitignore_sigma;
+}
+
+/** True when project.config.json carries an explicit gitignore_sigma value (as opposed to the implicit default). */
+export function hasExplicitGitignoreSigma(config: ProjectConfig): boolean {
+  return typeof config.git?.gitignore_sigma === 'boolean';
 }
 
 // Resolves the auto-outdate keep-count, tolerating a missing or malformed

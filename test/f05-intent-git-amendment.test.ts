@@ -44,11 +44,17 @@ describe('F05 baseline check and preflight (U-01)', () => {
     expect(r.stderr).toMatch(/baseline adopt/);
   });
 
-  it('fails git_repository for a project without Git', () => {
+  // WP-4 (PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY): Git is no longer a
+  // precondition. A project Git cannot hold the INTENT of is verified through local
+  // snapshots, so the missing piece is the baseline, not the repository.
+  it('uses snapshot mode for a project without Git and asks for a baseline', () => {
     const p = project({ noGit: true });
     const r = cli(p, 'intent baseline check');
     expect(r.exitCode).toBe(1);
-    expect(r.stdout).toMatch(/\[FAIL\] git_repository/);
+    expect(r.stdout).toMatch(/\[OK  \] verification_mode: snapshot/);
+    expect(r.stdout).not.toMatch(/git_repository/);
+    expect(r.stdout).toMatch(/\[FAIL\] baseline_recorded/);
+    expect(r.stderr).toMatch(/baseline adopt --director-confirm/);
   });
 
   it('reports uncommitted INTENT changes (worktree_clean) and uncertified edits', () => {
@@ -173,7 +179,7 @@ describe('F05 amendment recording (U-03, U-04)', () => {
     editIntent(p);
     const r = cli(p, 'intent amendment --change "x"');
     expect(r.exitCode).toBe(1);
-    expect(r.stderr).toMatch(/Missing: --purpose-changed yes\|no, --commit <ref>, --doc-sha256 <hash from preview>, --director-confirm/);
+    expect(r.stderr).toMatch(/Missing: --purpose-changed yes\|no, --doc-sha256 <hash from preview>, --director-confirm/);
   });
 
   it('requires --director-confirm', () => {

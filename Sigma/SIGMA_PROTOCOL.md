@@ -314,15 +314,15 @@ Direct edits, missing evidence, source drift, and pending notices are blockers. 
 
 ### 7.4 INTENT amendments
 
-A RATIFIED INTENT may be changed by an amendment, and an amendment may change any part of it. Amendments run through Git:
+A RATIFIED INTENT may be changed by an amendment, and an amendment may change any part of it. Amendments run against a recorded baseline, in one of two modes. In Git mode the baseline is a commit and a local annotated tag. In snapshot mode — used when Git does not track the INTENT (the default while the Sigma gitignore is on, and in projects without Git) — the baseline is a local copy under `Sigma/revisions/INTENT-v<N>/`. A chain that already has a Git baseline stays in Git mode until the Director moves it with `sigma intent baseline adopt` without `--commit`.
 
-1. ARC runs `sigma intent baseline check` to confirm the working copy is the committed, certified content. A chain without a Git baseline needs `sigma intent baseline adopt` with Director confirmation first. A project without a local Git repository cannot run an amendment.
+1. ARC runs `sigma intent baseline check` to confirm the working copy is the certified content of the baseline. A chain without a baseline needs `sigma intent baseline adopt` with Director confirmation first.
 2. ARC gives the Director the list of planned changes and the sections each affects. The Director approves the list.
 3. ARC edits the INTENT and runs `sigma intent amendment preview`, which shows the diff against the baseline, the document hash, and the impact on PLAN and EXEC. The Director reviews and approves the content.
-4. The reviewed content is committed to Git under the Director's direction.
-5. `sigma intent amendment` with the commit, the document hash, and `--director-confirm` verifies the commit, creates a local annotated tag, and records the amendment.
+4. Git mode only: the reviewed content is committed to Git under the Director's direction.
+5. `sigma intent amendment` with the document hash and `--director-confirm` records the amendment. In Git mode it also takes the commit, verifies it, and creates a local annotated tag. In snapshot mode it takes no commit and stores the reviewed content as `Sigma/revisions/INTENT-v<N>/amd-<NNN>.md`.
 
-An amendment takes effect from its ratification forward and does not retroactively validate work built ahead of it. After an amendment, each APPROVED PLAN needs FMN review, a revision that binds the current INTENT, a notice, and DEV acknowledgment. LOCKED history is not demoted or recertified. The Director authorizes an amendment directly; approval relayed by another role is not approval. Sigma never stages, commits, or pushes. Pushing the tag is the Director's action.
+An amendment takes effect from its ratification forward and does not retroactively validate work built ahead of it. After an amendment, each APPROVED PLAN needs FMN review, a revision that binds the current INTENT, a notice, and DEV acknowledgment. LOCKED history is not demoted or recertified. The Director authorizes an amendment directly; approval relayed by another role is not approval. Sigma never stages, commits, or pushes. In Git mode, pushing the tag is the Director's action.
 
 `sigma intent ratify` and `sigma intent amendment` are the only commands that certify the INTENT. Any other edit makes the file's hash differ from the certified one and is reported as `UNCERTIFIED_EDIT`. A warning is not a lock block. It clears through an amendment or by discarding the edit. `sigma doctor` reports it and never re-certifies.
 

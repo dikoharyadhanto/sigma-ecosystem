@@ -128,7 +128,9 @@ export function registerPrepareIntentAmendmentTool(server: McpServer): void {
             expected_state_revision: revision,
             effects: [
               `intent.amendments: +1 entry ${preview.next_amendment_id} (purpose_changed: ${args.purpose_changed ? 'yes' : 'no'}; change: "${args.change}")`,
-              'Result commit supplied at commit time is verified; annotated tag ' + preview.next_tag + ' is created locally (never pushed)',
+              preview.mode === 'snapshot'
+                ? 'Approved content is stored as local snapshot ' + preview.next_tag + ' (no Git commit or tag is used)'
+                : 'Result commit supplied at commit time is verified; annotated tag ' + preview.next_tag + ' is created locally (never pushed)',
               'intent.certified_doc_sha256: certified from the reviewed file bytes (the document is not rewritten); APPROVED PLANs flagged for INTENT review',
             ],
             authority: 'director',
@@ -137,6 +139,7 @@ export function registerPrepareIntentAmendmentTool(server: McpServer): void {
             consumed_at: null,
             dependencies_sha256: preview.diff_sha256,
             review_package: {
+              mode: preview.mode,
               baseline_commit: preview.report.baseline?.commit,
               diff_stat: preview.diff.stat,
               diff_sha256: preview.diff_sha256,

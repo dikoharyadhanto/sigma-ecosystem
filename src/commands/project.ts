@@ -12,6 +12,7 @@ import {
   GLOBAL_BRIDGE_DIR,
   PROJECT_SIGMA_DIR,
   PROJECT_IDENTITY_FILE,
+  PROJECT_CONFIG_FILE,
   ACTIVATE_STATUS_FILE,
   SCHEMA_VERSION,
   SIGMA_VERSION,
@@ -31,16 +32,24 @@ import {
   readActiveChain,
   readProjectIdentity,
   writeActivateStatus,
+  patchActivateStatus,
   listChainVersions,
   getNextValidOperations,
   getGateStatusLabel,
   getInvalidWarningLines,
   hasInvalidRuntime,
 } from '../engine/chain';
-import { createDefaultProjectConfig, writeProjectConfig } from '../engine/projectConfig';
+import {
+  createDefaultProjectConfig,
+  writeProjectConfig,
+  readProjectConfig,
+  resolveGitignoreSigma,
+  hasExplicitGitignoreSigma,
+} from '../engine/projectConfig';
+import { applyGitignorePolicy, enableSigmaGitignore } from '../services/gitignoreService';
 import { promptLanguageWizard } from '../engine/languageWizard';
 import { success, info, warn, error } from '../utils/output';
-import { ensureDir, fileExists, findProjectRoot } from '../utils/fs';
+import { assertSigmaFilesPresentOrThrow, ensureDir, fileExists, findProjectRoot } from '../utils/fs';
 import { ensureOperationsLog } from '../utils/operationLog';
 import { initNotes } from '../services/notesService';
 import { formatAssetDifference, inspectProjectAssets, stampProjectIfCurrent, syncManagedAssets } from '../services/assetConsistency';
@@ -166,22 +175,28 @@ interface ProjectIdentity {
   project_id: string;
   project_name: string;
   registered: true;
-  logs_created_at: string;
+  // `logs_created_at` and `sigma_applied` live in Sigma/activate_status.json
+  // (PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.4 item 2): this file
+  // is the one Sigma file kept in Git, so it only holds stable identity.
+  git?: { gitignore_sigma: boolean };
 }
 
 // Preserves the existing logs_created_at unless the operations log was just
 // (re)initialized — first-time creation and loss recovery are the same event
 // and both get a fresh timestamp; an untouched, still-valid log keeps its
-// original timestamp across repeated `start`/`register` calls.
+// original timestamp across repeated `start`/`register` calls. Reads the new
+// location first, then the copy older versions left on the identity file.
 function resolveLogsCreatedAt(projectRoot: string, logsReinitialized: boolean): string {
   if (!logsReinitialized) {
+    const manifestPath = path.join(projectRoot, ACTIVATE_STATUS_FILE);
     const identityPath = path.join(projectRoot, PROJECT_IDENTITY_FILE);
-    if (fileExists(identityPath)) {
+    for (const file of [manifestPath, identityPath]) {
+      if (!fileExists(file)) continue;
       try {
-        const existing = fs.readJsonSync(identityPath) as Partial<ProjectIdentity>;
-        if (existing.logs_created_at) return existing.logs_created_at;
+        const existing = fs.readJsonSync(file) as { logs_created_at?: unknown };
+        if (typeof existing.logs_created_at === 'string') return existing.logs_created_at;
       } catch {
-        // fall through to a fresh timestamp
+        // try the next location, then fall through to a fresh timestamp
       }
     }
   }
@@ -192,20 +207,28 @@ function writeProjectIdentity(
   projectRoot: string,
   projectId: string,
   projectName: string,
-  logsCreatedAt: string
+  logsCreatedAt: string,
+  gitignoreSigma?: boolean,
 ): void {
   // Read-merge-write: fields this function does not own (for example the DEV
   // workspace record) must survive a re-initialization.
-  const existing = readExistingIdentity(projectRoot);
-  const identity: ProjectIdentity = {
+  const existing: Record<string, unknown> = { ...readExistingIdentity(projectRoot) };
+  // Legacy volatile fields move to the manifest; drop them from the tracked identity.
+  delete existing.logs_created_at;
+  const identity: ProjectIdentity & Record<string, unknown> = {
     ...existing,
     schema_version: SCHEMA_VERSION,
     project_id: projectId,
     project_name: projectName,
     registered: true,
-    logs_created_at: logsCreatedAt,
   };
+  if (gitignoreSigma !== undefined) identity.git = { ...(existing.git as object | undefined), gitignore_sigma: gitignoreSigma };
   fs.writeJsonSync(path.join(projectRoot, PROJECT_IDENTITY_FILE), identity, { spaces: 2 });
+  // The manifest may not exist yet when `register` repairs a damaged project;
+  // creating it here would make a broken Sigma/ look healthy, so only patch an existing one.
+  if (fileExists(path.join(projectRoot, ACTIVATE_STATUS_FILE))) {
+    patchActivateStatus(projectRoot, { logs_created_at: logsCreatedAt });
+  }
 }
 
 function readExistingIdentity(projectRoot: string): Partial<ProjectIdentity> {
@@ -246,6 +269,9 @@ async function runStart(opts: {
   }
 
   const projectRoot = process.cwd();
+  // Defense in depth: the CLI hook already refused this, but the use-case must
+  // not be re-registrable from any other entry point either.
+  assertSigmaFilesPresentOrThrow(projectRoot, { exact: true });
   const sigmaDir = path.join(projectRoot, PROJECT_SIGMA_DIR);
   // PLAN-EVAL-05 — anchor moved to activate_status.json now that
   // Sigma/progress.json is no longer written at all (findProjectRoot()
@@ -305,6 +331,13 @@ async function runStart(opts: {
 
     console.log('');
     projectConfig = await promptLanguageWizard(projectConfig);
+  }
+
+  // `--reinit` rewrites project.config.json from defaults; an explicit earlier
+  // choice about Git must not silently flip back to ON (and re-detach files).
+  if (fileExists(path.join(projectRoot, PROJECT_CONFIG_FILE))) {
+    const previous = readProjectConfig(projectRoot);
+    if (hasExplicitGitignoreSigma(previous)) projectConfig.git = { gitignore_sigma: resolveGitignoreSigma(previous) };
   }
 
   info(`Initializing Sigma project: ${projectName} (${projectId})...`);
@@ -375,7 +408,11 @@ async function runStart(opts: {
 
   // Write .sigma-identity.json (root-level, used by `sigma doctor --reconstruct`
   // as a fallback if identity can't otherwise be determined)
-  writeProjectIdentity(projectRoot, projectId, projectName, resolveLogsCreatedAt(projectRoot, logsReinitialized));
+  writeProjectIdentity(
+    projectRoot, projectId, projectName,
+    resolveLogsCreatedAt(projectRoot, logsReinitialized),
+    resolveGitignoreSigma(projectConfig),
+  );
   console.log('  Identity: .sigma-identity.json written.');
 
   // Write project.config.json with language preferences
@@ -477,6 +514,15 @@ async function runStart(opts: {
   if (!isSigmaMcpResolvable()) {
     warn('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
   }
+
+  // Last, so every generated file (bridges, MCP configs, changelog) already exists
+  // and anything an earlier run left tracked in Git is detached in the same pass.
+  reportGitignore(applyGitignorePolicy(projectRoot));
+}
+
+function reportGitignore(report: { lines: string[]; warnings: string[] }): void {
+  for (const line of report.lines) console.log('  ' + line);
+  for (const line of report.warnings) warn(line);
 }
 
 // ── sigma project status ──────────────────────────────────────────────────────
@@ -551,6 +597,7 @@ function runStatus(): void {
 // ── sigma project sync ────────────────────────────────────────────────────────
 
 function runSync(opts: { confirm?: boolean; accept?: string[] }): void {
+  assertSigmaFilesPresentOrThrow(process.cwd());
   const projectRoot = findProjectRoot();
   if (!opts.confirm && opts.accept?.length) {
     throw new Error('--accept requires --confirm after reviewing the dry run.');
@@ -566,6 +613,9 @@ function runSync(opts: { confirm?: boolean; accept?: string[] }): void {
     console.log(`  ${PROJECT_IDENTITY_FILE} (version stamp — written only when every managed file matches its source after sync)`);
     console.log('  .mcp.json (sigma-mcp — upsert key sigma)');
     console.log('  opencode.jsonc / opencode.json (sigma-mcp — upsert key mcp.sigma)');
+    if (hasExplicitGitignoreSigma(readProjectConfig(projectRoot)) && resolveGitignoreSigma(readProjectConfig(projectRoot))) {
+      console.log('  .gitignore (refresh the sigma-managed block; already-tracked Sigma files are detached from the Git index, never from disk)');
+    }
     {
       const plan = planChangelogCreation(projectRoot);
       if (plan.action === 'create') console.log(`  ${plan.rel} (create empty product changelog; none exists in the project root or dev/)`);
@@ -613,6 +663,11 @@ function runSync(opts: { confirm?: boolean; accept?: string[] }): void {
   if (!isSigmaMcpResolvable()) {
     warn('sigma-mcp is not found in PATH. MCP config was written but will not work until sigma-mcp is resolvable. Make sure sigma-ecosystem is installed globally: npm install -g sigma-ecosystem');
   }
+
+  // A project that never ran `sigma config set gitignore` keeps its Git layout
+  // until the Director opts in; only an explicit ON is re-asserted here.
+  const config = readProjectConfig(projectRoot);
+  if (hasExplicitGitignoreSigma(config) && resolveGitignoreSigma(config)) reportGitignore(enableSigmaGitignore(projectRoot));
 }
 
 // ── sigma project register ────────────────────────────────────────────────────
@@ -636,6 +691,7 @@ function resolveRegisterIdentity(opts: { id?: string; name?: string }): { id: st
 }
 
 function runRegister(opts: { id?: string; name?: string }): void {
+  assertSigmaFilesPresentOrThrow(process.cwd());
   const projectRoot = findSigmaProjectRoot();
   const identity = resolveRegisterIdentity(opts);
 

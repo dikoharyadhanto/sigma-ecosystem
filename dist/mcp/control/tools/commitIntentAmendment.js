@@ -33,16 +33,17 @@ function registerCommitIntentAmendmentTool(server) {
         description: 'Records the Amendment frozen by operation_ticket_id against the active chain\'s RATIFIED DIR-INTENT ' +
             '— the MCP control-plane equivalent of `sigma intent amendment`. Requires a Director approval record ' +
             'for that exact ticket, recorded via the trusted local CLI (`sigma control approve <ticket_id>`). ' +
-            '`change` and `purpose_changed` must match what was frozen at prepare time exactly. `commit` is the Git ' +
-            'commit that holds exactly the approved INTENT content; Sigma verifies it, creates the local annotated tag, ' +
-            'then records the amendment. Sigma never stages, commits or pushes. The approval is consumed on a ' +
+            '`change` and `purpose_changed` must match what was frozen at prepare time exactly. In Git mode `commit` is ' +
+            'the Git commit that holds exactly the approved INTENT content; Sigma verifies it, creates the local ' +
+            'annotated tag, then records the amendment. In snapshot mode (the prepare ticket reports it; the INTENT is ' +
+            'not tracked by Git) omit `commit`: Sigma stores the approved content under Sigma/revisions/. Sigma never stages, commits or pushes. The approval is consumed on a ' +
             'successful commit and cannot be reused. ARC role only.',
         inputSchema: {
             operation_ticket_id: zod_1.z.string().min(1),
             approval_id: zod_1.z.string().min(1),
             change: zod_1.z.string().min(1),
             purpose_changed: zod_1.z.boolean(),
-            commit: zod_1.z.string().min(1),
+            commit: zod_1.z.string().min(1).optional(),
             idempotency_key: zod_1.z.string().min(1),
         },
         annotations: {
@@ -138,13 +139,13 @@ function registerCommitIntentAmendmentTool(server) {
                 const { chainVersion } = (0, chain_1.readActiveChain)(root);
                 const preview = (0, intentGit_1.previewIntentAmendment)(root, chainVersion, chain);
                 if (!ticket.dependencies_sha256 || preview.diff_sha256 !== ticket.dependencies_sha256) {
-                    throw new errors_1.McpQueryError(contract_1.ERROR_CODES.STALE_ARTIFACT, 'The diff against the Git baseline changed since this ticket was prepared.');
+                    throw new errors_1.McpQueryError(contract_1.ERROR_CODES.STALE_ARTIFACT, 'The diff against the baseline changed since this ticket was prepared.');
                 }
                 try {
                     verified = (0, intentAmendmentService_1.verifyAndTagAmendment)(root, {
                         change: args.change,
                         purposeChanged: args.purpose_changed,
-                        commit: args.commit,
+                        ...(args.commit ? { commit: args.commit } : {}),
                         docSha256: ticket.target.sha256.replace(/^sha256:/, ''),
                     });
                 }
@@ -162,7 +163,7 @@ function registerCommitIntentAmendmentTool(server) {
             const result = (0, intentAmendmentService_1.applyVerifiedAmendment)(root, {
                 change: args.change,
                 purposeChanged: args.purpose_changed,
-                commit: args.commit,
+                ...(args.commit ? { commit: args.commit } : {}),
                 docSha256: ticket?.target?.sha256?.replace(/^sha256:/, ''),
             }, verified);
             const consumedAt = new Date().toISOString();
@@ -174,8 +175,9 @@ function registerCommitIntentAmendmentTool(server) {
                 chainVersion: result.chainVersion,
                 version: result.version,
                 amendment_id: result.entry.id,
-                result_commit: result.commit,
-                result_tag: result.tag,
+                ...(result.mode === 'snapshot'
+                    ? { mode: 'snapshot', result_snapshot: result.tag }
+                    : { mode: 'git', result_commit: result.commit, result_tag: result.tag }),
                 operation_ticket_id: args.operation_ticket_id,
                 approval_id: args.approval_id,
                 ...(result.certifiedDocSha256 ? { sha256: result.certifiedDocSha256 } : {}),

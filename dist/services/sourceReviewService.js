@@ -52,6 +52,7 @@ const controlStore_1 = require("../engine/controlStore");
 const revisions_1 = require("../engine/revisions");
 const git = __importStar(require("../engine/gitRepo"));
 const docHash_1 = require("../engine/docHash");
+const intentSnapshot_1 = require("../engine/intentSnapshot");
 const docCheck_1 = require("../utils/docCheck");
 const f08Store_1 = require("./f08Store");
 function reviewChain(root, explicit) {
@@ -145,6 +146,10 @@ function certifiedSource(root, chain, expected, current) {
     const hash = expected.startsWith('sha256:') ? expected : 'sha256:' + expected;
     if (hash === current.sha256 || (0, docHash_1.matchesCertified)(Buffer.from(current.content, 'utf8'), expected))
         return { status: 'AVAILABLE', sha256: hash, content: current.content, origin: 'current-content-matches-reference' };
+    // Snapshot mode: certified INTENT content kept under Sigma/revisions/INTENT-v<N>/.
+    const snapshot = (0, intentSnapshot_1.findSnapshotByHash)(root, chain.chain_version, hash);
+    if (snapshot)
+        return { status: 'AVAILABLE', sha256: hash, content: snapshot.toString('utf8'), origin: 'snapshot:' + chain.chain_version };
     const top = git.repoToplevel(root);
     if (top.ok) {
         const rel = git.repoRelativePath(top.root, path_1.default.join(root, current.path));

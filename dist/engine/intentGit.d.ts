@@ -1,4 +1,5 @@
 import { ChainState, IntentGitBaseline } from './chain';
+import { IntentVerificationMode } from './intentSnapshot';
 export interface GitCheck {
     id: string;
     ok: boolean;
@@ -39,6 +40,8 @@ export interface AmendmentImpact {
 }
 export declare function amendmentImpact(chain: ChainState): AmendmentImpact;
 export interface AmendmentPreview {
+    /** `git`: baseline is a commit + tag. `snapshot`: baseline is a local copy under Sigma/revisions/. */
+    mode: IntentVerificationMode;
     report: IntentGitReport;
     impact: AmendmentImpact;
     diff: {

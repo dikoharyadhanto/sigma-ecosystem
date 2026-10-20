@@ -44,16 +44,17 @@ export function registerCommitIntentAmendmentTool(server: McpServer): void {
         'Records the Amendment frozen by operation_ticket_id against the active chain\'s RATIFIED DIR-INTENT ' +
         '— the MCP control-plane equivalent of `sigma intent amendment`. Requires a Director approval record ' +
         'for that exact ticket, recorded via the trusted local CLI (`sigma control approve <ticket_id>`). ' +
-        '`change` and `purpose_changed` must match what was frozen at prepare time exactly. `commit` is the Git ' +
-        'commit that holds exactly the approved INTENT content; Sigma verifies it, creates the local annotated tag, ' +
-        'then records the amendment. Sigma never stages, commits or pushes. The approval is consumed on a ' +
+        '`change` and `purpose_changed` must match what was frozen at prepare time exactly. In Git mode `commit` is ' +
+        'the Git commit that holds exactly the approved INTENT content; Sigma verifies it, creates the local ' +
+        'annotated tag, then records the amendment. In snapshot mode (the prepare ticket reports it; the INTENT is ' +
+        'not tracked by Git) omit `commit`: Sigma stores the approved content under Sigma/revisions/. Sigma never stages, commits or pushes. The approval is consumed on a ' +
         'successful commit and cannot be reused. ARC role only.',
       inputSchema: {
         operation_ticket_id: z.string().min(1),
         approval_id: z.string().min(1),
         change: z.string().min(1),
         purpose_changed: z.boolean(),
-        commit: z.string().min(1),
+        commit: z.string().min(1).optional(),
         idempotency_key: z.string().min(1),
       },
       annotations: {
@@ -63,7 +64,7 @@ export function registerCommitIntentAmendmentTool(server: McpServer): void {
         openWorldHint: false,
       },
     },
-    async (args: { operation_ticket_id: string; approval_id: string; change: string; purpose_changed: boolean; commit: string; idempotency_key: string }) => {
+    async (args: { operation_ticket_id: string; approval_id: string; change: string; purpose_changed: boolean; commit?: string; idempotency_key: string }) => {
       // Git verification and tagging are slow: they run in checkPreconditions (under the project
       // lock, outside the mutate() lease-safety budget); mutate() only writes chain and log.
       let verified: VerifiedAmendment | undefined;
@@ -161,13 +162,13 @@ export function registerCommitIntentAmendmentTool(server: McpServer): void {
             const { chainVersion } = readActiveChain(root);
             const preview = previewIntentAmendment(root, chainVersion, chain);
             if (!ticket.dependencies_sha256 || preview.diff_sha256 !== ticket.dependencies_sha256) {
-              throw new McpQueryError(ERROR_CODES.STALE_ARTIFACT, 'The diff against the Git baseline changed since this ticket was prepared.');
+              throw new McpQueryError(ERROR_CODES.STALE_ARTIFACT, 'The diff against the baseline changed since this ticket was prepared.');
             }
             try {
               verified = verifyAndTagAmendment(root, {
                 change: args.change,
                 purposeChanged: args.purpose_changed,
-                commit: args.commit,
+                ...(args.commit ? { commit: args.commit } : {}),
                 docSha256: ticket.target.sha256.replace(/^sha256:/, ''),
               });
             } catch (e) {
@@ -184,7 +185,7 @@ export function registerCommitIntentAmendmentTool(server: McpServer): void {
           const result = applyVerifiedAmendment(root, {
             change: args.change,
             purposeChanged: args.purpose_changed,
-            commit: args.commit,
+            ...(args.commit ? { commit: args.commit } : {}),
             docSha256: ticket?.target?.sha256?.replace(/^sha256:/, ''),
           }, verified);
           const consumedAt = new Date().toISOString();
@@ -196,8 +197,9 @@ export function registerCommitIntentAmendmentTool(server: McpServer): void {
             chainVersion: result.chainVersion,
             version: result.version,
             amendment_id: result.entry.id,
-            result_commit: result.commit,
-            result_tag: result.tag,
+            ...(result.mode === 'snapshot'
+              ? { mode: 'snapshot', result_snapshot: result.tag }
+              : { mode: 'git', result_commit: result.commit, result_tag: result.tag }),
             operation_ticket_id: args.operation_ticket_id,
             approval_id: args.approval_id,
             ...(result.certifiedDocSha256 ? { sha256: result.certifiedDocSha256 } : {}),

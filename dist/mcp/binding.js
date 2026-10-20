@@ -34,6 +34,7 @@ const fs_extra_1 = __importDefault(require("fs-extra"));
 const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
 const config_1 = require("../config");
+const fs_1 = require("../utils/fs");
 class BindingError extends Error {
     constructor(code, message) {
         super(message);
@@ -166,6 +167,12 @@ function resolveBinding(parsed) {
         return discoveryBinding();
     }
     const root = canonicalize(parsed.projectRoot);
+    // PLAN-IMPL-SIGMA-GITIGNORE-IDENTITY-AND-PORTABILITY §3.1 — a clone that holds
+    // only .sigma-identity.json must not get a server at all, in any mode.
+    const registration = (0, fs_1.inspectProjectRegistrationState)(root, { exact: true });
+    if (registration.state === 'IDENTITY_ONLY_MISSING_SIGMA') {
+        throw new BindingError('MISSING_SIGMA_FILES', (0, fs_1.missingSigmaFilesMessage)(registration.projectId ?? 'UNKNOWN', registration.projectName ?? 'UNKNOWN'));
+    }
     if (!fs_extra_1.default.existsSync(path_1.default.join(root, config_1.ACTIVATE_STATUS_FILE))) {
         throw new BindingError('NO_PROJECT', 'Bound root is not a Sigma project (no Sigma/activate_status.json).');
     }

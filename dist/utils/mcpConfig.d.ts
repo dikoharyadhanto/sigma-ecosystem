@@ -26,6 +26,8 @@
  * baris pada blok `[[plugins]]` yang name-nya "sigma" saja, sisa file
  * (komentar, plugin lain, section lain) tidak disentuh sama sekali.
  */
+/** Nama berkas config proyek (.mcp.json / opencode.*) yang entri `sigma`-nya terikat ke root lain. */
+export declare function findStaleMcpProjectRoots(projectRoot: string): string[];
 /**
  * Tulis/upsert entri sigma ke .mcp.json di project root.
  * Format: { "mcpServers": { "sigma": { "command": "sigma-mcp", "args": [projectRoot] } } }

@@ -30,7 +30,9 @@ import {
 } from '../engine/chain';
 import { INTENT_AMENDMENT_LOG_FILE } from '../config';
 import { diffAgainstWorktree, lfSha256 } from '../engine/gitRepo';
-import { ensureAnnotatedTag, intentAbsPath, intentTagName, nextAmendmentIdOf, verifyResultCommit, VerifiedResultCommit } from '../engine/intentGit';
+import { ensureAnnotatedTag, intentAbsPath, intentTagName, nextAmendmentIdOf, verifyResultCommit, VerifiedResultCommit, inspectIntentGit } from '../engine/intentGit';
+import { intentSnapshotTransactionFiles, readBaselineSnapshot, resolveIntentVerificationMode, snapshotFileRel, writeSnapshot, diffDocuments } from '../engine/intentSnapshot';
+import type { IntentVerificationMode } from '../engine/intentSnapshot';
 
 export class IntentAmendmentError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -42,13 +44,15 @@ export class IntentAmendmentError extends Error {
 export interface AmendmentRequest {
   change: string;
   purposeChanged: boolean;
-  /** Explicit commit reference holding the approved content (F05 §4.5). */
-  commit: string;
+  /** Explicit commit reference holding the approved content (F05 §4.5). Git mode only; snapshot mode takes none. */
+  commit?: string;
   /** Raw-byte SHA-256 of the INTENT file the Director reviewed (from `amendment preview`). */
   docSha256?: string;
 }
 
 export interface VerifiedAmendment {
+  /** `snapshot`: no commit or tag exists; `tag` holds the project-relative snapshot file. */
+  mode: IntentVerificationMode;
   chainVersion: string;
   verified: VerifiedResultCommit;
   tag: string;
@@ -58,6 +62,7 @@ export interface VerifiedAmendment {
 }
 
 export interface RecordIntentAmendmentResult {
+  mode: IntentVerificationMode;
   chainVersion: string;
   version: string;
   entry: AmendmentEntry;
@@ -69,7 +74,13 @@ export interface RecordIntentAmendmentResult {
 
 export function intentAmendmentTransactionFiles(projectRoot: string, targetChainVersion?: string): string[] {
   const chainVersion = targetChainVersion ?? readActiveChain(projectRoot).chainVersion;
-  return [chainFilePath(projectRoot, chainVersion), path.join(projectRoot, INTENT_AMENDMENT_LOG_FILE)];
+  const chain = readChain(projectRoot, chainVersion);
+  return [
+    chainFilePath(projectRoot, chainVersion),
+    path.join(projectRoot, INTENT_AMENDMENT_LOG_FILE),
+    // Snapshot mode writes these; listing them is harmless in Git mode (the journal restores or removes them).
+    ...intentSnapshotTransactionFiles(projectRoot, chainVersion, nextAmendmentIdOf(chain)),
+  ];
 }
 
 export function appendIntentLog(projectRoot: string, record: Record<string, unknown>): void {
@@ -106,6 +117,13 @@ export function verifyAndTagAmendment(projectRoot: string, request: AmendmentReq
     throw new IntentAmendmentError('INVALID_OPERATION', '--change cannot contain "|" or a newline (single-line amendment summary)');
   }
 
+  if (resolveIntentVerificationMode(projectRoot, chain) === 'snapshot') {
+    return verifyAndSnapshotAmendment(projectRoot, request, chainVersion, chain);
+  }
+  if (!request.commit) {
+    throw new IntentAmendmentError('INVALID_OPERATION', '--commit is required: this INTENT is verified against a Git baseline.');
+  }
+
   let verified: VerifiedResultCommit;
   try {
     verified = verifyResultCommit(projectRoot, chainVersion, chain, request.commit, request.docSha256);
@@ -134,13 +152,58 @@ export function verifyAndTagAmendment(projectRoot: string, request: AmendmentReq
   } catch (e) {
     throw new IntentAmendmentError('INVALID_OPERATION', (e as Error).message);
   }
-  return { chainVersion, verified, tag, tagCreated, diffStat, amendmentId };
+  return { mode: 'git', chainVersion, verified, tag, tagCreated, diffStat, amendmentId };
+}
+
+/**
+ * Snapshot-mode counterpart of the Git verification: checks the reviewed hash and the
+ * baseline snapshot, then stores the approved bytes as the amendment snapshot. No Git.
+ */
+function verifyAndSnapshotAmendment(
+  projectRoot: string,
+  request: AmendmentRequest,
+  chainVersion: string,
+  chain: ReturnType<typeof readChain>,
+): VerifiedAmendment {
+  if (request.commit) {
+    throw new IntentAmendmentError(
+      'INVALID_OPERATION',
+      'This INTENT is verified against local snapshots (Sigma/revisions/), not Git, so --commit is not used. Omit it.',
+    );
+  }
+  const report = inspectIntentGit(projectRoot, chainVersion, chain, 'edited');
+  const problems = [...report.blockers];
+  if (request.docSha256 && report.working_sha256 !== request.docSha256 && report.working_sha256_lf !== request.docSha256) {
+    problems.push(`doc_sha256: the INTENT file hash ${report.working_sha256} differs from the reviewed hash ${request.docSha256}; preview and obtain approval again`);
+  }
+  if (problems.length) {
+    throw new IntentAmendmentError('INVALID_OPERATION', 'Amendment cannot be completed; unfinished steps:\n' + problems.map(p => ` - ${p}`).join('\n'));
+  }
+
+  const baseline = chain.intent.snapshot_baseline!;
+  const amendmentId = nextAmendmentIdOf(chain);
+  const absPath = intentAbsPath(projectRoot, chain);
+  const bytes = fs.readFileSync(absPath);
+  const diffStat = diffDocuments(readBaselineSnapshot(projectRoot, baseline)!.toString('utf8'), bytes.toString('utf8'), baseline.file, snapshotFileRel(chainVersion, amendmentId)).stat;
+
+  // Nothing is written here. The snapshot is stored in phase 2, inside the journaled
+  // transaction, so an abandoned attempt leaves no orphan file behind (unlike a Git tag).
+  return {
+    mode: 'snapshot',
+    chainVersion,
+    verified: { commit: '', repo_root: '', repo_path: chain.intent.file ?? '', working_sha256: report.working_sha256!, working_sha256_lf: report.working_sha256_lf! },
+    tag: snapshotFileRel(chainVersion, amendmentId),
+    tagCreated: true,
+    diffStat,
+    amendmentId,
+  };
 }
 
 /** Phase 2 — no Git subprocess: records the entry, certifies the file bytes, writes chain and log. */
 export function applyVerifiedAmendment(projectRoot: string, request: AmendmentRequest, v: VerifiedAmendment, targetChainVersion?: string): RecordIntentAmendmentResult {
   const { chainVersion, data: chain } = loadChain(projectRoot, targetChainVersion ?? v.chainVersion);
   assertChainCanMutate(chain);
+  if (v.mode === 'snapshot') return applySnapshotAmendment(projectRoot, request, v, chainVersion, chain);
   const baseline = chain.intent.git_baseline;
   if (!baseline || nextAmendmentIdOf(chain) !== v.amendmentId) {
     throw new IntentAmendmentError('STALE_ARTIFACT', 'The chain changed since the commit was verified; preview and approve again.');
@@ -195,7 +258,79 @@ export function applyVerifiedAmendment(projectRoot: string, request: AmendmentRe
     doc_sha256: chain.intent.certified_doc_sha256,
   });
 
-  return { chainVersion, version: chain.intent.version, entry, certifiedDocSha256: chain.intent.certified_doc_sha256, tag: v.tag, tagCreated: v.tagCreated, commit: v.verified.commit };
+  return { mode: 'git', chainVersion, version: chain.intent.version, entry, certifiedDocSha256: chain.intent.certified_doc_sha256, tag: v.tag, tagCreated: v.tagCreated, commit: v.verified.commit };
+}
+
+function applySnapshotAmendment(
+  projectRoot: string,
+  request: AmendmentRequest,
+  v: VerifiedAmendment,
+  chainVersion: string,
+  chain: ReturnType<typeof readChain>,
+): RecordIntentAmendmentResult {
+  const previous = chain.intent.snapshot_baseline;
+  if (!previous || nextAmendmentIdOf(chain) !== v.amendmentId) {
+    throw new IntentAmendmentError('STALE_ARTIFACT', 'The chain changed since the content was verified; preview and approve again.');
+  }
+
+  let entry: AmendmentEntry;
+  try {
+    entry = recordIntentAmendment(chain, request.change, {
+      purpose_changed: request.purposeChanged,
+      doc_sha256: v.verified.working_sha256,
+      doc_sha256_lf: v.verified.working_sha256_lf,
+      snapshot_file: v.tag,
+      ...(v.diffStat ? { diff_stat: v.diffStat } : {}),
+    });
+  } catch (e) {
+    throw new IntentAmendmentError('INVALID_OPERATION', (e as Error).message);
+  }
+
+  const absPath = intentAbsPath(projectRoot, chain);
+  if (lfSha256(fs.readFileSync(absPath)) !== v.verified.working_sha256_lf) {
+    throw new IntentAmendmentError('STALE_ARTIFACT', 'The INTENT file changed during the transaction; preview and approve again.');
+  }
+  certifyIntentDoc(chain, absPath);
+  if (chain.intent.certified_doc_sha256 !== v.verified.working_sha256_lf) {
+    throw new IntentAmendmentError('STALE_ARTIFACT', 'The INTENT file changed during the transaction; preview and approve again.');
+  }
+  // Order matters, as with the Git tag (F05 §4.3): snapshot first, chain second.
+  let snapshotCreated: boolean;
+  try {
+    snapshotCreated = writeSnapshot(projectRoot, chainVersion, v.amendmentId, fs.readFileSync(absPath), {
+      revision: chain.intent.revision ?? (previous.revision + 1),
+      provenance: 'amendment',
+      recorded_at: entry.created_at,
+    }).created;
+  } catch (e) {
+    throw new IntentAmendmentError('INVALID_OPERATION', (e as Error).message);
+  }
+  chain.intent.snapshot_baseline = {
+    file: v.tag,
+    doc_sha256: v.verified.working_sha256,
+    doc_sha256_lf: v.verified.working_sha256_lf,
+    revision: chain.intent.revision ?? (previous.revision + 1),
+    provenance: 'amendment',
+    recorded_at: entry.created_at,
+    amendment: entry.id,
+  };
+  writeChain(projectRoot, chainVersion, chain);
+
+  appendIntentLog(projectRoot, {
+    event: 'amendment',
+    chain: chainVersion,
+    id: entry.id,
+    created_at: entry.created_at,
+    director_approved_at: entry.director_approved_at,
+    change: entry.change,
+    purpose_changed: request.purposeChanged,
+    mode: 'snapshot',
+    baseline_snapshot: previous.file,
+    result_snapshot: v.tag,
+    doc_sha256: chain.intent.certified_doc_sha256,
+  });
+
+  return { mode: 'snapshot', chainVersion, version: chain.intent.version, entry, certifiedDocSha256: chain.intent.certified_doc_sha256, tag: v.tag, tagCreated: snapshotCreated, commit: '' };
 }
 
 /**

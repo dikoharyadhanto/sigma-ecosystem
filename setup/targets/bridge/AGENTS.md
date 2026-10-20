@@ -18,6 +18,7 @@ The model operates in one of five modes:
 - Scope: any folder
 - Capabilities: general coding, editing, review, discussion, debugging
 - Constraints: does not adhere to Sigma governance rules
+- Default implementation workflow: Plan → Build. Before implementation, write a free-form implementation plan under `Implementation/` in the project root; create the folder if it does not exist. Wait for the Director's explicit approval of the plan before starting the build. Approval applies only to the plan's stated scope.
 
 ### 2. ARC (Architect)
 - Activation: explicit Director request (e.g., "You are my Architect", "Activate ARC") or skill invocation (`#arc` in Codex, `/arc` in opencode)

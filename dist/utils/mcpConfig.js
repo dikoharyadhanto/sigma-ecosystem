@@ -32,6 +32,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.McpManualEditRequired = void 0;
+exports.findStaleMcpProjectRoots = findStaleMcpProjectRoots;
 exports.writeClaudeMcpConfig = writeClaudeMcpConfig;
 exports.resolveOpencodeConfigPath = resolveOpencodeConfigPath;
 exports.writeOpencodeMcpConfig = writeOpencodeMcpConfig;
@@ -138,6 +139,50 @@ function writeTextSafe(filePath, text) {
 /** Tulis JSON polos (tanpa komentar) ke path secara atomik. */
 function writeJsonSafe(filePath, data) {
     writeTextSafe(filePath, JSON.stringify(data, null, 2) + '\n');
+}
+// ── Deteksi path proyek yang basi (portabilitas lintas-mesin) ─────────────────
+//
+// .mcp.json / opencode.json memuat path absolut mesin tempat file itu ditulis.
+// Bila proyek dipindah atau di-pull ke mesin lain (gitignore OFF), path itu
+// menunjuk ke root yang tidak ada di sini. Fungsi ini hanya MEMBACA.
+function rootFromArgs(args) {
+    if (!Array.isArray(args))
+        return null;
+    const strings = args.filter((a) => typeof a === 'string');
+    const flag = strings.findIndex(a => a === '--project-root' || a === '--cwd');
+    if (flag !== -1 && strings[flag + 1])
+        return strings[flag + 1];
+    // Bentuk lama: satu argumen posisional berisi root.
+    const positional = strings.find(a => !a.startsWith('-'));
+    return positional ?? null;
+}
+function samePath(a, b) {
+    const norm = (p) => {
+        const resolved = path_1.default.resolve(p);
+        return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+    };
+    return norm(a) === norm(b);
+}
+/** Nama berkas config proyek (.mcp.json / opencode.*) yang entri `sigma`-nya terikat ke root lain. */
+function findStaleMcpProjectRoots(projectRoot) {
+    const stale = [];
+    const claude = readJsonSafe(path_1.default.join(projectRoot, '.mcp.json'));
+    const claudeEntry = claude.mcpServers?.sigma;
+    const claudeRoot = rootFromArgs(claudeEntry?.args);
+    if (claudeRoot && !samePath(claudeRoot, projectRoot))
+        stale.push('.mcp.json');
+    try {
+        const opencodePath = resolveOpencodeConfigPath(projectRoot);
+        const parsed = readOpencodeConfig(opencodePath, '');
+        const entry = parsed?.root.mcp?.sigma;
+        const opencodeRoot = rootFromArgs(Array.isArray(entry?.command) ? entry.command.slice(1) : undefined);
+        if (opencodeRoot && !samePath(opencodeRoot, projectRoot))
+            stale.push(path_1.default.basename(opencodePath));
+    }
+    catch {
+        // unparsable opencode config is left for the user, same as the writers do
+    }
+    return stale;
 }
 // ── Stage 2: Project-scoped (ditulis di project start / sync) ─────────────────
 /**

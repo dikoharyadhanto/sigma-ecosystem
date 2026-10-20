@@ -191,6 +191,16 @@ sigma project start
 
 If the directory is not Git-managed, Sigma asks whether to initialize a local repository. The default is **No**. For non-interactive setup, use `sigma project start --id <ID> --name "<name>" --confirm --init-git`. This runs only `git init`. It does not configure GitHub, a remote, identity, branch policy, or an initial commit.
 
+#### Git and the files Sigma generates
+
+By default (`git.gitignore_sigma: true`) `sigma project start` writes a `# >>> sigma-managed >>>` block into the project's `.gitignore` that lists every file Sigma generates — `/Sigma/`, the bridge files (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `DEEPSEEK.md`, `REASONIX.md`), `.mcp.json`, `opencode.json`/`opencode.jsonc`, `CHANGE-RECORD.md`, and inside the DEV workspace only `dev/.sigma-workspace.json` and `dev/CHANGE-RECORD.md`. The `dev/` folder itself and the product work in it stay tracked. The one Sigma file that stays in Git is `.sigma-identity.json`. Files already committed by an earlier version are detached from the Git index with `git rm --cached` (nothing is deleted from disk, and Sigma never commits; you commit the change).
+
+**Other clones:** committing and pushing that cleanup means `git pull` on any other clone of the repository removes its tracked Sigma files from disk (Git deletes files a commit removes), after which that clone is blocked. Copy its `Sigma/` folder and other Sigma files somewhere safe before pulling there, or run `sigma config set gitignore off` instead if the project is worked on from several machines.
+
+A clone on another machine therefore holds the identity but no `Sigma/` folder, and every Sigma command — including `project start`, `register` and `sync`, and every MCP server — refuses to run there with `[SIGMA BLOCKED — MISSING LOCAL SIGMA FILES]`, so a second, diverging Sigma state cannot be created. To move a project between machines, run `sigma config set gitignore off` on the original machine, commit and push, then `git pull` on the other one.
+
+With gitignore on, `INTENT` baselines and amendments use local snapshots under `Sigma/revisions/INTENT-v<N>/` instead of a Git commit and tag (`sigma intent baseline adopt` without `--commit`, `sigma intent amendment` without `--commit`). A chain that already has a Git baseline stays in Git mode. `sigma config set gitignore on` lists such chains; the Director moves one with `sigma intent baseline adopt --v <chain> --director-confirm`.
+
 ### 3. Open your AI tool and activate ARC
 
 ```text
@@ -540,9 +550,9 @@ Most users do not need these commands. AI roles run operational commands after r
 | intent | `sigma intent clone` | Preview a new `INTENT` draft from a registered source; `--confirm` with the preview token creates it |
 | intent | `sigma intent ratify` | Ratify the active `INTENT` with Director approval |
 | intent | `sigma intent baseline check` | Verify that the `INTENT` in Git is the latest certified content (read-only) |
-| intent | `sigma intent baseline adopt` | Bind the certified `INTENT` to a Git commit and local tag (Director-confirmed) |
+| intent | `sigma intent baseline adopt` | Record the certified `INTENT` as the baseline (Director-confirmed): with `--commit`, bind it to a Git commit and local tag; without, store a local snapshot under `Sigma/revisions/` |
 | intent | `sigma intent amendment preview` | Show the diff against the Git baseline, the hash to approve, and the impact on `PLAN` and `EXEC` (read-only) |
-| intent | `sigma intent amendment` | Record a Director-approved amendment from a verified Git commit; creates a tag |
+| intent | `sigma intent amendment` | Record a Director-approved amendment: in Git mode from a verified commit (creates a tag), in snapshot mode from the reviewed file hash (stores a snapshot) |
 | intent | `sigma intent check` | Validate `INTENT` structure and report lock readiness (read-only) |
 | intent | `sigma intent status` | Show active intent version and state |
 | intent | `sigma intent list` | List intent versions |
@@ -581,6 +591,7 @@ Most users do not need these commands. AI roles run operational commands after r
 | config | `sigma config show` | Show current project configuration |
 | config | `sigma config set language <name> --interaction\|--sigma-document\|--output-document` | Set one language preference (free-form name, for example `English` or `Indonesia`) |
 | config | `sigma config set mailbox-outdate-keep <n>` | How many recent READ messages `sigma inbox read` keeps before aging the rest to OUTDATED (`0` disables; default `5`) |
+| config | `sigma config set gitignore on\|off` | Turn the Sigma `.gitignore` block on (default; `activate`, `true`, `1`) or off (`deactivate`, `false`, `0`). On detaches already-tracked Sigma files from the Git index without deleting them; off lets Sigma files be committed and pushed to another machine |
 | config | `sigma config set memo-limit <n>` | Maximum unread memos per INTENT and role before `sigma memo write` is blocked (`0` disables memo; default `5`) |
 | send | `sigma send --from <role> --to <role> --related-artifact <ref> --message <text>` | Send a message between roles; `--related-artifact` names the registered artifact or `GENERAL` |
 | inbox | `sigma inbox --role <role>` | List UNREAD messages for the active `INTENT` plus `GENERAL` |
