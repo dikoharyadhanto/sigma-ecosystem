@@ -72,7 +72,7 @@ describe('docCheck - FMN_PLAN schema selection', () => {
     it('the bundled template is structurally valid but not ready to lock', () => {
       const report = validateSigmaDocFile(TEMPLATE_V3, 'plan');
 
-      expect(report.schema).toBe('3');
+      expect(report.schema).toBe('4');
       expect(report.errors).toEqual([]);
       expect(unsatisfied(report)).toEqual([
         'AUD Advisory Verdict recorded (exactly one)',

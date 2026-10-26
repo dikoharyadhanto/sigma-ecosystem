@@ -159,12 +159,30 @@ describe('F08b safe draft cloning', () => {
     fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('schema=5', 'schema=4'));
     expect(() => previewClone(input)).toThrow(/Unsupported clone schema/);
   });
+  it.each(['3', '4'])('clones PLAN schema %s into schema 4 and resets the review schedule', schema => {
+    const env = bootstrap(), input = cloneInput(env, 'plan');
+    let source = fs.readFileSync(env.planPath, 'utf8');
+    if (schema === '3') {
+      source = source.replace('type=FMN_PLAN schema=4', 'type=FMN_PLAN schema=3').replace(
+        /<!-- SIGMA:FMN_PLAN:SECTION:CHECKPOINT_FOR_POST_BUILD_REVIEW -->[\s\S]*?(?=<!-- SIGMA:FMN_PLAN:SECTION:ACCEPTANCE_AND_TEST_CONTRACT -->)/, '',
+      );
+    } else {
+      source = source.replace('**Total checkpoints:** 1', '**Total checkpoints:** 2\n\n- Checkpoint 1: After: TASK-001 is complete and verified; Focus: interfaces.\n- Checkpoint 2 (Final): After: all implementation and verification are complete; Focus: overall post-build review.');
+    }
+    fs.writeFileSync(env.planPath, source);
+    const preview = previewClone(input);
+    expect(preview.content).toContain('type=FMN_PLAN schema=4');
+    expect(preview.content).toContain('**Total checkpoints:** 1');
+    expect(preview.content).not.toContain('**Total checkpoints:** 2');
+    expect(preview.reset_sections).toContain('CHECKPOINT_FOR_POST_BUILD_REVIEW');
+    expect(fs.readFileSync(env.planPath, 'utf8')).toBe(source);
+  });
   it('rejects stale preview, unsupported schemas and arbitrary chain selectors before creating a draft', async () => {
     const env = bootstrap(), input = cloneInput(env), preview = previewClone(input);
     fs.appendFileSync(env.planPath, '\nSource edited');
     await expect(localTransaction(env.projectDir, 'clone', 'FMN', () => cloneTransactionFiles(input), () => cloneDraft(input, preview.preview_token))).rejects.toThrow(/STALE_ARTIFACT/);
     expect(readChain(env.projectDir, 'v1').plan.versions).toHaveLength(1);
-    fs.writeFileSync(env.planPath, fs.readFileSync(env.planPath, 'utf8').replace('schema=3', 'schema=2'));
+    fs.writeFileSync(env.planPath, fs.readFileSync(env.planPath, 'utf8').replace(/type=FMN_PLAN schema=\d+/, 'type=FMN_PLAN schema=2'));
     expect(() => previewClone(input)).toThrow(/Unsupported clone schema/);
     expect(() => previewClone({ ...input, sourceChain: '../v1' })).toThrow(/Invalid chain/);
   });

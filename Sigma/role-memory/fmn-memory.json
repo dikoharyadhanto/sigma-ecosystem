@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "role": "FMN",
   "source_rule": "Sigma/rules/FMN-RULE.md",
-  "source_rule_version": "sha256:4eb7a7a85bb3faa23865579aa6600e6938d00dcbd27c3a4b186fa4f5aacbbeeb",
-  "memory_updated_at": "2026-10-15",
+  "source_rule_version": "sha256:2fc2a523574ee89dcdf20664ba73dee88b21ece980e2778a56a5c3403f2e1fb4",
+  "memory_updated_at": "2026-10-26",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -41,8 +41,9 @@
     "Every revision requires CONTRACT_CHANGE via sigma send with registered PLAN reference and revision_id; honor F03 sender UNREAD/migration gates and durable notice proof. DEV requests changes through CONTRACT_CHANGE_REQUEST to FMN.",
     "DEV must explicitly acknowledge the latest PLAN revision/hash; mailbox READ is not acknowledgement. Approval, EXEC creation and ack never authorize coding by themselves.",
     "INTENT amendments require review of APPROVED work; locked history stays historical. Missing hash/snapshot/ledger/notice/early approval and direct contract edits block final approval even under INVALID/override.",
-    "Use plan check --sources to inspect quoted INTENT references and distinguish structural eligibility, source certification, and semantic readiness. An existing ID does not prove alignment. Record an explicit advisory assessment through decisions assess, tied to both PLAN and INTENT hashes; a changed hash requires reassessment. For a new PLAN from prior content, review plan clone's preview token, diff and reset fields before confirming; supersede and approval remain separate. INTENT schema 5 and PLAN schema 3 support cloning; older schemas require manual drafting. Audit packs and substantive questions are bounded records, never approval.",
+    "Use plan check --sources to inspect quoted INTENT references and distinguish structural eligibility, source certification, and semantic readiness. An existing ID does not prove alignment. Record an explicit advisory assessment through decisions assess, tied to both PLAN and INTENT hashes; a changed hash requires reassessment. For a new PLAN from prior content, review plan clone's preview token, diff and reset fields before confirming; supersede and approval remain separate. INTENT schemas 5/6 and PLAN schemas 3/4 support cloning into their current templates; older schemas require manual drafting. Audit packs and substantive questions are bounded records, never approval.",
     "Before advising EXEC approval, check that the Changelog section states the execution's product changes as a flat list without Sigma identifiers (or `No product changes.`); Sigma copies it to the project changelog at LOCK.",
-    "FMN may recommend that the final product be reviewed by ARC, never that closure be granted. A recommendation needs a justification that a reviewable final product exists and why now; an open Gate 3 alone is not one. Send the request to ARC only after the Director approves, with --related-artifact INTENT-vN; answer corrections with --related-artifact PRODUCT-REVIEW-vN, item by item. FMN's messages are claims, not verdicts."
+    "FMN may recommend that the final product be reviewed by ARC, never that closure be granted. A recommendation needs a justification that a reviewable final product exists and why now; an open Gate 3 alone is not one. Send the request to ARC only after the Director approves, with --related-artifact INTENT-vN; answer corrections with --related-artifact PRODUCT-REVIEW-vN, item by item. FMN's messages are claims, not verdicts.",
+    "Define the fewest post-build checkpoints needed for dependencies, risk, and rework cost in PLAN; default 1 final overall review, pre-build excluded. Custom bullets state After and Focus; mark only the last (Final), covering all implementation and verification. Descriptions use the configured document language. Update Last Checkpoint Reviewed and free-form Content in EXEC Intermediate Post-Build Reviews immediately before FMN Post-Build Review, replacing the previous review (N/A if none), send DEV findings and an advisory outcome, and reserve the final overall verdict for FMN Post-Build Review. Reassess checkpoints when cloning. Intermediate reviews retain the existing outside-checkpoint contract revision approval path."
   ]
 }

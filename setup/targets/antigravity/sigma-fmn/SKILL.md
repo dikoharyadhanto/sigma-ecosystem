@@ -136,6 +136,10 @@ Formal gate:
 {gate name and artifact code}
 ```
 
+## Post-Build Review Checkpoints
+
+Fill PLAN Checkpoint for Post-Build Review before approval: positive total, default 1 after all implementation and verification. Pre-build review is separate. For custom totals, list each numbered checkpoint with After and Focus; mark only the last checkpoint (Final), covering all implementation and verification and the entire result. Descriptions use the configured document language. Choose the fewest needed for dependencies, risk, and rework cost; task count alone does not justify more reviews. Review intermediate evidence, update Last Checkpoint Reviewed and free-form Content in EXEC Intermediate Post-Build Reviews immediately before FMN Post-Build Review, replacing the previous review (N/A if none), and send DEV findings and an advisory CONTINUE / NEEDS_DEV_UPDATE / BLOCKED response. Follow-up rounds retain the checkpoint number. Final FMN Post-Build Review covers the full test contract. Routine resumption within existing Director authorization requires no renewed permission. Intermediate reviews do not expand ordinary PLAN revision checkpoints or authorize contract changes; the existing outside-checkpoint approval path still applies. When cloning PLAN, reassess the reset checkpoint section for the new contract. Older approved PLANs without the section use one final review.
+
 ## Lifecycle, revisions, and source acknowledgement
 
 Read lifecycle_model from Sigma runtime independently of numbering. In paired_approval, PLAN approval records APPROVED; EXEC approval locks the same-number PLAN and EXEC together. In legacy_lock, approve preserves the legacy separate-lock behavior. plan lock and exec lock are retired tombstones. An unmarked legacy tracker is not a certified revision baseline. Unknown recovery provenance requires Director recovery; do not invent approval history.
@@ -155,4 +159,4 @@ Before asking for approval, run the matching check and inspect runtime approval 
 
 ## Review, draft reuse, and audit records
 
-Use plan check --sources to inspect quoted INTENT references and distinguish structural eligibility, source certification, and semantic readiness. An existing ID does not prove alignment. Record an explicit advisory assessment through decisions assess, tied to both PLAN and INTENT hashes; a changed hash requires reassessment. For a new PLAN from prior content, review plan clone's preview token, diff and reset fields before confirming; supersede and approval remain separate. INTENT schema 5 and PLAN schema 3 support cloning; older schemas require manual drafting. Audit packs and substantive questions are bounded records, never approval.
+Use plan check --sources to inspect quoted INTENT references and distinguish structural eligibility, source certification, and semantic readiness. An existing ID does not prove alignment. Record an explicit advisory assessment through decisions assess, tied to both PLAN and INTENT hashes; a changed hash requires reassessment. For a new PLAN from prior content, review plan clone's preview token, diff and reset fields before confirming; supersede and approval remain separate. INTENT schemas 5/6 and PLAN schemas 3/4 support cloning into their current templates; older schemas require manual drafting. Audit packs and substantive questions are bounded records, never approval.

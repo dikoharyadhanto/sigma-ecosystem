@@ -61,8 +61,14 @@ A chain that has a Git baseline stays in Git mode even after its INTENT stops be
 ### 1.4 Artifacts, files, and changelog
 
 - **File names have no role prefix** (F10): new files are `INTENT-vN.md`, `PLAN-vN.M.md`, `EXEC-vN.M.md`, `CLOSE-vN.md`. Older files (`DIR-INTENT-…`, `FMN-PLAN-…`, `DEV-EXEC-…`, `DIR-CLOSE-…`) keep their names and are never renamed. Both forms are valid. Do not rename or "normalize" files.
-- **Product changelog** (F17): the EXEC template is schema 4 and has a required `Changelog` section (a flat list, or exactly `No product changes.`). New EXEC drafts use it, including in old chains. When an EXEC becomes LOCKED/APPROVED through `sigma exec approve --director-confirm`, the list is written into the project's `CHANGE-RECORD.md` (not `CHANGELOG.md`). If recording is skipped, a message says why; fix the file and resolve before the next EXEC.
-- Current template schemas: INTENT 6, CLOSE 3, PLAN 3, EXEC 4, PRODUCT-REVIEW 1, ROADMAP 1.
+- **Product changelog** (F17): the EXEC template is schema 5 and has a required `Changelog` section (a flat list, or exactly `No product changes.`). New EXEC drafts use it, including in old chains. When an EXEC becomes LOCKED/APPROVED through `sigma exec approve --director-confirm`, the list is written into the project's `CHANGE-RECORD.md` (not `CHANGELOG.md`). If recording is skipped, a message says why; fix the file and resolve before the next EXEC.
+- Current template schemas: INTENT 6, CLOSE 3, PLAN 4, EXEC 5, PRODUCT-REVIEW 1, ROADMAP 1.
+
+### Post-build review checkpoints
+
+PLAN schema 4 adds Checkpoint for Post-Build Review. FMN chooses the fewest checkpoints needed for dependencies and risk, default 1 after all implementation and verification. Pre-build review is separate. For custom totals, each numbered bullet states After and Focus; only the last bullet is marked `(Final)` and covers all implementation and verification and the whole result. Descriptions use the configured document language. DEV's technical stage breakdown does not add reviews. DEV waits before dependent work and resumes within existing Director authorization after FMN responds that findings are resolved. Escalate material blockers earlier when needed.
+
+EXEC schema 5 places FMN-owned Intermediate Post-Build Reviews immediately before FMN Post-Build Review. FMN updates Last Checkpoint Reviewed and free-form Content to replace the previous intermediate review; use N/A if none. Follow-up rounds retain the checkpoint number; FMN Post-Build Review remains the final overall verdict, followed by Summary and Changelog. Intermediate reviews do not expand ordinary contract revision checkpoints or add runtime gates. Existing documents retain their schema and single-final-review default when no schedule exists. PLAN cloning supports 3→4 and 4→4 and resets the schedule for FMN reassessment.
 
 ### 1.5 Messaging and memos
 

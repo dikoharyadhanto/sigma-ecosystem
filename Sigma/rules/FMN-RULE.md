@@ -74,9 +74,23 @@ FMN MUST NOT dictate low-level coding style unless required by intent, constrain
 
 ---
 
+### Checkpoint for Post-Build Review
+
+FMN MUST fill this PLAN section before approval. `Total checkpoints` is a positive integer, default 1. It counts implementation-result reviews only; pre-build review remains separate. With 1, the only checkpoint follows all implementation and verification. With more than 1, FMN lists Checkpoint 1 through N as bullets, each stating completed and verified work (`After:`) and review scope (`Focus:`). Mark only the last bullet `Checkpoint N (Final):`. Final means after all implementation and verification, with review of the overall result. Descriptions follow the configured document language.
+
+Choose the fewest checkpoints justified by dependency boundaries, propagation risk, rework cost, and plan size. Task count or DEV's technical stage breakdown alone is insufficient reason to add reviews. Each intermediate checkpoint must resolve a concrete uncertainty before dependent work proceeds.
+
+At intermediate checkpoints, FMN reviews the completed scope and available evidence, sends DEV the findings and required follow-up through Sigma messaging, and updates EXEC Intermediate Post-Build Reviews immediately before FMN Post-Build Review. Last Checkpoint Reviewed identifies the latest checkpoint reviewed; Content is free-form review content that replaces the previous review. Use N/A before any intermediate review or when none applies. FMN communicates findings and whether dependent work may continue through Sigma messaging. A follow-up review remains the same checkpoint. DEV may resume dependent work after findings are resolved and FMN has responded that it can continue within the existing authorized scope; no repeat Director authorization is needed solely because of this pause.
+
+At the final checkpoint, FMN reviews the entire PLAN acceptance and test contract and fills EXEC FMN Post-Build Review. Only this section carries the final overall advisory verdict. Summary, Changelog, and approval recommendations follow the final review.
+
+Intermediate reviews do not expand the ordinary PLAN revision checkpoints. A contract change during implementation follows the existing outside-checkpoint Director approval path; review feedback alone cannot authorize a contract change. Existing approved documents without this section use the single final-review default. Review findings belong in EXEC, never in PLAN.
+
+---
+
 ### 4. Post-Build Test Review
 
-After DEV completes implementation, FMN SHOULD evaluate `EXEC` against the acceptance criteria and test contract in `PLAN`.
+At each contracted checkpoint, FMN evaluates the completed scope and evidence. After all implementation and verification are complete, FMN evaluates the entire `EXEC` against the acceptance criteria and test contract in `PLAN`, including scope reviewed at intermediate checkpoints.
 
 FMN SHOULD record:
 
@@ -651,7 +665,7 @@ When escalating, FMN SHOULD provide:
 
 ## Review, draft reuse, and audit records
 
-Use plan check --sources to inspect quoted INTENT references and distinguish structural eligibility, source certification, and semantic readiness. An existing ID does not prove alignment. Record an explicit advisory assessment through decisions assess, tied to both PLAN and INTENT hashes; a changed hash requires reassessment. For a new PLAN from prior content, review plan clone's preview token, diff and reset fields before confirming; supersede and approval remain separate. INTENT schema 5 and PLAN schema 3 support cloning; older schemas require manual drafting. Audit packs and substantive questions are bounded records, never approval.
+Use plan check --sources to inspect quoted INTENT references and distinguish structural eligibility, source certification, and semantic readiness. An existing ID does not prove alignment. Record an explicit advisory assessment through decisions assess, tied to both PLAN and INTENT hashes; a changed hash requires reassessment. For a new PLAN from prior content, review plan clone's preview token, diff and reset fields before confirming; supersede and approval remain separate. INTENT schemas 5/6 and PLAN schemas 3/4 support cloning into their current templates; older schemas require manual drafting. Audit packs and substantive questions are bounded records, never approval.
 
 ## Final Doctrine
 

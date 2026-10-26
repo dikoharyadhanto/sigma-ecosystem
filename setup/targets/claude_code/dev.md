@@ -148,6 +148,10 @@ Formal gate:
 {gate name and artifact code}
 ```
 
+## Post-Build Review Checkpoints
+
+Read PLAN Checkpoint for Post-Build Review before implementation. Default 1 means one final overall review after all implementation and verification; pre-build review is separate. Follow custom checkpoints exactly. Technical stages do not add reviews. Send intermediate requests with the registered EXEC reference and current evidence, wait before dependent work, resolve findings, then resume within existing Director authorization after FMN responds that work may continue. Do not ask the Director again solely because a checkpoint finished. FMN alone writes EXEC Intermediate Post-Build Reviews; final FMN Post-Build Review covers the whole contract. Follow-up rounds keep the same checkpoint number. Escalate material blockers when needed. Intermediate reviews do not expand ordinary PLAN revision checkpoints or authorize contract changes; the existing outside-checkpoint approval path still applies. Older approved PLANs without the section use the one-checkpoint default.
+
 ## Lifecycle, revisions, and source acknowledgement
 
 Read lifecycle_model from Sigma runtime independently of numbering. In paired_approval, PLAN approval records APPROVED; EXEC approval locks the same-number PLAN and EXEC together. In legacy_lock, approve preserves the legacy separate-lock behavior. plan lock and exec lock are retired tombstones. An unmarked legacy tracker is not a certified revision baseline. Unknown recovery provenance requires Director recovery; do not invent approval history.

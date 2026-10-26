@@ -67,13 +67,14 @@ function getRoleGuidance(role: SigmaRole | undefined, gate2Open: boolean): RoleB
           gate2Open
             ? 'Gate 2 is open: identify the runtime-selected locked plan and prepare DEV-EXEC pre-implementation planning.'
             : 'Gate 2 is blocked: report the blocker and wait for a locked FMN-PLAN before execution work.',
-          'Stay within the locked FMN-PLAN scope and queue FMN review before material implementation.',
+          'Stay within the approved PLAN scope and queue FMN review before material implementation.',
+          'After Director authorizes implementation, follow PLAN post-build checkpoints; technical stages do not add review requests.',
         ],
         approval: [
           'Material implementation after pre-build review.',
           'Any lock, supersession, risk acceptance, closure, git commit, or git push.',
         ],
-        stopPoint: 'Stop after pre-implementation planning and FMN review request, then stop again after post-build evidence is complete.',
+        stopPoint: 'Stop after pre-implementation planning and FMN review request. During authorized implementation, wait for FMN at contracted post-build checkpoints before dependent work; resume within the existing authorization after findings are resolved. Stop after final overall post-build evidence and review request.',
       };
     case 'AUD':
       return {

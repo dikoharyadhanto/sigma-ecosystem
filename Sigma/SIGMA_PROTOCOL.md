@@ -224,6 +224,14 @@ DEV's record of the build for one PLAN: implementation approach, FMN pre-build r
 
 State machine: `DRAFT → LOCKED`. At most one non-final EXEC exists for a PLAN, and an EXEC always carries the version of its PLAN. When an EXEC becomes LOCKED, its changelog is recorded in the project `CHANGE-RECORD.md` (section 18).
 
+### 5.4.1 Post-build review checkpoints
+
+PLAN schema 4 requires Checkpoint for Post-Build Review. FMN chooses the smallest positive count justified by dependencies, risk, rework cost, and plan size. The default is one final overall review after all implementation and verification. Custom counts list each checkpoint's completed work and review focus; only the last is marked `(Final)` and reviews the entire result after all implementation and verification. Pre-build review is outside this count. Older approved PLAN documents without the section retain the single final-review default.
+
+DEV follows these checkpoints even when it divides implementation into more technical stages. It provides current evidence, requests FMN review, and waits before dependent work. FMN updates Last Checkpoint Reviewed and free-form Content in EXEC Intermediate Post-Build Reviews (schema 5), placed immediately before FMN Post-Build Review and replacing the previous intermediate review, sends its response through Sigma messaging, and reserves FMN Post-Build Review for the final overall verdict. Follow-up rounds stay under the same checkpoint. DEV resumes within existing Director authorization after findings are resolved and FMN responds that dependent work may continue. Routine stage completion does not require renewed Director permission. Material blockers may be escalated earlier.
+
+Checkpoint review does not approve runtime state or authorize a contract change. For section 7.3, intermediate review remains outside the ordinary pre-build/final post-build revision checkpoints and follows the existing early Director approval path for any contract revision. The final review still covers the full test contract, including earlier reviewed work; Summary and Changelog follow that review. Checkpoint completion is recorded in documents and messages, without adding runtime gates or state transitions.
+
 ### 5.5 CLOSE
 
 The Director's closing report. It describes the final product — what it is, for whom, its main objective and features, its limitations and accepted risks as of closure, the quality standard it meets, how to operate it when that applies, and how it works — and references the INTENT, the PRODUCT REVIEW, and the PLAN and EXEC versions that support the closure. It holds no test results. There is one non-superseded CLOSE per INTENT; a second draft for the same INTENT is rejected. A CLOSE is `SUPERSEDED` only as a cascade from `sigma intent supersede`. A revision is a new version.

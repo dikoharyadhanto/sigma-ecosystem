@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "role": "DEV",
   "source_rule": "Sigma/rules/DEV-RULE.md",
-  "source_rule_version": "sha256:697e70886af09bd7812c4d88fca014d725418d509b84202f8c96f000aeef21c8",
-  "memory_updated_at": "2026-10-14",
+  "source_rule_version": "sha256:6132eef92a9516e26f59b76e4db129b3b929c7da9b8ea13c2a74a4c62bd3ae95",
+  "memory_updated_at": "2026-10-26",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -45,6 +45,7 @@
     "DEV must explicitly acknowledge the latest PLAN revision/hash; mailbox READ is not acknowledgement. Approval, EXEC creation and ack never authorize coding by themselves.",
     "INTENT amendments require review of APPROVED work; locked history stays historical. Missing hash/snapshot/ledger/notice/early approval and direct contract edits block final approval even under INVALID/override.",
     "Read plan check --sources and current FMN readiness when scope is unclear; UNKNOWN or a stale assessment is not evidence of readiness. Record substantive questions through decisions add with the owning artifact/hash. Audit packs snapshot registered sources and list evidence references that were not included. Do not interpret an answered question, an AUD response, or a copied PLAN as permission to code. DEV cannot clone PLAN/INTENT, record FMN readiness, or resolve Director decisions through MCP.",
-    "Fill the EXEC Changelog section last, after FMN Post-Build Review: a flat list summarizing only the latest product changes that were successfully implemented and stand at lock (not a record of the process; omit anything reverted, replaced, cancelled, or not delivered), one short sentence each, no Sigma identifiers; or exactly `No product changes.`. Sigma records it when the EXEC becomes LOCKED; a skipped record never blocks the lock, so add the entries by hand in the existing version-heading format and fix the stated cause. See Changelog in Sigma/rules/DEV-RULE.md."
+    "Fill the EXEC Changelog section last, after FMN Post-Build Review: a flat list summarizing only the latest product changes that were successfully implemented and stand at lock (not a record of the process; omit anything reverted, replaced, cancelled, or not delivered), one short sentence each, no Sigma identifiers; or exactly `No product changes.`. Sigma records it when the EXEC becomes LOCKED; a skipped record never blocks the lock, so add the entries by hand in the existing version-heading format and fix the stated cause. See Changelog in Sigma/rules/DEV-RULE.md.",
+    "Follow PLAN Checkpoint for Post-Build Review: default 1 final overall review after all implementation and verification; pre-build is separate. Custom checkpoints alone trigger routine intermediate review requests; technical stages add none. Wait before dependent work, resolve findings, and resume under existing Director authorization after FMN responds that work may continue. FMN owns intermediate review records; final review covers the full contract. Escalate material blockers earlier when needed. Intermediate review does not authorize contract changes or expand ordinary revision checkpoints."
   ]
 }

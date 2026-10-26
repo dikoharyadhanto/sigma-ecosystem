@@ -1,4 +1,4 @@
-<!-- SIGMA:DOC type=FMN_PLAN schema=3 -->
+<!-- SIGMA:DOC type=FMN_PLAN schema=4 -->
 # FMN-PLAN
 
 > Build contract and test contract for DEV. FMN fills the contract before initial approval; approved-contract changes follow the declared checkpoint and revision workflow.
@@ -77,6 +77,16 @@
 | Task ID | Task | Expected Output | Priority |
 |:------- |:---- |:--------------- |:-------- |
 | TASK-001 | [...] | [...] | Must |
+
+---
+
+<!-- SIGMA:FMN_PLAN:SECTION:CHECKPOINT_FOR_POST_BUILD_REVIEW -->
+## Checkpoint for Post-Build Review
+
+> FMN sets the fewest checkpoints needed for dependencies and risk. Exclude pre-build review. Default `1`: overall review after all implementation and verification; no list needed.
+> For custom totals, list `- Checkpoint N: After: [completed work]; Focus: [review scope].` Mark only the last `Checkpoint N (Final):` for the overall review.
+
+**Total checkpoints:** 1
 
 ---
 

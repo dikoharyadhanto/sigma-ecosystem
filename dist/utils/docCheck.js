@@ -124,6 +124,14 @@ const PLAN_SPEC_V3 = {
     ],
     verdictSectionId: 'AUD_NOTES',
 };
+// Schema 4 adds the review schedule; schema 3 retains its original contract.
+const PLAN_SCHEMA_V4 = 4;
+const PLAN_CHECKPOINT_SECTION = 'CHECKPOINT_FOR_POST_BUILD_REVIEW';
+const PLAN_SPEC_V4 = {
+    ...PLAN_SPEC_V3,
+    requiredSections: PLAN_SPEC_V3.requiredSections.flatMap(id => id === 'WORK_ORDER' ? [id, PLAN_CHECKPOINT_SECTION] : [id]),
+    sectionOrder: PLAN_SPEC_V3.sectionOrder.flatMap(id => id === 'WORK_ORDER' ? [id, PLAN_CHECKPOINT_SECTION] : [id]),
+};
 // First execution-document schema version with the unnumbered section layout
 // (summary first, build result and verification in one section). Earlier
 // schemas keep validating against DOC_SPECS.exec.
@@ -182,6 +190,14 @@ const EXEC_SPEC_V4 = {
         'DIRECTOR_OBSERVATION_REPORT_MINOR_REQUESTS',
         'CHANGELOG',
     ],
+};
+// Schema 5 keeps intermediate evidence separate from the final overall verdict.
+const EXEC_SCHEMA_V5 = 5;
+const EXEC_INTERMEDIATE_SECTION = 'INTERMEDIATE_POST_BUILD_REVIEWS';
+const EXEC_SPEC_V5 = {
+    ...EXEC_SPEC_V4,
+    requiredSections: EXEC_SPEC_V4.requiredSections.flatMap(id => id === 'FMN_POST_BUILD_REVIEW' ? [EXEC_INTERMEDIATE_SECTION, id] : [id]),
+    sectionOrder: EXEC_SPEC_V4.sectionOrder.flatMap(id => id === 'FMN_POST_BUILD_REVIEW' ? [EXEC_INTERMEDIATE_SECTION, id] : [id]),
 };
 // First DIR_CLOSE schema version that is a closing report of the final product
 // (README-like). Documents on an earlier schema keep validating against
@@ -384,8 +400,12 @@ function resolveDocSpec(domain, schema) {
             return CLOSE_SPEC_V3;
         if (domain === 'intent' && version >= INTENT_SCHEMA_V5)
             return INTENT_SPEC_V5;
+        if (domain === 'plan' && version >= PLAN_SCHEMA_V4)
+            return PLAN_SPEC_V4;
         if (domain === 'plan' && version >= PLAN_SCHEMA_V3)
             return PLAN_SPEC_V3;
+        if (domain === 'exec' && version >= EXEC_SCHEMA_V5)
+            return EXEC_SPEC_V5;
         if (domain === 'exec' && version >= EXEC_SCHEMA_V4)
             return EXEC_SPEC_V4;
         if (domain === 'exec' && version >= EXEC_SCHEMA_V3)
@@ -689,6 +709,44 @@ function evaluatePlanV3Gate(relevantMarkers, lines, requirements, passes, warnin
             passes.push('Acceptance Criteria and Test Contract: every AC has a Test Method and Expected Result');
         }
     }
+}
+// Validate the declared schedule only. Review completion remains documentary evidence.
+function evaluatePlanCheckpointContract(relevantMarkers, lines, requirements, passes, warnings) {
+    const marker = relevantMarkers.find(m => m.sectionId === PLAN_CHECKPOINT_SECTION);
+    if (!marker)
+        return;
+    const end = sectionEndLine(relevantMarkers, marker, lines.length);
+    // Exclude quoted template guidance from the actual declaration.
+    const body = lines.slice(marker.line, end).filter(line => !/^\s*>/.test(line)).join('\n');
+    const declarations = [...body.matchAll(/^[ \t]*\*\*Total checkpoints:\*\*[ \t]*(.*?)[ \t]*$/gm)];
+    const rawCount = declarations[0]?.[1] ?? '';
+    const count = /^\d+$/.test(rawCount) ? Number(rawCount) : NaN;
+    let issue = null;
+    if (declarations.length !== 1 || !Number.isSafeInteger(count) || count < 1) {
+        issue = 'state exactly one Total checkpoints declaration with a positive integer';
+    }
+    const entries = body.split('\n').filter(line => /^[ \t]*-[ \t]+Checkpoint\b/i.test(line));
+    const bullets = entries.map(line => /^[ \t]*-[ \t]+Checkpoint[ \t]+(\d+)([ \t]+\(Final\))?:[ \t]*(.*)$/i.exec(line));
+    if (!issue && (count > 1 || entries.length > 0)) {
+        if (bullets.length !== count || bullets.some((bullet, index) => !bullet || Number(bullet[1]) !== index + 1)) {
+            issue = 'list Checkpoint 1 through the declared total exactly once in order';
+        }
+        else {
+            const scopes = bullets.map(bullet => /^After:\s*(.+?);\s*Focus:\s*(.+?)\s*$/i.exec(bullet[3]));
+            if (scopes.some(scope => !scope || isPlaceholderContent(scope[1].replace(/[.!]$/, '')) || isPlaceholderContent(scope[2].replace(/[.!]$/, '')))) {
+                issue = 'each checkpoint needs completed work in After and review scope in Focus';
+            }
+            else if (!bullets[bullets.length - 1][2] || bullets.slice(0, -1).some(bullet => bullet[2])) {
+                // Final denotes the whole implementation; prose may use any document language.
+                issue = 'mark only the last checkpoint (Final) for the overall review after all implementation and verification';
+            }
+        }
+    }
+    requirements.push({ label: 'Post-build review checkpoint contract is complete', satisfied: issue === null, scope: 'lock' });
+    if (issue)
+        warnings.push(`Checkpoint for Post-Build Review: ${issue}`);
+    else
+        passes.push(`Post-build review checkpoint contract: ${count} checkpoint(s)`);
 }
 function evaluateExecVerdictGate(relevantMarkers, lines, requirements, passes, warnings) {
     const marker = relevantMarkers.find(m => m.sectionId === EXEC_VERDICT_SECTION_ID);
@@ -1053,12 +1111,15 @@ function validateSigmaDocFile(absPath, domain) {
             evaluateFinalChecklistGate(relevantMarkers, lines, requirements);
         }
     }
-    if (domain === 'plan' && spec === PLAN_SPEC_V3) {
+    if (domain === 'plan' && (spec === PLAN_SPEC_V3 || spec === PLAN_SPEC_V4)) {
         evaluatePlanV3Gate(relevantMarkers, lines, requirements, passes, warnings);
+    }
+    if (domain === 'plan' && spec === PLAN_SPEC_V4) {
+        evaluatePlanCheckpointContract(relevantMarkers, lines, requirements, passes, warnings);
     }
     if (domain === 'exec') {
         evaluateExecVerdictGate(relevantMarkers, lines, requirements, passes, warnings);
-        if (spec === EXEC_SPEC_V3 || spec === EXEC_SPEC_V4) {
+        if (spec === EXEC_SPEC_V3 || spec === EXEC_SPEC_V4 || spec === EXEC_SPEC_V5) {
             evaluateExecV3Gate(spec, relevantMarkers, lines, requirements, passes, warnings);
         }
     }

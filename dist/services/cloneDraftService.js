@@ -46,13 +46,13 @@ function previewClone(input) {
     // INTENT schema 5 and 6 share the section IDs and order, so a schema 5 source
     // is cloned into the schema 6 template; its sections keep their source wording.
     const docType = type === 'intent' ? 'DIR_INTENT' : 'FMN_PLAN';
-    const sourceSchemas = type === 'intent' ? ['5', '6'] : ['3'], destinationExpected = type === 'intent' ? '6' : '3';
+    const sourceSchemas = type === 'intent' ? ['5', '6'] : ['3', '4'], destinationExpected = type === 'intent' ? '6' : '4';
     const template = fs_extra_1.default.readFileSync((0, artifacts_1.resolveTemplate)(type === 'intent' ? 'DIR-INTENT-TEMPLATE.md' : 'FMN-PLAN-TEMPLATE.md'), 'utf8');
     const schemaOf = (text) => text.match(/<!--\s*SIGMA:DOC type=([A-Z_]+) schema=(\d+)\s*-->/);
     const sourceSchema = schemaOf(source.content), destinationSchema = schemaOf(template);
     if (sourceSchema?.[1] !== docType || destinationSchema?.[1] !== docType ||
         !sourceSchemas.includes(sourceSchema[2]) || destinationSchema[2] !== destinationExpected)
-        throw new Error('Unsupported clone schema mapping. Supported: INTENT 5→6 and 6→6, PLAN 3→3. Review older schemas manually; host templates may require F09.');
+        throw new Error('Unsupported clone schema mapping. Supported: INTENT 5→6 and 6→6, PLAN 3→4 and 4→4. Checkpoints are reset for FMN reassessment. Review older schemas manually; host templates may require F09.');
     const structure = (0, docCheck_1.validateSigmaDocFile)(path_1.default.join(root, source.path), type);
     if (!structure.ok)
         throw new Error('Source structure invalid: ' + structure.errors.join('; '));
@@ -67,6 +67,7 @@ function previewClone(input) {
     const targetChain = type === 'intent' ? (0, chain_1.nextChainVersion)(root) : active.chainVersion;
     const targetVersion = type === 'intent' ? targetChain : (0, chain_1.nextPlanVersion)(active.data, active.data.intent.version);
     const sourceById = new Map(sourceSections.map(s => [s.id, s]));
+    // Review cadence depends on the new work; use the template default for FMN reassessment.
     const allowed = CONTRACT_SECTIONS[type];
     let content = template.slice(0, template.indexOf(templateSections[0].marker));
     for (const section of templateSections) {

@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "role": "ARC",
   "source_rule": "Sigma/rules/ARC-RULE.md",
-  "source_rule_version": "sha256:67dc91ee7f61b4c1c34fb2966d68b3ac96629b51e185329de9fbc0c6e95e1624",
-  "memory_updated_at": "2026-10-15",
+  "source_rule_version": "sha256:422e313b665538e7b4e667de98b8a53c63f1950f2468d98cdbe7706f604107f4",
+  "memory_updated_at": "2026-10-26",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -40,6 +40,6 @@
     "If the INTENT needs research, research may start before, during, or after the Director interview, but must be finished before any AUD audit and before sigma intent ratify.",
     "Before recommending sigma intent ratify, run sigma intent check first and confirm it reports Lock readiness: Eligible; resolve any unsatisfied Lock Requirements shown in the output before recommending ratify.",
     "When writing INTENT, follow Writing Style Rules in Sigma/rules/ARC-RULE.md: state facts directly, do not over-explain, and write only the current correct statement without narrating corrections or how a decision was reached.",
-    "Use intent clone only after the Director selects the new intent direction. Review its preview token, diff, reset fields, and new-chain activation effect before confirming; cloning creates a fresh DRAFT and inherits no certification or audit verdict. Only INTENT schema 5 or 6 (cloned into the current schema 6 template) and PLAN schema 3 currently support cloning; older schemas require manual drafting. Cloned INTENT sections keep their source wording; revise them to the current template guidance. Record substantive questions through decisions add with an explicit artifact/hash. Only the trusted local Director surface may resolve them. Source review, audit records, and answered questions never grant ratification or approval."
+    "Use intent clone only after the Director selects the new intent direction. Review its preview token, diff, reset fields, and new-chain activation effect before confirming; cloning creates a fresh DRAFT and inherits no certification or audit verdict. Only INTENT schema 5 or 6 (cloned into the current schema 6 template) and PLAN schemas 3 or 4 (cloned into the current schema 4 template) currently support cloning; older schemas require manual drafting. Cloned INTENT sections keep their source wording; revise them to the current template guidance. Record substantive questions through decisions add with an explicit artifact/hash. Only the trusted local Director surface may resolve them. Source review, audit records, and answered questions never grant ratification or approval."
   ]
 }

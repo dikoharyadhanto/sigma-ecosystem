@@ -398,7 +398,7 @@ DEV MUST document implementation work in `EXEC`.
 - Director Observation Report & Minor Requests (DEV transcribes it from the Director's chat report)
 - Changelog (template schema 4 and later; the last section, which DEV fills last, after FMN Post-Build Review)
 
-FMN fills the FMN Pre-Build Review and FMN Post-Build Review sections.
+FMN fills FMN Pre-Build Review, Intermediate Post-Build Reviews, and the final overall FMN Post-Build Review. DEV does not write in these sections.
 
 DEV (or FMN) MUST fill the `Director Summary` section to provide a concise, human-readable summary of the execution, in five sentences at most, in plain language, without IDs. This section can be freely filled by either DEV or FMN. The recommended timing to fill this is after receiving the FMN Post-Build Review, so it accurately captures the final execution state and readiness.
 
@@ -725,6 +725,22 @@ This rule applies to all message types: mandatory triggers, clarification reques
 
 ---
 
+## Post-Build Review Checkpoints
+
+DEV MUST read PLAN Checkpoint for Post-Build Review before building and map its implementation approach to the contracted checkpoints. Pre-build review is separate. An approved older PLAN without the section uses one checkpoint after all implementation and verification.
+
+After the Director authorizes implementation, DEV continues through routine tasks and technical stages without asking for repeated permission or requesting routine FMN reviews outside the contract. Splitting implementation into stages in EXEC does not add checkpoints. Progress updates do not require a review response.
+
+At each intermediate checkpoint, DEV updates the current build results and verification evidence, sends FMN a CHECK/REVIEW request through `sigma send` with the registered EXEC reference, checkpoint number, completed tasks, evidence, concerns, and dependent next work. DEV waits for FMN before continuing dependent work. FMN alone records Intermediate Post-Build Reviews. DEV addresses findings and supplies follow-up evidence under the same checkpoint; it does not add a new checkpoint for each review round.
+
+After FMN responds that findings are resolved and dependent work may continue, DEV resumes under the existing Director authorization within the approved scope. Do not ask the Director to authorize again solely because a checkpoint finished. Scope changes, contract revisions, and actions requiring separate permission retain their existing approval requirements.
+
+At the final checkpoint, DEV completes all implementation and verification, fills the build results and deviations, and sends the overall post-build request under Trigger 3. Earlier partial reviews cannot replace the final FMN Post-Build Review, authorize final approval, or trigger the final Summary and Changelog prematurely.
+
+Material blockers, conflicting requirements, and required scope changes may be escalated before a checkpoint. These are clarification or contract-change requests, not extra routine reviews. Intermediate reviews do not expand the ordinary PLAN revision checkpoints; contract changes during implementation follow the existing outside-checkpoint Director approval path.
+
+---
+
 ## Mandatory Message Triggers
 
 These message sends are required steps — not optional. DEV has not completed the triggering action until the message is sent.
@@ -784,7 +800,7 @@ Please review and advise Director on whether to authorize implementation.
 
 ### Trigger 3 — When DEV completes implementation and requests FMN post-build review and test
 
-When DEV has completed the Build Result and Verification and the Deviations, Issues, and Limitations sections, DEV MUST send a message to FMN requesting post-build review and test execution against the PLAN test contract.
+At the final contracted checkpoint, after all implementation and verification are complete and the Build Result and Verification and Deviations, Issues, and Limitations sections are finished, DEV MUST send FMN the overall post-build review request against the entire PLAN test contract. Intermediate reviews use Post-Build Review Checkpoints above.
 
 Message must include:
 
@@ -813,7 +829,7 @@ DEV must not wait for Director to prompt this message. Sending it is part of com
 
 ### General Message Policy
 
-Message sends not covered by the triggers above may be sent at DEV's discretion with Director awareness. DEV is not limited to messaging FMN only — DEV may message any Sigma role when the situation warrants it.
+Routine review requests follow the contracted post-build checkpoints and the mandatory pre-build review. Do not send extra routine reviews merely because a task or technical stage finished. Other substantive messages, including clarification and material blocker escalation, may be sent at DEV's discretion with Director awareness. DEV may message any Sigma role when the situation warrants it.
 
 When DEV discovers, mid-build, that the acceptance criteria and test
 contract in the PLAN conflict with observed reality, DEV should default to pausing

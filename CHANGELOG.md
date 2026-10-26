@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+- PLAN schema 4 adds `Checkpoint for Post-Build Review`: one final review by default, or an FMN-defined schedule ending in an overall review. Pre-build review remains separate.
+- EXEC schema 5 places Intermediate Post-Build Reviews before the final overall review; FMN updates Last Checkpoint Reviewed and free-form Content with the latest review. DEV follows contracted checkpoints, waits before dependent work, and resumes within existing Director authorization after review findings are resolved; technical stages do not add routine reviews.
+- Document checks validate the checkpoint schedule while preserving older schemas. PLAN cloning supports 3→4 and 4→4 and resets checkpoints for FMN reassessment. No checkpoint runtime gate is added.
+
 ## [2.2.0] - 2026-10-20
 
 - Version 2.2.0. The entries below, from "Gitignore by default, identity guardrail, portability" through "Certified-hash stability across hosts", are part of this release; the host (`~/.sigma`) and each project receive the new rules through `sigma setup update` and `sigma project sync`.

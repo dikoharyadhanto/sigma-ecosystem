@@ -166,6 +166,8 @@ describe('Role memory and bootstrap regressions', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Gate 2 is open/i);
     expect(result.stdout).toMatch(/prepare DEV-EXEC pre-implementation planning/i);
+    expect(result.stdout).toContain('follow PLAN post-build checkpoints');
+    expect(result.stdout).toContain('resume within the existing authorization');
     expect(result.stdout).toMatch(/Material implementation after pre-build review/i);
   });
 

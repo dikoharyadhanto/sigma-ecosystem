@@ -1,9 +1,9 @@
-<!-- SIGMA:DOC type=DEV_EXEC schema=4 -->
+<!-- SIGMA:DOC type=DEV_EXEC schema=5 -->
 # DEV-EXEC
 
 > Implementation plan, build result, and verification evidence for an APPROVED PLAN (LOCKED on legacy chains).
 > Approval and lock state are managed by Sigma CLI. Do not record them here. EXEC approval locks the same-number PLAN/EXEC pair on paired_approval chains.
-> Ownership: DEV fills Implementation Plan and Technical Research before the build, and Build Result and Verification and Deviations, Issues, and Limitations after it. DEV fills Changelog last, after FMN Post-Build Review. FMN fills FMN Pre-Build Review and FMN Post-Build Review; DEV does not write in them. DEV transcribes Director Observation Report & Minor Requests from the Director's chat report. DEV or FMN fills Director Summary, last.
+> Ownership: DEV fills Implementation Plan and Technical Research before the build, updates Build Result and Verification before each review, and completes the build results and Deviations, Issues, and Limitations after all implementation and verification. DEV fills Changelog last, after FMN Post-Build Review. FMN fills FMN Pre-Build Review, Intermediate Post-Build Reviews, and the final overall FMN Post-Build Review; DEV does not write in them. DEV transcribes Director Observation Report & Minor Requests from the Director's chat report. DEV or FMN fills Director Summary, last.
 
 ---
 
@@ -147,7 +147,7 @@ If NOT_NEEDED, state briefly why existing knowledge is sufficient:
 <!-- SIGMA:DEV_EXEC:SECTION:BUILD_RESULT_AND_VERIFICATION -->
 ## Build Result and Verification
 
-> Filled by DEV after the build.
+> Filled progressively by DEV before each contracted review, then completed after all implementation and verification.
 
 ### What Was Implemented
 
@@ -234,10 +234,25 @@ If none, replace the table with: No material deviation, issue, or limitation.
 
 ---
 
+<!-- SIGMA:DEV_EXEC:SECTION:INTERMEDIATE_POST_BUILD_REVIEWS -->
+## Intermediate Post-Build Reviews
+
+> FMN updates this section with the latest checkpoint reviewed before the final checkpoint and its free-form review content. Record the final checkpoint in FMN Post-Build Review. Use N/A if none.
+
+### Last Checkpoint Reviewed
+
+N/A
+
+### Content
+
+N/A
+
+---
+
 <!-- SIGMA:DEV_EXEC:SECTION:FMN_POST_BUILD_REVIEW -->
 ## FMN Post-Build Review
 
-> Filled by FMN after DEV completes Build Result and Verification. DEV must not write in this section.
+> Filled by FMN at the final contracted checkpoint, after all implementation and verification are complete. Review the entire PLAN test contract, including work reviewed earlier. Intermediate outcomes do not replace this final overall verdict. DEV must not write in this section.
 
 ### AC Verification
 
