@@ -1,6 +1,6 @@
 # Sigma v2 — Clean Operation Guide
 
-Written 2026-10-15 for Sigma 2.1.0 (master commit `61c1dce`); updated 2026-10-20 for Sigma 2.2.0 (gitignore by default, identity guardrail, snapshot-mode INTENT baseline, portability). Facts were verified against the code, the CLI help, and the machine on those dates. Items marked **[Inference]** were not verified.
+Written 2026-10-15 for Sigma 2.1.0 (master commit `61c1dce`); updated 2026-10-20 for Sigma 2.2.0 (gitignore by default, identity guardrail, snapshot-mode INTENT baseline, portability); updated 2026-10-26 for Sigma 2.3.0 (post-build review checkpoints, PLAN schema 4, EXEC schema 5). Facts were verified against the code, the CLI help, and the machine on those dates. Items marked **[Inference]** were not verified.
 
 **Audience:** any AI that is active inside an existing Sigma project while the machine's global Sigma installation is already the latest version, and the Director who supervises it.
 

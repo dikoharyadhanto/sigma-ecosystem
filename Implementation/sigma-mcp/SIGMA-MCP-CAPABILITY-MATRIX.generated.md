@@ -5,7 +5,7 @@
 
 ## Baseline
 
-- Sigma version: `2.2.0`
+- Sigma version: `2.3.0`
 - Operation registry: schema `1.0.0`, generated `2026-10-14T18:05:35.000Z`, 92 entries
 - Active operations: 89; tombstones: 3 (`intent_lock`, `plan_lock`, `exec_lock`)
 - Implemented on MCP: 57; deferred: 17; not admissible: 15
