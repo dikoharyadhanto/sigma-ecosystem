@@ -1,0 +1,15 @@
+{
+  "name": "sigma-aud-ui-ux-design",
+  "version": "1.0.0",
+  "description": "Audit live product UI and UX through direct interaction",
+  "author": {
+    "name": "Sigma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sigma",
+    "audit",
+    "aud",
+    "aud-ui-ux-design"
+  ]
+}

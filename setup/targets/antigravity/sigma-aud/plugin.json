@@ -1,7 +1,7 @@
 {
   "name": "sigma-aud",
   "version": "1.0.0",
-  "description": "Sigma Auditor role — passive external auditor; reviews Director-provided evidence only",
+  "description": "Sigma AUD: independent advisory review and four bounded product-audit skills",
   "author": {
     "name": "Sigma"
   },

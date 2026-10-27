@@ -5,6 +5,15 @@ description: "Sigma environment diagnostic — read-only check of CLI, skills, a
 
 # /sigma-test — Sigma Environment Diagnostic
 
+## Product-audit session guard
+
+Before any source read, command, memo listing, or bootstrap below, check the
+session context. If one of the four AUD product-audit skills is or has been bound
+in this session, do not execute this workflow or discover Sigma evidence. Explain
+that a new session is required for this workflow; preserve the existing audit
+binding. A request for a short status may be answered only from already-permitted
+current audit context, without reading additional sources or writing a memo.
+
 ## Skill Identity
 
 This is a universal, read-only diagnostic skill.
@@ -64,21 +73,27 @@ Run: `sigma session bootstrap`
 
 #### A3 — Skill files (`A3.skills`)
 
-Check that the following skill directories exist in `~/.gemini/config/plugins/`:
+Check that the following skill directories exist in `~/.gemini/config/skills/`:
 
 | Skill | Expected directory |
 | :--- | :--- |
-| /arc | `~/.gemini/config/plugins/sigma-arc/` |
-| /fmn | `~/.gemini/config/plugins/sigma-fmn/` |
-| /dev | `~/.gemini/config/plugins/sigma-dev/` |
-| /aud | `~/.gemini/config/plugins/sigma-aud/` |
-| /report | `~/.gemini/config/plugins/sigma-report/` |
-| /sigma-test | `~/.gemini/config/plugins/sigma-test/` |
+| /arc | `~/.gemini/config/skills/sigma-arc/` |
+| /fmn | `~/.gemini/config/skills/sigma-fmn/` |
+| /dev | `~/.gemini/config/skills/sigma-dev/` |
+| /aud | `~/.gemini/config/skills/sigma-aud/` |
+| /aud-security | `~/.gemini/config/skills/sigma-aud-security/` |
+| /aud-ui-ux-design | `~/.gemini/config/skills/sigma-aud-ui-ux-design/` |
+| /aud-performance-cost | `~/.gemini/config/skills/sigma-aud-performance-cost/` |
+| /aud-code-logic | `~/.gemini/config/skills/sigma-aud-code-logic/` |
+| /report | `~/.gemini/config/skills/sigma-report/` |
+| /sigma-test | `~/.gemini/config/skills/sigma-test/` |
 
 For each directory, verify it contains both `SKILL.md` and `plugin.json`.
 
 - PASS if directory and both files exist
 - FAIL if directory or files are missing (run `sigma setup install` to redeploy)
+
+Verify all four product-audit entries as well as base AUD. Inspect files only; do not invoke audit skills as a diagnostic.
 
 #### A4 — Asset drift (`A4.assets`)
 
@@ -207,7 +222,7 @@ Project: {active Sigma project / not a Sigma project}
 | :--- | :--- | :--- | :--- | :--- |
 | A | A1.cli | `sigma --version` / `--help` | PASS/FAIL | v{version} |
 | A | A2.bootstrap | `sigma session bootstrap` | PASS/N/A/FAIL | {phase or reason} |
-| A | A3.skills | skill files (/arc, /fmn, /dev, /aud, /report, /sigma-test) | PASS/FAIL | {missing items} |
+| A | A3.skills | skill files (/arc, /fmn, /dev, /aud, /aud-security, /aud-ui-ux-design, /aud-performance-cost, /aud-code-logic, /report, /sigma-test) | PASS/FAIL | {missing items} |
 | A | A4.assets | `sigma doctor --check-assets` | PASS/WARN/FAIL | {N differences} |
 | A | A5.global | `~/.sigma/` and subdirectories | PASS/FAIL | |
 | A | A6.project | `Sigma/` structure | PASS/WARN/FAIL/N/A | |

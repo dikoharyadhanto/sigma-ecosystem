@@ -1,0 +1,6 @@
+interface:
+  display_name: "AUD UI–UX Design Audit"
+  short_description: "Audit live product UI and UX through direct interaction"
+  default_prompt: "Use $aud-ui-ux-design to audit my designated product; state preparation requirements before inspection."
+policy:
+  allow_implicit_invocation: false

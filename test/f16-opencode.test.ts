@@ -18,6 +18,7 @@ const CLAUDE_SOURCE = path.join(REPO_ROOT, 'setup', 'targets', 'claude_code');
 const ROLE_FILES = [
   'arc.md', 'fmn.md', 'dev.md', 'aud.md', 'report.md',
   'sigma-test.md', 'humanize.md', 'write-memo.md', 'read-memo.md',
+  'aud-security.md', 'aud-ui-ux-design.md', 'aud-performance-cost.md', 'aud-code-logic.md',
 ];
 
 const lf = (s: string) => s.replace(/\r\n/g, '\n');
@@ -71,7 +72,7 @@ describe('F16 U-01 detectTools', () => {
 // ── U-02 ─────────────────────────────────────────────────────────────────────
 
 describe('F16 U-02 command deploy', () => {
-  it('writes the nine commands and the plugin when opencode is detected', () => {
+  it('writes the role and product-audit commands and the plugin when opencode is detected', () => {
     fs.ensureDirSync(ocDir(env));
 
     const r = runCli('setup install --yes --force', env.projectDir, env.homeDir);
@@ -104,10 +105,11 @@ describe('F16 U-02 command deploy', () => {
     expect(fs.readFileSync(path.join(commandsDir(env), 'mine.md'), 'utf-8')).toBe('my own command\n');
   });
 
-  it('keeps content parity with claude_code/ for every command except sigma-test', () => {
+  it('keeps content parity with claude_code/ apart from native invocation metadata and sigma-test', () => {
+    const comparable = (text: string) => lf(text).replace(/^disable-model-invocation: true\n/m, '');
     for (const file of ROLE_FILES.filter((f) => f !== 'sigma-test.md')) {
-      expect(lf(fs.readFileSync(path.join(OPENCODE_SOURCE, file), 'utf-8')), file)
-        .toBe(lf(fs.readFileSync(path.join(CLAUDE_SOURCE, file), 'utf-8')));
+      expect(comparable(fs.readFileSync(path.join(OPENCODE_SOURCE, file), 'utf-8')), file)
+        .toBe(comparable(fs.readFileSync(path.join(CLAUDE_SOURCE, file), 'utf-8')));
     }
   });
 

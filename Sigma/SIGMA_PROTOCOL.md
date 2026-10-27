@@ -2,6 +2,7 @@
 
 **Document**: SIGMA_PROTOCOL.md
 **Version**: v1.0 (2026-10-15)
+**Amended**: 2026-10-27 — independent AUD product-audit skills
 **Authority Tier**: Operational
 **Owner**: Director
 **Status**: Active
@@ -161,13 +162,36 @@ FMN cannot approve any artifact and cannot author EXEC implementation content or
 
 | Property | Value |
 | :--- | :--- |
-| Phase | DESIGN and BUILD (advisory, on demand) |
-| Authors | Audit findings, transcribed into the audited artifact by ARC or FMN |
+| Phase | Advisory, on demand; standalone product audits do not require a lifecycle gate |
+| Authors | Audit findings; standalone product reports in `Sigma/Audit Product/` |
 | Approval authority | None — Director only |
 
-AUD is a passive external auditor. It reviews evidence the Director provides or authorizes and produces advisory findings. A verdict is evidence for Director judgment, never an approval gate. AUD does not challenge the Director's destination (section 10).
+AUD is an independent advisory auditor. A verdict is evidence for Director
+judgment, never an approval gate. AUD does not challenge the Director's
+destination (section 10). Base artifact reviews remain passive and limited to
+Director-provided or authorized evidence. AUD participation remains optional
+(section 11).
 
-AUD is activated explicitly and is optional by default (section 11). It does not roam the project, run CLI commands, or read files the Director has not provided or authorized.
+Independent product audits follow these principles:
+
+1. Explicit Director invocation authorizes the designated product audit within
+   the selected skill's access boundary and establishes AUD without separate
+   activation. Implicit loading or reviewing a skill is not activation.
+2. Exactly one specialization may ever activate per session. Refuse simultaneous
+   specializations and require a new session to switch.
+3. Sigma is excluded as product evidence and audit target. Only the operational
+   and current-session output exceptions defined by the AUD contract apply.
+4. AUD must not modify the original product source tree or implement repairs.
+   Writing test code does not transfer FMN or DEV responsibilities to AUD.
+5. Production, side-effecting external-service, and paid tests require explicit
+   Director authorization for the specific test beyond the general invocation.
+6. Reports are advisory references for FMN planning followed by DEV execution;
+   they are not approved requirements or authority to bypass lifecycle gates.
+
+The four specializations, preparation, evidence/retest boundaries, credential
+handling, test workspaces, and reporting details have one operational authority:
+the Product Audit Skills contract in `Sigma/rules/AUD-RULE.md`. Skills implement
+their audit-specific methods; bridge instructions and memory provide reminders.
 
 > Detailed role rules: `Sigma/rules/AUD-RULE.md`
 
@@ -616,7 +640,11 @@ Detailed behavioral rules for ARC, AUD, FMN, and DEV, including activation, proh
 
 Role memory is a short operating cue for the first moments of role activation. It is reminder-only and must not override rules, this protocol, CLI output, runtime state, locked artifacts, or Director instructions.
 
-Roles do not share one activation bootstrap. ARC starts as stop-first intent intake. AUD starts as a passive evidence-boundary review. FMN and DEV use runtime orientation only within their direct planning or execution chain.
+Roles do not share one activation bootstrap. ARC starts as stop-first intent intake.
+Base AUD starts as a passive evidence-boundary review; explicit product-audit
+invocation instead starts with its preparation and isolation contract (section
+4.5), without discovering Sigma runtime state. FMN and DEV use runtime orientation
+only within their direct planning or execution chain.
 
 Skill files for each role are deployed by `sigma setup install` to the AI tool directories it detects: Claude Code, Codex CLI, Reasonix, Antigravity, and opencode.
 

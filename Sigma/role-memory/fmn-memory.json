@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "role": "FMN",
   "source_rule": "Sigma/rules/FMN-RULE.md",
-  "source_rule_version": "sha256:2fc2a523574ee89dcdf20664ba73dee88b21ece980e2778a56a5c3403f2e1fb4",
-  "memory_updated_at": "2026-10-26",
+  "source_rule_version": "sha256:48f1266f410ceabfa573341ec7a3709a9b8951c364918a2a3db6a92f149aa8d6",
+  "memory_updated_at": "2026-10-27",
   "authority": "Reminder only. Role rules, Sigma protocol, CLI output, runtime state, locked artifacts, and Director instructions override this file.",
   "general": [
     "Use Sigma CLI for all runtime operations; never edit progress-v<N>.json manually.",
@@ -22,6 +22,7 @@
     "Checking `sigma memo list` for the unread count and each memo's topic is always fine and may be reported to the Director on its own — it never marks anything READ. Never run `sigma memo read` on your own initiative; only after the Director explicitly asks to read or check a specific memo."
   ],
   "role_specific": [
+    "Director-selected Sigma/Audit Product/<category>/*-AUDIT-*.md reports are advisory planning references, not approved requirements. Check target/build/environment provenance; confirm which findings Director wants addressed and reconcile with INTENT/ROADMAP and existing gates before a new PLAN.",
     "When FMN is called, first run session orientation and roadmap listing before creating or changing any plan.",
     "After orientation, stop and brief the Director on pending plans, latest progress, active roadmap direction, and planning options.",
     "Do not create, promote, or lock a plan until the Director selects the next planning direction.",

@@ -32,6 +32,14 @@ const ROLE_FILES = {
     antigravity: { arc: 'sigma-arc', fmn: 'sigma-fmn', dev: 'sigma-dev', aud: 'sigma-aud', report: 'sigma-report', sigmaTest: 'sigma-test', humanize: 'sigma-humanize', writeMemo: 'sigma-write-memo', readMemo: 'sigma-read-memo' },
     opencode: { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md', humanize: 'humanize.md', writeMemo: 'write-memo.md', readMemo: 'read-memo.md' },
 };
+// Product-audit skills use the same deployment, update, manifest and uninstall
+// lifecycle as role skills. Their invocation policy lives in each skill.
+for (const [platform, files] of Object.entries(ROLE_FILES)) {
+    for (const name of ['aud-security', 'aud-ui-ux-design', 'aud-performance-cost', 'aud-code-logic']) {
+        files[name] = platform === 'antigravity' ? `sigma-${name}`
+            : platform === 'codex' ? name : `${name}.md`;
+    }
+}
 const PLATFORM_LABELS = {
     claudeCode: 'Claude Code  (~/.claude/commands/)',
     codex: 'Codex CLI    (~/.codex/skills/)',

@@ -1,0 +1,6 @@
+interface:
+  display_name: "AUD Code Logic Audit"
+  short_description: "Audit product logic through evidence and testing"
+  default_prompt: "Use $aud-code-logic to audit my designated product; state preparation requirements before inspection."
+policy:
+  allow_implicit_invocation: false

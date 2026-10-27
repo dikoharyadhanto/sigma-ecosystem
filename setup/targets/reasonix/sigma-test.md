@@ -5,6 +5,15 @@ description: "Sigma environment diagnostic — read-only check of CLI, skills, a
 
 # /sigma-test — Sigma Environment Diagnostic
 
+## Product-audit session guard
+
+Before any source read, command, memo listing, or bootstrap below, check the
+session context. If one of the four AUD product-audit skills is or has been bound
+in this session, do not execute this workflow or discover Sigma evidence. Explain
+that a new session is required for this workflow; preserve the existing audit
+binding. A request for a short status may be answered only from already-permitted
+current audit context, without reading additional sources or writing a memo.
+
 ## Skill Identity
 
 This is a universal, read-only diagnostic skill.
@@ -72,11 +81,17 @@ Check that the following files exist in `~/.reasonix/skills/`:
 | /fmn | `~/.reasonix/skills/fmn.md` |
 | /dev | `~/.reasonix/skills/dev.md` |
 | /aud | `~/.reasonix/skills/aud.md` |
+| /aud-security | `~/.reasonix/skills/aud-security.md` |
+| /aud-ui-ux-design | `~/.reasonix/skills/aud-ui-ux-design.md` |
+| /aud-performance-cost | `~/.reasonix/skills/aud-performance-cost.md` |
+| /aud-code-logic | `~/.reasonix/skills/aud-code-logic.md` |
 | /report | `~/.reasonix/skills/report.md` |
 | /sigma-test | `~/.reasonix/skills/sigma-test.md` |
 
 - PASS if file exists
 - FAIL if file is missing (run `sigma setup install` to redeploy)
+
+Verify all four product-audit entries as well as base AUD. Inspect files only; do not invoke audit skills as a diagnostic.
 
 #### A4 — Asset drift (`A4.assets`)
 
@@ -205,7 +220,7 @@ Project: {active Sigma project / not a Sigma project}
 | :--- | :--- | :--- | :--- | :--- |
 | A | A1.cli | `sigma --version` / `--help` | PASS/FAIL | v{version} |
 | A | A2.bootstrap | `sigma session bootstrap` | PASS/N/A/FAIL | {phase or reason} |
-| A | A3.skills | skill files (/arc, /fmn, /dev, /aud, /report, /sigma-test) | PASS/FAIL | {missing items} |
+| A | A3.skills | skill files (/arc, /fmn, /dev, /aud, /aud-security, /aud-ui-ux-design, /aud-performance-cost, /aud-code-logic, /report, /sigma-test) | PASS/FAIL | {missing items} |
 | A | A4.assets | `sigma doctor --check-assets` | PASS/WARN/FAIL | {N differences} |
 | A | A5.global | `~/.sigma/` and subdirectories | PASS/FAIL | |
 | A | A6.project | `Sigma/` structure | PASS/WARN/FAIL/N/A | |

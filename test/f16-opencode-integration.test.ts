@@ -65,9 +65,10 @@ describe.skipIf(!HAS_OPENCODE)('F16 U-08 opencode integration', () => {
     expect(sigma.command[sigma.command.indexOf('--project-id') + 1]).toBe('OCINT');
   });
 
-  it('resolves the nine Sigma commands', () => {
+  it('resolves the Sigma role and product-audit commands', () => {
     expect(Object.keys(resolved.command).sort()).toEqual(
-      ['arc', 'aud', 'dev', 'fmn', 'humanize', 'read-memo', 'report', 'sigma-test', 'write-memo'],
+      ['arc', 'aud', 'aud-code-logic', 'aud-performance-cost', 'aud-security', 'aud-ui-ux-design',
+        'dev', 'fmn', 'humanize', 'read-memo', 'report', 'sigma-test', 'write-memo'],
     );
     expect(resolved.command.arc.description).toMatch(/^Sigma ARC/);
     expect(resolved.command.arc.template).toContain('Role Identity');

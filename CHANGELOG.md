@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format loos
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-10-27
+
+- Add four independent AUD product-audit skills: Security, UI–UX Design, Performance–Cost, and Code Logic, distributed across all five supported platforms with install/update/uninstall coverage.
+- Explicit invocation grants bounded audit access; one specialization per session, Sigma evidence isolation, README baseline context, and advisory reports preserve separation from FMN planning and DEV implementation.
+- Define sanitized handling for known or suspected secret-bearing files, specific authorization for production/external-effect/paid tests, and isolated testing without modifying the original product tree.
+- Retests accept Director-authored scenarios as testing instructions and require fresh evidence; previous reports, attachments, pasted text, and excerpts remain prohibited.
+- Keep Protocol at principle level with operational details in AUD-RULE. UI–UX automation runs in temporary storage by default; persisting code requires checking exclusion status.
+- Extend diagnostic/session guards, document FMN advisory report intake, and correct the Claude protection hook's native file_path handling and PreToolUse denial response.
+- Make the version-stamp link fixture portable on Windows by using a directory junction while retaining the real symbolic-link rejection check.
+
 ## [2.3.0] - 2026-10-26
 
 - Version 2.3.0. Adds post-build review checkpoints (PLAN schema 4, EXEC schema 5); the host (`~/.sigma`) and each project receive the new rules, templates, and skills through `sigma setup update` and `sigma project sync`.

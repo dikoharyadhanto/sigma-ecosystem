@@ -1,0 +1,6 @@
+interface:
+  display_name: "AUD Security Audit"
+  short_description: "Audit product security within AUD evidence boundaries"
+  default_prompt: "Use $aud-security to audit my designated product; state preparation requirements before inspection."
+policy:
+  allow_implicit_invocation: false

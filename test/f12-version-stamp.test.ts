@@ -201,7 +201,13 @@ describe('F12 warning', () => {
   it('stays silent and does not fail the command when the hash cannot be computed', () => {
     const w = installedWorld();
     // Symbolic links are refused in managed assets, so hashing the host rules throws.
-    fs.symlinkSync(path.join(w.home, '.sigma', 'rules', 'ARC-RULE.md'), path.join(w.home, '.sigma', 'rules', 'LINK.md'));
+    // A Windows directory junction exercises the same lstat boundary without
+    // requiring administrator/Developer Mode privileges to create a file symlink.
+    const target = path.join(w.home, 'link-target');
+    const link = path.join(w.home, '.sigma', 'rules', 'LINK');
+    fs.ensureDirSync(target);
+    fs.symlinkSync(target, link, process.platform === 'win32' ? 'junction' : 'dir');
+    expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
     const run = sigma(['config', 'show'], w.project, w.home);
     expect(run.exitCode).toBe(0);
     expect(run.stderr).not.toContain('Sigma:');

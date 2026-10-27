@@ -1,0 +1,6 @@
+interface:
+  display_name: "AUD Performance–Cost Audit"
+  short_description: "Audit product performance and cost efficiency"
+  default_prompt: "Use $aud-performance-cost to audit my designated product; state preparation requirements before inspection."
+policy:
+  allow_implicit_invocation: false

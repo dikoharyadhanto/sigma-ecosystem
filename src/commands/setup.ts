@@ -49,6 +49,15 @@ const ROLE_FILES: Record<string, Record<string, string>> = {
   opencode:    { arc: 'arc.md', fmn: 'fmn.md', dev: 'dev.md', aud: 'aud.md', report: 'report.md', sigmaTest: 'sigma-test.md', humanize: 'humanize.md', writeMemo: 'write-memo.md', readMemo: 'read-memo.md' },
 };
 
+// Product-audit skills use the same deployment, update, manifest and uninstall
+// lifecycle as role skills. Their invocation policy lives in each skill.
+for (const [platform, files] of Object.entries(ROLE_FILES)) {
+  for (const name of ['aud-security', 'aud-ui-ux-design', 'aud-performance-cost', 'aud-code-logic']) {
+    files[name] = platform === 'antigravity' ? `sigma-${name}`
+      : platform === 'codex' ? name : `${name}.md`;
+  }
+}
+
 const PLATFORM_LABELS: Record<string, string> = {
   claudeCode:  'Claude Code  (~/.claude/commands/)',
   codex:       'Codex CLI    (~/.codex/skills/)',

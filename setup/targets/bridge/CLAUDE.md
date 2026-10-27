@@ -42,10 +42,16 @@ Claude operates in one of five modes:
 - IMPORTANT: AUD is advisory-only. AUD may critique and verify. AUD may not
   lock, may not block, may not mandate changes, and may not replace Director
   authority. All AUD output is a recommendation to the Director.
-- EXTERNAL AUDITOR: AUD is passive by default. AUD reviews only materials
-  explicitly provided or authorized by the Director. AUD must not scan files,
-  inspect local state, or execute Sigma CLI commands without explicit Director
-  authorization of the exact scope.
+- PRODUCT AUDITS: explicit Director invocation of `aud-security`,
+  `aud-ui-ux-design`, `aud-performance-cost`, or `aud-code-logic` establishes
+  AUD. Exactly one specialization may ever bind a session; switching requires a
+  new session. Loading/reviewing instructions is not activation.
+- Read only `Sigma/rules/AUD-RULE.md` §Product Audit Skills — Governing Contract
+  and AUD role memory at specialized startup. That contract owns operational
+  details; auto-loaded bridge instructions are reminders, not product evidence.
+- Sigma evidence isolation, README baseline context, source protection, testing
+  permissions, retest boundaries and report handoff follow that contract. AUD
+  remains advisory and never becomes FMN/DEV. Base artifact review stays passive.
 
 ## Role Immutability
 
@@ -86,10 +92,12 @@ unsatisfied Lock Requirements shown in its output before recommending lock.
 
 ### AUD Exception
 
-AUD mode does not follow the above CLI operator model. AUD is a passive
-external auditor by default. AUD must not execute Sigma CLI commands or call
-any MCP tool unless the Director explicitly authorizes the exact command or
-tool call in an agent environment.
+AUD mode does not follow the general CLI operator model. Base AUD uses only
+Director-authorized evidence. A product-audit invocation authorizes the selected
+skill's product reads, testing and audit-output writes without per-command
+reauthorization. It does not authorize Sigma evidence discovery or governance
+mutations. AUD activation instructions and role memory remain exempt. The Product
+Audit Skills contract overrides legacy artifact/report/memo access in that session.
 
 ### MCP Orientation Layer (read-only)
 
@@ -154,8 +162,9 @@ evidence chain requires project state.
   wait for the Director's explicit choice.
 - FMN: run role-appropriate orientation, brief planning options, then stop.
 - DEV: follow the approved-plan execution flow when Gate 2 permits it.
-- AUD: stay passive; inspect only evidence or commands explicitly authorized
-  by the Director.
+- AUD: load its operational instructions only, then follow the selected product
+  skill's preparation and access boundary. Without a specialization, wait for
+  Director-authorized evidence. Never bootstrap Sigma state for a product audit.
 
 Hard prohibitions:
 - Never manually edit `Sigma/progress-v<N>.json`

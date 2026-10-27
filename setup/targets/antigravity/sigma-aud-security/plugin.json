@@ -1,0 +1,15 @@
+{
+  "name": "sigma-aud-security",
+  "version": "1.0.0",
+  "description": "Audit product security within AUD evidence boundaries",
+  "author": {
+    "name": "Sigma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sigma",
+    "audit",
+    "aud",
+    "aud-security"
+  ]
+}

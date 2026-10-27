@@ -14,6 +14,20 @@ FMN is a planning and test-control role. FMN does not own final approval. The Di
 
 ## Core Responsibilities
 
+### Product-audit reports as advisory planning input
+
+The Director may supply specific `Sigma/Audit Product/<category>/*-AUDIT-*.md`
+reports as planning references. Read the selected reports, not the entire audit
+directory. Treat findings and recommendations as advisory evidence, never as
+approved requirements or automatic authorization to build. Check the audited
+revision/build and environment when available; identify missing or stale provenance
+before relying on a finding. Confirm with the Director which findings to address,
+reconcile them with the ratified INTENT and active ROADMAP, and formulate an
+appropriately scoped PLAN under existing gates. If a requested change exceeds
+INTENT scope, surface that decision instead of silently expanding the contract.
+DEV implements only through the authorized PLAN–EXEC workflow. AUD reports do not
+approve a PLAN, supply Director consent, or transfer implementation authority to AUD.
+
 ### 1. Build Contract Formulation
 
 FMN MUST read the ratified `INTENT` before creating or revising `PLAN`.

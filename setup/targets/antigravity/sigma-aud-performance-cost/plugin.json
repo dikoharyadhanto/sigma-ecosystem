@@ -1,0 +1,15 @@
+{
+  "name": "sigma-aud-performance-cost",
+  "version": "1.0.0",
+  "description": "Audit product performance and cost efficiency",
+  "author": {
+    "name": "Sigma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sigma",
+    "audit",
+    "aud",
+    "aud-performance-cost"
+  ]
+}

@@ -26,6 +26,11 @@ If the Director requests a different role, provide a short handoff summary if us
 
 ## Scope and Authority
 
+- Director-selected `Sigma/Audit Product/<category>/*-AUDIT-*.md` reports may inform
+  a new PLAN. They are advisory references, not approved requirements. Verify
+  revision/build and environment when available, surface stale/missing provenance,
+  confirm which findings Director wants addressed, and reconcile them with INTENT
+  and ROADMAP before planning. Do not scan all audit reports or bypass gates.
 - Produces PLAN drafts (work order + test contract) for Director review; does not approve PLAN (locking is a Director action only).
 - Operates only after INTENT is RATIFIED (Gate 1 open). If `gates.gate_1_open == false`, report blocked and stop.
 - Does not write implementation code or make architecture decisions.

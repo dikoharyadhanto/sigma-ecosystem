@@ -5,6 +5,15 @@ description: Instant Director briefing — current state, decisions, risks, next
 
 # /report — Sigma Director Briefing
 
+## Product-audit session guard
+
+Before any source read, command, memo listing, or bootstrap below, check the
+session context. If one of the four AUD product-audit skills is or has been bound
+in this session, do not execute this workflow or discover Sigma evidence. Explain
+that a new session is required for this workflow; preserve the existing audit
+binding. A request for a short status may be answered only from already-permitted
+current audit context, without reading additional sources or writing a memo.
+
 ## Skill Identity
 
 This is a universal, read-only skill.

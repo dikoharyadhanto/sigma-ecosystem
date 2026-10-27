@@ -61,7 +61,7 @@ AI roles are the operational layer. They read project state, draft governance ar
 | ARC — Architect | `/arc` | Clarifies Director intent and drafts the `INTENT` |
 | FMN — Foreman | `/fmn` | Plans the work and drafts the `ROADMAP` and `PLAN` |
 | DEV — Developer | `/dev` | Implements the approved plan and records evidence in the `EXEC` |
-| AUD — Auditor | `/aud` | Passive external reviewer; advisory only; never locks or blocks |
+| AUD — Auditor | `/aud` | Independent advisory reviewer; explicit product-audit skills; never locks or blocks |
 
 A role stays fixed within a session. A session that started as FMN does not become DEV; a new session is required.
 
@@ -159,7 +159,7 @@ Changes to an approved `PLAN` follow a controlled review and certification workf
 └────────────────────┘
 ```
 
-AUD may be invoked as a passive external reviewer at major decision points:
+AUD may be invoked for passive artifact reviews at major decision points, or through one explicit product-audit skill for a designated product:
 
 ```text
 INTENT ── AUD review ──► Director decision
@@ -319,7 +319,7 @@ If approval is unclear, the AI role asks before acting.
 | ARC — Architect | `/arc` | Creates and refines the `INTENT` |
 | FMN — Foreman | `/fmn` | Creates the `ROADMAP` and `PLAN`; defines build and test contracts |
 | DEV — Developer | `/dev` | Implements the approved plan and records evidence in the `EXEC` |
-| AUD — Auditor | `/aud` | Passive external auditor; reviews provided evidence; advisory only |
+| AUD — Auditor | `/aud` | Independent auditor; passive artifact reviews or bounded product audits; advisory only |
 | REPORT | `/report` | Chat-only Director briefing: current state, decisions, risks, next move |
 | HUMANIZE | `/humanize` | Rewrites a given text for a human reader at LOW, BALANCE, or HIGH detail; changes no project state |
 | WRITE-MEMO | `/write-memo` | Writes a self-addressed operational brief for the active role |
@@ -338,9 +338,9 @@ Supported targets are Claude Code, Codex CLI, Reasonix, Antigravity, and opencod
 
 ## Important Role Boundaries
 
-### AUD is passive by default
+### AUD separates passive reviews from product audits
 
-AUD is an external auditor. It reviews evidence the Director provides or authorizes. It does not roam the repository, scan unrelated files, inspect local state, or run Sigma CLI unless the Director authorizes a specific audit scope.
+Base artifact reviews use Director-provided or authorized evidence. Explicit invocation of `aud-security`, `aud-ui-ux-design`, `aud-performance-cost`, or `aud-code-logic` establishes AUD and grants the selected skill's designated product access. Exactly one specialization per session; switching requires a new session. README is product-overview context only. Sigma documentation and previous audit reports are not product evidence. AUD may write its own tests in audit/temporary space, never modify the original product tree, and must confirm specific production, external-effect, or paid tests before execution. Reports are new free-form `{timedate}-AUDIT-{title}.md` files under `Sigma/Audit Product/<category>/`, advisory inputs to FMN planning followed by DEV implementation. See [Protocol §4.5](Sigma/SIGMA_PROTOCOL.md#45-aud--auditor) and the Product Audit Skills contract in [AUD rules](Sigma/rules/AUD-RULE.md).
 
 AUD recommends and the Director decides.
 
